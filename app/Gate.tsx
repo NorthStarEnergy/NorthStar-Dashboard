@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from 'react';
 function formatSystemTime(date: Date) {
   const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   const offset = -date.getTimezoneOffset() / 60;
-  return `${time} [HE ${offset >= 0 ? '+' : '-'} ${Math.abs(offset)}]`;
+  return `${time} [HE ${offset >= 0 ? '+' : '-'}${Math.abs(offset)}]`;
 }
 
 export default function Gate({ owner }: { owner: boolean }) {
