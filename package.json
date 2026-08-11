@@ -1,5 +1,8 @@
 {
   "name": "northstar-control-room",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "scripts": {
+    "build": "node -e \"console.log('Static dashboard build already present')\""
+  }
 }
