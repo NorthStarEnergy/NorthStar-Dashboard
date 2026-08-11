@@ -1,3 +1,4 @@
+// Explicit static bundle entrypoint for production custom-domain serving.
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
