@@ -6,7 +6,7 @@
   "engines": { "node": ">=22.13.0" },
   "scripts": {
     "dev": "vinext dev",
-    "build": "vinext build",
+    "build": "vinext build && node scripts/prepare-sites.mjs",
     "start": "vinext start"
   },
   "dependencies": {
