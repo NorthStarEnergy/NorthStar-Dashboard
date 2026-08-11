@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Northstar Site Check-in</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Check-in">
+<link rel="apple-touch-icon" href="/icons/northstar-192.png">
+<style>
+:root{--bg:#0b1117;--panel:#121d25;--line:#293943;--text:#edf3f5;--muted:#82929d;--blue:#69b7e8;--green:#65d5a2;--gold:#f2b84b;--red:#ff6577}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;display:grid;place-items:center;padding:20px}
+.card{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px}.brand{text-align:center;color:var(--gold);font:700 14px monospace;letter-spacing:3px}.brand-mark{width:58px;height:58px;margin:0 auto 8px;border-radius:50%;position:relative;background:radial-gradient(circle at 50% 50%,#17b4d3 0 22%,transparent 23%),conic-gradient(from 20deg,transparent 0 15%,#398fe2 15% 32%,transparent 32% 48%,#18b6d2 48% 66%,transparent 66% 82%,#2473d0 82% 100%);box-shadow:0 0 0 2px #214d75}.brand-mark:after{content:'';position:absolute;inset:13px;border-radius:50%;border:3px solid #8fc4f2;opacity:.75}.brand small{display:block;color:var(--text);font:600 16px monospace;letter-spacing:2px;margin-top:5px}
+h1{font-size:23px;margin:24px 0 4px}p{color:var(--muted);font:11px monospace;line-height:1.6}.site{color:var(--blue);font:700 13px monospace;margin:12px 0 18px;padding:10px;border:1px solid #355567;border-radius:5px}
+label{display:block;color:var(--muted);font:9px monospace;letter-spacing:1px;margin-top:14px}input,select{width:100%;padding:12px;margin-top:6px;background:#091218;color:#fff;border:1px solid var(--line);border-radius:5px}
+.consent{display:flex;gap:8px;align-items:flex-start;color:var(--gold);font:10px monospace;letter-spacing:0}.consent input{width:auto;margin:0}.check,.help,.verify,.confirm{width:100%;margin-top:12px;padding:13px;border:0;border-radius:5px;font-weight:700}.check{background:var(--blue);color:#061018}.help{background:var(--red);color:#fff;font-size:15px}.help.sent{background:#4b262d}.verify,.confirm{background:#1d3946;color:var(--text);font-size:11px}.status{margin-top:16px;color:var(--green);font:10px/1.5 monospace;min-height:18px}.status.error{color:var(--red)}.hint{font-size:9px;margin-top:6px}button:disabled{opacity:.7}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand"><div class="brand-mark" aria-label="NorthStar"></div><small>SITE CHECK-IN</small></div>
+  <h1>Contractor arrival</h1>
+  <p>This QR code is tied to the site below. Check in when you arrive and check out before leaving.</p>
+  <div class="site" id="siteName">LOADING SITE TOKEN</div>
+  <label>YOUR NAME<input id="name" autocomplete="name" placeholder="Full name"></label>
+  <label>CONTRACTOR COMPANY<input id="company" autocomplete="organization" placeholder="Company or crew name"></label>
+  <label>PHONE FOR SAFETY CALLBACK (OPTIONAL)<input id="phone" autocomplete="tel" placeholder="416-555-0123"></label>
+  <button class="verify" id="requestVerification" type="button" hidden>VERIFY PHONE NUMBER</button>
+  <input id="verificationCode" inputmode="numeric" maxlength="6" placeholder="Six-digit verification code" hidden>
+  <button class="confirm" id="confirmVerification" type="button" hidden>CONFIRM PHONE</button>
+  <p class="hint">Phone verification is optional during the pilot. Without it, the record is marked QR-unverified.</p>
+  <label>EXPECTED TIME ON SITE<select id="expected"><option value="60">1 hour</option><option value="120">2 hours</option><option value="240" selected>4 hours</option><option value="480">8 hours</option><option value="720">12 hours</option></select></label>
+  <label>WORK NOTES<input id="notes" placeholder="Crew, equipment, or task (optional)"></label>
+  <label class="consent"><input type="checkbox" id="alone"> I am working alone and require hourly safety check-ins.</label>
+  <label class="consent"><input type="checkbox" id="location"> Share my current location for operator safety tracking.</label>
+  <button class="check" id="submit" type="button">CHECK IN</button>
+  <button class="help" id="help" type="button" hidden>NEED HELP NOW</button>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+</main>
+<script>
+const sites={APIROQ:'Iroquois Falls',M1S:'Island Falls',F2B:'Fort Frances','K2M CCTS':'Kenora'};
+const params=new URLSearchParams(location.search),legacySite=params.get('site')||'',tokenKey='northstar-site-token';
+// Launched from the installed home-screen icon there is no query string, so the
+// last token this device resolved stands in for a fresh scan of the site QR.
+const token=params.get('token')||(legacySite?'':localStorage.getItem(tokenKey)||''),storageKey='northstar-checkin-'+(token||legacySite);
+const statusNode=document.querySelector('#status'),submit=document.querySelector('#submit'),help=document.querySelector('#help'),requestVerification=document.querySelector('#requestVerification'),confirmVerification=document.querySelector('#confirmVerification'),verificationCode=document.querySelector('#verificationCode');
+let site=null,siteReady=false,verificationId=null,active=null,watch=null;
+function showStatus(message,error=false){statusNode.textContent=message;statusNode.classList.toggle('error',error)}
+async function resolveSite(){
+  try{
+    if(token){const response=await fetch('/api/checkin-tokens/resolve?token='+encodeURIComponent(token));if(!response.ok)throw new Error('invalid or expired site QR token');site=(await response.json()).site;localStorage.setItem(tokenKey,token);requestVerification.hidden=false}
+    else site=sites[legacySite]||legacySite||null;
+  }catch(error){site=null;localStorage.removeItem(tokenKey);showStatus(String(error.message||error).toUpperCase(),true)}
+  siteReady=true;document.querySelector('#siteName').textContent=site?site.toUpperCase():'SITE LINK INVALID';
+}
+function sendPosition(){return new Promise(resolve=>{if(!document.querySelector('#location').checked||!navigator.geolocation)return resolve({});navigator.geolocation.getCurrentPosition(p=>resolve({latitude:p.coords.latitude,longitude:p.coords.longitude}),()=>resolve({}),{enableHighAccuracy:true,maximumAge:60000,timeout:8000})})}
+function renderActive(){const checkedIn=Boolean(active&&active.status!=='checked-out');submit.textContent=checkedIn?'CHECK OUT':'CHECK IN';help.hidden=!checkedIn;help.disabled=Boolean(active?.needsHelp);help.classList.toggle('sent',Boolean(active?.needsHelp));help.textContent=active?.helpState==='acknowledged'?'HELP ACKNOWLEDGED — ASSISTANCE OPEN':active?.needsHelp?'HELP REQUEST SENT':'NEED HELP NOW';if(checkedIn){document.querySelector('#name').value=active.name||'';document.querySelector('#company').value=active.company||''}}
+function remember(){if(active)localStorage.setItem(storageKey,active.id);else localStorage.removeItem(storageKey)}
+async function refreshActive(){if(!active)return;try{const response=await fetch('/api/checkins/'+encodeURIComponent(active.id)+'?ts='+Date.now());if(!response.ok&&response.status!==404)throw 0;const found=response.status===404?null:await response.json();if(!found||found.status==='checked-out'){active=null;remember();clearInterval(watch);renderActive();showStatus('CHECKED OUT');return}active=found;renderActive();if(active.helpState==='acknowledged')showStatus('AN OPERATOR HAS ACKNOWLEDGED YOUR HELP REQUEST. ASSISTANCE REMAINS OPEN.');else if(active.needsHelp)showStatus('HELP REQUEST SENT. STAY SAFE AND FOLLOW SITE EMERGENCY PROCEDURES.')}catch{showStatus('SAFETY STATUS CONNECTION LOST — CONTACT THE CONTROL ROOM DIRECTLY',true)}}
+async function heartbeat(){if(!active)return;try{const pos=await sendPosition(),response=await fetch('/api/checkins/'+encodeURIComponent(active.id)+'/heartbeat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pos)});if(!response.ok)throw 0;active=await response.json();renderActive()}catch{showStatus('HEARTBEAT FAILED — CONTACT THE CONTROL ROOM IF THIS CONTINUES',true)}}
+function startWatch(){clearInterval(watch);watch=setInterval(async()=>{await heartbeat();await refreshActive()},300000)}
+requestVerification.onclick=async()=>{const phone=document.querySelector('#phone').value.trim();if(!token){showStatus('USE A SIGNED SITE QR CODE BEFORE VERIFYING A PHONE',true);return}if(!phone){showStatus('ENTER A PHONE NUMBER FIRST',true);return}requestVerification.disabled=true;try{const response=await fetch('/api/phone-verifications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,phone})}),data=await response.json();if(!response.ok)throw new Error(data.error||'verification request failed');verificationId=data.verificationId;verificationCode.hidden=false;confirmVerification.hidden=false;if(data.debugCode){verificationCode.value=data.debugCode;showStatus('DEVELOPMENT CODE FILLED — CONFIRM PHONE')}else showStatus('CODE REQUESTED. SMS DELIVERY IS NOT CONNECTED IN THIS PILOT.')}catch(error){showStatus(String(error.message||error).toUpperCase(),true)}finally{requestVerification.disabled=false}}
+confirmVerification.onclick=async()=>{if(!verificationId)return;confirmVerification.disabled=true;try{const response=await fetch('/api/phone-verifications/'+encodeURIComponent(verificationId)+'/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:verificationCode.value.trim()})}),data=await response.json();if(!response.ok)throw new Error(data.error||'verification failed');showStatus('PHONE VERIFIED FOR SAFETY CALLBACK');confirmVerification.textContent='PHONE VERIFIED';requestVerification.hidden=true;verificationCode.disabled=true}catch(error){showStatus(String(error.message||error).toUpperCase(),true)}finally{confirmVerification.disabled=false}}
+submit.onclick=async()=>{submit.disabled=true;try{if(active){const response=await fetch('/api/checkins/'+encodeURIComponent(active.id),{method:'DELETE'});if(!response.ok)throw 0;active=null;remember();clearInterval(watch);renderActive();showStatus('CHECKED OUT');return}const name=document.querySelector('#name').value.trim(),company=document.querySelector('#company').value.trim();if(!siteReady||!site||!name||!company){showStatus('ENTER YOUR NAME, CONTRACTOR COMPANY, AND USE A VALID SITE QR CODE',true);return}showStatus('CHECKING IN…');const pos=await sendPosition(),response=await fetch('/api/checkins',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,site,kind:'Contractor',source:'contractor-qr',qrToken:token||undefined,company,phone:document.querySelector('#phone').value.trim()||undefined,phoneVerificationId:verificationId||undefined,provisional:true,alone:document.querySelector('#alone').checked,expectedMinutes:Number(document.querySelector('#expected').value),notes:document.querySelector('#notes').value.trim(),...pos})}),data=await response.json();if(!response.ok)throw new Error(data.error||'check-in failed');active=data;remember();renderActive();startWatch();showStatus(data.verificationMethod==='qr-phone'?'CHECKED IN — PHONE VERIFIED — WAITING FOR OPERATOR CONFIRMATION':'CHECKED IN — WAITING FOR OPERATOR CONFIRMATION')}catch(error){showStatus(String(error.message||'CHECK-IN SERVICE UNAVAILABLE').toUpperCase(),true)}finally{submit.disabled=false}}
+help.onclick=async()=>{if(!active||!confirm('Send an urgent help request to the control room?'))return;help.disabled=true;try{const response=await fetch('/api/checkins/'+encodeURIComponent(active.id)+'/help',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({actor:(active.name||'worker')+' worker device'})}),data=await response.json();if(!response.ok)throw 0;active=data;renderActive();showStatus('HELP REQUEST SENT. STAY SAFE AND FOLLOW SITE EMERGENCY PROCEDURES.')}catch{help.disabled=false;showStatus('HELP REQUEST FAILED — CALL THE CONTROL ROOM OR EMERGENCY SERVICES DIRECTLY',true)}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){heartbeat();refreshActive()}});window.addEventListener('online',()=>{heartbeat();refreshActive()});
+if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+(async()=>{await resolveSite();const saved=localStorage.getItem(storageKey);if(!saved)return;active={id:saved};renderActive();await refreshActive();if(active)startWatch()})();
+</script>
+</body>
+</html>
