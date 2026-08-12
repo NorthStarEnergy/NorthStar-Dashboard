@@ -1,0 +1,1943 @@
+"""Persistent check-in store for Northstar field-staff safety.
+
+Check-ins and their status changes survive a backend restart. Operational
+records are never overwritten or deleted: a checkout marks the record closed
+and every change appends a row to ``checkin_events``.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import sqlite3
+import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
+
+ROOT = Path(__file__).resolve().parent
+DB_PATH = Path(os.environ.get("NORTHSTAR_DB", ROOT / "data" / "northstar.db"))
+BACKUP_DIR = DB_PATH.parent / "backups"
+BACKUP_KEEP = 14
+# One file per day, refreshed on this interval so a crash loses at most an
+# hour rather than everything since the backend started.
+BACKUP_REFRESH_SECONDS = int(os.environ.get("NORTHSTAR_BACKUP_REFRESH", "3600"))
+# Optional second copy of each daily backup on other storage (another disk,
+# a synced folder). A mirror failure never blocks the primary backup.
+BACKUP_MIRROR = os.environ.get("NORTHSTAR_BACKUP_MIRROR", "").strip() or None
+TZ = ZoneInfo("America/Toronto")
+
+# A worker who is alone must be heard from every hour; a crew has a longer
+# grace period. Both are overridable per check-in.
+OVERDUE_MINUTES_ALONE = int(os.environ.get("NORTHSTAR_OVERDUE_ALONE", "60"))
+OVERDUE_MINUTES_CREW = int(os.environ.get("NORTHSTAR_OVERDUE_CREW", "240"))
+
+STATUS_ON_SITE = "on-site"
+STATUS_OVERDUE = "overdue"
+STATUS_PROVISIONAL = "provisional"
+STATUS_CHECKED_OUT = "checked-out"
+OPEN_STATUSES = (STATUS_ON_SITE, STATUS_OVERDUE, STATUS_PROVISIONAL)
+
+ALERT_ACTIVE = "active"
+ALERT_ACKNOWLEDGED = "acknowledged"
+ALERT_RESOLVED = "resolved"
+ALERT_OPEN_STATES = (ALERT_ACTIVE, ALERT_ACKNOWLEDGED)
+
+SWITCHING_DRAFT = "DRAFT"
+SWITCHING_READY = "READY FOR QUALIFIED REVIEW"
+SWITCHING_REVIEWED = "REVIEW RECORDED · NOT RELEASE"
+SWITCHING_REVIEW_CHECKS = (
+    "identity",
+    "source",
+    "field",
+    "isolation",
+    "protection",
+    "communications",
+    "changes",
+    "release",
+)
+
+
+class SwitchingConflict(ValueError):
+    """Raised when an operator submits an older copy of a switching draft."""
+
+# A price sitting exactly on a threshold would otherwise raise and resolve on
+# every refresh. An alert only clears once the price is back inside the band by
+# this margin, so a hovering price produces one alarm, not a stream of them.
+ALERT_RECOVERY_MARGIN = float(os.environ.get("NORTHSTAR_ALERT_RECOVERY_MARGIN", "2.0"))
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS checkins (
+    id                    TEXT PRIMARY KEY,
+    name                  TEXT NOT NULL,
+    site                  TEXT NOT NULL,
+    kind                  TEXT NOT NULL,
+    company               TEXT NOT NULL DEFAULT '',
+    status                TEXT NOT NULL,
+    alone                 INTEGER NOT NULL DEFAULT 0,
+    checked_in            TEXT NOT NULL,
+    last_heard            TEXT NOT NULL,
+    checked_out_at        TEXT,
+    overdue_after_minutes INTEGER NOT NULL,
+    expected_minutes      INTEGER,
+    notes                 TEXT NOT NULL DEFAULT '',
+    latitude              REAL,
+    longitude             REAL,
+    help_state            TEXT NOT NULL DEFAULT 'none',
+    help_requested_at     TEXT,
+    help_acknowledged_at  TEXT,
+    help_acknowledged_by  TEXT,
+    help_resolved_at      TEXT,
+    help_resolved_by      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS checkin_events (
+    seq          INTEGER PRIMARY KEY AUTOINCREMENT,
+    checkin_id   TEXT NOT NULL,
+    at           TEXT NOT NULL,
+    actor        TEXT NOT NULL,
+    event        TEXT NOT NULL,
+    site         TEXT NOT NULL,
+    worker       TEXT NOT NULL,
+    prior_status TEXT,
+    new_status   TEXT,
+    prior_help_state TEXT,
+    new_help_state   TEXT,
+    details      TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_checkins_status ON checkins(status);
+CREATE INDEX IF NOT EXISTS idx_events_checkin ON checkin_events(checkin_id, seq);
+
+CREATE TABLE IF NOT EXISTS logbook (
+    id      TEXT PRIMARY KEY,
+    at      TEXT NOT NULL,
+    type    TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    details TEXT NOT NULL DEFAULT '',
+    source  TEXT NOT NULL DEFAULT 'operator'
+);
+
+CREATE TABLE IF NOT EXISTS outages (
+    id        TEXT PRIMARY KEY,
+    title     TEXT NOT NULL,
+    asset     TEXT NOT NULL DEFAULT '',
+    site      TEXT NOT NULL,
+    severity  TEXT NOT NULL,
+    outage_type TEXT NOT NULL DEFAULT 'Unplanned',
+    details   TEXT NOT NULL DEFAULT '',
+    status    TEXT NOT NULL,
+    opened_at TEXT NOT NULL,
+    opened_by TEXT NOT NULL DEFAULT 'operator',
+    closed_at TEXT,
+    closed_by TEXT
+);
+
+CREATE TABLE IF NOT EXISTS outage_events (
+    seq          INTEGER PRIMARY KEY AUTOINCREMENT,
+    outage_id    TEXT NOT NULL,
+    at           TEXT NOT NULL,
+    actor        TEXT NOT NULL,
+    event        TEXT NOT NULL,
+    site         TEXT NOT NULL,
+    prior_status TEXT,
+    new_status   TEXT,
+    details      TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS alert_settings (
+    node       TEXT PRIMARY KEY,
+    low        REAL,
+    high       REAL,
+    actions    TEXT NOT NULL DEFAULT '[]',
+    enabled    INTEGER NOT NULL DEFAULT 1,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS alerts (
+    id              TEXT PRIMARY KEY,
+    node            TEXT NOT NULL,
+    kind            TEXT NOT NULL,
+    threshold       REAL NOT NULL,
+    state           TEXT NOT NULL,
+    opened_at       TEXT NOT NULL,
+    opening_price   REAL NOT NULL,
+    last_price      REAL NOT NULL,
+    last_seen       TEXT NOT NULL,
+    peak_price      REAL NOT NULL,
+    acknowledged_at TEXT,
+    acknowledged_by TEXT,
+    resolved_at     TEXT,
+    resolved_price  REAL,
+    actions         TEXT NOT NULL DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS alert_events (
+    seq         INTEGER PRIMARY KEY AUTOINCREMENT,
+    alert_id    TEXT NOT NULL,
+    at          TEXT NOT NULL,
+    actor       TEXT NOT NULL,
+    event       TEXT NOT NULL,
+    node        TEXT NOT NULL,
+    prior_state TEXT,
+    new_state   TEXT,
+    price       REAL,
+    details     TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_alerts_state ON alerts(state, node);
+CREATE INDEX IF NOT EXISTS idx_alert_events_alert ON alert_events(alert_id, seq);
+CREATE INDEX IF NOT EXISTS idx_outage_events_outage ON outage_events(outage_id, seq);
+
+CREATE TABLE IF NOT EXISTS switching_drafts (
+    id              TEXT PRIMARY KEY,
+    package_name    TEXT NOT NULL DEFAULT '',
+    site            TEXT NOT NULL DEFAULT '',
+    asset           TEXT NOT NULL DEFAULT '',
+    diagram_revision TEXT NOT NULL DEFAULT '',
+    rule_set        TEXT NOT NULL DEFAULT '',
+    work_scope      TEXT NOT NULL DEFAULT '',
+    status          TEXT NOT NULL,
+    record_version  INTEGER NOT NULL DEFAULT 1,
+    payload         TEXT NOT NULL DEFAULT '{}',
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL,
+    created_by      TEXT NOT NULL DEFAULT '',
+    reviewer_name   TEXT NOT NULL DEFAULT '',
+    reviewer_role   TEXT NOT NULL DEFAULT '',
+    review_comments TEXT NOT NULL DEFAULT '',
+    reviewed_at     TEXT,
+    reviewed_by     TEXT
+);
+
+CREATE TABLE IF NOT EXISTS switching_draft_events (
+    seq          INTEGER PRIMARY KEY AUTOINCREMENT,
+    draft_id     TEXT NOT NULL,
+    at           TEXT NOT NULL,
+    actor        TEXT NOT NULL,
+    event        TEXT NOT NULL,
+    prior_status TEXT,
+    new_status   TEXT,
+    details      TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_switching_drafts_status ON switching_drafts(status, updated_at);
+CREATE INDEX IF NOT EXISTS idx_switching_draft_events_draft ON switching_draft_events(draft_id, seq);
+
+-- Packet 16 test fixture metadata. These tables intentionally contain no source bytes.
+-- retention_days = NULL means indefinite for this non-production test dataset.
+CREATE TABLE IF NOT EXISTS repository_policies (
+    repository_id       TEXT PRIMARY KEY,
+    repository_name     TEXT NOT NULL,
+    policy_id           TEXT NOT NULL,
+    policy_revision     TEXT NOT NULL CHECK (length(trim(policy_revision)) > 0),
+    retention_days      INTEGER,
+    access_roles        TEXT NOT NULL DEFAULT '[]',
+    versioning_enabled  INTEGER NOT NULL DEFAULT 1 CHECK (versioning_enabled IN (0, 1)),
+    immutable_records   INTEGER NOT NULL DEFAULT 1 CHECK (immutable_records IN (0, 1)),
+    legal_hold_supported INTEGER NOT NULL DEFAULT 1 CHECK (legal_hold_supported IN (0, 1)),
+    backup_policy       TEXT NOT NULL DEFAULT '',
+    deletion_policy     TEXT NOT NULL DEFAULT '',
+    data_owner          TEXT NOT NULL,
+    environment         TEXT NOT NULL DEFAULT 'TEST_ONLY',
+    created_at          TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS artifact_repository_refs (
+    artifact_class     TEXT PRIMARY KEY,
+    repository_id      TEXT NOT NULL REFERENCES repository_policies(repository_id),
+    object_prefix      TEXT NOT NULL,
+    object_revision    TEXT NOT NULL,
+    owner              TEXT NOT NULL,
+    access_rule        TEXT NOT NULL,
+    retention_rule     TEXT NOT NULL,
+    source_bytes_stored INTEGER NOT NULL DEFAULT 0 CHECK (source_bytes_stored = 0),
+    environment        TEXT NOT NULL DEFAULT 'TEST_ONLY'
+);
+
+CREATE INDEX IF NOT EXISTS idx_artifact_repository_refs_repository
+    ON artifact_repository_refs(repository_id);
+"""
+
+_LOCK = threading.Lock()
+
+
+def now_iso() -> str:
+    return datetime.now(TZ).isoformat()
+
+
+def _connect() -> sqlite3.Connection:
+    connection = sqlite3.connect(DB_PATH, timeout=10)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA journal_mode=WAL")
+    connection.execute("PRAGMA foreign_keys=ON")
+    return connection
+
+
+@contextmanager
+def _session() -> Iterator[sqlite3.Connection]:
+    """One transaction: commits on success, rolls back on error, always closes.
+
+    ``with sqlite3.connect(...) as connection`` commits but does not close, so
+    using it directly leaks a handle per call — one per HTTP request here.
+    """
+    connection = _connect()
+    try:
+        with connection:
+            yield connection
+    finally:
+        connection.close()
+
+
+def init_db() -> None:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with _LOCK, _session() as connection:
+        connection.executescript(SCHEMA)
+        _migrate_schema(connection)
+        from northstar_phase1 import init_schema as init_phase1_schema
+
+        init_phase1_schema(connection)
+        from northstar_voice import init_schema as init_voice_schema
+
+        init_voice_schema(connection)
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_checkins_help_state"
+            " ON checkins(help_state) WHERE help_state IN ('requested','acknowledged')"
+        )
+        connection.execute("PRAGMA optimize")
+
+
+def _migrate_schema(connection: sqlite3.Connection) -> None:
+    """Add fields introduced after the first pilot database was deployed."""
+    checkin_columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(checkins)").fetchall()
+    }
+    checkin_additions = {
+        "help_state": "TEXT NOT NULL DEFAULT 'none'",
+        "help_requested_at": "TEXT",
+        "help_acknowledged_at": "TEXT",
+        "help_acknowledged_by": "TEXT",
+        "help_resolved_at": "TEXT",
+        "help_resolved_by": "TEXT",
+    }
+    for name, definition in checkin_additions.items():
+        if name not in checkin_columns:
+            connection.execute(f"ALTER TABLE checkins ADD COLUMN {name} {definition}")
+
+    event_columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(checkin_events)").fetchall()
+    }
+    for name in ("prior_help_state", "new_help_state"):
+        if name not in event_columns:
+            connection.execute(f"ALTER TABLE checkin_events ADD COLUMN {name} TEXT")
+
+    outage_columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(outages)").fetchall()
+    }
+    for name, definition in {
+        "asset": "TEXT NOT NULL DEFAULT ''",
+        "outage_type": "TEXT NOT NULL DEFAULT 'Unplanned'",
+        "opened_by": "TEXT NOT NULL DEFAULT 'operator'",
+        "closed_by": "TEXT",
+    }.items():
+        if name not in outage_columns:
+            connection.execute(f"ALTER TABLE outages ADD COLUMN {name} {definition}")
+
+    switching_columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(switching_drafts)").fetchall()
+    }
+    if "record_version" not in switching_columns:
+        connection.execute(
+            "ALTER TABLE switching_drafts ADD COLUMN record_version INTEGER NOT NULL DEFAULT 1"
+        )
+
+
+def daily_backup(reference: datetime | None = None) -> Path | None:
+    """Refresh today's copy of the database at ``backups/northstar-YYYY-MM-DD.db``.
+
+    One file per day, rewritten every ``BACKUP_REFRESH_SECONDS`` so a crash
+    loses at most that interval rather than everything recorded since the
+    backend started. Uses the sqlite backup API, which copies an in-use WAL
+    database consistently. Keeps the newest ``BACKUP_KEEP`` days. Returns the
+    path when this call wrote a copy, or None when the current one is still
+    fresh or there is no database yet.
+    """
+    if not DB_PATH.exists():
+        return None
+    reference = reference or datetime.now(TZ)
+    target = BACKUP_DIR / f"northstar-{reference.date().isoformat()}.db"
+    if target.exists():
+        age = reference.timestamp() - target.stat().st_mtime
+        if age < BACKUP_REFRESH_SECONDS:
+            return None
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    # Write beside the target and swap, so an interrupted copy cannot leave a
+    # truncated file where a good backup used to be.
+    staging = target.with_suffix(".db.partial")
+    with _LOCK:
+        source = sqlite3.connect(DB_PATH, timeout=10)
+        try:
+            staging.unlink(missing_ok=True)
+            destination = sqlite3.connect(staging)
+            try:
+                source.backup(destination)
+            finally:
+                destination.close()
+        finally:
+            source.close()
+    staging.replace(target)
+    for stale in sorted(BACKUP_DIR.glob("northstar-*.db"))[:-BACKUP_KEEP]:
+        stale.unlink()
+    if BACKUP_MIRROR:
+        try:
+            mirror_dir = Path(BACKUP_MIRROR)
+            mirror_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(target, mirror_dir / target.name)
+            for stale in sorted(mirror_dir.glob("northstar-*.db"))[:-BACKUP_KEEP]:
+                stale.unlink()
+        except OSError as exc:
+            print(f"backup mirror to {BACKUP_MIRROR} failed: {exc}")
+    return target
+
+
+def _row_to_record(row: sqlite3.Row, reference: datetime | None = None) -> dict[str, Any]:
+    reference = reference or datetime.now(TZ)
+    last_heard = datetime.fromisoformat(row["last_heard"])
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "site": row["site"],
+        "kind": row["kind"],
+        "company": row["company"],
+        "status": row["status"],
+        "alone": bool(row["alone"]),
+        "checkedIn": row["checked_in"],
+        "lastHeard": row["last_heard"],
+        "checkedOutAt": row["checked_out_at"],
+        "overdueAfterMinutes": row["overdue_after_minutes"],
+        "expectedMinutes": row["expected_minutes"],
+        "notes": row["notes"],
+        "latitude": row["latitude"],
+        "longitude": row["longitude"],
+        "helpState": row["help_state"],
+        "needsHelp": row["help_state"] in ("requested", "acknowledged"),
+        "helpRequestedAt": row["help_requested_at"],
+        "helpAcknowledgedAt": row["help_acknowledged_at"],
+        "helpAcknowledgedBy": row["help_acknowledged_by"],
+        "helpResolvedAt": row["help_resolved_at"],
+        "helpResolvedBy": row["help_resolved_by"],
+        "overdue": row["status"] == STATUS_OVERDUE,
+        "minutesSinceHeard": int((reference - last_heard).total_seconds() // 60),
+    }
+
+
+def _append_event(
+    connection: sqlite3.Connection,
+    *,
+    checkin_id: str,
+    actor: str,
+    event: str,
+    site: str,
+    worker: str,
+    prior_status: str | None,
+    new_status: str | None,
+    prior_help_state: str | None = None,
+    new_help_state: str | None = None,
+    details: str = "",
+    at: str | None = None,
+) -> None:
+    connection.execute(
+        "INSERT INTO checkin_events"
+        " (checkin_id, at, actor, event, site, worker, prior_status, new_status,"
+        " prior_help_state, new_help_state, details) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            checkin_id,
+            at or now_iso(),
+            actor,
+            event,
+            site,
+            worker,
+            prior_status,
+            new_status,
+            prior_help_state,
+            new_help_state,
+            details[:2000],
+        ),
+    )
+
+
+def create_checkin(payload: dict[str, Any], actor: str = "check-in") -> dict[str, Any]:
+    """Insert a check-in. Raises ValueError when name or site is missing."""
+    name = str(payload.get("name", "")).strip()[:80]
+    site = str(payload.get("site", "")).strip()[:60]
+    if not name or not site:
+        raise ValueError("name and site are required")
+
+    alone = bool(payload.get("alone"))
+    timestamp = now_iso()
+    overdue_after = payload.get("overdueAfterMinutes")
+    try:
+        overdue_after = int(overdue_after)
+    except (TypeError, ValueError):
+        overdue_after = OVERDUE_MINUTES_ALONE if alone else OVERDUE_MINUTES_CREW
+    overdue_after = max(5, min(overdue_after, 24 * 60))
+
+    expected = payload.get("expectedMinutes")
+    try:
+        expected = max(0, min(int(expected), 24 * 60))
+    except (TypeError, ValueError):
+        expected = None
+
+    status = STATUS_PROVISIONAL if payload.get("provisional") else STATUS_ON_SITE
+    record_id = f"checkin-{int(datetime.now(TZ).timestamp() * 1000)}"
+
+    with _LOCK, _session() as connection:
+        # Millisecond ids can collide when two workers submit together.
+        while connection.execute("SELECT 1 FROM checkins WHERE id=?", (record_id,)).fetchone():
+            record_id += "x"
+        connection.execute(
+            "INSERT INTO checkins (id, name, site, kind, company, status, alone, checked_in,"
+            " last_heard, overdue_after_minutes, expected_minutes, notes, latitude, longitude)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                record_id,
+                name,
+                site,
+                str(payload.get("kind", "Northstar")).strip()[:30] or "Northstar",
+                str(payload.get("company", "")).strip()[:80],
+                status,
+                int(alone),
+                timestamp,
+                timestamp,
+                overdue_after,
+                expected,
+                str(payload.get("notes", "")).strip()[:500],
+                payload.get("latitude"),
+                payload.get("longitude"),
+            ),
+        )
+        _append_event(
+            connection,
+            checkin_id=record_id,
+            actor=actor,
+            event="check-in",
+            site=site,
+            worker=name,
+            prior_status=None,
+            new_status=status,
+            details=f"alone={alone}; overdue after {overdue_after} min",
+            at=timestamp,
+        )
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (record_id,)).fetchone()
+    return _row_to_record(row)
+
+
+def list_checkins(include_closed: bool = False) -> list[dict[str, Any]]:
+    with _LOCK, _session() as connection:
+        if include_closed:
+            rows = connection.execute("SELECT * FROM checkins ORDER BY checked_in").fetchall()
+        else:
+            placeholders = ",".join("?" for _ in OPEN_STATUSES)
+            rows = connection.execute(
+                f"SELECT * FROM checkins WHERE status IN ({placeholders})"
+                " OR help_state IN ('requested','acknowledged') ORDER BY checked_in",
+                OPEN_STATUSES,
+            ).fetchall()
+    reference = datetime.now(TZ)
+    return [_row_to_record(row, reference) for row in rows]
+
+
+def get_checkin(checkin_id: str) -> dict[str, Any] | None:
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+    return _row_to_record(row) if row else None
+
+
+def record_heartbeat(
+    checkin_id: str,
+    latitude: Any = None,
+    longitude: Any = None,
+    actor: str = "worker",
+) -> dict[str, Any] | None:
+    """Refresh last-heard. An overdue worker returns to on-site and that is logged."""
+    timestamp = now_iso()
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+        if row is None:
+            return None
+        if row["status"] == STATUS_CHECKED_OUT:
+            return _row_to_record(row)
+
+        prior_status = row["status"]
+        new_status = STATUS_ON_SITE if prior_status == STATUS_OVERDUE else prior_status
+        connection.execute(
+            "UPDATE checkins SET last_heard=?, status=?,"
+            " latitude=COALESCE(?, latitude), longitude=COALESCE(?, longitude) WHERE id=?",
+            (timestamp, new_status, latitude, longitude, checkin_id),
+        )
+        _append_event(
+            connection,
+            checkin_id=checkin_id,
+            actor=actor,
+            event="heartbeat",
+            site=row["site"],
+            worker=row["name"],
+            prior_status=prior_status,
+            new_status=new_status,
+            details="worker heard from" if prior_status != STATUS_OVERDUE else "overdue cleared by heartbeat",
+            at=timestamp,
+        )
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+    return _row_to_record(row)
+
+
+def request_help(checkin_id: str, actor: str = "worker") -> dict[str, Any] | None:
+    """Open an urgent help request without relying on a browser staying open."""
+    timestamp = now_iso()
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+        if row is None:
+            return None
+        if row["status"] == STATUS_CHECKED_OUT:
+            raise ValueError("cannot request help after checkout")
+        if row["help_state"] in ("requested", "acknowledged"):
+            return _row_to_record(row)
+        prior_help_state = row["help_state"]
+        connection.execute(
+            "UPDATE checkins SET help_state='requested', help_requested_at=?,"
+            " help_acknowledged_at=NULL, help_acknowledged_by=NULL,"
+            " help_resolved_at=NULL, help_resolved_by=NULL WHERE id=?",
+            (timestamp, checkin_id),
+        )
+        _append_event(
+            connection,
+            checkin_id=checkin_id,
+            actor=actor[:80],
+            event="help requested",
+            site=row["site"],
+            worker=row["name"],
+            prior_status=row["status"],
+            new_status=row["status"],
+            prior_help_state=prior_help_state,
+            new_help_state="requested",
+            details="worker requested immediate operator assistance",
+            at=timestamp,
+        )
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+    return _row_to_record(row)
+
+
+def acknowledge_help(checkin_id: str, actor: str = "operator") -> dict[str, Any] | None:
+    """Record that an operator has seen a request; the request remains open."""
+    timestamp = now_iso()
+    actor = actor.strip()[:80] or "operator"
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+        if row is None:
+            return None
+        if row["help_state"] != "requested":
+            return _row_to_record(row)
+        connection.execute(
+            "UPDATE checkins SET help_state='acknowledged', help_acknowledged_at=?,"
+            " help_acknowledged_by=? WHERE id=?",
+            (timestamp, actor, checkin_id),
+        )
+        _append_event(
+            connection,
+            checkin_id=checkin_id,
+            actor=actor,
+            event="help acknowledged",
+            site=row["site"],
+            worker=row["name"],
+            prior_status=row["status"],
+            new_status=row["status"],
+            prior_help_state="requested",
+            new_help_state="acknowledged",
+            details="operator acknowledged the help request; assistance remains open",
+            at=timestamp,
+        )
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+    return _row_to_record(row)
+
+
+def resolve_help(checkin_id: str, actor: str = "operator") -> dict[str, Any] | None:
+    """Close a help request after the operator confirms the situation is resolved."""
+    timestamp = now_iso()
+    actor = actor.strip()[:80] or "operator"
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+        if row is None:
+            return None
+        if row["help_state"] not in ("requested", "acknowledged"):
+            return _row_to_record(row)
+        prior_help_state = row["help_state"]
+        connection.execute(
+            "UPDATE checkins SET help_state='resolved', help_resolved_at=?,"
+            " help_resolved_by=? WHERE id=?",
+            (timestamp, actor, checkin_id),
+        )
+        _append_event(
+            connection,
+            checkin_id=checkin_id,
+            actor=actor,
+            event="help resolved",
+            site=row["site"],
+            worker=row["name"],
+            prior_status=row["status"],
+            new_status=row["status"],
+            prior_help_state=prior_help_state,
+            new_help_state="resolved",
+            details="operator marked the help request resolved",
+            at=timestamp,
+        )
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+    return _row_to_record(row)
+
+
+def adjust_time(checkin_id: str, field: str, hour: int, minute: int, actor: str = "operator edit") -> dict[str, Any] | None:
+    """Correct a check-in or last-seen time. The original value stays in the event log."""
+    if field not in ("checkedIn", "lastHeard"):
+        raise ValueError("field must be checkedIn or lastHeard")
+    column = "checked_in" if field == "checkedIn" else "last_heard"
+
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+        if row is None:
+            return None
+        previous = row[column]
+        corrected = datetime.fromisoformat(previous).replace(
+            hour=hour, minute=minute, second=0, microsecond=0
+        )
+        connection.execute(
+            f"UPDATE checkins SET {column}=? WHERE id=?", (corrected.isoformat(), checkin_id)
+        )
+        _append_event(
+            connection,
+            checkin_id=checkin_id,
+            actor=actor,
+            event=f"{field} corrected",
+            site=row["site"],
+            worker=row["name"],
+            prior_status=row["status"],
+            new_status=row["status"],
+            details=f"{previous} -> {corrected.isoformat()}",
+        )
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+    return _row_to_record(row)
+
+
+def check_out(checkin_id: str, actor: str = "check-in") -> dict[str, Any] | None:
+    """Close a check-in. The row is retained; only the status changes."""
+    timestamp = now_iso()
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+        if row is None:
+            return None
+        if row["status"] == STATUS_CHECKED_OUT:
+            return _row_to_record(row)
+        connection.execute(
+            "UPDATE checkins SET status=?, checked_out_at=? WHERE id=?",
+            (STATUS_CHECKED_OUT, timestamp, checkin_id),
+        )
+        _append_event(
+            connection,
+            checkin_id=checkin_id,
+            actor=actor,
+            event="check-out",
+            site=row["site"],
+            worker=row["name"],
+            prior_status=row["status"],
+            new_status=STATUS_CHECKED_OUT,
+            at=timestamp,
+        )
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+    return _row_to_record(row)
+
+
+def resolve_provisional(checkin_id: str, accept: bool, actor: str = "operator") -> dict[str, Any] | None:
+    """Confirm or reject a provisional check-in.
+
+    Accepting moves it to on-site. Rejecting closes it like a checkout — the
+    row and its history are retained. Anything not currently provisional is
+    returned unchanged, so a double-click cannot corrupt state.
+    """
+    timestamp = now_iso()
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+        if row is None:
+            return None
+        if row["status"] != STATUS_PROVISIONAL:
+            return _row_to_record(row)
+        new_status = STATUS_ON_SITE if accept else STATUS_CHECKED_OUT
+        if accept:
+            connection.execute(
+                "UPDATE checkins SET status=? WHERE id=?", (new_status, checkin_id)
+            )
+        else:
+            connection.execute(
+                "UPDATE checkins SET status=?, checked_out_at=? WHERE id=?",
+                (new_status, timestamp, checkin_id),
+            )
+        _append_event(
+            connection,
+            checkin_id=checkin_id,
+            actor=actor,
+            event="provisional accepted" if accept else "provisional rejected",
+            site=row["site"],
+            worker=row["name"],
+            prior_status=STATUS_PROVISIONAL,
+            new_status=new_status,
+            details="identity confirmed by operator" if accept else "rejected by operator; record closed",
+            at=timestamp,
+        )
+        row = connection.execute("SELECT * FROM checkins WHERE id=?", (checkin_id,)).fetchone()
+    return _row_to_record(row)
+
+
+def evaluate_overdue(reference: datetime | None = None) -> list[dict[str, Any]]:
+    """Move silent workers to overdue. Returns the records that just changed."""
+    reference = reference or datetime.now(TZ)
+    timestamp = reference.isoformat()
+    changed: list[dict[str, Any]] = []
+
+    with _LOCK, _session() as connection:
+        rows = connection.execute(
+            "SELECT * FROM checkins WHERE status IN (?,?)", (STATUS_ON_SITE, STATUS_PROVISIONAL)
+        ).fetchall()
+        for row in rows:
+            deadline = datetime.fromisoformat(row["last_heard"]) + timedelta(
+                minutes=row["overdue_after_minutes"]
+            )
+            if reference < deadline:
+                continue
+            connection.execute(
+                "UPDATE checkins SET status=? WHERE id=?", (STATUS_OVERDUE, row["id"])
+            )
+            silent = int((reference - datetime.fromisoformat(row["last_heard"])).total_seconds() // 60)
+            _append_event(
+                connection,
+                checkin_id=row["id"],
+                actor="northstar-monitor",
+                event="overdue",
+                site=row["site"],
+                worker=row["name"],
+                prior_status=row["status"],
+                new_status=STATUS_OVERDUE,
+                details=(
+                    f"no contact for {silent} min"
+                    f" (limit {row['overdue_after_minutes']} min; alone={bool(row['alone'])})"
+                ),
+                at=timestamp,
+            )
+            changed.append(_row_to_record(row, reference) | {"status": STATUS_OVERDUE, "overdue": True})
+    return changed
+
+
+def history(checkin_id: str | None = None, limit: int = 250) -> list[dict[str, Any]]:
+    limit = max(1, min(limit, 1000))
+    with _LOCK, _session() as connection:
+        if checkin_id:
+            rows = connection.execute(
+                "SELECT * FROM checkin_events WHERE checkin_id=? ORDER BY seq DESC LIMIT ?",
+                (checkin_id, limit),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                "SELECT * FROM checkin_events ORDER BY seq DESC LIMIT ?", (limit,)
+            ).fetchall()
+    return [
+        {
+            "seq": row["seq"],
+            "checkinId": row["checkin_id"],
+            "at": row["at"],
+            "actor": row["actor"],
+            "event": row["event"],
+            "site": row["site"],
+            "worker": row["worker"],
+            "priorStatus": row["prior_status"],
+            "newStatus": row["new_status"],
+            "priorHelpState": row["prior_help_state"],
+            "newHelpState": row["new_help_state"],
+            "details": row["details"],
+        }
+        for row in rows
+    ]
+
+
+def operational_summary(reference: datetime | None = None) -> dict[str, Any]:
+    """Small, read-only status snapshot for watchdog and support diagnostics."""
+    reference = reference or datetime.now(TZ)
+    with _LOCK, _session() as connection:
+        integrity = connection.execute("PRAGMA quick_check(1)").fetchone()[0]
+        counts = connection.execute(
+            "SELECT"
+            " SUM(CASE WHEN status IN ('on-site','overdue','provisional') THEN 1 ELSE 0 END)"
+            " AS active_checkins,"
+            " SUM(CASE WHEN status='overdue' THEN 1 ELSE 0 END) AS overdue_checkins,"
+            " SUM(CASE WHEN help_state IN ('requested','acknowledged') THEN 1 ELSE 0 END)"
+            " AS open_help FROM checkins"
+        ).fetchone()
+        open_outages = connection.execute(
+            "SELECT COUNT(*) FROM outages WHERE status='Open'"
+        ).fetchone()[0]
+        open_alerts = connection.execute(
+            "SELECT COUNT(*) FROM alerts WHERE state IN ('active','acknowledged')"
+        ).fetchone()[0]
+
+    backups = sorted(BACKUP_DIR.glob("northstar-*.db")) if BACKUP_DIR.exists() else []
+    backup_at = None
+    backup_age_minutes = None
+    if backups:
+        modified = datetime.fromtimestamp(backups[-1].stat().st_mtime, TZ)
+        backup_at = modified.isoformat()
+        backup_age_minutes = max(0, int((reference - modified).total_seconds() // 60))
+    return {
+        "ok": integrity == "ok",
+        "integrity": integrity,
+        "activeCheckins": int(counts["active_checkins"] or 0),
+        "overdueCheckins": int(counts["overdue_checkins"] or 0),
+        "openHelpRequests": int(counts["open_help"] or 0),
+        "openOutages": int(open_outages),
+        "openPriceAlerts": int(open_alerts),
+        "lastBackupAt": backup_at,
+        "backupAgeMinutes": backup_age_minutes,
+        "backupMirrorConfigured": bool(BACKUP_MIRROR),
+    }
+
+
+def _unique_id(connection: sqlite3.Connection, table: str, prefix: str) -> str:
+    record_id = f"{prefix}-{int(datetime.now(TZ).timestamp() * 1000)}"
+    while connection.execute(f"SELECT 1 FROM {table} WHERE id=?", (record_id,)).fetchone():
+        record_id += "x"
+    return record_id
+
+
+def add_logbook_entry(
+    entry_type: str, subject: str, details: str = "", source: str = "operator"
+) -> dict[str, Any]:
+    """Append a logbook entry. The logbook is append-only; nothing edits or deletes."""
+    timestamp = now_iso()
+    with _LOCK, _session() as connection:
+        record_id = _unique_id(connection, "logbook", "event")
+        connection.execute(
+            "INSERT INTO logbook (id, at, type, subject, details, source) VALUES (?,?,?,?,?,?)",
+            (record_id, timestamp, entry_type[:60], subject[:160], details[:4000], source[:40]),
+        )
+    return {
+        "id": record_id,
+        "type": entry_type[:60],
+        "subject": subject[:160],
+        "details": details[:4000],
+        "source": source[:40],
+        "timestamp": timestamp,
+    }
+
+
+def list_logbook(limit: int = 250) -> list[dict[str, Any]]:
+    limit = max(1, min(limit, 1000))
+    with _LOCK, _session() as connection:
+        rows = connection.execute(
+            "SELECT * FROM logbook ORDER BY at DESC, id DESC LIMIT ?", (limit,)
+        ).fetchall()
+    return [
+        {
+            "id": row["id"],
+            "type": row["type"],
+            "subject": row["subject"],
+            "details": row["details"],
+            "source": row["source"],
+            "timestamp": row["at"],
+        }
+        for row in rows
+    ]
+
+
+def _switching_clip(value: Any, limit: int) -> str:
+    return str(value or "").strip()[:limit]
+
+
+def _switching_file_records(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    records: list[dict[str, Any]] = []
+    for item in value[:50]:
+        if not isinstance(item, dict):
+            continue
+        try:
+            size = max(0, min(int(item.get("size", 0) or 0), 25 * 1024 * 1024))
+        except (TypeError, ValueError):
+            size = 0
+        records.append(
+            {
+                "name": _switching_clip(item.get("name"), 255),
+                "size": size,
+                "type": _switching_clip(item.get("type"), 120),
+                "lastModified": _switching_clip(item.get("lastModified"), 80),
+            }
+        )
+    return [record for record in records if record["name"]]
+
+
+def _switching_rows(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    rows: list[dict[str, str]] = []
+    for item in value[:100]:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                "first": _switching_clip(item.get("first"), 240),
+                "second": _switching_clip(item.get("second"), 2000),
+            }
+        )
+    return rows
+
+
+def _normalise_switching_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    checks = payload.get("checks", {})
+    if not isinstance(checks, dict):
+        checks = {}
+    source_manifest_digest = _switching_clip(payload.get("sourceManifestDigest"), 64).lower()
+    if source_manifest_digest and (
+        len(source_manifest_digest) != 64
+        or any(character not in "0123456789abcdef" for character in source_manifest_digest)
+    ):
+        raise ValueError("source manifest digest must be a SHA-256 hex value")
+    result = {
+        "packageName": _switching_clip(payload.get("packageName"), 160),
+        "site": _switching_clip(payload.get("site"), 120),
+        "asset": _switching_clip(payload.get("asset"), 160),
+        "canonicalAssetId": _switching_clip(payload.get("canonicalAssetId"), 160),
+        "topologySnapshotId": _switching_clip(payload.get("topologySnapshotId"), 160),
+        "topologyRevision": _switching_clip(payload.get("topologyRevision"), 160),
+        "revision": _switching_clip(payload.get("revision"), 120),
+        "ruleSet": _switching_clip(payload.get("ruleSet"), 160),
+        "authorityProcedureId": _switching_clip(payload.get("authorityProcedureId"), 160),
+        "authorityProcedureRevision": _switching_clip(payload.get("authorityProcedureRevision"), 160),
+        "qualificationEvidenceRef": _switching_clip(payload.get("qualificationEvidenceRef"), 240),
+        "sourceManifestDigest": source_manifest_digest,
+        "scope": _switching_clip(payload.get("scope"), 4000),
+        "diagrams": _switching_file_records(payload.get("diagrams")),
+        "ruleSources": _switching_file_records(payload.get("ruleSources")),
+        "isolation": _switching_rows(payload.get("isolation")),
+        "sequence": _switching_rows(payload.get("sequence")),
+        "verification": _switching_rows(payload.get("verification")),
+        "permission": _switching_rows(payload.get("permission")),
+        "restoration": _switching_rows(payload.get("restoration")),
+        "reviewerName": _switching_clip(payload.get("reviewerName"), 160),
+        "reviewerRole": _switching_clip(payload.get("reviewerRole"), 240),
+        "reviewComments": _switching_clip(payload.get("reviewComments"), 4000),
+        "checks": {key: bool(checks.get(key)) for key in SWITCHING_REVIEW_CHECKS},
+    }
+    encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
+    if len(encoded.encode("utf-8")) > 50 * 1024:
+        raise ValueError("switching draft metadata exceeds 50 KB")
+    return result
+
+
+def _switching_validation_errors(payload: dict[str, Any]) -> list[str]:
+    errors = []
+    for key, label in (
+        ("packageName", "package name"),
+        ("site", "site"),
+        ("asset", "circuit or asset"),
+        ("canonicalAssetId", "canonical asset ID"),
+        ("topologySnapshotId", "topology snapshot ID"),
+        ("topologyRevision", "topology revision"),
+        ("revision", "diagram revision"),
+        ("ruleSet", "UWPC/EUSR rule set"),
+        ("authorityProcedureId", "authority procedure ID"),
+        ("authorityProcedureRevision", "authority procedure revision"),
+        ("qualificationEvidenceRef", "qualification evidence reference"),
+        ("scope", "work scope"),
+    ):
+        if not str(payload.get(key, "")).strip():
+            errors.append(label)
+    if not payload.get("diagrams"):
+        errors.append("circuit diagram source")
+    if not payload.get("ruleSources"):
+        errors.append("governing rule/procedure source")
+    if not payload.get("sourceManifestDigest"):
+        errors.append("source manifest digest")
+    for key, label in (
+        ("isolation", "isolation review rows"),
+        ("sequence", "sequence/checkback rows"),
+        ("verification", "verification rows"),
+        ("permission", "safe-work permission rows"),
+        ("restoration", "restoration/closeout rows"),
+    ):
+        rows = payload.get(key) or []
+        if not rows or any(not row["first"].strip() or not row["second"].strip() for row in rows):
+            errors.append(label)
+    return errors
+
+
+def _append_switching_event(
+    connection: sqlite3.Connection,
+    *,
+    draft_id: str,
+    actor: str,
+    event: str,
+    prior_status: str | None,
+    new_status: str | None,
+    details: str = "",
+    at: str | None = None,
+) -> None:
+    connection.execute(
+        "INSERT INTO switching_draft_events"
+        " (draft_id, at, actor, event, prior_status, new_status, details)"
+        " VALUES (?,?,?,?,?,?,?)",
+        (
+            draft_id,
+            at or now_iso(),
+            _switching_clip(actor, 80) or "operator",
+            _switching_clip(event, 80),
+            prior_status,
+            new_status,
+            _switching_clip(details, 4000),
+        ),
+    )
+
+
+def _switching_history_from_connection(
+    connection: sqlite3.Connection, draft_id: str, limit: int = 250
+) -> list[dict[str, Any]]:
+    rows = connection.execute(
+        "SELECT * FROM switching_draft_events WHERE draft_id=? ORDER BY seq DESC LIMIT ?",
+        (draft_id, max(1, min(limit, 1000))),
+    ).fetchall()
+    return [
+        {
+            "seq": row["seq"],
+            "at": row["at"],
+            "actor": row["actor"],
+            "event": row["event"],
+            "priorStatus": row["prior_status"],
+            "newStatus": row["new_status"],
+            "details": row["details"],
+        }
+        for row in rows
+    ]
+
+
+def _switching_record(
+    row: sqlite3.Row, audit: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    try:
+        payload = json.loads(row["payload"] or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+    record = dict(payload) if isinstance(payload, dict) else {}
+    record.update(
+        {
+            "id": row["id"],
+            "packageName": row["package_name"],
+            "site": row["site"],
+            "asset": row["asset"],
+            "revision": row["diagram_revision"],
+            "ruleSet": row["rule_set"],
+            "scope": row["work_scope"],
+            "status": row["status"],
+            "version": row["record_version"],
+            "createdAt": row["created_at"],
+            "updatedAt": row["updated_at"],
+            "createdBy": row["created_by"],
+            "reviewerName": row["reviewer_name"],
+            "reviewerRole": row["reviewer_role"],
+            "reviewComments": row["review_comments"],
+            "reviewedAt": row["reviewed_at"],
+            "reviewedBy": row["reviewed_by"],
+        }
+    )
+    if audit is not None:
+        record["audit"] = audit
+    return record
+
+
+def create_switching_draft(payload: dict[str, Any], actor: str = "operator") -> dict[str, Any]:
+    data = _normalise_switching_payload(payload)
+    timestamp = now_iso()
+    actor = _switching_clip(actor, 80) or "operator"
+    with _LOCK, _session() as connection:
+        record_id = _unique_id(connection, "switching_drafts", "switching")
+        connection.execute(
+            "INSERT INTO switching_drafts"
+            " (id, package_name, site, asset, diagram_revision, rule_set, work_scope, status, record_version, payload, created_at, updated_at, created_by)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                record_id,
+                data["packageName"],
+                data["site"],
+                data["asset"],
+                data["revision"],
+                data["ruleSet"],
+                data["scope"],
+                SWITCHING_DRAFT,
+                1,
+                json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+                timestamp,
+                timestamp,
+                actor,
+            ),
+        )
+        _append_switching_event(
+            connection,
+            draft_id=record_id,
+            actor=actor,
+            event="created",
+            prior_status=None,
+            new_status=SWITCHING_DRAFT,
+            details="draft package created; no operational release",
+            at=timestamp,
+        )
+    return get_switching_draft(record_id)  # type: ignore[return-value]
+
+
+def _switching_expected_version(payload: dict[str, Any]) -> int | None:
+    value = payload.get("version")
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        raise ValueError("draft version must be an integer")
+    try:
+        version = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("draft version must be an integer") from exc
+    if version < 1:
+        raise ValueError("draft version must be positive")
+    return version
+
+
+def save_switching_draft(
+    draft_id: str, payload: dict[str, Any], actor: str = "operator"
+) -> dict[str, Any] | None:
+    actor = _switching_clip(actor, 80) or "operator"
+    expected_version = _switching_expected_version(payload)
+    with _LOCK, _session() as connection:
+        row = connection.execute(
+            "SELECT * FROM switching_drafts WHERE id=?", (draft_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        if row["status"] == SWITCHING_REVIEWED:
+            raise ValueError("reviewed packages are immutable; start a new revision")
+        if expected_version is not None and expected_version != row["record_version"]:
+            raise SwitchingConflict(
+                f"stale draft version; server is at version {row['record_version']}"
+            )
+        try:
+            existing = json.loads(row["payload"] or "{}")
+        except json.JSONDecodeError:
+            existing = {}
+        merged = {**(existing if isinstance(existing, dict) else {}), **payload}
+        data = _normalise_switching_payload(merged)
+        timestamp = now_iso()
+        prior_status = row["status"]
+        new_status = SWITCHING_DRAFT if prior_status == SWITCHING_READY else prior_status
+        new_version = row["record_version"] + 1
+        connection.execute(
+            "UPDATE switching_drafts SET package_name=?, site=?, asset=?, diagram_revision=?, rule_set=?, work_scope=?, status=?, record_version=?, payload=?, updated_at=? WHERE id=?",
+            (
+                data["packageName"],
+                data["site"],
+                data["asset"],
+                data["revision"],
+                data["ruleSet"],
+                data["scope"],
+                new_status,
+                new_version,
+                json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+                timestamp,
+                draft_id,
+            ),
+        )
+        _append_switching_event(
+            connection,
+            draft_id=draft_id,
+            actor=actor,
+            event="updated",
+            prior_status=prior_status,
+            new_status=new_status,
+            details="draft metadata saved; ready status is cleared when content changes",
+            at=timestamp,
+        )
+    return get_switching_draft(draft_id)
+
+
+def mark_switching_draft_ready(
+    draft_id: str, actor: str = "operator", expected_version: int | str | None = None
+) -> dict[str, Any] | None:
+    actor = _switching_clip(actor, 80) or "operator"
+    if expected_version is not None:
+        expected_version = _switching_expected_version({"version": expected_version})
+    with _LOCK, _session() as connection:
+        row = connection.execute(
+            "SELECT * FROM switching_drafts WHERE id=?", (draft_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        if expected_version is not None and expected_version != row["record_version"]:
+            raise SwitchingConflict(
+                f"stale draft version; server is at version {row['record_version']}"
+            )
+        if row["status"] == SWITCHING_REVIEWED:
+            raise ValueError("reviewed packages are immutable")
+        if row["status"] == SWITCHING_READY:
+            return _switching_record(row, _switching_history_from_connection(connection, draft_id))
+        try:
+            data = json.loads(row["payload"] or "{}")
+        except json.JSONDecodeError:
+            data = {}
+        errors = _switching_validation_errors(data if isinstance(data, dict) else {})
+        if errors:
+            raise ValueError("not ready: " + ", ".join(errors))
+        timestamp = now_iso()
+        new_version = row["record_version"] + 1
+        connection.execute(
+            "UPDATE switching_drafts SET status=?, record_version=?, updated_at=? WHERE id=?",
+            (SWITCHING_READY, new_version, timestamp, draft_id),
+        )
+        _append_switching_event(
+            connection,
+            draft_id=draft_id,
+            actor=actor,
+            event="ready-for-review",
+            prior_status=row["status"],
+            new_status=SWITCHING_READY,
+            details="all source and draft-form gates passed; qualified review required",
+            at=timestamp,
+        )
+    return get_switching_draft(draft_id)
+
+
+def record_switching_review(
+    draft_id: str, payload: dict[str, Any], actor: str = "operator"
+) -> dict[str, Any] | None:
+    actor = _switching_clip(actor, 80) or "operator"
+    expected_version = _switching_expected_version(payload)
+    with _LOCK, _session() as connection:
+        row = connection.execute(
+            "SELECT * FROM switching_drafts WHERE id=?", (draft_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        if expected_version is not None and expected_version != row["record_version"]:
+            raise SwitchingConflict(
+                f"stale draft version; server is at version {row['record_version']}"
+            )
+        if row["status"] != SWITCHING_READY:
+            raise ValueError("package must be ready for qualified review")
+        checks = payload.get("checks", {})
+        checks = checks if isinstance(checks, dict) else {}
+        if not all(bool(checks.get(key)) for key in SWITCHING_REVIEW_CHECKS):
+            raise ValueError("all qualified-person review checks are required")
+        reviewer_name = _switching_clip(payload.get("reviewerName"), 160)
+        reviewer_role = _switching_clip(payload.get("reviewerRole"), 240)
+        review_comments = _switching_clip(payload.get("reviewComments"), 4000)
+        if not reviewer_name or not reviewer_role or not review_comments:
+            raise ValueError("reviewer name, role/authorization, and comments are required")
+        try:
+            existing = json.loads(row["payload"] or "{}")
+        except json.JSONDecodeError:
+            existing = {}
+        data = _normalise_switching_payload(
+            {
+                **(existing if isinstance(existing, dict) else {}),
+                "checks": checks,
+                "reviewerName": reviewer_name,
+                "reviewerRole": reviewer_role,
+                "reviewComments": review_comments,
+            }
+        )
+        timestamp = now_iso()
+        new_version = row["record_version"] + 1
+        connection.execute(
+            "UPDATE switching_drafts SET status=?, record_version=?, payload=?, reviewer_name=?, reviewer_role=?, review_comments=?, reviewed_at=?, reviewed_by=?, updated_at=? WHERE id=?",
+            (
+                SWITCHING_REVIEWED,
+                new_version,
+                json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+                reviewer_name,
+                reviewer_role,
+                review_comments,
+                timestamp,
+                actor,
+                timestamp,
+                draft_id,
+            ),
+        )
+        _append_switching_event(
+            connection,
+            draft_id=draft_id,
+            actor=actor,
+            event="review-recorded",
+            prior_status=row["status"],
+            new_status=SWITCHING_REVIEWED,
+            details="review recorded; operational release remains blocked",
+            at=timestamp,
+        )
+    return get_switching_draft(draft_id)
+
+
+def get_switching_draft(draft_id: str) -> dict[str, Any] | None:
+    with _LOCK, _session() as connection:
+        row = connection.execute(
+            "SELECT * FROM switching_drafts WHERE id=?", (draft_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return _switching_record(row, _switching_history_from_connection(connection, draft_id))
+
+
+def get_switching_review_evidence(draft_id: str) -> dict[str, Any] | None:
+    """Return the dashboard's Packet 13-compatible immutable review projection.
+
+    This is evidence only: it deliberately exposes no approval, certification,
+    release, or equipment-command capability.
+    """
+    with _LOCK, _session() as connection:
+        row = connection.execute(
+            "SELECT * FROM switching_drafts WHERE id=?", (draft_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        record = _switching_record(row, _switching_history_from_connection(connection, draft_id))
+    return {
+        "packet": "13",
+        "evidenceType": "UWPC_EUSR_REVIEW_EVIDENCE",
+        "draftId": record["id"],
+        "status": record["status"],
+        "terminalNonRelease": record["status"] == SWITCHING_REVIEWED,
+        "sourceManifestDigest": record.get("sourceManifestDigest", ""),
+        "authorityProcedureId": record.get("authorityProcedureId", ""),
+        "authorityProcedureRevision": record.get("authorityProcedureRevision", ""),
+        "qualificationEvidenceRef": record.get("qualificationEvidenceRef", ""),
+        "canonicalAssetId": record.get("canonicalAssetId", ""),
+        "topologySnapshotId": record.get("topologySnapshotId", ""),
+        "topologyRevision": record.get("topologyRevision", ""),
+        "reviewerName": record.get("reviewerName", ""),
+        "reviewerRole": record.get("reviewerRole", ""),
+        "reviewComments": record.get("reviewComments", ""),
+        "reviewedAt": record.get("reviewedAt"),
+        "reviewedBy": record.get("reviewedBy"),
+        "audit": record.get("audit", []),
+    }
+
+
+def list_switching_drafts(status: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+    limit = max(1, min(limit, 500))
+    with _LOCK, _session() as connection:
+        if status in (SWITCHING_DRAFT, SWITCHING_READY, SWITCHING_REVIEWED):
+            rows = connection.execute(
+                "SELECT * FROM switching_drafts WHERE status=? ORDER BY updated_at DESC, id DESC LIMIT ?",
+                (status, limit),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                "SELECT * FROM switching_drafts ORDER BY updated_at DESC, id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+    return [_switching_record(row) for row in rows]
+
+
+def _append_outage_event(
+    connection: sqlite3.Connection,
+    *,
+    outage_id: str,
+    actor: str,
+    event: str,
+    site: str,
+    prior_status: str | None,
+    new_status: str | None,
+    details: str = "",
+    at: str | None = None,
+) -> None:
+    connection.execute(
+        "INSERT INTO outage_events"
+        " (outage_id, at, actor, event, site, prior_status, new_status, details)"
+        " VALUES (?,?,?,?,?,?,?,?)",
+        (
+            outage_id,
+            at or now_iso(),
+            actor[:80],
+            event[:60],
+            site[:80],
+            prior_status,
+            new_status,
+            details[:2000],
+        ),
+    )
+
+
+def create_outage(payload: dict[str, Any], actor: str = "operator") -> dict[str, Any]:
+    """Open an outage record. Raises ValueError when the title is missing."""
+    title = str(payload.get("title", "")).strip()[:160]
+    if not title:
+        raise ValueError("title is required")
+    outage_type = str(payload.get("type", "Unplanned")).strip().title()
+    if outage_type not in {"Planned", "Unplanned"}:
+        outage_type = "Unplanned"
+    asset = str(payload.get("asset", "")).strip()[:160]
+    timestamp = now_iso()
+    actor = actor.strip()[:80] or "operator"
+    with _LOCK, _session() as connection:
+        record_id = _unique_id(connection, "outages", "outage")
+        connection.execute(
+            "INSERT INTO outages"
+            " (id, title, asset, site, severity, outage_type, details, status, opened_at, opened_by)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (
+                record_id,
+                title,
+                asset,
+                str(payload.get("site", "System / transmission")).strip()[:80],
+                str(payload.get("severity", "Monitor")).strip()[:30],
+                outage_type,
+                str(payload.get("details", "")).strip()[:4000],
+                "Open",
+                timestamp,
+                actor,
+            ),
+        )
+        _append_outage_event(
+            connection,
+            outage_id=record_id,
+            actor=actor,
+            event="opened",
+            site=str(payload.get("site", "System / transmission")).strip()[:80],
+            prior_status=None,
+            new_status="Open",
+            details=str(payload.get("details", "")).strip(),
+            at=timestamp,
+        )
+        row = connection.execute("SELECT * FROM outages WHERE id=?", (record_id,)).fetchone()
+    return _outage_record(row)
+
+
+def _outage_record(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "asset": row["asset"],
+        "site": row["site"],
+        "severity": row["severity"],
+        "type": row["outage_type"],
+        "details": row["details"],
+        "status": row["status"],
+        "openedAt": row["opened_at"],
+        "openedBy": row["opened_by"],
+        "closedAt": row["closed_at"],
+        "closedBy": row["closed_by"],
+    }
+
+
+def list_outages() -> list[dict[str, Any]]:
+    with _LOCK, _session() as connection:
+        rows = connection.execute("SELECT * FROM outages ORDER BY opened_at DESC, id DESC").fetchall()
+    return [_outage_record(row) for row in rows]
+
+
+def get_outage(outage_id: str) -> dict[str, Any] | None:
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM outages WHERE id=?", (outage_id,)).fetchone()
+    return _outage_record(row) if row else None
+
+
+def close_outage(
+    outage_id: str, actor: str = "operator", details: str = ""
+) -> dict[str, Any] | None:
+    """Close an outage. The record is retained; closing twice is a no-op."""
+    actor = actor.strip()[:80] or "operator"
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM outages WHERE id=?", (outage_id,)).fetchone()
+        if row is None:
+            return None
+        if row["status"] != "Closed":
+            timestamp = now_iso()
+            connection.execute(
+                "UPDATE outages SET status='Closed', closed_at=?, closed_by=? WHERE id=?",
+                (timestamp, actor, outage_id),
+            )
+            _append_outage_event(
+                connection,
+                outage_id=outage_id,
+                actor=actor,
+                event="closed",
+                site=row["site"],
+                prior_status=row["status"],
+                new_status="Closed",
+                details=details or "outage marked closed",
+                at=timestamp,
+            )
+            row = connection.execute("SELECT * FROM outages WHERE id=?", (outage_id,)).fetchone()
+    return _outage_record(row)
+
+
+def outage_history(outage_id: str | None = None, limit: int = 250) -> list[dict[str, Any]]:
+    limit = max(1, min(limit, 1000))
+    with _LOCK, _session() as connection:
+        if outage_id:
+            rows = connection.execute(
+                "SELECT * FROM outage_events WHERE outage_id=? ORDER BY seq DESC LIMIT ?",
+                (outage_id, limit),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                "SELECT * FROM outage_events ORDER BY seq DESC LIMIT ?", (limit,)
+            ).fetchall()
+    return [
+        {
+            "seq": row["seq"],
+            "outageId": row["outage_id"],
+            "at": row["at"],
+            "actor": row["actor"],
+            "event": row["event"],
+            "site": row["site"],
+            "priorStatus": row["prior_status"],
+            "newStatus": row["new_status"],
+            "details": row["details"],
+        }
+        for row in rows
+    ]
+
+
+def set_alert_setting(payload: dict[str, Any]) -> dict[str, Any]:
+    """Upsert one node's alert thresholds. Raises ValueError on an unusable setting."""
+    node = str(payload.get("node", "")).strip()[:40]
+    if not node:
+        raise ValueError("node is required")
+
+    def limit(key: str) -> float | None:
+        value = payload.get(key)
+        if value is None or value == "":
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{key} must be a number or empty") from None
+
+    low, high = limit("low"), limit("high")
+    # Overlapping limits would leave the node permanently in alarm on both
+    # sides, so the setting is rejected rather than saved and left to misfire.
+    if low is not None and high is not None and low >= high:
+        raise ValueError("low must be below high")
+
+    record = {
+        "node": node,
+        "low": low,
+        "high": high,
+        "actions": payload.get("actions", []),
+        "enabled": bool(payload.get("enabled", True)),
+        "updatedAt": now_iso(),
+    }
+    with _LOCK, _session() as connection:
+        connection.execute(
+            "INSERT INTO alert_settings (node, low, high, actions, enabled, updated_at)"
+            " VALUES (?,?,?,?,?,?) ON CONFLICT(node) DO UPDATE SET"
+            " low=excluded.low, high=excluded.high, actions=excluded.actions,"
+            " enabled=excluded.enabled, updated_at=excluded.updated_at",
+            (
+                node,
+                record["low"],
+                record["high"],
+                json.dumps(record["actions"]),
+                int(record["enabled"]),
+                record["updatedAt"],
+            ),
+        )
+    return record
+
+
+def _alert_record(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "node": row["node"],
+        "kind": row["kind"],
+        "threshold": row["threshold"],
+        "state": row["state"],
+        "openedAt": row["opened_at"],
+        "openingPrice": row["opening_price"],
+        # The dashboard banner reads `price`; it is the latest observed value,
+        # not the value at the moment the alarm was raised.
+        "price": row["last_price"],
+        "lastSeen": row["last_seen"],
+        "peakPrice": row["peak_price"],
+        "acknowledgedAt": row["acknowledged_at"],
+        "acknowledgedBy": row["acknowledged_by"],
+        "resolvedAt": row["resolved_at"],
+        "resolvedPrice": row["resolved_price"],
+        "actions": json.loads(row["actions"]),
+    }
+
+
+def _append_alert_event(
+    connection: sqlite3.Connection,
+    *,
+    alert_id: str,
+    actor: str,
+    event: str,
+    node: str,
+    prior_state: str | None,
+    new_state: str | None,
+    price: float | None = None,
+    details: str = "",
+    at: str | None = None,
+) -> None:
+    connection.execute(
+        "INSERT INTO alert_events"
+        " (alert_id, at, actor, event, node, prior_state, new_state, price, details)"
+        " VALUES (?,?,?,?,?,?,?,?,?)",
+        (alert_id, at or now_iso(), actor, event, node, prior_state, new_state, price, details[:2000]),
+    )
+
+
+def _breach_threshold(setting: dict[str, Any], kind: str) -> float | None:
+    """The configured limit for one side, or None when that side is not set."""
+    if not setting or not setting.get("enabled"):
+        return None
+    value = setting.get("high") if kind == "high" else setting.get("low")
+    return None if value is None else float(value)
+
+
+def _still_breaching(kind: str, price: float, threshold: float) -> bool:
+    """True while the excursion continues, using the recovery margin as hysteresis."""
+    if kind == "high":
+        return price > threshold - ALERT_RECOVERY_MARGIN
+    return price < threshold + ALERT_RECOVERY_MARGIN
+
+
+def evaluate_price_alerts(
+    prices: dict[str, float | None], reference: datetime | None = None
+) -> dict[str, list[dict[str, Any]]]:
+    """Compare live prices against the stored thresholds and move alert state.
+
+    Runs on the server against every market refresh, so an excursion is caught
+    and recorded whether or not anyone has the dashboard open. Returns the
+    alerts that changed state on this pass: ``{"raised": [...], "resolved": [...]}``.
+
+    An alert is raised the moment the price touches the limit and only resolves
+    once it is back inside by ``ALERT_RECOVERY_MARGIN``. Acknowledging does not
+    resolve — the operator confirms they have seen it, the data decides when the
+    condition is over. Nothing is ever deleted; each transition appends an event.
+    """
+    reference = reference or datetime.now(TZ)
+    timestamp = reference.isoformat()
+    raised: list[dict[str, Any]] = []
+    resolved: list[dict[str, Any]] = []
+
+    with _LOCK, _session() as connection:
+        settings = {
+            row["node"]: {
+                "low": row["low"],
+                "high": row["high"],
+                "actions": json.loads(row["actions"]),
+                "enabled": bool(row["enabled"]),
+            }
+            for row in connection.execute("SELECT * FROM alert_settings").fetchall()
+        }
+        placeholders = ",".join("?" for _ in ALERT_OPEN_STATES)
+        open_rows = connection.execute(
+            f"SELECT * FROM alerts WHERE state IN ({placeholders})", ALERT_OPEN_STATES
+        ).fetchall()
+
+        # Close first, so a threshold edited mid-excursion can re-raise against
+        # the new limit on this same pass rather than waiting for the next one.
+        still_open: set[tuple[str, str]] = set()
+        for row in open_rows:
+            node, kind = row["node"], row["kind"]
+            price = prices.get(node)
+            threshold = _breach_threshold(settings.get(node, {}), kind)
+
+            if threshold is None:
+                reason = "alerting disabled or threshold cleared for this node"
+            elif threshold != row["threshold"]:
+                reason = f"threshold changed from {row['threshold']} to {threshold}"
+            elif price is None:
+                # No price this pass. Hold the alarm rather than clearing it on
+                # missing data: a dead feed is not a recovery.
+                still_open.add((node, kind))
+                continue
+            elif _still_breaching(kind, float(price), float(row["threshold"])):
+                peak = (
+                    max(row["peak_price"], float(price))
+                    if kind == "high"
+                    else min(row["peak_price"], float(price))
+                )
+                connection.execute(
+                    "UPDATE alerts SET last_price=?, last_seen=?, peak_price=? WHERE id=?",
+                    (float(price), timestamp, peak, row["id"]),
+                )
+                still_open.add((node, kind))
+                continue
+            else:
+                reason = f"price returned inside the limit (margin {ALERT_RECOVERY_MARGIN})"
+
+            connection.execute(
+                "UPDATE alerts SET state=?, resolved_at=?, resolved_price=?,"
+                " last_price=COALESCE(?, last_price), last_seen=? WHERE id=?",
+                (ALERT_RESOLVED, timestamp, price, price, timestamp, row["id"]),
+            )
+            _append_alert_event(
+                connection,
+                alert_id=row["id"],
+                actor="northstar-monitor",
+                event="resolved",
+                node=node,
+                prior_state=row["state"],
+                new_state=ALERT_RESOLVED,
+                price=price,
+                details=reason,
+                at=timestamp,
+            )
+            closed = connection.execute("SELECT * FROM alerts WHERE id=?", (row["id"],)).fetchone()
+            resolved.append(_alert_record(closed))
+
+        for node, price in prices.items():
+            if price is None:
+                continue
+            setting = settings.get(node, {})
+            for kind in ("high", "low"):
+                threshold = _breach_threshold(setting, kind)
+                if threshold is None or (node, kind) in still_open:
+                    continue
+                breaching = price >= threshold if kind == "high" else price <= threshold
+                if not breaching:
+                    continue
+                alert_id = _unique_id(connection, "alerts", "alert")
+                actions = json.dumps(setting.get("actions", []))
+                connection.execute(
+                    "INSERT INTO alerts (id, node, kind, threshold, state, opened_at,"
+                    " opening_price, last_price, last_seen, peak_price, actions)"
+                    " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        alert_id,
+                        node,
+                        kind,
+                        threshold,
+                        ALERT_ACTIVE,
+                        timestamp,
+                        float(price),
+                        float(price),
+                        timestamp,
+                        float(price),
+                        actions,
+                    ),
+                )
+                _append_alert_event(
+                    connection,
+                    alert_id=alert_id,
+                    actor="northstar-monitor",
+                    event="raised",
+                    node=node,
+                    prior_state=None,
+                    new_state=ALERT_ACTIVE,
+                    price=float(price),
+                    details=f"{kind} limit {threshold} reached at {price}",
+                    at=timestamp,
+                )
+                still_open.add((node, kind))
+                row = connection.execute("SELECT * FROM alerts WHERE id=?", (alert_id,)).fetchone()
+                raised.append(_alert_record(row))
+
+    return {"raised": raised, "resolved": resolved}
+
+
+def acknowledge_alert(alert_id: str, actor: str = "operator") -> dict[str, Any] | None:
+    """Record that an operator has seen an alarm.
+
+    Silences it without ending it: the record stays open until the price
+    recovers. Acknowledging anything not currently active is a no-op, so a
+    double-click cannot rewrite the first acknowledgement.
+    """
+    timestamp = now_iso()
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM alerts WHERE id=?", (alert_id,)).fetchone()
+        if row is None:
+            return None
+        if row["state"] != ALERT_ACTIVE:
+            return _alert_record(row)
+        connection.execute(
+            "UPDATE alerts SET state=?, acknowledged_at=?, acknowledged_by=? WHERE id=?",
+            (ALERT_ACKNOWLEDGED, timestamp, actor[:80], alert_id),
+        )
+        _append_alert_event(
+            connection,
+            alert_id=alert_id,
+            actor=actor[:80],
+            event="acknowledged",
+            node=row["node"],
+            prior_state=ALERT_ACTIVE,
+            new_state=ALERT_ACKNOWLEDGED,
+            price=row["last_price"],
+            details="operator acknowledged; condition still active",
+            at=timestamp,
+        )
+        row = connection.execute("SELECT * FROM alerts WHERE id=?", (alert_id,)).fetchone()
+    return _alert_record(row)
+
+
+def list_alerts(include_resolved: bool = False, limit: int = 250) -> list[dict[str, Any]]:
+    limit = max(1, min(limit, 1000))
+    with _LOCK, _session() as connection:
+        if include_resolved:
+            rows = connection.execute(
+                "SELECT * FROM alerts ORDER BY opened_at DESC, id DESC LIMIT ?", (limit,)
+            ).fetchall()
+        else:
+            placeholders = ",".join("?" for _ in ALERT_OPEN_STATES)
+            rows = connection.execute(
+                f"SELECT * FROM alerts WHERE state IN ({placeholders})"
+                " ORDER BY opened_at DESC, id DESC LIMIT ?",
+                (*ALERT_OPEN_STATES, limit),
+            ).fetchall()
+    return [_alert_record(row) for row in rows]
+
+
+def alert_history(alert_id: str | None = None, limit: int = 250) -> list[dict[str, Any]]:
+    limit = max(1, min(limit, 1000))
+    with _LOCK, _session() as connection:
+        if alert_id:
+            rows = connection.execute(
+                "SELECT * FROM alert_events WHERE alert_id=? ORDER BY seq DESC LIMIT ?",
+                (alert_id, limit),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                "SELECT * FROM alert_events ORDER BY seq DESC LIMIT ?", (limit,)
+            ).fetchall()
+    return [
+        {
+            "seq": row["seq"],
+            "alertId": row["alert_id"],
+            "at": row["at"],
+            "actor": row["actor"],
+            "event": row["event"],
+            "node": row["node"],
+            "priorState": row["prior_state"],
+            "newState": row["new_state"],
+            "price": row["price"],
+            "details": row["details"],
+        }
+        for row in rows
+    ]
+
+
+def list_alert_settings() -> dict[str, dict[str, Any]]:
+    with _LOCK, _session() as connection:
+        rows = connection.execute("SELECT * FROM alert_settings").fetchall()
+    return {
+        row["node"]: {
+            "node": row["node"],
+            "low": row["low"],
+            "high": row["high"],
+            "actions": json.loads(row["actions"]),
+            "enabled": bool(row["enabled"]),
+            "updatedAt": row["updated_at"],
+        }
+        for row in rows
+    }

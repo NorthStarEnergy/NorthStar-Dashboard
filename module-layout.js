@@ -14,6 +14,7 @@
  */
 (() => {
   const ZONES = [
+    { id: 'overview', container: '#overviewModules', item: '[data-overview-module]', step: [20, 20], min: [240, 120] },
     { id: 'staff',   container: '#staffGroups',     item: '.staff-group',  step: [20, 20], min: [180, 90] },
     { id: 'market',  container: '#nodeCards',       item: '.node-card',    step: [20, 20], min: [200, 120] },
     // Weather stations are a uniform set read at a glance, so they reorder but do

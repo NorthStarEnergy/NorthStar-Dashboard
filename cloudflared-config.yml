@@ -1,0 +1,42 @@
+# Northstar tunnel — northstarenergy.ca
+#
+# REFERENCE ONLY. The tunnel installed on 2026-08-11 is *remotely managed*: the
+# Windows service runs `tunnel run --token-file C:\ProgramData\cloudflared\token`,
+# so ingress comes from the Zero Trust dashboard, not from this file. Nothing
+# here is read at runtime. It documents the intended routing, and is what you
+# would install to C:\Users\Ryan1\.cloudflared\config.yml if the tunnel were ever
+# converted to locally managed (which needs a cert.pem from `tunnel login`).
+#
+# Tunnel:    c40ae859-c686-46b8-a3af-3a67e7b81c5a
+# Connector: 81d1b22b-da8b-4451-953d-77c8fc8fc6e3
+#
+# Both hostnames reach the same backend on localhost:4180. What separates them:
+#   ops.      — Cloudflare Access sits in front, injects Cf-Access-Jwt-Assertion
+#   checkin.  — public, no login; a contractor scans a placard and lands here
+#
+# The path allowlist is defence in depth. The real lock is the operator gate in
+# ieso_backend.py (NORTHSTAR_OPERATOR_GATE=access), which refuses the roster,
+# the QR tokens and the operational log when that header is absent.
+
+ingress:
+  # ---- Public worker surface -------------------------------------------------
+  # Only what a phone needs: the check-in page, its API calls, PWA assets.
+  # Deliberately admits /api/checkins/history, which the operator gate then
+  # refuses — Go's regexp has no negative lookahead, so the gate carries that
+  # case rather than the path pattern.
+  - hostname: checkin.northstarenergy.ca
+    path: ^/(contractor-checkin\.html|api/health|api/checkins(/.*)?|api/checkin-tokens/resolve|api/phone-verifications(/.*)?|manifest\.webmanifest|sw\.js|icons/.*|favicon\.(ico|png))$
+    service: http://localhost:4180
+
+  # Unmatched paths must not fall through to the dashboard HTML. On the
+  # dashboard-managed tunnel this is implicit: a request matching no public
+  # hostname rule gets 404 from cloudflared, so no explicit rule is needed there.
+  - hostname: checkin.northstarenergy.ca
+    service: http_status:404
+
+  # ---- Operator surface ------------------------------------------------------
+  # Access policy required on this hostname before it is reachable.
+  - hostname: ops.northstarenergy.ca
+    service: http://localhost:4180
+
+  - service: http_status:404

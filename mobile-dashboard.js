@@ -2,6 +2,8 @@
   const status = document.querySelector('#mobileFeedStatus');
   const summary = document.querySelector('#mobileSummary');
   const workers = document.querySelector('#mobileWorkers');
+  const overviewSummary = document.querySelector('#overviewTrackerSummary');
+  const overviewWorkers = document.querySelector('#overviewTrackerWorkers');
   if (!status || !summary || !workers) return;
 
   const esc = value => String(value ?? '').replace(/[<>&"]/g, char => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[char]));
@@ -11,11 +13,23 @@
     ? `<a target="_blank" rel="noopener" href="https://maps.google.com/?q=${Number(row.latitude)},${Number(row.longitude)}">${Number(row.latitude).toFixed(5)}, ${Number(row.longitude).toFixed(5)} ↗</a>`
     : '<span class="muted-note">NO CONSENTED GPS</span>';
 
+  function renderOverview(active, gps, help, overdue) {
+    if (!overviewSummary || !overviewWorkers) return;
+    overviewSummary.innerHTML = `<div><span>ACTIVE</span><b>${active.length}</b></div><div><span>GPS</span><b>${gps}/${active.length || 0}</b></div><div><span>HELP</span><b class="${help ? 'alert' : ''}">${help}</b></div><div><span>OVERDUE</span><b class="${overdue ? 'alert' : ''}">${overdue}</b></div>`;
+    const ordered = [...active].sort((a, b) => Number(Boolean(b.needsHelp)) - Number(Boolean(a.needsHelp)) || Number(Boolean(b.overdue)) - Number(Boolean(a.overdue)));
+    overviewWorkers.innerHTML = ordered.length ? ordered.slice(0, 6).map(row => {
+      const alert = row.needsHelp || row.overdue;
+      const state = row.needsHelp ? 'NEEDS HELP' : row.overdue ? 'OVERDUE' : String(row.status || 'ACTIVE').toUpperCase();
+      return `<article class="overview-tracker-worker ${alert ? 'alert' : ''}"><strong>${esc(row.name)}</strong><em>${state}</em><small>${esc(row.site)} · LAST ${time(row.lastHeard)} · ${location(row)}</small></article>`;
+    }).join('') : '<div class="muted-note">NO ACTIVE FIELD DEVICES</div>';
+  }
+
   function render(rows) {
     const active = rows.filter(row => row.status !== 'checked-out');
     const gps = active.filter(hasGps).length;
     const help = active.filter(row => row.needsHelp).length;
     const overdue = active.filter(row => row.overdue).length;
+    renderOverview(active, gps, help, overdue);
     summary.innerHTML = `<div><span>ACTIVE DEVICES</span><b>${active.length}</b></div><div><span>GPS SHARING</span><b>${gps}/${active.length || 0}</b></div><div><span>HELP</span><b class="${help ? 'mobile-danger' : ''}">${help}</b></div><div><span>OVERDUE</span><b class="${overdue ? 'mobile-danger' : ''}">${overdue}</b></div>`;
     workers.innerHTML = active.length ? active.map(row => `<article class="mobile-worker ${row.needsHelp || row.overdue ? 'mobile-worker-alert' : ''}"><div class="mobile-worker-head"><div><strong>${esc(row.name)}</strong><small>${esc(row.kind || 'Worker')} · ${esc(row.company || 'NorthStar')} · ${esc(row.site)}</small></div><b>${row.needsHelp ? 'NEEDS HELP' : row.overdue ? 'OVERDUE' : String(row.status || 'ACTIVE').toUpperCase()}</b></div><div class="mobile-worker-grid"><span><label>LAST HEARTBEAT</label>${time(row.lastHeard)}</span><span><label>GPS LOCATION</label>${location(row)}</span><span><label>SESSION</label>${row.expectedMinutes ? `${row.expectedMinutes} MIN EXPECTED` : 'NO DEADLINE'}</span><span><label>HELP STATE</label>${esc(row.helpState || 'NONE').toUpperCase()}</span></div><button class="mobile-history" data-history="${esc(row.id)}">VIEW RECENT HISTORY</button><div class="mobile-history-output" data-history-output="${esc(row.id)}" hidden></div></article>`).join('') : '<div class="muted-note">NO ACTIVE MOBILE WORKERS</div>';
     workers.querySelectorAll('[data-history]').forEach(button => button.onclick = async () => {
@@ -38,6 +52,7 @@
       render(await response.json());
       status.textContent = 'LIVE · REFRESH 30 SEC';
     } catch (error) {
+      if (overviewWorkers) overviewWorkers.innerHTML = `<div class="muted-note">Field tracker unavailable: ${esc(error.message)}</div>`;
       status.textContent = 'FEED ERROR';
       workers.innerHTML = `<div class="muted-note">Mobile feed unavailable — ${esc(error.message)}</div>`;
     }

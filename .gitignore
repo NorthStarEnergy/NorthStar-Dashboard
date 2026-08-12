@@ -1,0 +1,56 @@
+# Operational data — the check-in database and its backups are records,
+# not source. Never commit or ship them.
+data/
+__pycache__/
+*.py[cod]
+
+# Generated build/runtime output and handoff staging.
+.wrangler/
+dist/
+tmp/
+output/
+outputs/
+handoff/
+control-room-dashboard/
+node_modules/
+
+# Credentials, logs, archives, and visual QA artifacts.
+*.log
+cloudflared-login.*
+tools/cloudflared.exe
+*.zip
+dashboard-launch-check.png
+dashboard-screenshot*.png
+live-dashboard*.html
+northstar-*-check.png
+northstar-arctic*.png
+northstar-compass*.png
+northstar-dashboard*.png
+northstar-energy-combined.png
+northstar-logo-dark.png
+northstar-signal*.png
+northstar-wordmark.png
+outlook-icon.png
+sharepoint-icon.png
+teams-icon.png
+northstar-symbol-small.png
+weather-conditions-sprite.png
+current-dashboard-check.png
+market-layout-check.png
+theme-*.png
+northstar-*-latest.png
+
+# Superseded experiments and pre-patch copies are not canonical runtime source.
+_northstar_verify/
+annunciator.js
+final-fix.js
+graph-fix.js
+northstar-clean.html.prepatch
+ops-beta.*
+preview-*.html
+staff-layout.js
+ui-fix.js
+weather-demo.html
+start-ieso-backend.bat
+start-northstar-v2.*
+start-northstar-v3.*
