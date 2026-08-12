@@ -111,6 +111,20 @@ printed before 2026-08-11 points at `localhost` and must be replaced.
   would show success while nothing was sent. It fails loudly instead.
 - **`GET /api/checkins/<id>` is public by design** — the worker's phone has no
   credential. Anyone holding a check-in id can read that one record. Tightening
-  it means a short-lived signed token issued at check-in.
-- **`tests/test_phase1_port.py:150` fails on a hardcoded 2026-08-02 date**, not a
-  regression. Baseline is `1 failed, 61 passed`.
+  it means a short-lived signed token issued at check-in. Confirmed still current
+  2026-08-12: `ieso_backend.py`'s own comment (line 88) states this route must not
+  be added to the operator gate for exactly this reason.
+- **Corrected 2026-08-12 — this line was stale.** The `tests/test_phase1_port.py`
+  hardcoded-date failure this used to describe is gone; that test now computes its
+  reference date from `datetime.now(...)` instead of a fixed 2026-08-02 literal.
+  **Baseline is `87 passed, 0 failed`**, matching `AGENTS.md`. If you see a
+  different count, trust a fresh `python -m pytest tests -q` run over this file.
+- **Corrected 2026-08-12: the retired Sites static pipeline was hardened fail-closed.**
+  `build.mjs` now refuses to run, `auth.js` redirects to the real operator gate, and
+  `server/index.js` redirects the entire legacy surface. The current Vinext Sites
+  package does not include that pipeline; both live entrypoints and the retired asset
+  paths were checked. The primary Cloudflare Tunnel deployment remains the operational
+  dashboard path.
+- **The QR-signing secret (`data/.northstar-qr-secret`) is not included in the
+  automated daily backup.** See `RECOVERY-RUNBOOK.md` §1 for what that means and
+  the recovery procedure if it's lost.

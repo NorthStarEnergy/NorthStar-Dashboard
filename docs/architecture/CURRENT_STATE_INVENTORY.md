@@ -304,11 +304,14 @@ Per Packet 00 §4, none of this is an approved production architecture — see `
 ## 10. Tests
 
 Packet 17 verification on 2026-08-12: `python -m pytest tests -q` → **86 passed, 0 failed**.
+Packet 18 consolidation on 2026-08-12 added the legacy-pipeline regression guard:
+`python -m pytest tests -q` → **87 passed, 0 failed**.
 The release build records the exact Sites source commit and backend hash in
 `dist/.openai/release.json`; the older count below is retained as the pre-packet snapshot.
 
 `python -m pytest tests -q` → **81 passed, 0 failed** (verified 2026-08-11, before any change in
-this work order). Note `AGENTS.md` still records the older baseline of 66.
+this work order). The historical snapshot is retained; `AGENTS.md` now records the current 87-test
+baseline.
 
 | File | Covers |
 |---|---|

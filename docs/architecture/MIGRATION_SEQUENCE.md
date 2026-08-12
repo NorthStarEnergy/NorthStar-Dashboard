@@ -7,7 +7,7 @@ gaps referenced as `G-n` from `GAP_ANALYSIS.md`; decisions as `D-n`.
 
 1. **Every stage is independently shippable and independently revertible.** No stage depends on a
    later stage being finished.
-2. **Every stage ends green**: `python -m pytest tests -q`, currently **86 passed, 0 failed**.
+2. **Every stage ends green**: `python -m pytest tests -q`, currently **87 passed, 0 failed**.
 3. **Behaviour-preserving unless the stage says otherwise**, and the stages that do change
    behaviour say so in bold and name the decision that authorises them.
 4. **Additive before subtractive.** New path lands beside the old one; the old one is removed only
@@ -27,8 +27,8 @@ Stage 0 item is backup-restore verification; every later stage must preserve the
 |---|---|---|
 | 0.1 | Commit the safe canonical source baseline. Confirm `.gitignore` excludes `data/`, `.northstar-qr-secret`, cloudflared credentials, generated output, screenshots, ZIP staging, and frozen handoff copies | **Completed by Packet 17**; clean checkout and release metadata are required |
 | 0.2 | Tag the exact Packet 17 source used for the deployed Sites version | **Completed by Packet 17**; `packet-17-2026-08-12` |
-| 0.3 | **Verify a backup restores.** Take a `data/backups/*.db`, open it in a scratch copy, run the suite against it. Packet 06 requires this test layer and it has never been exercised (G-9) | suite green against the restored file |
-| 0.4 | Reconcile `AGENTS.md`: baseline is 86, not 66 | **Completed by Packet 17** |
+| 0.3 | **Verify a backup restores.** Take a `data/backups/*.db`, open it in a scratch copy, run the suite against it. Packet 06 requires this test layer and it has never been exercised (G-9) | **Completed 2026-08-12**; restore drill passed and the 87-test suite passed against the isolated copy |
+| 0.4 | Reconcile `AGENTS.md`: baseline is 87, not 66 | **Completed by Packet 17; refreshed by Packet 18 consolidation** |
 
 Cost: under an hour. **0.3 is the highest value-per-minute item in this entire document** — it is
 the only thing standing between a disk failure and total loss of the operational record, and it
