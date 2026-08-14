@@ -9,6 +9,7 @@ directly, behind the store's back, exactly as such a person would.
 
 from __future__ import annotations
 
+import shutil
 import sqlite3
 
 import pytest
@@ -16,13 +17,34 @@ import pytest
 import northstar_store as store
 
 
+@pytest.fixture(scope="session")
+def schema_template(tmp_path_factory):
+    """Build the schema once. Copying the file per test beats rebuilding it.
+
+    ``init_db()`` creates every table, applies the phase-1 and voice schemas and
+    runs ``PRAGMA optimize`` — roughly two seconds. Paying that per test made
+    this module the slowest in the suite and slowed the whole run enough to trip
+    the socket timeout in ``test_api_workflows``, which then reported as a
+    security-test failure. Build once, copy after.
+    """
+    template = tmp_path_factory.mktemp("schema") / "template.db"
+    original_db, original_backups = store.DB_PATH, store.BACKUP_DIR
+    store.DB_PATH = template
+    store.BACKUP_DIR = template.parent / "backups"
+    try:
+        store.init_db()
+    finally:
+        store.DB_PATH, store.BACKUP_DIR = original_db, original_backups
+    return template
+
+
 @pytest.fixture()
-def clean_log(tmp_path, monkeypatch):
+def clean_log(tmp_path, monkeypatch, schema_template):
     """A store backed by a scratch database, never the operational one."""
     db = tmp_path / "integrity.db"
+    shutil.copyfile(schema_template, db)
     monkeypatch.setattr(store, "DB_PATH", db)
     monkeypatch.setattr(store, "BACKUP_DIR", tmp_path / "backups")
-    store.init_db()
     return db
 
 

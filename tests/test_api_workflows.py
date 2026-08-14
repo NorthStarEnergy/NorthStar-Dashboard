@@ -10,12 +10,35 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 MISSING = object()
+
+# Several tests here are security regressions: they assert that a route is
+# refused. A socket timeout is not a status code and not a security finding, but
+# with a short timeout and no URLError handling it surfaced as one — a slow run
+# on a loaded machine reported "the static tree serves secrets" when the server
+# had simply not answered yet. Time out generously, and when it does happen say
+# plainly that it is a responsiveness problem so nobody goes hunting a breach.
+REQUEST_TIMEOUT = float(os.environ.get("NORTHSTAR_TEST_TIMEOUT", "20"))
+
+
+def _timed_out(request: Request, error: BaseException) -> AssertionError:
+    # urlopen raises URLError when the connection itself fails, but a bare
+    # TimeoutError when reading the response times out. TimeoutError is not a
+    # URLError — both are OSError, only one is a URLError — so both must be
+    # named, and only one of them carries .reason.
+    reason = getattr(error, "reason", None) or error.__class__.__name__
+    return AssertionError(
+        f"{request.get_method()} {request.full_url} did not respond within"
+        f" {REQUEST_TIMEOUT:.0f}s ({reason}).\n"
+        "This is a responsiveness failure, not a security finding. Re-run on an"
+        " idle machine, or raise NORTHSTAR_TEST_TIMEOUT, before treating it as a"
+        " regression."
+    )
 
 
 class APITest(unittest.TestCase):
@@ -63,9 +86,11 @@ class APITest(unittest.TestCase):
             headers={"Content-Type": "application/json"},
         )
         try:
-            response = urlopen(request, timeout=5)
+            response = urlopen(request, timeout=REQUEST_TIMEOUT)
         except HTTPError as error:
             response = error
+        except (URLError, TimeoutError) as error:
+            raise _timed_out(request, error) from error
         body = response.read()
         value = json.loads(body) if body else None
         return response.status, value, dict(response.headers.items())
@@ -99,9 +124,11 @@ class APITest(unittest.TestCase):
             headers["Cf-Access-Jwt-Assertion"] = identity
         request = Request(self.base + path, data=data, method=method, headers=headers)
         try:
-            return urlopen(request, timeout=5).status
+            return urlopen(request, timeout=REQUEST_TIMEOUT).status
         except HTTPError as error:
             return error.status
+        except (URLError, TimeoutError) as error:
+            raise _timed_out(request, error) from error
 
     def test_operator_gate_covers_help_subroutes_but_not_the_workers_alarm(self) -> None:
         """A worker must be able to raise help; only an operator may clear it."""
@@ -141,7 +168,7 @@ class APITest(unittest.TestCase):
     def test_public_health_is_liveness_only_and_hides_filesystem_paths(self) -> None:
         self.enable_operator_gate()
         request = Request(self.base + "/api/health", method="GET")
-        public = json.loads(urlopen(request, timeout=5).read())
+        public = json.loads(urlopen(request, timeout=REQUEST_TIMEOUT).read())
         self.assertEqual(set(public), {"status", "serverTime", "checkinOrigin", "database"})
         self.assertNotIn("sharePath", json.dumps(public))
         # Liveness flag only — never the operational counts beside it.
@@ -151,7 +178,7 @@ class APITest(unittest.TestCase):
 
         identified = Request(self.base + "/api/health", method="GET",
                              headers={"Cf-Access-Jwt-Assertion": "jwt"})
-        operator = json.loads(urlopen(identified, timeout=5).read())
+        operator = json.loads(urlopen(identified, timeout=REQUEST_TIMEOUT).read())
         self.assertIn("database", operator)
         self.assertIn("scada", operator)
 
@@ -175,9 +202,11 @@ class APITest(unittest.TestCase):
         data = None if payload is MISSING else json.dumps(payload).encode("utf-8")
         request = Request(self.base + path, data=data, method=method, headers=headers)
         try:
-            return urlopen(request, timeout=5).status
+            return urlopen(request, timeout=REQUEST_TIMEOUT).status
         except HTTPError as error:
             return error.status
+        except (URLError, TimeoutError) as error:
+            raise _timed_out(request, error) from error
 
     def test_forged_access_header_cannot_clear_a_distress_call(self) -> None:
         """The worst case on the public hostname is a write, not a read.
