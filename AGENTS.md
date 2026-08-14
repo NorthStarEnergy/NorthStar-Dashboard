@@ -211,6 +211,20 @@ validation, and audit behaviour.
      override is an append-only `voice_events` row. Retention purges the audio bytes only.
 - Transcription is engine-agnostic: `NORTHSTAR_VOICE_ENGINE=command` plus `NORTHSTAR_VOICE_COMMAND`
   with `{file}`. Do not add a vendor SDK — the project ships with `tzdata` as its only dependency.
+- **`northstar-clean.html` is served from disk on every request — there is no static cache.** Saving
+  the file publishes it to `ops.northstarenergy.ca` immediately. No restart, no staging. Restarting
+  is only needed for Python changes.
+- **Some dashboard functions are defined more than once, and the last definition wins.**
+  `openNode` is defined twice inline in `northstar-clean.html` (offsets ~135889 and ~176895) and
+  again in `market-workspace.js`; `renderNodeDetail` likewise. `market-workspace.js?v=7` is loaded
+  near the end of the file, so **the module version is the live one and both inline copies are
+  dead**. Editing the inline copy changes nothing and looks like the code is not running. Before
+  concluding anything about a dashboard function, grep every runtime file and check script load
+  order. A 2026-08-14 audit mis-diagnosed a working feature as lost by reading only the HTML.
+- `.ontario-market` is **the IESO tile**, not an Ontario-specific card — the class name is legacy.
+  `market-workspace.js` registers IESO as a node (`data.nodes.IESO`, `nodeLabels.IESO`) so it gets
+  the generic `data-expand` dog-ear and an `IESO MARKET DETAIL` panel. There is no separate Ontario
+  market surface any more, and that consolidation was deliberate.
 - The local preview is `http://localhost:4180/northstar-clean.html`; restart after edits because the server holds code in memory.
 
 ## Running and verifying
