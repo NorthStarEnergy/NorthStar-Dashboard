@@ -218,6 +218,30 @@ validation, and audit behaviour.
     .\start-northstar.ps1          # sets env vars, starts on :4180, waits for health
     python -m pytest tests -q
 
+**A reboot takes the site down while making it look up.** `cloudflared` is a Windows service and
+returns on its own; the backend is not, and does not. The tunnel then serves a dead origin and both
+public hostnames answer `502` with nothing logged and nothing alerting. This happened on
+2026-08-14: an unclean shutdown at 01:31 left `checkin.northstarenergy.ca` — the worker QR
+surface — down for five hours before anyone noticed.
+
+A scheduled task, **"NorthStar Control Room backend"**, now runs `start-northstar.ps1 -DemoLogin
+-NoBrowser` at logon with a 60-second delay. `-NoBrowser` is required: the task has no desktop.
+It is an **at-logon** trigger, not at-startup, because registering an at-startup trigger needs an
+elevated shell. A machine sitting at the lock screen after a reboot is therefore still down. To
+close that gap, run once from an **admin** PowerShell:
+
+    $t = Get-ScheduledTask "NorthStar Control Room backend"
+    $s = New-ScheduledTaskTrigger -AtStartup; $s.Delay = "PT60S"
+    Set-ScheduledTask "NorthStar Control Room backend" -Trigger $s `
+      -Principal (New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" `
+                   -LogonType S4U -RunLevel Limited)
+
+After any reboot or restart, check the public surface, not just `localhost` — the whole failure
+mode is that the origin looks fine locally:
+
+    curl.exe -s -o NUL -w "%{http_code}\n" https://checkin.northstarenergy.ca/api/health
+    curl.exe -s -o NUL -w "%{http_code}\n" https://ops.northstarenergy.ca/
+
 **Baseline was `87 passed, 0 failed`** as of 2026-08-12, and `122 passed, 0 failed` on 2026-08-13
 after Packet 19 (`tests/test_demo_auth.py`, 23 tests) and the Packet 20 hostname-separation suite.
 The old `test_phase1_port.py:150` date bomb
