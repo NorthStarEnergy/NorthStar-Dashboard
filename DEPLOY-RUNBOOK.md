@@ -58,7 +58,14 @@ Networks → Tunnels → the Northstar tunnel → Public Hostname.
 | Service | `HTTP` → `localhost:4180` |
 
 No catch-all 404 rule is needed. A request matching no rule gets 404 from
-cloudflared, which is what keeps `northstar-clean.html` off the public host.
+cloudflared.
+
+**Since Packet 20 (2026-08-13) this rule is no longer the only thing keeping the
+operator app off the public host.** The backend enforces the same allowlist
+itself (`CHECKIN_PUBLIC_ROUTES` / `CHECKIN_PUBLIC_PREFIXES` in `ieso_backend.py`),
+so a tunnel reconfigured by hand — or this Path field emptied by accident —
+cannot turn `checkin.` into a public mirror of the dashboard. Keep the two lists
+in step: **if you add a path here, add it there, and never the other way round.**
 
 DNS records are created automatically.
 
@@ -79,6 +86,24 @@ backend. Do not turn it off while the tunnel is routed: the edge path rule
 deliberately admits `/api/checkins` (the worker app POSTs there), so the gate is
 the only thing keeping the roster off the public hostname.
 
+### 4b. Demo sign-in mode (Packet 19)
+
+To show the console to someone who is not in the Access team, run the gate in
+`demo` mode instead of `access`:
+
+1. `python scripts/setup-demo-auth.py` — asks for the owner's temporary
+   password, writes `data/.northstar-demo-auth.json` (username + salted scrypt
+   verifier; never the password). Re-run with `--force` to rotate.
+2. `.\start-northstar.ps1 -DemoLogin` — sets `NORTHSTAR_OPERATOR_GATE=demo`.
+   The launcher refuses to start if no credential exists.
+3. `https://ops.northstarenergy.ca` shows the sign-in screen; a session lasts one
+   workday, and SIGN OUT in the dashboard header ends it server-side.
+
+Everything in §4 still applies: `demo` is a third gate mode, not the gate turned
+off, and the public-hostname refusal is unchanged. The Access application on
+`ops.` can stay in place — Access at the edge and the demo login at the origin
+are independent layers.
+
 ## 5. Verify from outside
 
 From a phone on cellular, not the LAN:
@@ -88,10 +113,20 @@ From a phone on cellular, not the LAN:
 - [ ] "Add to Home Screen" offers install; the icon launches standalone
 - [ ] Launching from the icon (no query string) still resolves the site
 - [ ] `https://checkin.northstarenergy.ca/northstar-clean.html` → **404**
+- [ ] `https://checkin.northstarenergy.ca/operator-login.html` → **404**
+- [ ] `https://checkin.northstarenergy.ca/module-layout.js` → **404**
+- [ ] `https://checkin.northstarenergy.ca/api/weather` → **404**
 - [ ] `https://checkin.northstarenergy.ca/api/checkins` → **403** (gate on) and
       never a worker roster
 - [ ] `https://checkin.northstarenergy.ca/api/checkin-tokens` → **403**
+- [ ] `https://checkin.northstarenergy.ca/api/health` → liveness only: `status`,
+      `serverTime`, `checkinOrigin`, `database.ok` and nothing else
+- [ ] After signing in on `ops.`, the browser's cookie for
+      `NorthstarOperatorSession` shows **no `Domain`** (DevTools → Application →
+      Cookies) and no cookie is sent on a request to `checkin.`
+- [ ] `https://checkin.northstarenergy.ca/api/auth/login` → **404**, always
 - [ ] `https://ops.northstarenergy.ca` → Access challenge, then the dashboard
+      (or the demo sign-in screen when the gate is in `demo` mode)
 - [ ] GPS consent works — geolocation needs a secure origin, so this is the
       first point at which it can be tested for real
 
@@ -117,8 +152,10 @@ printed before 2026-08-11 points at `localhost` and must be replaced.
 - **Corrected 2026-08-12 — this line was stale.** The `tests/test_phase1_port.py`
   hardcoded-date failure this used to describe is gone; that test now computes its
   reference date from `datetime.now(...)` instead of a fixed 2026-08-02 literal.
-  **Baseline is `87 passed, 0 failed`**, matching `AGENTS.md`. If you see a
-  different count, trust a fresh `python -m pytest tests -q` run over this file.
+  **Baseline is `122 passed, 0 failed`** as of 2026-08-13 (87 before Packet 19's
+  demo-login suite and Packet 20's hostname-separation suite), matching
+  `AGENTS.md`. If you see a different count, trust a fresh
+  `python -m pytest tests -q` run over this file.
 - **Corrected 2026-08-12: the retired Sites static pipeline was hardened fail-closed.**
   `build.mjs` now refuses to run, `auth.js` redirects to the real operator gate, and
   `server/index.js` redirects the entire legacy surface. The current Vinext Sites

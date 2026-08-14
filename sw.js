@@ -8,7 +8,7 @@
 // fail so they call the control room instead — a request quietly queued by a
 // service worker would tell someone help is on the way when nothing was sent.
 
-const CACHE = 'northstar-checkin-v1';
+const CACHE = 'northstar-checkin-v2';
 const SHELL = [
   '/contractor-checkin.html',
   '/manifest.webmanifest',
@@ -39,7 +39,9 @@ self.addEventListener('fetch', event => {
   // Anything that changes safety state, and anything off-origin, is left alone.
   if (request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/')) return;
+  // This worker is registered at the origin root so the installable check-in
+  // app works, but it must never cache or serve the operator dashboard.
+  if (!SHELL.includes(url.pathname)) return;
 
   // Network first: a worker should get the current page whenever there is signal.
   event.respondWith(

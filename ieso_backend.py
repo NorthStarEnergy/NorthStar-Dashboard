@@ -7,6 +7,7 @@ import io
 import json
 import mimetypes
 import os
+import posixpath
 import re
 import socket
 import threading
@@ -25,6 +26,7 @@ from zoneinfo import ZoneInfo
 import northstar_store as store
 import northstar_phase1 as phase1
 import northstar_voice as voice
+import northstar_auth as auth
 
 ROOT = Path(__file__).resolve().parent
 HOST = os.environ.get("NORTHSTAR_BIND_HOST", "127.0.0.1").strip()
@@ -55,6 +57,7 @@ ALLOWED_ORIGINS = {
 # worker checking themselves in. Anything not listed here, including the
 # /api/checkins/<id>/... device routes and token resolution, stays open.
 OPERATOR_ROUTES = {
+    "/api/dashboard-layout-default": ("POST",),
     "/api/checkins": ("GET",),
     "/api/checkins/history": ("GET",),
     "/api/checkin-tokens": ("GET", "POST"),
@@ -102,6 +105,44 @@ OPERATOR_ROUTE_PATTERNS = (
 # operator happened to open the generator from. Empty falls back to that origin.
 CHECKIN_ORIGIN = os.environ.get("NORTHSTAR_CHECKIN_ORIGIN", "").strip().rstrip("/")
 
+# The public check-in hostname carries the worker app and nothing else.
+#
+# The operator gate decides who may read the roster; this list decides what
+# exists on `checkin.northstarenergy.ca` at all. Without it the hostname is a
+# public mirror of the operator application: the dashboard HTML and every script
+# it loads, the login page, the market and weather feeds — all reachable with no
+# login, because they are not operator routes and the static tree is shared.
+#
+# The Cloudflare ingress rule says the same thing (see cloudflared-config.yml),
+# but that rule lives in the Zero Trust dashboard, which this process cannot
+# read and an operator can change in a browser. A tunnel edited by hand must not
+# be able to widen the public surface on its own, so the origin states the
+# contract too. Operator routes are refused by the gate *before* this check, so
+# they keep answering 403 — a deliberate refusal, not a "no such thing".
+#
+# Anything added here is published to the open internet. Worker routes only.
+CHECKIN_PUBLIC_ROUTES = {
+    "/contractor-checkin.html",  # the worker PWA itself
+    "/manifest.webmanifest",
+    "/sw.js",
+    "/favicon.ico",
+    "/favicon.png",
+    "/api/health",  # liveness only on this hostname; see public_health()
+    "/api/checkins",  # POST is a worker checking in; GET is the roster, gated
+    "/api/checkin-tokens/resolve",  # the placard QR the worker just scanned
+    "/api/phone-verifications",
+}
+
+# Prefixes for the worker's own per-record routes: read/heartbeat/help/checkout
+# on `/api/checkins/<id>`, phone verification, and the PWA's icons. Operator
+# sub-routes under `/api/checkins/<id>/` (help/acknowledge, help/resolve,
+# provisional, time) match here too and are refused by the gate above.
+CHECKIN_PUBLIC_PREFIXES = (
+    "/api/checkins/",
+    "/api/phone-verifications/",
+    "/icons/",
+)
+
 # Static files come from the project directory, which also holds the SQLite
 # database, the QR signing secret, backups, logs, source and handoff archives.
 # None of that is a web asset. Production binds to loopback.
@@ -119,8 +160,32 @@ STATIC_ALLOW_SUFFIXES = {
 
 # "off" keeps the localhost development behaviour. "access" requires the header
 # Cloudflare Access injects once a user has authenticated at the edge, so the
-# operator surface stays unreachable on the public check-in hostname.
+# operator surface stays unreachable on the public check-in hostname. "demo" is
+# the Packet 19 gate: a single owner-supplied credential, verified here, with a
+# server-side session. It is a distinct third mode on purpose — running the demo
+# login must never mean setting this to "off".
 OPERATOR_GATE = os.environ.get("NORTHSTAR_OPERATOR_GATE", "off").strip().lower()
+
+# The hostname the operator dashboard is published on. The demo login endpoint
+# and the demo session exist only here; the check-in hostname must not offer a
+# second way to create an operator session.
+OPERATOR_HOST = os.environ.get("NORTHSTAR_OPERATOR_HOST", "ops.northstarenergy.ca").strip().lower()
+
+# Demo credentials are local runtime configuration, not source: see
+# northstar_auth.config_path() and scripts/setup-demo-auth.py. Loading is
+# tolerant here and fatal at startup — an import-time crash would take the
+# public check-in surface down with it, and __main__ refuses to serve anyway.
+try:
+    DEMO_AUTH: dict[str, Any] | None = auth.load_config()
+    DEMO_AUTH_ERROR: str = ""
+except auth.AuthConfigError as exc:
+    DEMO_AUTH, DEMO_AUTH_ERROR = None, str(exc)
+
+DEMO_SESSIONS = auth.SessionStore()
+DEMO_LOGIN_THROTTLE = auth.LoginThrottle(
+    max_failures=max(1, int(os.environ.get("NORTHSTAR_DEMO_LOGIN_MAX_FAILURES", "5"))),
+    window_seconds=max(60, int(os.environ.get("NORTHSTAR_DEMO_LOGIN_WINDOW_SECONDS", "900"))),
+)
 
 
 class APIError(Exception):
@@ -128,6 +193,85 @@ class APIError(Exception):
         super().__init__(message)
         self.status = status
         self.message = message
+
+
+DASHBOARD_LAYOUT_PATH = ROOT / "data" / "dashboard-layout-default.json"
+DASHBOARD_LAYOUT_SCRIPT = ROOT / "dashboard-layout-default.js"
+DASHBOARD_LAYOUT_ZONES = {
+    "overview", "staff", "market", "marketTop", "marketDetail",
+    "weather", "weatherStrip", "switching",
+}
+
+
+def _layout_number(value: Any, low: int = -10000, high: int = 10000) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = int(round(value))
+    return number if low <= number <= high else None
+
+
+def normalize_dashboard_layout(payload: dict[str, Any]) -> dict[str, Any]:
+    raw_layout = payload.get("layout")
+    if not isinstance(raw_layout, dict):
+        raise APIError(400, "layout must be an object")
+    layout: dict[str, Any] = {}
+    for zone_id, raw_zone in raw_layout.items():
+        if zone_id not in DASHBOARD_LAYOUT_ZONES or not isinstance(raw_zone, dict):
+            continue
+        zone: dict[str, Any] = {"order": [], "size": {}, "position": {}}
+        raw_order = raw_zone.get("order", [])
+        if isinstance(raw_order, list):
+            zone["order"] = [str(item)[:100] for item in raw_order[:100]]
+        for field, names in (("size", ("w", "h")), ("position", ("x", "y", "w", "h"))):
+            raw_items = raw_zone.get(field, {})
+            if not isinstance(raw_items, dict):
+                continue
+            for key, raw_rect in list(raw_items.items())[:100]:
+                if not isinstance(raw_rect, dict):
+                    continue
+                rect = {name: _layout_number(raw_rect.get(name)) for name in names}
+                if all(value is not None for value in rect.values()):
+                    zone[field][str(key)[:100]] = rect
+        layout[zone_id] = zone
+    preferences = payload.get("preferences", {})
+    if not isinstance(preferences, dict):
+        preferences = {}
+    clean_preferences = {}
+    for key in ("tabOrder", "closedOverview"):
+        values = preferences.get(key, [])
+        clean_preferences[key] = [str(item)[:100] for item in values[:100]] if isinstance(values, list) else []
+    return {"layout": layout, "preferences": clean_preferences, "captureRequested": False}
+
+
+def write_dashboard_layout_default(value: dict[str, Any]) -> None:
+    DASHBOARD_LAYOUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    encoded = json.dumps(value, separators=(",", ":"), ensure_ascii=True)
+    temp = DASHBOARD_LAYOUT_PATH.with_suffix(".tmp")
+    temp.write_text(encoded + "\n", encoding="utf-8")
+    temp.replace(DASHBOARD_LAYOUT_PATH)
+    bootstrap = (
+        "window.NORTHSTAR_LAYOUT_DEFAULT=" + encoded + ";\n"
+        "(()=>{const d=window.NORTHSTAR_LAYOUT_DEFAULT||{},p=d.preferences||{},s=(k,v)=>{"
+        "try{if(v!=null)localStorage.setItem(k,JSON.stringify(v))}catch{}};"
+        "s('northstarModuleLayout',d.layout);s('northstarTabOrder',p.tabOrder);"
+        "s('northstarClosedOverviewModules',p.closedOverview);"
+        "if(d.captureRequested){let j=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch{return null}},"
+        "layout=j('northstarModuleLayout');if(layout&&Object.keys(layout).length)fetch('/api/dashboard-layout-default',"
+        "{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({layout,preferences:{"
+        "tabOrder:j('northstarTabOrder')||[],closedOverview:j('northstarClosedOverviewModules')||[]}})}).catch(()=>{})}})();\n"
+    )
+    script_temp = DASHBOARD_LAYOUT_SCRIPT.with_suffix(".tmp")
+    script_temp.write_text(bootstrap, encoding="utf-8")
+    script_temp.replace(DASHBOARD_LAYOUT_SCRIPT)
+
+
+def demo_session_seconds() -> int:
+    return int((DEMO_AUTH or {}).get("sessionSeconds", auth.DEFAULT_SESSION_SECONDS))
+
+
+def demo_username() -> str:
+    return str((DEMO_AUTH or {}).get("username", "ron"))
+
 
 REPORTS = {
     "rt_energy": ("RealtimeEnergyLMP", "PUB_RealtimeEnergyLMP.csv"),
@@ -476,7 +620,7 @@ def weather_snapshot() -> dict[str, Any]:
         "&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,"
         "precipitation_probability,precipitation,wind_speed_10m,weather_code"
         "&daily=weather_code,temperature_2m_max,temperature_2m_min,"
-        "precipitation_probability_max,precipitation_sum&forecast_days=7"
+        "precipitation_probability_max,precipitation_sum&forecast_days=14"
         "&temperature_unit=celsius&precipitation_unit=mm&wind_speed_unit=kmh&timezone=auto"
     )
     last_error: Exception | None = None
@@ -778,10 +922,78 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()
 
-    def _operator_gate_blocks(self) -> bool:
-        """True when an operator-only route is reached without an edge identity."""
-        if OPERATOR_GATE != "access":
+    def _arrived_on(self) -> str:
+        """The hostname this request actually arrived on, without the port."""
+        return (self.headers.get("Host") or "").rsplit(":", 1)[0].strip().lower()
+
+    def _is_public_checkin_host(self) -> bool:
+        if not CHECKIN_ORIGIN:
             return False
+        public_host = (urlparse(CHECKIN_ORIGIN).hostname or "").lower()
+        return bool(public_host) and self._arrived_on() == public_host
+
+    def _is_operator_host(self) -> bool:
+        """True when this request may reach the demo login and demo sessions.
+
+        The operator hostname always qualifies. Loopback qualifies only when the
+        check-in origin is not a public one — i.e. on a developer's machine with
+        no tunnel in front of it. In production `CHECKIN_ORIGIN` is public, so
+        `localhost:4180` cannot sign in or hold a session, which is the same
+        rule the Access gate already imposes (see AGENTS.md invariant 1).
+        """
+        arrived_on = self._arrived_on()
+        if self._is_public_checkin_host():
+            return False
+        if arrived_on == OPERATOR_HOST:
+            return True
+        local = arrived_on in {"127.0.0.1", "localhost", "::1", "[::1]", ""}
+        return local and not CHECKIN_ORIGIN.startswith("https://")
+
+    def _checkin_host_forbidden(self) -> bool:
+        """True for anything on the public check-in hostname that is not the worker app.
+
+        Answers 404, not 403: on that hostname the operator application does not
+        exist, and saying "forbidden" would confirm it is there. Operator routes
+        are handled before this and still answer 403, because refusing a known
+        operator route is the more useful signal for the regression tests and the
+        dashboard's own error handling.
+        """
+        if not self._is_public_checkin_host():
+            return False
+        # Normalise before matching, or an admitted prefix becomes a way out of
+        # the allowlist: /icons/%2e%2e/northstar-clean.html starts with /icons/
+        # but resolves to the operator console, which the static handler would
+        # then happily serve.
+        route = posixpath.normpath(unquote(self.path.split("?", 1)[0]).replace("\\", "/"))
+        if route in CHECKIN_PUBLIC_ROUTES:
+            return False
+        return not any(route.startswith(prefix) for prefix in CHECKIN_PUBLIC_PREFIXES)
+
+    def _demo_actor(self) -> str | None:
+        """The signed-in demo operator for this request, or None."""
+        if OPERATOR_GATE != "demo" or not self._is_operator_host():
+            return None
+        return DEMO_SESSIONS.actor(auth.cookie_token(self.headers.get("Cookie", "")))
+
+    def _cross_origin_write(self) -> bool:
+        """True when a mutating request claims an origin that is not ours.
+
+        The session cookie is SameSite=Lax, so a cross-site POST does not carry
+        it — but that is a browser promise, and the check belongs on the server.
+        A request with no Origin header (curl, the worker PWA's own fetches on
+        the public host, the test suite) is not treated as cross-origin; a
+        request that names a different host than it arrived on is.
+        """
+        origin = (self.headers.get("Origin") or "").strip()
+        if not origin or origin.lower() == "null":
+            return False
+        origin_host = (urlparse(origin).hostname or "").lower()
+        return bool(origin_host) and origin_host != self._arrived_on()
+
+    def _operator_gate_denial(self) -> tuple[int, str] | None:
+        """(status, message) when this request must be refused, else None."""
+        if OPERATOR_GATE not in {"access", "demo"}:
+            return None
         route = self.path.split("?", 1)[0]
         if route == "/api/switching/drafts" or route.startswith("/api/switching/drafts/"):
             allowed_methods = ("GET", "POST")
@@ -792,7 +1004,7 @@ class Handler(SimpleHTTPRequestHandler):
             for method, pattern in OPERATOR_ROUTE_PATTERNS
         )
         if not operator:
-            return False
+            return None
         # Header presence is not evidence of authentication. Cloudflare does NOT
         # strip a client-supplied copy of Cf-Access-Jwt-Assertion on the public
         # check-in hostname: a 2026-08-11 probe of the live tunnel sent the
@@ -810,34 +1022,115 @@ class Handler(SimpleHTTPRequestHandler):
         #
         # This is defence in depth, not the whole answer: verifying the JWT
         # against the Access team's certs is still open (ADR-011).
-        if CHECKIN_ORIGIN:
-            public_host = (urlparse(CHECKIN_ORIGIN).hostname or "").lower()
-            arrived_on = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip().lower()
-            if public_host and arrived_on == public_host:
-                return True
-        return not self.headers.get("Cf-Access-Jwt-Assertion")
+        if self._is_public_checkin_host():
+            return 403, "operator authentication required"
+        if OPERATOR_GATE == "demo":
+            if self._demo_actor() is None:
+                return 401, "operator sign-in required"
+            # A valid session is not a licence for another site to spend it.
+            if self.command in {"POST", "DELETE", "PUT", "PATCH"} and self._cross_origin_write():
+                return 403, "cross-origin operator request refused"
+            return None
+        return (
+            None
+            if self.headers.get("Cf-Access-Jwt-Assertion")
+            else (403, "operator authentication required")
+        )
+
+    def _operator_gate_blocks(self) -> bool:
+        """True when an operator-only route must be refused. Kept for callers
+        that only need the yes/no answer."""
+        return self._operator_gate_denial() is not None
+
+    def _refuse_operator_request(self, denial: tuple[int, str]) -> None:
+        status, message = denial
+        payload: dict[str, Any] = {"error": message}
+        if OPERATOR_GATE == "demo":
+            # The dashboard uses this marker to send an expired session back to
+            # the login screen instead of rendering broken panels.
+            payload["loginRequired"] = True
+        self._send_json(payload, status)
 
     def _operator_actor(self) -> str:
-        """Return an edge-authenticated operator identity for audit records."""
+        """Return an authenticated operator identity for audit records."""
+        if OPERATOR_GATE == "demo":
+            # The demo user is a demo user. Record the configured username, and
+            # never dress it up as an employee email or a real identity.
+            return self._demo_actor() or demo_username()
         identity = self.headers.get("Cf-Access-Authenticated-User-Email", "")
         if not identity and OPERATOR_GATE != "access":
             identity = self.headers.get("X-Northstar-Operator", "")
         return identity.strip()[:160] or "operator console"
 
+    def _audit_actor(self, requested: Any, fallback: str = "operator console") -> str:
+        """Who to record for an operator action.
+
+        In demo mode the server decides: a signed-in session is the only actor
+        an audit record may name, whatever the request body claims. In the other
+        modes the historical client-supplied value is preserved.
+        """
+        if OPERATOR_GATE == "demo":
+            actor = self._demo_actor()
+            if actor:
+                return actor
+        return str(requested if requested is not None else fallback).strip()[:80] or fallback
+
+    def _refused_before_dispatch(self) -> bool:
+        """Run both hostname rules before any handler sees the request.
+
+        Order is load-bearing. The operator gate goes first so an operator route
+        reached on the public check-in hostname keeps answering 403 — that is the
+        refusal the 2026-08-11 regression tests assert and the shape the packet's
+        verification matrix expects. Everything else that is not the worker app
+        then 404s, because it does not exist on that hostname.
+        """
+        denial = self._operator_gate_denial()
+        if denial:
+            self._refuse_operator_request(denial)
+            return True
+        if self._checkin_host_forbidden():
+            self.send_error(404)
+            return True
+        return False
+
     def do_OPTIONS(self) -> None:
+        if self._refused_before_dispatch():
+            return
         self.send_response(204)
         self.end_headers()
 
     def do_GET(self) -> None:
-        if self._operator_gate_blocks():
-            self._send_json({"error": "operator authentication required"}, 403)
+        if self._refused_before_dispatch():
             return
+        route = self.path.split("?", 1)[0]
+        if route == "/api/auth/session":
+            self._demo_session_state()
+            return
+        # The dashboard must not boot into a signed-out session and then fill
+        # with failed API calls. Serve the login screen instead of the console.
+        if (
+            OPERATOR_GATE == "demo"
+            and route in {"/", "/northstar-clean.html", "/index.html"}
+            and self._is_operator_host()
+            and not self._demo_actor()
+        ):
+            self.path = "/operator-login.html"
         route = self.path.split("?", 1)[0]
         if route == "/api/health":
             snapshot = health_snapshot()
             # Only trim when deployed. With the gate off this is a local box and
-            # the dashboard's watchdog needs the full diagnostic payload.
-            if OPERATOR_GATE == "access" and not self.headers.get("Cf-Access-Jwt-Assertion"):
+            # the dashboard's watchdog needs the full diagnostic payload. Health
+            # is not an operator route (the check-in PWA and the launcher both
+            # poll it), so the trimming decision is made here, per caller.
+            if self._is_public_checkin_host():
+                # Health is the one operator-app route the worker PWA shares, so
+                # it cannot be closed on the public hostname. It can be reduced:
+                # there is no caller there that is ever entitled to more than
+                # "the server is up", whatever gate mode this process runs in.
+                snapshot = public_health(snapshot)
+            elif OPERATOR_GATE == "access" and not self.headers.get("Cf-Access-Jwt-Assertion"):
+                snapshot = public_health(snapshot)
+            elif OPERATOR_GATE == "demo" and not self._demo_actor():
                 snapshot = public_health(snapshot)
             self._send_json(snapshot)
             return
@@ -1028,8 +1321,21 @@ class Handler(SimpleHTTPRequestHandler):
         return value
 
     def do_POST(self) -> None:
-        if self._operator_gate_blocks():
-            self._send_json({"error": "operator authentication required"}, 403)
+        if self._refused_before_dispatch():
+            return
+        route = self.path.split("?", 1)[0]
+        if route in {"/api/auth/login", "/api/auth/logout"}:
+            try:
+                if route == "/api/auth/login":
+                    self._demo_login()
+                else:
+                    self._demo_logout()
+            except APIError as exc:
+                self._send_json({"error": exc.message}, exc.status)
+            except Exception as exc:
+                # Never let an authentication fault print a credential.
+                print(f"API POST {route} failed: {type(exc).__name__}")
+                self._send_json({"error": "internal server error"}, 500)
             return
         try:
             self._do_POST()
@@ -1039,8 +1345,142 @@ class Handler(SimpleHTTPRequestHandler):
             print(f"API POST {self.path} failed: {exc}")
             self._send_json({"error": "internal server error"}, 500)
 
+    def _demo_auth_available(self) -> bool:
+        """The login surface exists only in demo mode, on the operator host.
+
+        `checkin.northstarenergy.ca` must not offer a second way to create an
+        operator session, so the endpoint is not merely refused there — it does
+        not exist there.
+        """
+        return OPERATOR_GATE == "demo" and self._is_operator_host()
+
+    def _throttle_key(self) -> str:
+        return f"{self._arrived_on()}:{self.client_address[0] if self.client_address else ''}"
+
+    def _demo_session_state(self) -> None:
+        """What the dashboard boot sequence asks before loading operator data."""
+        if OPERATOR_GATE != "demo":
+            # No demo gate in front of this deployment; the dashboard proceeds
+            # as it always has (localhost development, or Cloudflare Access).
+            self._send_json({"mode": OPERATOR_GATE, "required": False, "authenticated": False})
+            return
+        if not self._is_operator_host():
+            self._send_json({"error": "not found"}, 404)
+            return
+        actor = self._demo_actor()
+        self._send_json(
+            {
+                "mode": "demo",
+                "required": True,
+                "authenticated": bool(actor),
+                "username": actor,
+                "loginUrl": "/operator-login.html",
+            },
+            200 if actor else 401,
+        )
+
+    def _demo_login(self) -> None:
+        if not self._demo_auth_available():
+            self._send_json({"error": "not found"}, 404)
+            return
+        if DEMO_AUTH is None:
+            self._send_json(
+                {"error": "demo authentication is not configured on this server"}, 503
+            )
+            return
+        if self._cross_origin_write():
+            self._send_json({"error": "cross-origin sign-in refused"}, 403)
+            return
+        allowed, retry_after = DEMO_LOGIN_THROTTLE.check(self._throttle_key())
+        if not allowed:
+            self.send_response(429)
+            self.send_header("Retry-After", str(retry_after))
+            body = json.dumps(
+                {
+                    "error": "too many failed sign-in attempts; try again later",
+                    "retryAfter": retry_after,
+                },
+                separators=(",", ":"),
+            ).encode()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        payload = self._json_body()
+        username = str(payload.get("username", "") or "")
+        password = str(payload.get("password", "") or "")
+        if not auth.authenticates(DEMO_AUTH, username, password):
+            # One message for a wrong username, a wrong password and a blank
+            # one: which of the three it was is not the caller's business.
+            DEMO_LOGIN_THROTTLE.record_failure(self._throttle_key())
+            still_allowed, _ = DEMO_LOGIN_THROTTLE.check(self._throttle_key())
+            if not still_allowed:
+                # Logged once, when the limit trips — a line per failed guess
+                # would let anyone flood the operational log from outside.
+                log_event(
+                    "Operator sign-in blocked",
+                    "Repeated failed demo sign-in attempts",
+                    f"{DEMO_LOGIN_THROTTLE.max_failures} failures within"
+                    f" {DEMO_LOGIN_THROTTLE.window_seconds // 60} minutes;"
+                    " further attempts from that caller are refused for the rest"
+                    " of the window. No password value is recorded.",
+                    "northstar-security",
+                )
+            self._send_json({"error": "invalid credentials"}, 401)
+            return
+        lifetime = demo_session_seconds()
+        token, _ = DEMO_SESSIONS.create(DEMO_AUTH["username"], lifetime)
+        DEMO_LOGIN_THROTTLE.reset(self._throttle_key())
+        log_event(
+            "Operator sign-in",
+            f"Demo operator {DEMO_AUTH['username']} signed in",
+            "Demo authentication session opened on the operator hostname."
+            " This is the single shared demo credential, not an employee identity.",
+            DEMO_AUTH["username"],
+        )
+        body = json.dumps(
+            {"authenticated": True, "username": DEMO_AUTH["username"], "expiresIn": lifetime},
+            separators=(",", ":"),
+        ).encode()
+        self.send_response(200)
+        self.send_header("Set-Cookie", auth.set_cookie_value(token, lifetime))
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _demo_logout(self) -> None:
+        if not self._demo_auth_available():
+            self._send_json({"error": "not found"}, 404)
+            return
+        token = auth.cookie_token(self.headers.get("Cookie", ""))
+        actor = DEMO_SESSIONS.actor(token)
+        # The server-side session goes first: clearing the cookie alone would
+        # leave a token that still works if it were ever replayed.
+        DEMO_SESSIONS.destroy(token)
+        if actor:
+            log_event(
+                "Operator sign-out",
+                f"Demo operator {actor} signed out",
+                "Demo authentication session invalidated on the server.",
+                actor,
+            )
+        body = json.dumps({"authenticated": False}, separators=(",", ":")).encode()
+        self.send_response(200)
+        self.send_header("Set-Cookie", auth.clear_cookie_value())
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def _do_POST(self) -> None:
         route = self.path.split("?", 1)[0]
+        if route == "/api/dashboard-layout-default":
+            saved = normalize_dashboard_layout(self._json_body())
+            write_dashboard_layout_default(saved)
+            self._send_json({"saved": True})
+            return
         if route == "/api/switching/drafts":
             payload = self._json_body()
             actor = self._operator_actor()
@@ -1204,7 +1644,7 @@ class Handler(SimpleHTTPRequestHandler):
                 f"{record['node']} pricing thresholds updated",
                 f"low={record['low']}, high={record['high']}, actions: "
                 + (", ".join(str(action) for action in record["actions"]) or "none"),
-                "operator",
+                self._audit_actor(None, "operator"),
             )
             # Score the new limits against the current price now rather than
             # leaving the operator up to five minutes without the alarm they
@@ -1220,7 +1660,7 @@ class Handler(SimpleHTTPRequestHandler):
             # not end the alert: only the price returning inside the limit does.
             payload = self._json_body()
             alert_id = str(payload.get("id", ""))
-            actor = str(payload.get("actor", "operator")).strip()[:80] or "operator"
+            actor = self._audit_actor(payload.get("actor"), "operator")
             previous = store.list_alerts(include_resolved=True)
             was_active = any(
                 row["id"] == alert_id and row["state"] == store.ALERT_ACTIVE for row in previous
@@ -1232,7 +1672,7 @@ class Handler(SimpleHTTPRequestHandler):
                     f"{record['node']} {record['kind']} alert acknowledged by {actor}",
                     f"${record['price']:.2f} against limit ${record['threshold']:.2f}."
                     " The alarm stays open until the price recovers.",
-                    "operator",
+                    actor,
                 )
             self._send_json(record or {"error": "alert not found"}, 200 if record else 404)
             return
@@ -1246,13 +1686,13 @@ class Handler(SimpleHTTPRequestHandler):
                 str(payload.get("type", "Operator action"))[:60],
                 subject,
                 str(payload.get("details", "")),
-                str(payload.get("source", "operator"))[:40],
+                self._audit_actor(payload.get("source"), "operator")[:40],
             )
             self._send_json(record, 201)
             return
         if self.path == "/api/outages":
             payload = self._json_body()
-            actor = str(payload.get("actor", "operator console")).strip()[:80] or "operator console"
+            actor = self._audit_actor(payload.get("actor"))
             try:
                 record = store.create_outage(payload, actor)
             except ValueError as exc:
@@ -1264,7 +1704,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.startswith("/api/outages/") and self.path.endswith("/close"):
             outage_id = self.path[len("/api/outages/"):-len("/close")]
             payload = self._json_body()
-            actor = str(payload.get("actor", "operator console")).strip()[:80] or "operator console"
+            actor = self._audit_actor(payload.get("actor"))
             previous = store.get_outage(outage_id)
             record = store.close_outage(outage_id, actor, str(payload.get("details", "")))
             if record and previous and previous["status"] == "Open":
@@ -1301,7 +1741,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_error(400, "accept must be true or false")
                 return
             accept = payload["accept"]
-            actor = str(payload.get("actor", "operator")).strip()[:80] or "operator"
+            actor = self._audit_actor(payload.get("actor"), "operator")
             previous = store.get_checkin(checkin_id)
             record = store.resolve_provisional(checkin_id, accept, actor)
             if record and previous and previous["status"] == store.STATUS_PROVISIONAL:
@@ -1317,7 +1757,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.startswith("/api/checkins/") and self.path.endswith("/help/acknowledge"):
             checkin_id = self.path[len("/api/checkins/"):-len("/help/acknowledge")]
             payload = self._json_body()
-            actor = str(payload.get("actor", "operator console")).strip()[:80] or "operator console"
+            actor = self._audit_actor(payload.get("actor"))
             previous = store.get_checkin(checkin_id)
             record = store.acknowledge_help(checkin_id, actor)
             if record and previous and previous["helpState"] == "requested":
@@ -1332,7 +1772,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.startswith("/api/checkins/") and self.path.endswith("/help/resolve"):
             checkin_id = self.path[len("/api/checkins/"):-len("/help/resolve")]
             payload = self._json_body()
-            actor = str(payload.get("actor", "operator console")).strip()[:80] or "operator console"
+            actor = self._audit_actor(payload.get("actor"))
             previous = store.get_checkin(checkin_id)
             record = store.resolve_help(checkin_id, actor)
             if record and previous and previous["needsHelp"]:
@@ -1438,6 +1878,8 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_error(404)
 
     def do_DELETE(self) -> None:
+        if self._refused_before_dispatch():
+            return
         prefix = "/api/checkins/"
         if self.path.startswith(prefix):
             # Checking out closes the record; the operational history is retained.
@@ -1475,12 +1917,22 @@ if __name__ == "__main__":
     # the gate off, GET /api/checkins would serve the operator roster there. That
     # combination has happened in practice, so refuse to start rather than come
     # up quietly in the unsafe state.
-    if CHECKIN_ORIGIN.startswith("https://") and OPERATOR_GATE != "access":
+    if CHECKIN_ORIGIN.startswith("https://") and OPERATOR_GATE not in {"access", "demo"}:
         raise SystemExit(
             f"Refusing to start: NORTHSTAR_CHECKIN_ORIGIN is public ({CHECKIN_ORIGIN}) "
             f"but NORTHSTAR_OPERATOR_GATE is '{OPERATOR_GATE}'. That serves the operator "
-            "roster on the public check-in hostname. Set NORTHSTAR_OPERATOR_GATE=access, "
-            "or clear NORTHSTAR_CHECKIN_ORIGIN for local-only work."
+            "roster on the public check-in hostname. Set NORTHSTAR_OPERATOR_GATE=access "
+            "or demo, or clear NORTHSTAR_CHECKIN_ORIGIN for local-only work."
+        )
+    # Demo mode with no credential would be a gate with no key: every operator
+    # route closed and no way to open one. Refuse to start instead of coming up
+    # looking healthy and serving nothing.
+    if OPERATOR_GATE == "demo" and DEMO_AUTH is None:
+        raise SystemExit(
+            "Refusing to start: NORTHSTAR_OPERATOR_GATE=demo but no demo credential is "
+            f"configured{(' — ' + DEMO_AUTH_ERROR) if DEMO_AUTH_ERROR else ''}. Run "
+            "'python scripts/setup-demo-auth.py' on this PC to create "
+            f"{auth.config_path()}."
         )
     if CHECKIN_ORIGIN.startswith("https://") and HOST not in {"127.0.0.1", "localhost", "::1"}:
         raise SystemExit(
@@ -1504,6 +1956,14 @@ if __name__ == "__main__":
     print(f"Northstar check-in database: {store.DB_PATH}", flush=True)
     print(f"Northstar voice inbox: {voice.inbox_path()} (engine: {voice.engine_name()})", flush=True)
     print(f"Northstar dashboard ready: http://localhost:{PORT}/northstar-clean.html", flush=True)
+    if OPERATOR_GATE == "demo":
+        print(
+            f"Operator gate: demo sign-in as '{demo_username()}' on {OPERATOR_HOST}"
+            f" (session {demo_session_seconds() // 3600}h, credential from {auth.config_path()})",
+            flush=True,
+        )
+    else:
+        print(f"Operator gate: {OPERATOR_GATE}", flush=True)
     print("Live market feeds are warming up in the background.", flush=True)
     try:
         server.serve_forever()

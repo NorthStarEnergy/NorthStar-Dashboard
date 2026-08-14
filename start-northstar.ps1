@@ -1,10 +1,28 @@
-param([switch]$NoBrowser)
+param(
+    [switch]$NoBrowser,
+    # Packet 19: run the operator console behind the demo sign-in instead of the
+    # Cloudflare Access header. The credential is local runtime configuration —
+    # create it once with `python scripts/setup-demo-auth.py`.
+    [switch]$DemoLogin,
+    # Local-only work: no tunnel, no public check-in origin. Combine with
+    # -DemoLogin to exercise the sign-in on http://localhost:4180.
+    [switch]$LocalOnly
+)
 
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backendFile = Join-Path $projectRoot 'ieso_backend.py'
-$dashboardUrl = 'http://localhost:4180/northstar-clean.html'
+$operatorHost = if ($env:NORTHSTAR_OPERATOR_HOST) {
+    $env:NORTHSTAR_OPERATOR_HOST
+} else {
+    'ops.northstarenergy.ca'
+}
+$dashboardUrl = if ($LocalOnly) {
+    'http://localhost:4180/northstar-clean.html'
+} else {
+    "https://$operatorHost/northstar-clean.html"
+}
 $healthUrl = 'http://127.0.0.1:4180/api/health'
 $port = 4180
 
@@ -93,11 +111,13 @@ $env:NORTHSTAR_PORT = [string]$port
 $env:NORTHSTAR_BIND_HOST = '127.0.0.1'
 
 # Public deployment settings. Both are safe to leave set for local-only use:
-# the gate only engages when it is exactly 'access', and the check-in origin is
-# only consulted when generating QR placard links.
+# the gate only engages when it is 'access' or 'demo', and the check-in origin
+# is only consulted when generating QR placard links.
 #   NORTHSTAR_OPERATOR_GATE   'access' requires the Cloudflare Access header on
-#                             the roster, QR tokens and operational log. Set to
-#                             'off' to work on the dashboard without the tunnel.
+#                             the roster, QR tokens and operational log; 'demo'
+#                             requires the Packet 19 sign-in session instead.
+#                             Set to 'off' to work on the dashboard without the
+#                             tunnel.
 #   NORTHSTAR_CHECKIN_ORIGIN  the hostname printed into QR codes — must be the
 #                             public check-in host, never whichever origin the
 #                             operator opened the generator from.
@@ -111,8 +131,28 @@ $env:NORTHSTAR_BIND_HOST = '127.0.0.1'
 # either, because cloudflared connects to localhost and the two are
 # indistinguishable by address. Operators use ops.northstarenergy.ca.
 # For local-only work, clear NORTHSTAR_CHECKIN_ORIGIN and set the gate to 'off'.
+#
+# -DemoLogin selects the third gate mode, 'demo': the operator hostname gets a
+# real server-enforced sign-in (Packet 19) instead of trusting the Access
+# header. It is a distinct mode, never 'off' — every operator route stays gated
+# either way, and the public-hostname refusal is unchanged in all three modes.
+if ($DemoLogin) {
+    $demoCredential = Join-Path $projectRoot 'data\.northstar-demo-auth.json'
+    if (-not (Test-Path -LiteralPath $demoCredential) -and -not $env:NORTHSTAR_DEMO_PASSWORD_HASH) {
+        throw "No demo credential found at $demoCredential. Run 'python scripts/setup-demo-auth.py' first."
+    }
+    $env:NORTHSTAR_OPERATOR_GATE = 'demo'
+}
 if (-not $env:NORTHSTAR_OPERATOR_GATE) { $env:NORTHSTAR_OPERATOR_GATE = 'access' }
-if (-not $env:NORTHSTAR_CHECKIN_ORIGIN) { $env:NORTHSTAR_CHECKIN_ORIGIN = 'https://checkin.northstarenergy.ca' }
+if ($LocalOnly) {
+    # No tunnel in front: clearing the public origin is what lets the sign-in
+    # and the dashboard work on localhost. Never do this on the production host
+    # while checkin.northstarenergy.ca is published.
+    $env:NORTHSTAR_CHECKIN_ORIGIN = ''
+} elseif (-not $env:NORTHSTAR_CHECKIN_ORIGIN) {
+    $env:NORTHSTAR_CHECKIN_ORIGIN = 'https://checkin.northstarenergy.ca'
+}
+if (-not $env:NORTHSTAR_OPERATOR_HOST) { $env:NORTHSTAR_OPERATOR_HOST = $operatorHost }
 
 # The dashboard and the check-in page each call their own origin, so nothing
 # needs cross-origin access. The default is '*', which let any website on the

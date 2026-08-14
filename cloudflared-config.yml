@@ -15,8 +15,18 @@
 #   checkin.  — public, no login; a contractor scans a placard and lands here
 #
 # The path allowlist is defence in depth. The real lock is the operator gate in
-# ieso_backend.py (NORTHSTAR_OPERATOR_GATE=access), which refuses the roster,
-# the QR tokens and the operational log when that header is absent.
+# ieso_backend.py (NORTHSTAR_OPERATOR_GATE=access, or =demo since Packet 19),
+# which refuses the roster, the QR tokens and the operational log to a caller
+# with no proven identity.
+#
+# Packet 20 (2026-08-13): the origin now enforces this same worker-surface
+# allowlist itself — CHECKIN_PUBLIC_ROUTES and CHECKIN_PUBLIC_PREFIXES in
+# ieso_backend.py, mirrored from the path regex below. The gate alone was never
+# enough here: it only guards *operator routes*, so the dashboard HTML, its
+# scripts and the weather/market feeds were public on this hostname by
+# construction, held off it by nothing but this edge rule — which is not read at
+# runtime, cannot be tested from this repository, and is editable in a browser.
+# Change the regex below and the two Python lists together.
 
 ingress:
   # ---- Public worker surface -------------------------------------------------
