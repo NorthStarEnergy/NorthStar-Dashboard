@@ -1,0 +1,102 @@
+// Packet 19 — demo operator session guard for the dashboard.
+//
+// This is not the lock. Every operator route is enforced server-side in
+// ieso_backend.py, and nothing here can open one. What this does is make the
+// dashboard behave correctly when there is no session: check first, then load,
+// so a signed-out or expired browser gets the login screen instead of a console
+// full of failed panels.
+//
+// It must run before the dashboard's inline boot code, which starts fetching
+// operator data as soon as it parses — hence a plain <script> in <head>.
+(function () {
+  'use strict';
+
+  var LOGIN_PAGE = '/operator-login.html';
+  var nativeFetch = window.fetch.bind(window);
+  var redirecting = false;
+
+  function toLogin() {
+    if (redirecting) return;
+    redirecting = true;
+    try { sessionStorage.setItem('northstarSessionEnded', '1'); } catch (e) { /* private mode */ }
+    window.location.replace(LOGIN_PAGE);
+  }
+
+  // One request, asked once, before anything else touches /api/.
+  var state = nativeFetch('/api/auth/session', {
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  }).then(function (response) {
+    return response.json().catch(function () { return {}; }).then(function (body) {
+      return {
+        // A 404 means this deployment has no demo gate (localhost development,
+        // or Cloudflare Access in front). Leave the dashboard alone.
+        required: response.status === 404 ? false : Boolean(body.required),
+        authenticated: Boolean(body.authenticated),
+        username: body.username || null,
+      };
+    });
+  }).catch(function () {
+    // The backend is unreachable. That is the watchdog's problem to display,
+    // not a reason to bounce the operator to a login page that also will not load.
+    return { required: false, authenticated: false, username: null };
+  });
+
+  window.northstarOperatorSession = state;
+
+  window.fetch = function (input, init) {
+    var url = String(typeof input === 'string' ? input : (input && input.url) || '');
+    var path = url.indexOf(window.location.origin) === 0 ? url.slice(window.location.origin.length) : url;
+    if (path.indexOf('/api/') !== 0 || path.indexOf('/api/auth/') === 0) {
+      return nativeFetch(input, init);
+    }
+    return state.then(function (session) {
+      if (session.required && !session.authenticated) {
+        toLogin();
+        return Promise.reject(new Error('operator sign-in required'));
+      }
+      return nativeFetch(input, init).then(function (response) {
+        // A session that expires mid-shift ends the same way it started.
+        if (session.required && (response.status === 401 || response.status === 403)) {
+          response.clone().json().then(function (body) {
+            if (body && body.loginRequired) toLogin();
+          }).catch(function () { /* not a JSON refusal; leave it to the caller */ });
+        }
+        return response;
+      });
+    });
+  };
+
+  function addSignOut(session) {
+    if (!session.required || !session.authenticated) return;
+    if (document.querySelector('.operator-signout')) return;
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'operator-signout';
+    button.textContent = 'SIGN OUT';
+    button.title = 'End this demo operator session';
+    button.addEventListener('click', function () {
+      button.disabled = true;
+      nativeFetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      }).catch(function () { /* the redirect below is what the operator sees */ })
+        .then(function () { window.location.replace(LOGIN_PAGE); });
+    });
+    var host = document.querySelector('.app > aside') || document.body;
+    var linkState = host.querySelector ? host.querySelector('.link-state') : null;
+    if (linkState) host.insertBefore(button, linkState);
+    else host.appendChild(button);
+  }
+
+  function ready(run) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', run);
+    } else {
+      run();
+    }
+  }
+
+  state.then(function (session) { ready(function () { addSignOut(session); }); });
+})();

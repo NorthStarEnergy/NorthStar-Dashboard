@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NorthStar Operator Sign In</title>
+<!-- Packet 19. There is no credential in this page: the form posts to
+     /api/auth/login and the server decides. Nothing here grants access, and
+     nothing here may ever be allowed to (see the retired auth.js). -->
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#071015;color:#e7edf2;font:16px Arial,sans-serif}.login-shell{width:min(430px,calc(100vw - 40px))}.disclaimer{margin:0 0 12px;padding:10px 14px;border:1px solid #5c4724;border-radius:6px;background:#211b10;color:#e6c57e;font:11px/1.45 monospace}.card{width:100%;padding:32px 34px;border:1px solid #2c4254;border-radius:10px;background:#111a24;box-shadow:0 24px 70px #0008}.brand-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 30px}.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand img{width:48px;height:48px;object-fit:contain}.brand span{color:#f1f6fb;font-size:25px;font-weight:700;letter-spacing:-.04em}.brand small{display:block;margin-top:3px;color:#1598e5;font:700 10px monospace;letter-spacing:.18em;text-transform:uppercase}.service-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.service-status{display:flex;align-items:center;gap:6px;color:#77d69a;font-size:10px;font-weight:700;white-space:nowrap}.service-status i{width:7px;height:7px;background:#43d17a;border-radius:50%;box-shadow:0 0 9px #43d17a;display:block}.system-time{color:#5ec8f3;font:10px monospace;white-space:nowrap}h1{margin:0 0 8px;color:#e7edf2;font-size:25px}p.lede{color:#9db0bd;font-size:13px;line-height:1.5}label{display:block;margin:16px 0 0;color:#9db0bd;font:11px monospace}input{display:block;box-sizing:border-box;width:100%;margin-top:7px;padding:12px;background:#0a0f15;color:#fff;border:1px solid #2c4254;border-radius:5px;font:inherit}button{width:100%;margin-top:20px;padding:12px;background:#1598e5;color:#fff;border:0;border-radius:5px;font-weight:700;cursor:pointer}button[disabled]{opacity:.6;cursor:progress}.error{min-height:18px;margin-top:12px;color:#ff8d78;font-size:12px}.notice{min-height:0;margin-top:12px;color:#9db0bd;font-size:12px}.foot{margin-top:22px;color:#6e8997;font-size:11px;line-height:1.5}</style></head>
+<body><div class="login-shell"><p class="disclaimer">DEMO ACCESS · This is a shared operator demonstration environment. It is not a production control surface and does not represent an employee identity.</p><main class="card">
+<div class="brand-row"><div class="brand"><img src="/northstar-symbol.png" alt=""><span>NorthStar<small>Operations Dashboard</small></span></div><div class="service-meta"><div class="service-status"><i></i>SERVICE RUNNING</div><div class="system-time" id="systemTime">SYSTEM TIME</div></div></div>
+<h1>NorthStar operator sign in</h1>
+<p class="lede">Use the owner-provided temporary credentials. This is a shared demo login for the operator console, not a personal employee account.</p>
+<form id="operatorSignIn">
+  <label for="username">USERNAME</label>
+  <input id="username" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+  <label for="password">PASSWORD</label>
+  <input id="password" name="password" type="password" autocomplete="current-password" required>
+  <button type="submit">OPEN DASHBOARD</button>
+  <div class="notice" id="notice"></div>
+  <div class="error" role="alert" id="error"></div>
+</form>
+<div style="display:flex;justify-content:space-between;gap:12px;margin-top:14px"><a style="flex:1;padding:9px 8px;border:1px solid #2c4254;border-radius:5px;color:#8aa7bb;font-size:11px;text-align:center;text-decoration:none" href="mailto:support@northstarenergy.ca?subject=NorthStar%20username%20or%20password%20help">Forgot Username/Password</a><a style="flex:1;padding:9px 8px;border:1px solid #2c4254;border-radius:5px;color:#8aa7bb;font-size:11px;text-align:center;text-decoration:none" href="mailto:support@northstarenergy.ca?subject=NorthStar%20support%20request">Contact</a></div>
+<p class="foot">Field workers do not sign in here — the check-in page needs no login.</p>
+</main></div>
+<script>
+(function(){
+  var form=document.querySelector('#operatorSignIn'),error=document.querySelector('#error'),notice=document.querySelector('#notice');
+  try{
+    if(sessionStorage.getItem('northstarSessionEnded')){
+      notice.textContent='That session has ended. Sign in again to reopen the dashboard.';
+      sessionStorage.removeItem('northstarSessionEnded');
+    }
+  }catch(e){/* private mode */}
+  // Already signed in (a bookmark, a back button): go straight through.
+  fetch('/api/auth/session',{cache:'no-store'}).then(function(r){
+    if(r.status===404&&/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
+      location.replace('https://ops.northstarenergy.ca/operator-login.html');
+      return null;
+    }
+    return r.json();
+  }).then(function(s){
+    if(s&&s.authenticated)location.replace('/northstar-clean.html');
+  }).catch(function(){});
+  form.addEventListener('submit',async function(event){
+    event.preventDefault();
+    error.textContent='';
+    var button=form.querySelector('button');
+    button.disabled=true;
+    try{
+      var response=await fetch('/api/auth/login',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({username:form.username.value,password:form.password.value})
+      });
+      if(response.ok){location.replace('/northstar-clean.html');return}
+      var body=await response.json().catch(function(){return{}});
+      if(response.status===429){
+        var wait=Math.ceil((body.retryAfter||60)/60);
+        error.textContent='Too many failed attempts. Try again in about '+wait+' minute'+(wait===1?'':'s')+'.';
+      }else if(response.status===404){
+        error.textContent='Operator sign-in is not available on this hostname.';
+      }else if(response.status===503){
+        error.textContent='No demo credential is configured on this server.';
+      }else{
+        error.textContent=body.error||'Sign-in failed.';
+      }
+    }catch(e){
+      error.textContent='The server could not be reached.';
+    }
+    button.disabled=false;
+    form.password.value='';
+    form.password.focus();
+  });
+})();
+</script></body></html>
