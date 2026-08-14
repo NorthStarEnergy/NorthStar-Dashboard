@@ -2,14 +2,21 @@
   const tabs = [...document.querySelectorAll('[data-outage-tab]')];
   const panes = [...document.querySelectorAll('[data-outage-pane]')];
   const switchingPane = document.querySelector('[data-outage-pane="switching-plans"]');
-  const switching = document.querySelector('#switching');
   if (!tabs.length || !switchingPane) return;
 
-  if (switching) {
-    switching.classList.remove('section', 'active');
-    switching.classList.add('outage-switching-content');
-    switchingPane.append(switching);
-  }
+  switchingPane.innerHTML = `<div class="source-truth engineering-outage-link">
+    <div class="panel">
+      <label>ENGINEERING WORKSPACE</label>
+      <h2>Switching plans &amp; one-line drawings</h2>
+      <p class="muted-note">Engineering is now a dedicated workspace for one-line drafting, source intake, work packages, qualified-person review, and audit records.</p>
+      <button class="primary-btn" type="button" data-open-engineering>OPEN ENGINEERING</button>
+    </div>
+    <div class="panel">
+      <label>SAFETY BOUNDARY</label>
+      <h2>Drafting only</h2>
+      <p class="muted-note">Engineering records do not issue equipment commands or provide operational release.</p>
+    </div>
+  </div>`;
 
   const show = name => {
     tabs.forEach(tab => {
@@ -30,10 +37,8 @@
     button.addEventListener('click', () => show(button.dataset.openOutageTab));
   });
 
-  const engineering = document.querySelector('[data-tab="switching"]');
-  engineering?.addEventListener('click', () => {
-    document.querySelector('[data-tab="outages"]')?.click();
-    show('switching-plans');
+  switchingPane.querySelector('[data-open-engineering]')?.addEventListener('click', () => {
+    document.querySelector('[data-tab="switching"]')?.click();
   });
 
   const outageList = document.querySelector('#outageList');
@@ -48,7 +53,7 @@
       ? `<button class="node-expand outage-close" data-close-outage="${escapeHtml(outage.id)}">CLOSE</button>`
       : '';
     return `<article class="event-item outage-item outage-severity-${severity} outage-type-${type.toLowerCase()}">
-      <header><span>${formatTime(outage.openedAt)} · ${escapeHtml(outage.site || '')}</span><span class="outage-badges"><b class="outage-badge ${severity}">${escapeHtml(outage.severity || 'Monitor')}</b><b class="outage-badge ${type.toLowerCase()}">${type.toUpperCase()}</b>${close}</span></header>
+      <header><span>${reportTime(outage.openedAt)} · ${escapeHtml(outage.site || '')}</span><span class="outage-badges"><b class="outage-badge ${severity}">${escapeHtml(outage.severity || 'Monitor')}</b><b class="outage-badge ${type.toLowerCase()}">${type.toUpperCase()}</b>${close}</span></header>
       <strong>${escapeHtml(asset)}</strong><p>${escapeHtml(title + (outage.details || ''))}</p>
     </article>`;
   }

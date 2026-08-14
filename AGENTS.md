@@ -33,7 +33,12 @@ Since 2026-08-11 it is published through a Cloudflare tunnel on **northstarenerg
 Both reach `localhost:4180`. A change that widens the public surface is a live data exposure, not a
 staging bug. See `DEPLOY-RUNBOOK.md` for the full topology, and treat these as hard invariants:
 
-1. **The operator gate is load-bearing.** `NORTHSTAR_OPERATOR_GATE=access` makes the roster, QR
+1. **The operator gate is load-bearing.** It has three modes and only one of them is unsafe on a
+   published host: `off` (local development), `access` (Cloudflare Access header), and `demo`
+   (Packet 19 server-side sign-in — see §"Demo operator login" below). `demo` is a *distinct mode*,
+   never a reason to set the gate to `off`; everything in this section applies to it unchanged.
+
+   `NORTHSTAR_OPERATOR_GATE=access` makes the roster, QR
    tokens and logbook require the `Cf-Access-Jwt-Assertion` header Cloudflare Access injects. The
    edge path rule *cannot* cover `/api/checkins`, because the worker app POSTs there — so the gate
    is the only thing keeping the roster off the public hostname. Never disable it while
@@ -57,6 +62,29 @@ staging bug. See `DEPLOY-RUNBOOK.md` for the full topology, and treat these as h
    **The production launcher binds `127.0.0.1`, so the LAN bypass is closed.** The JWT is still
    not cryptographically verified; do not reintroduce a non-loopback bind without completing
    that verification. See `docs/adr/ADR-011`.
+
+ 1b. **The check-in hostname carries the worker app and nothing else** (Packet 20, 2026-08-13).
+   The gate answers "is this an operator route, and is the caller authenticated?" — so everything
+   that is *not* an operator route was public on `checkin.` by construction: `northstar-clean.html`,
+   every script and stylesheet it loads, `operator-login.html`, `/api/weather`, `/api/market-prices`.
+   `CHECKIN_PUBLIC_ROUTES` and `CHECKIN_PUBLIC_PREFIXES` in `ieso_backend.py` now list the worker
+   surface, and `_checkin_host_forbidden` 404s everything else that arrives on that hostname. The
+   Cloudflare ingress rule says the same thing, but it lives in the Zero Trust dashboard where this
+   process cannot read it and an operator can change it in a browser.
+
+   Order matters and is asserted: the gate runs **first**, so an operator route on the public
+   hostname still answers **403** (the shape the forged-header tests assert), and everything else
+   answers 404. Adding an entry to those lists publishes it to the open internet — worker routes
+   only, and `tests/test_packet20_hostname_separation.py` reads `sw.js`'s precache list to make sure
+   the worker app's own shell never falls off the allowlist.
+
+ 1c. **The operator session cookie is host-only. Never give it a `Domain`.** (Packet 20 §4.)
+   `northstar_auth.set_cookie_value` sets `Path`, `Max-Age`, `HttpOnly`, `Secure` and `SameSite` and
+   deliberately no `Domain`, so the browser scopes it to `ops.` and never attaches it to a request
+   for `checkin.`. `Domain=northstarenergy.ca` would hand a live operator session to the public
+   worker page. The server also refuses a copied session on that hostname, so this is defence in
+   depth rather than the only lock — keep both. The rest of the demo login is §"Demo operator
+   login" below.
 
 2. **`GET /api/checkins` is the roster, `POST /api/checkins` is a worker checking in.** Same path,
    opposite trust. `OPERATOR_ROUTES` in `ieso_backend.py` is method-aware. Keep it that way.
@@ -86,6 +114,35 @@ staging bug. See `DEPLOY-RUNBOOK.md` for the full topology, and treat these as h
 5. **Do not add background-heartbeat features that imply reliability.** The heartbeat is a browser
    `setInterval` and dies when the phone locks. The owner decided on 2026-08-11 that OVERDUE is
    advisory and a native wrapper is out of scope. Do not re-propose Capacitor.
+
+## Demo operator login (Packet 19)
+
+`NORTHSTAR_OPERATOR_GATE=demo` puts a real, server-enforced sign-in in front of the operator
+console. Start it with `.\start-northstar.ps1 -DemoLogin`; add `-LocalOnly` to work on
+`localhost:4180` (it clears the public check-in origin — never do that on the production host).
+
+- The credential is **local runtime configuration, not source**: `data/.northstar-demo-auth.json`,
+  written by `python scripts/setup-demo-auth.py`. It holds a username and a salted scrypt verifier.
+  There is no password value in any HTML, JavaScript, source file, log, Git object or Drive copy,
+  and there must never be one. `northstar_auth.py` owns config loading, verification, sessions and
+  throttling; `ieso_backend.py` owns the routes.
+- `POST /api/auth/login` / `POST /api/auth/logout` / `GET /api/auth/session` exist **only on the
+  operator hostname** and return 404 on `checkin.`. The session cookie is host-only (no `Domain`),
+  `HttpOnly; Secure; SameSite=Lax`, and expires after one workday. Logout destroys the server-side
+  session, not just the cookie.
+- Authorization reuses `OPERATOR_ROUTES` / `OPERATOR_ROUTE_PATTERNS`. **Do not start a second list.**
+  Mutating operator requests also refuse a cross-origin `Origin`. Five failed sign-ins in fifteen
+  minutes locks that caller out for the rest of the window; a success clears the count.
+- In demo mode the audit actor is the configured username (`ron`), decided by the server. A client
+  cannot name itself in `payload.actor` — `_audit_actor()` overrides it. Do not make the demo user
+  look like an employee identity.
+- `operator-session.js` loads first in `northstar-clean.html`, checks the session before any
+  operator fetch, and redirects a signed-out or expired browser to `operator-login.html`. It is
+  convenience, not protection: nothing in the browser decides access. Do not move any part of the
+  decision into it, and do not restore `auth.js`, the old static login, or the Sites pipeline.
+- Covered by `tests/test_demo_auth.py`. See `docs/adr/ADR-023-demo-operator-authentication.md` for
+  what this deliberately is not: it is not Access, it does not verify the Access JWT (ADR-011), and
+  it does not unblock Stage 3 identity work.
 
 Also preserve, from the earlier Phase 1 port: QR verification, provisional check-ins,
 phone-verification shadow mode, location-event retention, site escalation policies, SCADA import
@@ -140,7 +197,9 @@ validation, and audit behaviour.
     .\start-northstar.ps1          # sets env vars, starts on :4180, waits for health
     python -m pytest tests -q
 
-**Baseline is `87 passed, 0 failed`** as of 2026-08-12. The old `test_phase1_port.py:150` date bomb
+**Baseline was `87 passed, 0 failed`** as of 2026-08-12, and `122 passed, 0 failed` on 2026-08-13
+after Packet 19 (`tests/test_demo_auth.py`, 23 tests) and the Packet 20 hostname-separation suite.
+The old `test_phase1_port.py:150` date bomb
 is fixed; a red suite is now a real regression, not a known quirk. Four of those tests are
 security regressions covering live, publicly reachable failures — if any goes red, stop and fix it
 before anything else:
@@ -149,6 +208,19 @@ before anything else:
 - `test_static_tree_does_not_serve_secrets_or_the_database`
 - `test_forged_access_header_cannot_open_the_roster_on_the_public_host`
 - `test_forged_access_header_cannot_clear_a_distress_call`
+
+Two more from Packet 19 protect the same containment for the demo session:
+
+- `test_an_operator_session_is_still_refused_on_the_checkin_hostname`
+- `test_the_login_endpoint_does_not_exist_on_the_checkin_hostname`
+
+And three from Packet 20 (`tests/test_packet20_hostname_separation.py`) hold the hostname boundary
+itself — the first two cover surface that no gate ever looked at:
+
+- `test_the_operator_console_is_not_served_on_the_check_in_hostname`
+- `test_non_operator_apis_are_not_published_on_the_check_in_hostname`
+- `test_operator_routes_are_refused_on_the_check_in_hostname` (403, not 404, and not to a copied
+  session cookie or a forged edge header)
 
 Restarting matters: the server holds code in memory, so edits do nothing until you restart it.
 Check with `(Invoke-RestMethod http://127.0.0.1:4180/api/health).checkinOrigin`.

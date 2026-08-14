@@ -83,6 +83,8 @@ class APITest(unittest.TestCase):
                 ("127.0.0.1", self.server.server_port), self.backend.Handler
             )
 
+    # The demo operator login (Packet 19) has its own suite: tests/test_demo_auth.py.
+
     def enable_operator_gate(self) -> None:
         previous = self.backend.OPERATOR_GATE
         self.backend.OPERATOR_GATE = "access"

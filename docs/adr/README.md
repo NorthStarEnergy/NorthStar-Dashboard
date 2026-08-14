@@ -20,6 +20,7 @@ own decisions, recorded 2026-08-11 during the Packet 00 alignment.
 | [ADR-020](ADR-020-ai-surface-has-no-contract.md) | The dashboard's AI surface has no server contract | **Open — D-6** |
 | [ADR-021](ADR-021-api-versioning-and-permanent-unversioned-aliases.md) | API versioning; unversioned paths kept forever | Proposed |
 | [ADR-022](ADR-022-loopback-only-origin-for-public-tunnel.md) | Loopback-only origin for the public tunnel | Accepted 2026-08-12 |
+| [ADR-023](ADR-023-demo-operator-authentication.md) | Demo operator authentication (third gate mode) | Accepted 2026-08-13 |
 
 ## Rules
 - One decision per file. Never edit an accepted ADR to change its meaning — supersede it with a

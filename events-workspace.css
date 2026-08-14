@@ -1,0 +1,209 @@
+#eventsCard .events-head h2 {
+  color: #f4fbff !important;
+  font: 800 16px/1.1 Arial, sans-serif !important;
+  letter-spacing: 1.2px;
+}
+
+#eventsCard .events-head small {
+  color: #69b7e8 !important;
+  font: 800 9px/1.2 monospace !important;
+  letter-spacing: .9px;
+}
+
+#eventsCard .events-live {
+  font: 800 10px/1 monospace !important;
+}
+
+#eventsCard .events-filter {
+  padding: 5px 8px !important;
+  font: 800 9px/1 monospace !important;
+}
+
+#eventsCard .events-log-entry label,
+#eventsCard .quick-log-status {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+}
+
+#eventsCard .quick-log-form input,
+#eventsCard .quick-log-form select,
+#eventsCard .quick-log-form .primary-btn,
+#eventsCard .events-query {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+#eventsCard .events-query {
+  padding: 8px 10px !important;
+}
+
+#eventsCard .events-log-entry #quickLogDetails {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+#eventsCard .events-log-entry .logbook-launcher {
+  display: grid !important;
+  flex: 0 0 44px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  place-items: center;
+  border: 1px solid #3b6478;
+  border-radius: 5px;
+  background: #132936;
+  color: #79c8f3;
+  font: 800 23px/1 Arial, sans-serif;
+  cursor: pointer;
+}
+
+#eventsCard .events-log-entry .logbook-launcher:hover {
+  border-color: #69b7e8;
+  background: #1a3544;
+  color: #fff;
+}
+
+#eventsCard .events-log-entry .logbook-launcher:focus-visible {
+  outline: 2px solid #69b7e8;
+  outline-offset: 2px;
+}
+
+#eventsCard .events-stream {
+  padding: 0 10px !important;
+}
+
+#eventsCard .events-stream .event-item {
+  display: grid !important;
+  grid-template-columns: 32px minmax(0, 1fr) !important;
+  gap: 9px !important;
+  align-items: center;
+  padding: 9px 0 !important;
+  border-top: 1px solid #263943 !important;
+  border-left: 0 !important;
+}
+
+#eventsCard .events-stream .event-item:first-child {
+  border-top: 0 !important;
+}
+
+#eventsCard .event-symbol {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 7px;
+  font: 900 17px/1 Arial, sans-serif;
+  box-shadow: inset 0 0 12px rgb(255 255 255 / 3%);
+}
+
+#eventsCard .event-symbol svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+#eventsCard .event-symbol-outlook,
+#eventsCard .event-symbol-teams {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+#eventsCard .event-symbol-generator-start {
+  color: #65d5a2;
+  border-width: 2px;
+  border-radius: 50%;
+  background: #112b24;
+}
+
+#eventsCard .event-symbol-generator-stop {
+  color: #ff7169;
+  border-width: 2px;
+  border-radius: 50%;
+  background: #321a1b;
+}
+
+#eventsCard .event-symbol-market {
+  color: #65d5a2;
+  background: #112b24;
+}
+
+#eventsCard .event-symbol-alarm {
+  color: #f2a64b;
+  background: #352711;
+}
+
+#eventsCard .event-symbol-trip {
+  color: #ff5b56;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 27px;
+}
+
+#eventsCard .event-symbol-info {
+  color: #69b7e8;
+  background: #112532;
+}
+
+#eventsCard .event-copy {
+  min-width: 0;
+}
+
+#eventsCard .event-copy header {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  color: #8eacbb !important;
+  font: 800 9px/1.2 monospace !important;
+  letter-spacing: .25px;
+}
+
+#eventsCard .event-copy strong {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #f4f8fa !important;
+  font: 800 12px/1.25 Arial, sans-serif !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#eventsCard .event-copy p {
+  margin: 3px 0 0 !important;
+  overflow: hidden;
+  color: #becbd1 !important;
+  font: 600 10px/1.35 monospace !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#eventsCard .event-tag {
+  color: #94a7b1 !important;
+  font: 800 9px/1 monospace !important;
+  letter-spacing: .5px;
+}
+
+#eventsCard .event-kind-generator-start strong,
+#eventsCard .event-kind-market strong {
+  color: #82e7ba !important;
+}
+
+#eventsCard .event-kind-generator-stop strong,
+#eventsCard .event-kind-trip strong {
+  color: #ff8580 !important;
+}
+
+#eventsCard .event-kind-alarm strong {
+  color: #f6bd69 !important;
+}
+
+#eventsCard .muted-note {
+  padding: 12px 4px;
+  font-size: 10px !important;
+  font-weight: 700;
+}

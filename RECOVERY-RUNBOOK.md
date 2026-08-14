@@ -103,7 +103,11 @@ default if unset. Confirmed by reading each file directly (`ieso_backend.py`, `n
 | `NORTHSTAR_DB` | `data/northstar.db` (relative to project root) | SQLite database path. |
 | `NORTHSTAR_ALLOWED_ORIGIN` | `*` in the backend's own default, but `start-northstar.ps1` sets it to `https://northstarenergy.ca,https://checkin.northstarenergy.ca` if not already set | CORS allow-list. **Never deploy with the bare `*` default** — see the F-06 finding in the original audit. |
 | `NORTHSTAR_CHECKIN_ORIGIN` | unset (backend behaves as local-only) / `https://checkin.northstarenergy.ca` via the launcher | The public hostname printed into QR codes, and the value the operator-gate's Host check compares against. |
-| `NORTHSTAR_OPERATOR_GATE` | unset (`off`-equivalent) in the backend / forced to `access` by `start-northstar.ps1` if not already set | Whether `Cf-Access-Jwt-Assertion` is required on operator routes. **This is the single most safety-critical variable in the system** — see `AGENTS.md` §1. |
+| `NORTHSTAR_OPERATOR_GATE` | unset (`off`-equivalent) in the backend / forced to `access` by `start-northstar.ps1` if not already set | `off`, `access` (require `Cf-Access-Jwt-Assertion`) or `demo` (require a Packet 19 sign-in session). **This is the single most safety-critical variable in the system** — see `AGENTS.md` §1. |
+| `NORTHSTAR_OPERATOR_HOST` | `ops.northstarenergy.ca` | The hostname the demo sign-in and demo sessions exist on. The check-in hostname never qualifies. |
+| `NORTHSTAR_DEMO_AUTH_FILE` | `data/.northstar-demo-auth.json` | Where the demo operator credential (username + salted scrypt verifier) is read from. Created by `python scripts/setup-demo-auth.py`. |
+| `NORTHSTAR_DEMO_PASSWORD_HASH` / `NORTHSTAR_DEMO_USERNAME` / `NORTHSTAR_DEMO_SESSION_SECONDS` | unset / `ron` / 9h | Pre-Packet-19 fallback, used only when the credential file is absent. The hash is `algorithm$salt$digest`; a plaintext password here would be a credential in the environment block, so prefer the file. |
+| `NORTHSTAR_DEMO_LOGIN_MAX_FAILURES` / `NORTHSTAR_DEMO_LOGIN_WINDOW_SECONDS` | `5` / `900` | Failed-sign-in throttle: failures per caller address within a sliding window. |
 
 ### Backups
 
@@ -173,6 +177,13 @@ that's needed, gathered in one place instead of scattered across `DEPLOY-RUNBOOK
 6. **Cloudflare Access policy.** Re-create the self-hosted application for `ops.northstarenergy.ca`
    per `DEPLOY-RUNBOOK.md` §3, listing each operator's email. Verify the challenge works **before**
    turning the operator gate on, exactly as that document already says.
+6b. **The demo operator credential** (Packet 19), if the deployment uses `NORTHSTAR_OPERATOR_GATE=demo`.
+   `data/.northstar-demo-auth.json` holds a username and a salted scrypt verifier — no password. It
+   is not in Git and is not in any backup that excludes `data/`. Losing it costs nothing but a
+   re-run: `python scripts/setup-demo-auth.py` on the new machine, with the owner supplying a fresh
+   temporary password. **Do not try to recover the old password from the file — that is the point of
+   it.** Unlike the QR secret in §1, there is no downstream artifact (no printed placards) tied to
+   this credential, so a rotation is a one-minute operation with no lead time.
 7. **Environment variables.** Everything in §2 above. Most have safe defaults via
    `start-northstar.ps1`; the ones that don't (`NORTHSTAR_BACKUP_MIRROR`,
    `NORTHSTAR_QR_SECRET` if choosing not to use the file fallback) are the D-5/§18.2 owner

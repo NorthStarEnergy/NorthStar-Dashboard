@@ -38,6 +38,47 @@
   let selectedFiles = [];
   let selectedRuleFiles = [];
 
+  function buildEngineeringHub() {
+    const workspace = document.querySelector('#switching .switching-workspace');
+    const banner = workspace?.querySelector('.switching-banner');
+    if (!workspace || !banner || workspace.querySelector('.engineering-hub')) return;
+
+    const label = banner.querySelector('label');
+    const title = banner.querySelector('h2');
+    if (label) label.textContent = 'ENGINEERING WORKSPACE · DRAWINGS / WORK PACKAGES / REVIEW';
+    if (title) title.textContent = 'Engineering Drawings & Work Protection';
+    const intro = document.createElement('p');
+    intro.className = 'engineering-banner-copy';
+    intro.textContent = 'Build one-line diagrams, assemble controlled source packages, document review checks, and retain a local or server-backed audit trail.';
+    title?.after(intro);
+
+    const hub = document.createElement('nav');
+    hub.className = 'engineering-hub';
+    hub.setAttribute('aria-label', 'Engineering workspace tools');
+    hub.innerHTML = `
+      <button type="button" data-engineering-target="#oneLineEditor"><span>DRAWING</span><strong>One-line editor</strong><small>Symbols, connections, labels, import and export</small><em>OPEN EDITOR →</em></button>
+      <button type="button" data-engineering-target="[data-module-id='switching-intake']"><span>SOURCE CONTROL</span><strong>Diagram intake</strong><small id="engineeringSourceStatus">No source package loaded</small><em>OPEN INTAKE →</em></button>
+      <button type="button" data-engineering-target="[data-module-id='switching-form']"><span>WORK PACKAGE</span><strong>Draft package</strong><small id="engineeringDraftStatus">Draft not started</small><em>OPEN PACKAGE →</em></button>
+      <button type="button" data-engineering-target="[data-module-id='switching-approval']"><span>REVIEW</span><strong>Qualified-person gate</strong><small id="engineeringReviewStatus">Not ready for review</small><em>OPEN REVIEW →</em></button>`;
+    hub.querySelectorAll('[data-engineering-target]').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelector(button.dataset.engineeringTarget)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    banner.after(hub);
+  }
+
+  function renderEngineeringHub() {
+    const diagrams = selectedFiles.length || state.diagrams.length;
+    const sources = selectedRuleFiles.length || state.ruleSources.length;
+    const sourceStatus = document.querySelector('#engineeringSourceStatus');
+    const draftStatus = document.querySelector('#engineeringDraftStatus');
+    const reviewStatus = document.querySelector('#engineeringReviewStatus');
+    if (sourceStatus) sourceStatus.textContent = `${diagrams} diagram${diagrams === 1 ? '' : 's'} · ${sources} procedure source${sources === 1 ? '' : 's'}`;
+    if (draftStatus) draftStatus.textContent = state.packageName ? `${state.packageName} · ${state.status}` : 'Draft not started';
+    if (reviewStatus) reviewStatus.textContent = state.status === 'REVIEW RECORDED · NOT RELEASE' ? 'Review recorded · not release' : state.status === 'READY FOR QUALIFIED REVIEW' ? 'Ready for qualified review' : 'Not ready for review';
+  }
+
   const $ = id => document.getElementById(id);
   const read = () => {
     try {
@@ -276,6 +317,7 @@
     $('wpReviewPill').className = `switching-state-pill ${state.status === 'REVIEW RECORDED · NOT RELEASE' ? 'reviewed' : state.status === 'READY FOR QUALIFIED REVIEW' ? 'ready' : ''}`;
     $('wpFormStatus').textContent = state.packageName ? `${state.diagrams.length} diagram(s) · ${state.ruleSources.length} governing source(s) · source-derived fields remain subject to qualified review.` : 'Create a package after attaching the current source diagrams. The fields below are intentionally blank until a qualified reviewer verifies the source.';
     $('wpRecordReview').disabled = state.status !== 'READY FOR QUALIFIED REVIEW';
+    renderEngineeringHub();
     renderAudit();
   }
 
@@ -295,6 +337,7 @@
       storage.textContent = label;
       storage.className = `switching-module-state ${state.storage === 'SERVER' ? 'synced' : state.storage === 'UNSYNCED' ? 'unsynced' : ''}`;
     }
+    renderEngineeringHub();
     renderAudit();
   }
 
@@ -429,6 +472,7 @@
   }
 
   function bind() {
+    buildEngineeringHub();
     read(); renderFields(); void hydrateServer();
     $('wpAddDiagram').onclick = () => $('wpDiagramFiles').click();
     $('wpDiagramFiles').onchange = event => {
