@@ -23,6 +23,27 @@ The runtime is a Python standard-library HTTP server with SQLite and static HTML
 - `contractor-checkin.html` — the worker-facing PWA
 - `tests/` — regression suite
 
+## How work is handed off between agents
+
+**`git log` is the state of this project. Not the ZIPs, not Drive, not the newest file timestamp.**
+
+On 2026-08-13 twelve builds were packaged and zero were committed, so `git log` claimed the project
+was two packets behind what was actually running. Any agent that had run `git restore` to start
+clean would have destroyed two days of work. Do not let that recur.
+
+- **One packet, one commit.** Commit before packaging anything. A packet that is only a ZIP is a
+  packet the next agent cannot see, diff, or revert.
+- **Tag the packet** — `git tag -a packet-NN-short-name`. The tag is what a ZIP is built *from*.
+- **`outputs/` and the Drive upload are derived artifacts.** They are delivery, not source. Never
+  copy code back out of one; `Where to work` above already forbids it, and this is why.
+- **Leave the tree clean.** Ending a session with 39 uncommitted files is how the next agent
+  inherits an unreadable state.
+- **Write the packet report** to `docs/packets/`, then summarise it in `docs/PACKET-LOG.md`.
+- **Run `python -m pytest tests -q` before committing** and put the count in the commit message.
+- If two agents run at once, give each its own `git worktree` rather than sharing this tree.
+
+To see where things stand, in order: `git log --oneline -5`, `git status --porcelain`, `git tag -n1`.
+
 ## This is live on the internet
 
 Since 2026-08-11 it is published through a Cloudflare tunnel on **northstarenergy.ca**:
@@ -264,73 +285,12 @@ decision.
 
 **Where they disagree with this file, this file wins** and the document is wrong. Fix the document.
 
-## Work added 2026-08-12 (Packet 18 pass) — reviewed; only explicitly marked items are wired
+## Packet history
 
-A Cowork/Claude session did a source-level review of Packet 17's claimed fixes (the report is in
-the Packet 17/18 Drive folder). The additions below were reviewed against the checked-out source;
-the explicit test results and wiring status are recorded here so later agents do not treat drafts
-as live behavior:
-
-- `northstar-clean.html` — the Flows tab (`#flows`) no longer renders a bare
-  `WATER MANAGEMENT / FLOWS` label with nothing else. It now says PLANNED and points at
-  `docs/architecture/DECISION_LOG.md`. This one change **is** live in this file, since it is a pure
-  content change with no behavior to regress. The operational browser and AI drafts below remain
-  unwired; each item's current validation status is stated explicitly.
-- `scripts/restore_drill.py` — a standalone backup-restore integrity check (copies the newest
-  `data/backups/*.db` to an isolated scratch path, never touches the live database). Written to
-  close the Stage 0.3 gap in `MIGRATION_SEQUENCE.md` ("has never been exercised (G-9)"). Run on
-  2026-08-12: PASS for integrity, foreign keys, expected tables, and audit-trail presence; the
-  full 87-test suite also passed against the restored copy.
-- `proposed/packet18_worker_safety/` — worker capability tokens and phone-verification throttling
-  for §18.1 (decision D-1), with unit tests. Deliberately outside `tests/` so it cannot affect the
-  baseline above just by existing. Focused validation run on 2026-08-12: 22 passed. It remains
-  unwired pending the D-1 decision. Read its `README.md` before moving it into the live backend.
-- `proposed/packet18_release_preflight/` - read-only primary-backend pre-flight checks. Its
-  focused tests pass (12); the manual check intentionally fails while the checkout is dirty and
-  passes the other five checks. It remains advisory and unwired pending owner approval.
-- `proposed/packet18_browser_smoke/` — Playwright-syntax browser smoke tests for §18.5. The
-  project's own "45 tests across 12 suites" TypeScript baseline (Packet 18) was not found anywhere
-  in this folder during this session — see that folder's `README.md` before assuming this is the
-  right place or the right framework for it.
-- `proposed/packet18_ai_assistant_contract/` — a draft `/api/ai` contract for §18.3 / decision D-6.
-  Documentation only; does not touch the still-inert `#assistant` placeholder in
-  `northstar-clean.html`.
-- The legacy static pipeline hardening described above is source-wired and covered by
-  `tests/test_legacy_sites_pipeline.py`; it does not change the already-deployed Vinext package.
-
-**Second pass, same date, with restore-drill and source validation complete:**
-
-- `RECOVERY-RUNBOOK.md` (project root) — §18.2. Where the QR-signing secret actually lives, what
-  happens if it's lost, the recovery procedure, a full `NORTHSTAR_*` environment variable reference,
-  and a from-scratch redeploy checklist. Documentation only. Found and documented a genuine gap
-  while writing it: `daily_backup()` in `northstar_store.py` never copies
-  `data/.northstar-qr-secret`, so a lost secret means every printed placard needs reprinting even if
-  the database backups are intact.
-- **§18.3 (training module) — investigated, correctly stopped, nothing written.** Packet 14's
-  "session creation, scenario isolation, learner outcome evidence" does not exist anywhere in this
-  repository — not as code, not as a spec file. `docs/architecture/SWITCHING-ENGINEERING-REMAINING-WORK.md`
-  and `MIGRATION_SEQUENCE.md` both reference it as still-open future work (the latter calls the
-  underlying simulator "Packet 06"), and ADR-001/`GAP_ANALYSIS.md` both state plainly that no
-  training module exists yet. There was nothing to check for feasibility or wire in. Writing one
-  from scratch would mean deciding training content and access — an owner decision, not a
-  documentation or integration task. Correctly stopped rather than inventing a module.
-- **§18.4 (Packet 12/13/10/11 contract integration) — mostly already done, one new script written.**
-  Packet 12 (canonical asset ID / topology revision fields) and Packet 13 (read-only review-evidence
-  projection at the operator-gated `/api/switching/drafts/{id}/review-evidence`) are already
-  implemented and confirmed present in `northstar_store.py`/`ieso_backend.py` — nothing new needed
-  there; what remains (a live topology registry to validate against, a retention policy) needs an
-  external system or an owner decision, not more code. "Packet 10/11" does not appear anywhere in
-  this repository, same as Packet 14 above — nothing to assess. Packet 15's release evaluator:
-  `scripts/prepare-sites.mjs` already does a narrow version of this for the Sites build only (clean
-  checkout, `NORTHSTAR_RELEASE_SHA` match). `proposed/packet18_release_preflight/` extends the same
-  idea to the primary deployment path — clean checkout, release SHA, operator-gate default, the
-  loopback-bind guard, `data/` gitignored, and the four named regression tests all present — as a
-  standalone script a human runs and decides whether to wire into `start-northstar.ps1`. Not wired
-  in by this pass.
- - `proposed/packet18_sites_redirect_fix/` — the same `Gate.tsx` redirect-to-`ops.` pattern, applied
-   to `server/index.js`. The source fix is now in place; the proposed copy remains for traceability.
-   No separate Sites deployment was needed because the current Vinext package does not use this
-   retired server entrypoint, and its live routes were already verified as safe.
+`docs/PACKET-LOG.md` records what each packet changed, newest first, and `docs/packets/` holds the
+full completion reports. **This file states what is true now; the log states what happened.** Do not
+add session narrative here — it is what turned this brief from short into long, and a stale
+narrative in an invariants file is read as a rule.
 
 ## Never commit
 
