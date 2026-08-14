@@ -7,6 +7,7 @@ and every change appends a row to ``checkin_events``.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -114,12 +115,17 @@ CREATE INDEX IF NOT EXISTS idx_checkins_status ON checkins(status);
 CREATE INDEX IF NOT EXISTS idx_events_checkin ON checkin_events(checkin_id, seq);
 
 CREATE TABLE IF NOT EXISTS logbook (
-    id      TEXT PRIMARY KEY,
-    at      TEXT NOT NULL,
-    type    TEXT NOT NULL,
-    subject TEXT NOT NULL,
-    details TEXT NOT NULL DEFAULT '',
-    source  TEXT NOT NULL DEFAULT 'operator'
+    id         TEXT PRIMARY KEY,
+    at         TEXT NOT NULL,
+    type       TEXT NOT NULL,
+    subject    TEXT NOT NULL,
+    details    TEXT NOT NULL DEFAULT '',
+    source     TEXT NOT NULL DEFAULT 'operator',
+    -- Tamper evidence: each row hashes its predecessor's digest with its own
+    -- stored fields, so an edit or deletion breaks every digest after it.
+    -- Databases created before 2026-08-14 gain these by migration instead.
+    prev_hash  TEXT,
+    entry_hash TEXT
 );
 
 CREATE TABLE IF NOT EXISTS outages (
@@ -354,6 +360,86 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
         connection.execute(
             "ALTER TABLE switching_drafts ADD COLUMN record_version INTEGER NOT NULL DEFAULT 1"
         )
+
+    logbook_columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(logbook)").fetchall()
+    }
+    chain_added = False
+    for name in ("prev_hash", "entry_hash"):
+        if name not in logbook_columns:
+            connection.execute(f"ALTER TABLE logbook ADD COLUMN {name} TEXT")
+            chain_added = True
+    if chain_added:
+        _rebuild_logbook_chain(connection)
+
+
+def _logbook_hash(
+    prev_hash: str, record_id: str, at: str, entry_type: str, subject: str, details: str, source: str
+) -> str:
+    """Hash one logbook row over its predecessor, making the log tamper-evident.
+
+    The unit separator cannot appear in any of these fields, so no combination of
+    field values can be rearranged to produce the same digest as a different row.
+    """
+    payload = "\x1f".join(
+        (prev_hash or "", record_id, at, entry_type, subject, details, source)
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _rebuild_logbook_chain(connection: sqlite3.Connection) -> int:
+    """Compute the chain across every existing row, in insertion order.
+
+    Run once when the columns are introduced. This establishes a baseline; it
+    does NOT prove anything about rows written before that point, because it
+    hashes whatever is in the table now. Integrity is only demonstrable from the
+    first entry appended after this runs. Said plainly so nobody later reads a
+    complete chain as proof the pilot data was never touched.
+    """
+    rows = connection.execute(
+        "SELECT rowid, id, at, type, subject, details, source FROM logbook ORDER BY rowid"
+    ).fetchall()
+    previous = ""
+    for row in rows:
+        digest = _logbook_hash(
+            previous, row["id"], row["at"], row["type"], row["subject"], row["details"], row["source"]
+        )
+        connection.execute(
+            "UPDATE logbook SET prev_hash = ?, entry_hash = ? WHERE rowid = ?",
+            (previous, digest, row["rowid"]),
+        )
+        previous = digest
+    return len(rows)
+
+
+def verify_logbook_chain() -> dict[str, Any]:
+    """Recompute the chain and report the first row that does not match.
+
+    A break means the row's stored fields are not what were hashed when it was
+    written: the entry was edited, deleted, or inserted out of band. Returns the
+    offending id rather than raising, so an operator can be shown where the
+    record stops being trustworthy.
+    """
+    with _LOCK, _session() as connection:
+        rows = connection.execute(
+            "SELECT rowid, id, at, type, subject, details, source, prev_hash, entry_hash"
+            " FROM logbook ORDER BY rowid"
+        ).fetchall()
+    previous = ""
+    for index, row in enumerate(rows):
+        expected = _logbook_hash(
+            previous, row["id"], row["at"], row["type"], row["subject"], row["details"], row["source"]
+        )
+        if row["prev_hash"] != previous or row["entry_hash"] != expected:
+            return {
+                "ok": False,
+                "checked": index,
+                "entries": len(rows),
+                "brokenAt": row["id"],
+                "brokenTimestamp": row["at"],
+            }
+        previous = row["entry_hash"]
+    return {"ok": True, "checked": len(rows), "entries": len(rows), "brokenAt": None}
 
 
 def daily_backup(reference: datetime | None = None) -> Path | None:
@@ -919,21 +1005,50 @@ def _unique_id(connection: sqlite3.Connection, table: str, prefix: str) -> str:
 def add_logbook_entry(
     entry_type: str, subject: str, details: str = "", source: str = "operator"
 ) -> dict[str, Any]:
-    """Append a logbook entry. The logbook is append-only; nothing edits or deletes."""
+    """Append a logbook entry. The logbook is append-only; nothing edits or deletes.
+
+    Each row carries a SHA-256 over its predecessor's digest and its own stored
+    fields, so editing or removing any earlier entry breaks every digest after
+    it. See ``verify_logbook_chain``. The hash covers the values as stored —
+    after truncation — so a verified chain reflects the record as kept, not the
+    text as typed.
+    """
     timestamp = now_iso()
+    stored_type = entry_type[:60]
+    stored_subject = subject[:160]
+    stored_details = details[:4000]
+    stored_source = source[:40]
     with _LOCK, _session() as connection:
         record_id = _unique_id(connection, "logbook", "event")
+        tail = connection.execute(
+            "SELECT entry_hash FROM logbook ORDER BY rowid DESC LIMIT 1"
+        ).fetchone()
+        previous = (tail["entry_hash"] if tail else "") or ""
+        digest = _logbook_hash(
+            previous, record_id, timestamp, stored_type, stored_subject, stored_details, stored_source
+        )
         connection.execute(
-            "INSERT INTO logbook (id, at, type, subject, details, source) VALUES (?,?,?,?,?,?)",
-            (record_id, timestamp, entry_type[:60], subject[:160], details[:4000], source[:40]),
+            "INSERT INTO logbook (id, at, type, subject, details, source, prev_hash, entry_hash)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (
+                record_id,
+                timestamp,
+                stored_type,
+                stored_subject,
+                stored_details,
+                stored_source,
+                previous,
+                digest,
+            ),
         )
     return {
         "id": record_id,
-        "type": entry_type[:60],
-        "subject": subject[:160],
-        "details": details[:4000],
-        "source": source[:40],
+        "type": stored_type,
+        "subject": stored_subject,
+        "details": stored_details,
+        "source": stored_source,
         "timestamp": timestamp,
+        "entryHash": digest,
     }
 
 
