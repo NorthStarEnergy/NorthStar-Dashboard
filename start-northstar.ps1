@@ -6,7 +6,28 @@ param(
     [switch]$DemoLogin,
     # Local-only work: no tunnel, no public check-in origin. Combine with
     # -DemoLogin to exercise the sign-in on http://localhost:4180.
-    [switch]$LocalOnly
+    [switch]$LocalOnly,
+    # Block until the backend exits instead of returning once it is healthy.
+    # REQUIRED when launched from Task Scheduler. A scheduled task is finished
+    # when its own process ends, and Task Scheduler then terminates everything
+    # left in the task's process tree - including the backend this script just
+    # started. That is what killed the 2026-08-21 12:22 run with exit code
+    # 0xC000013A and left the site down. Staying alive keeps the task Running
+    # for the life of the backend, so the restart settings can do their job.
+    [switch]$Wait,
+    # Run the backend in the FOREGROUND, for Task Scheduler.
+    #
+    # Two things make the interactive path unusable from a task. The ancestor
+    # walk and Get-NorthstarProcesses both enumerate Win32_Process through CIM;
+    # under a non-interactive task that hung indefinitely, before the first
+    # Write-Host, which is why the 2026-08-21 run produced no output and no
+    # backend. And Start-Process detaches, so the task's own process ends and
+    # Task Scheduler then kills the tree it left behind.
+    #
+    # Service mode skips both process-hygiene steps - a task has no stale
+    # interactive re-run to clean up - and keeps python as a foreground child so
+    # the task stays Running for as long as the backend does.
+    [switch]$ServiceMode
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,11 +50,13 @@ $port = 4180
 Set-Location -LiteralPath $projectRoot
 
 $ancestorProcessIds = @()
+if (-not $ServiceMode) {
 $processCursor = Get-CimInstance Win32_Process -Filter "ProcessId=$PID"
 while ($processCursor -and $processCursor.ParentProcessId) {
     $ancestorProcessIds += [int]$processCursor.ParentProcessId
     $processCursor = Get-CimInstance Win32_Process `
         -Filter "ProcessId=$($processCursor.ParentProcessId)" -ErrorAction SilentlyContinue
+}
 }
 
 function Get-NorthstarHealth {
@@ -61,7 +84,7 @@ function Get-NorthstarProcesses {
 }
 
 $backendSourceTime = (Get-Item -LiteralPath $backendFile).LastWriteTime
-$northstarProcesses = @(Get-NorthstarProcesses)
+$northstarProcesses = if ($ServiceMode) { @() } else { @(Get-NorthstarProcesses) }
 $freshBackend = $northstarProcesses | Where-Object {
     $_.Name -match '^(?:python|py)' -and
     (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue).StartTime -ge $backendSourceTime
@@ -71,6 +94,7 @@ $health = Get-NorthstarHealth
 if ($health -and $freshBackend) {
     Write-Host 'NorthStar is already running. Opening the dashboard...'
     if (-not $NoBrowser) { Start-Process $dashboardUrl }
+    if ($Wait) { Wait-Process -Id $freshBackend.ProcessId -ErrorAction SilentlyContinue }
     return
 }
 
@@ -160,6 +184,20 @@ if (-not $env:NORTHSTAR_OPERATOR_HOST) { $env:NORTHSTAR_OPERATOR_HOST = $operato
 # DELETE /api/checkins/<id>, i.e. checking a worker out. Pin it.
 if (-not $env:NORTHSTAR_ALLOWED_ORIGIN) { $env:NORTHSTAR_ALLOWED_ORIGIN = 'https://northstarenergy.ca,https://checkin.northstarenergy.ca' }
 
+if ($ServiceMode -and $health) {
+    Write-Host 'Service mode: a healthy backend is already running; nothing to do.'
+    return
+}
+
+if ($ServiceMode) {
+    Write-Host 'Service mode: running the backend in the foreground.'
+    Start-Process -FilePath $pythonFile -ArgumentList $pythonArguments `
+        -WorkingDirectory $projectRoot -NoNewWindow -Wait `
+        -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
+    Write-Host 'The backend exited.'
+    return
+}
+
 Write-Host 'Starting NorthStar core services...'
 $backendProcess = Start-Process -FilePath $pythonFile -ArgumentList $pythonArguments `
     -WorkingDirectory $projectRoot -WindowStyle Hidden -PassThru `
@@ -184,3 +222,8 @@ if (-not $health) {
 
 Write-Host 'Core systems are ready. Live market and weather feeds may take another minute to warm up.'
 if (-not $NoBrowser) { Start-Process $dashboardUrl }
+if ($Wait) {
+    Write-Host "Holding this process while the backend runs (pid $($backendProcess.Id))."
+    Wait-Process -Id $backendProcess.Id
+    Write-Host 'The backend exited.'
+}

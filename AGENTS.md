@@ -238,8 +238,26 @@ public hostnames answer `502` with nothing logged and nothing alerting. This hap
 2026-08-14: an unclean shutdown at 01:31 left `checkin.northstarenergy.ca` — the worker QR
 surface — down for five hours before anyone noticed.
 
-A scheduled task, **"NorthStar Control Room backend"**, now runs `start-northstar.ps1 -DemoLogin
--NoBrowser` at logon with a 60-second delay. `-NoBrowser` is required: the task has no desktop.
+A scheduled task, **"NorthStar Control Room backend"**, runs `start-northstar.ps1 -DemoLogin
+-NoBrowser -ServiceMode` at logon with a 60-second delay. **`-ServiceMode` is mandatory from a
+task and the site stays down without it.** Two independent reasons, both found the hard way when
+the first version of this task left the site 502 from 2026-08-15 to 2026-08-22:
+
+1. The ancestor walk and `Get-NorthstarProcesses` enumerate `Win32_Process` through CIM. Under a
+   non-interactive task that hangs indefinitely — before the launcher's first `Write-Host`, so
+   Task Scheduler reports only a running task and no backend ever appears. It does not hang
+   interactively, so it cannot be reproduced by running the script by hand.
+2. The normal path uses `Start-Process` and returns. A task is finished when its own process
+   ends, and Task Scheduler then kills everything left in the task's tree — including the
+   backend. That is exit code `0xC000013A` in the task history.
+
+`-ServiceMode` skips both CIM steps and keeps python as a foreground child, so the task stays
+`Running` for the life of the backend. Task output goes to `data/task-start.log`; without it a
+failure inside the launcher is invisible.
+
+**Verify an auto-start fix by stopping the backend and running the task, never by running it
+while the backend is already up.** The already-running path returns success without starting
+anything, which is how a broken task was recorded as verified. `-NoBrowser` is required: the task has no desktop.
 It is an **at-logon** trigger, not at-startup, because registering an at-startup trigger needs an
 elevated shell. A machine sitting at the lock screen after a reboot is therefore still down. To
 close that gap, run once from an **admin** PowerShell:
