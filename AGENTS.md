@@ -13,6 +13,13 @@ Do not work in, or copy code back from, any of these:
 - `control-room-dashboard/` (nested) — an abandoned Next/Vinext/Drizzle starter. Not the runtime.
 - `tmp/`, `output/`, `dist/`, `handoff/*/source/` — frozen snapshots and ZIP staging. Read-only history.
 - Anything extracted from a handoff ZIP. Those were point-in-time copies; several are now months stale.
+- **The Drive `00_CANONICAL_SOURCE_TREE` / CANON tree, despite its name.** It is the separate
+  `NorthStar Dashboard v2` / v0.4-v0.6 product line, not this runtime. Its `start-northstar.ps1`
+  is the pre-2026-08-11-audit launcher whose only env var is `NORTHSTAR_PORT`, so copying it here
+  restores the gate-`off` default, `ALLOWED_ORIGIN='*'`, and the non-loopback bind - three holes
+  this project already had exploited. Its `northstar_store.py` predates the logbook hash chain and
+  its `tests/` lack every security regression. Full comparison, and the list of genuinely unmerged
+  work it *does* hold, in `docs/drive-canon-reconciliation-2026-08-22.md`.
 
 The runtime is a Python standard-library HTTP server with SQLite and static HTML/JS:
 
