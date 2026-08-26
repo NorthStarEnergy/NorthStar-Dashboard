@@ -201,6 +201,7 @@ class DemoAuthTest(unittest.TestCase):
             "/api/retention",
             "/api/site-policies",
             "/api/switching/drafts",
+            "/api/schematics",
             "/api/voice",
             "/api/voice/recordings",
         )
@@ -215,6 +216,7 @@ class DemoAuthTest(unittest.TestCase):
             ("POST", "/api/outages", {"title": "unauthorised", "site": "Kenora"}),
             ("POST", "/api/alerts/clear", {"id": "x"}),
             ("POST", "/api/switching/drafts", {"packageName": "unauthorised"}),
+            ("POST", "/api/schematics", {"name": "unauthorised", "record": {}}),
             ("POST", f"/api/checkins/{record['id']}/help/resolve", {"actor": "x"}),
             ("POST", f"/api/checkins/{record['id']}/provisional", {"accept": True}),
             ("POST", "/api/voice/scan", {}),
@@ -339,7 +341,7 @@ class DemoAuthTest(unittest.TestCase):
         self.create_checkin()
         cookie = self.session_cookie()
         for path in ("/api/checkins", "/api/checkins/history", "/api/logbook",
-                     "/api/checkin-tokens", "/api/switching/drafts"):
+                     "/api/checkin-tokens", "/api/switching/drafts", "/api/schematics"):
             with self.subTest(path=path):
                 self.assertEqual(self.call("GET", path, host=PUBLIC_HOST, cookie=cookie)[0], 403)
 

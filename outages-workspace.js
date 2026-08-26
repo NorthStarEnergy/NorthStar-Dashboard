@@ -43,6 +43,7 @@
 
   const outageList = document.querySelector('#outageList');
   const outageSummary = document.querySelector('#outageSummary');
+  let latestOutages = [];
 
   function outageMarkup(outage) {
     const severity = String(outage.severity || 'Monitor').toLowerCase();
@@ -52,8 +53,11 @@
     const close = outage.status === 'Open' && outage.id
       ? `<button class="node-expand outage-close" data-close-outage="${escapeHtml(outage.id)}">CLOSE</button>`
       : '';
+    const switching = outage.status === 'Open' && outage.id
+      ? `<button class="node-expand" data-create-switching="${escapeHtml(outage.id)}">CREATE PLAN</button>`
+      : '';
     return `<article class="event-item outage-item outage-severity-${severity} outage-type-${type.toLowerCase()}">
-      <header><span>${reportTime(outage.openedAt)} · ${escapeHtml(outage.site || '')}</span><span class="outage-badges"><b class="outage-badge ${severity}">${escapeHtml(outage.severity || 'Monitor')}</b><b class="outage-badge ${type.toLowerCase()}">${type.toUpperCase()}</b>${close}</span></header>
+      <header><span>${reportTime(outage.openedAt)} · ${escapeHtml(outage.site || '')}</span><span class="outage-badges"><b class="outage-badge ${severity}">${escapeHtml(outage.severity || 'Monitor')}</b><b class="outage-badge ${type.toLowerCase()}">${type.toUpperCase()}</b>${switching}${close}</span></header>
       <strong>${escapeHtml(asset)}</strong><p>${escapeHtml(title + (outage.details || ''))}</p>
     </article>`;
   }
@@ -76,6 +80,7 @@
       const response = await fetch('/api/outages?ts=' + Date.now());
       if (!response.ok) throw new Error('outage register unavailable');
       const records = await response.json();
+      latestOutages = records;
       const open = records.filter(outage => outage.status === 'Open');
       outageList.innerHTML = open.map(outageMarkup).join('') || '<div class="muted-note">No open outages.</div>';
       renderOutageSummary(open);
@@ -118,6 +123,12 @@
   }
   document.addEventListener('click', event => {
     if (event.target.closest('[data-close-outage]')) setTimeout(loadOutageRegister, 350);
+    const create = event.target.closest('[data-create-switching]');
+    if (create) {
+      const outage = latestOutages.find(item => item.id === create.dataset.createSwitching);
+      document.querySelector('[data-tab="switching"]')?.click();
+      setTimeout(() => window.NorthStarSwitching?.prefillOutage(outage || create.dataset.createSwitching), 50);
+    }
   });
   setTimeout(loadOutageRegister, 500);
   setInterval(loadOutageRegister, 60000);

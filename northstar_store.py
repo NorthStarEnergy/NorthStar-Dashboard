@@ -66,6 +66,10 @@ SWITCHING_REVIEW_CHECKS = (
 class SwitchingConflict(ValueError):
     """Raised when an operator submits an older copy of a switching draft."""
 
+
+class SchematicConflict(ValueError):
+    """Raised when an operator submits an older copy of a one-line record."""
+
 # A price sitting exactly on a threshold would otherwise raise and resolve on
 # every refresh. An alert only clears once the price is back inside the band by
 # this margin, so a hovering price produces one alarm, not a stream of them.
@@ -204,6 +208,8 @@ CREATE TABLE IF NOT EXISTS switching_drafts (
     package_name    TEXT NOT NULL DEFAULT '',
     site            TEXT NOT NULL DEFAULT '',
     asset           TEXT NOT NULL DEFAULT '',
+    outage_id       TEXT NOT NULL DEFAULT '',
+    schematic_id    TEXT NOT NULL DEFAULT '',
     diagram_revision TEXT NOT NULL DEFAULT '',
     rule_set        TEXT NOT NULL DEFAULT '',
     work_scope      TEXT NOT NULL DEFAULT '',
@@ -233,6 +239,52 @@ CREATE TABLE IF NOT EXISTS switching_draft_events (
 
 CREATE INDEX IF NOT EXISTS idx_switching_drafts_status ON switching_drafts(status, updated_at);
 CREATE INDEX IF NOT EXISTS idx_switching_draft_events_draft ON switching_draft_events(draft_id, seq);
+
+CREATE TABLE IF NOT EXISTS switching_attachments (
+    id           TEXT PRIMARY KEY,
+    draft_id     TEXT NOT NULL REFERENCES switching_drafts(id),
+    kind         TEXT NOT NULL CHECK (kind IN ('diagram', 'source')),
+    filename     TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    size_bytes   INTEGER NOT NULL,
+    sha256       TEXT NOT NULL,
+    content      BLOB NOT NULL,
+    uploaded_at  TEXT NOT NULL,
+    uploaded_by  TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_switching_attachment_dedup
+    ON switching_attachments(draft_id, kind, filename, sha256);
+CREATE INDEX IF NOT EXISTS idx_switching_attachments_draft
+    ON switching_attachments(draft_id, kind, uploaded_at);
+
+CREATE TABLE IF NOT EXISTS one_line_documents (
+    id                    TEXT PRIMARY KEY,
+    name                  TEXT NOT NULL,
+    outage_id             TEXT NOT NULL DEFAULT '',
+    standard_approval_ref TEXT NOT NULL DEFAULT '',
+    current_revision      INTEGER NOT NULL,
+    current_payload       TEXT NOT NULL,
+    created_at            TEXT NOT NULL,
+    updated_at            TEXT NOT NULL,
+    created_by            TEXT NOT NULL,
+    updated_by            TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS one_line_revisions (
+    document_id TEXT NOT NULL REFERENCES one_line_documents(id),
+    revision    INTEGER NOT NULL,
+    payload     TEXT NOT NULL,
+    sha256      TEXT NOT NULL,
+    at          TEXT NOT NULL,
+    actor       TEXT NOT NULL,
+    PRIMARY KEY (document_id, revision)
+);
+
+CREATE INDEX IF NOT EXISTS idx_one_line_documents_updated
+    ON one_line_documents(updated_at, id);
+CREATE INDEX IF NOT EXISTS idx_one_line_documents_outage
+    ON one_line_documents(outage_id, updated_at);
 
 -- Packet 16 test fixture metadata. These tables intentionally contain no source bytes.
 -- retention_days = NULL means indefinite for this non-production test dataset.
@@ -360,6 +412,18 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
         connection.execute(
             "ALTER TABLE switching_drafts ADD COLUMN record_version INTEGER NOT NULL DEFAULT 1"
         )
+    for name, definition in {
+        "outage_id": "TEXT NOT NULL DEFAULT ''",
+        "schematic_id": "TEXT NOT NULL DEFAULT ''",
+    }.items():
+        if name not in switching_columns:
+            connection.execute(
+                f"ALTER TABLE switching_drafts ADD COLUMN {name} {definition}"
+            )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_switching_drafts_outage"
+        " ON switching_drafts(outage_id, updated_at)"
+    )
 
     logbook_columns = {
         row["name"] for row in connection.execute("PRAGMA table_info(logbook)").fetchall()
@@ -1075,6 +1139,14 @@ def _switching_clip(value: Any, limit: int) -> str:
     return str(value or "").strip()[:limit]
 
 
+def _bounded_int(value: Any, minimum: int, maximum: int, default: int = 0) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(minimum, min(parsed, maximum))
+
+
 def _switching_file_records(value: Any) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
@@ -1086,14 +1158,18 @@ def _switching_file_records(value: Any) -> list[dict[str, Any]]:
             size = max(0, min(int(item.get("size", 0) or 0), 25 * 1024 * 1024))
         except (TypeError, ValueError):
             size = 0
-        records.append(
-            {
-                "name": _switching_clip(item.get("name"), 255),
-                "size": size,
-                "type": _switching_clip(item.get("type"), 120),
-                "lastModified": _switching_clip(item.get("lastModified"), 80),
-            }
-        )
+        digest = _switching_clip(item.get("sha256"), 64).lower()
+        if digest and (len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest)):
+            digest = ""
+        records.append({
+            "attachmentId": _switching_clip(item.get("attachmentId"), 120),
+            "name": _switching_clip(item.get("name"), 255),
+            "size": size,
+            "type": _switching_clip(item.get("type"), 120),
+            "lastModified": _switching_clip(item.get("lastModified"), 80),
+            "sha256": digest,
+            "storage": "SERVER" if item.get("attachmentId") else "LOCAL",
+        })
     return [record for record in records if record["name"]]
 
 
@@ -1127,6 +1203,10 @@ def _normalise_switching_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "packageName": _switching_clip(payload.get("packageName"), 160),
         "site": _switching_clip(payload.get("site"), 120),
         "asset": _switching_clip(payload.get("asset"), 160),
+        "outageId": _switching_clip(payload.get("outageId"), 120),
+        "schematicId": _switching_clip(payload.get("schematicId"), 120),
+        "schematicRevision": _bounded_int(payload.get("schematicRevision"), 0, 1000000),
+        "symbolProfileApprovalRef": _switching_clip(payload.get("symbolProfileApprovalRef"), 240),
         "canonicalAssetId": _switching_clip(payload.get("canonicalAssetId"), 160),
         "topologySnapshotId": _switching_clip(payload.get("topologySnapshotId"), 160),
         "topologyRevision": _switching_clip(payload.get("topologyRevision"), 160),
@@ -1173,10 +1253,14 @@ def _switching_validation_errors(payload: dict[str, Any]) -> list[str]:
     ):
         if not str(payload.get(key, "")).strip():
             errors.append(label)
-    if not payload.get("diagrams"):
-        errors.append("circuit diagram source")
-    if not payload.get("ruleSources"):
-        errors.append("governing rule/procedure source")
+    durable_diagrams = [item for item in payload.get("diagrams", []) if item.get("attachmentId")]
+    durable_sources = [item for item in payload.get("ruleSources", []) if item.get("attachmentId")]
+    if not durable_diagrams and not payload.get("schematicId"):
+        errors.append("server-stored circuit diagram source")
+    if payload.get("schematicId") and not payload.get("symbolProfileApprovalRef"):
+        errors.append("utility symbol-profile approval reference")
+    if not durable_sources:
+        errors.append("server-stored governing rule/procedure source")
     if not payload.get("sourceManifestDigest"):
         errors.append("source manifest digest")
     for key, label in (
@@ -1254,6 +1338,8 @@ def _switching_record(
             "packageName": row["package_name"],
             "site": row["site"],
             "asset": row["asset"],
+            "outageId": row["outage_id"],
+            "schematicId": row["schematic_id"],
             "revision": row["diagram_revision"],
             "ruleSet": row["rule_set"],
             "scope": row["work_scope"],
@@ -1282,13 +1368,15 @@ def create_switching_draft(payload: dict[str, Any], actor: str = "operator") -> 
         record_id = _unique_id(connection, "switching_drafts", "switching")
         connection.execute(
             "INSERT INTO switching_drafts"
-            " (id, package_name, site, asset, diagram_revision, rule_set, work_scope, status, record_version, payload, created_at, updated_at, created_by)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " (id, package_name, site, asset, outage_id, schematic_id, diagram_revision, rule_set, work_scope, status, record_version, payload, created_at, updated_at, created_by)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 record_id,
                 data["packageName"],
                 data["site"],
                 data["asset"],
+                data["outageId"],
+                data["schematicId"],
                 data["revision"],
                 data["ruleSet"],
                 data["scope"],
@@ -1356,11 +1444,13 @@ def save_switching_draft(
         new_status = SWITCHING_DRAFT if prior_status == SWITCHING_READY else prior_status
         new_version = row["record_version"] + 1
         connection.execute(
-            "UPDATE switching_drafts SET package_name=?, site=?, asset=?, diagram_revision=?, rule_set=?, work_scope=?, status=?, record_version=?, payload=?, updated_at=? WHERE id=?",
+            "UPDATE switching_drafts SET package_name=?, site=?, asset=?, outage_id=?, schematic_id=?, diagram_revision=?, rule_set=?, work_scope=?, status=?, record_version=?, payload=?, updated_at=? WHERE id=?",
             (
                 data["packageName"],
                 data["site"],
                 data["asset"],
+                data["outageId"],
+                data["schematicId"],
                 data["revision"],
                 data["ruleSet"],
                 data["scope"],
@@ -1409,6 +1499,25 @@ def mark_switching_draft_ready(
         except json.JSONDecodeError:
             data = {}
         errors = _switching_validation_errors(data if isinstance(data, dict) else {})
+        if isinstance(data, dict) and data.get("outageId"):
+            linked_outage = connection.execute(
+                "SELECT 1 FROM outages WHERE id=?", (data["outageId"],)
+            ).fetchone()
+            if linked_outage is None:
+                errors.append("valid linked outage")
+        if isinstance(data, dict) and data.get("schematicId"):
+            linked_schematic = connection.execute(
+                "SELECT current_revision,standard_approval_ref FROM one_line_documents WHERE id=?",
+                (data["schematicId"],),
+            ).fetchone()
+            if linked_schematic is None:
+                errors.append("valid server schematic")
+            elif int(data.get("schematicRevision", 0) or 0) != linked_schematic["current_revision"]:
+                errors.append("current schematic revision")
+            elif not linked_schematic["standard_approval_ref"]:
+                errors.append("schematic utility symbol-profile approval reference")
+            elif data.get("symbolProfileApprovalRef") != linked_schematic["standard_approval_ref"]:
+                errors.append("matching schematic symbol-profile approval reference")
         if errors:
             raise ValueError("not ready: " + ", ".join(errors))
         timestamp = now_iso()
@@ -1526,6 +1635,9 @@ def get_switching_review_evidence(draft_id: str) -> dict[str, Any] | None:
         "packet": "13",
         "evidenceType": "UWPC_EUSR_REVIEW_EVIDENCE",
         "draftId": record["id"],
+        "outageId": record.get("outageId", ""),
+        "schematicId": record.get("schematicId", ""),
+        "schematicRevision": record.get("schematicRevision", 0),
         "status": record["status"],
         "terminalNonRelease": record["status"] == SWITCHING_REVIEWED,
         "sourceManifestDigest": record.get("sourceManifestDigest", ""),
@@ -1544,20 +1656,504 @@ def get_switching_review_evidence(draft_id: str) -> dict[str, Any] | None:
     }
 
 
-def list_switching_drafts(status: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+def list_switching_drafts(
+    status: str | None = None,
+    limit: int = 100,
+    query: str | None = None,
+    outage_id: str | None = None,
+) -> list[dict[str, Any]]:
     limit = max(1, min(limit, 500))
+    query = _switching_clip(query, 160)
+    outage_id = _switching_clip(outage_id, 120)
+    clauses: list[str] = []
+    values: list[Any] = []
+    if status in (SWITCHING_DRAFT, SWITCHING_READY, SWITCHING_REVIEWED):
+        clauses.append("status=?")
+        values.append(status)
+    if outage_id:
+        clauses.append("outage_id=?")
+        values.append(outage_id)
+    if query:
+        clauses.append("(package_name LIKE ? OR site LIKE ? OR asset LIKE ? OR id LIKE ?)")
+        pattern = f"%{query}%"
+        values.extend([pattern, pattern, pattern, pattern])
+    where = " WHERE " + " AND ".join(clauses) if clauses else ""
     with _LOCK, _session() as connection:
-        if status in (SWITCHING_DRAFT, SWITCHING_READY, SWITCHING_REVIEWED):
-            rows = connection.execute(
-                "SELECT * FROM switching_drafts WHERE status=? ORDER BY updated_at DESC, id DESC LIMIT ?",
-                (status, limit),
-            ).fetchall()
-        else:
-            rows = connection.execute(
-                "SELECT * FROM switching_drafts ORDER BY updated_at DESC, id DESC LIMIT ?",
-                (limit,),
-            ).fetchall()
+        rows = connection.execute(
+            f"SELECT * FROM switching_drafts{where} ORDER BY updated_at DESC, id DESC LIMIT ?",
+            (*values, limit),
+        ).fetchall()
     return [_switching_record(row) for row in rows]
+
+
+_SWITCHING_ATTACHMENT_TYPES = {
+    "diagram": {
+        ".pdf": "application/pdf",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".json": "application/json",
+    },
+    "source": {
+        ".pdf": "application/pdf",
+        ".txt": "text/plain",
+        ".doc": "application/msword",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    },
+}
+MAX_SWITCHING_ATTACHMENT_BYTES = 25 * 1024 * 1024
+
+
+def _safe_attachment_name(value: Any) -> str:
+    filename = str(value or "").replace("\\", "/").split("/")[-1].strip()
+    filename = "".join(character for character in filename if ord(character) >= 32)
+    if not filename or filename in {".", ".."}:
+        raise ValueError("attachment filename is required")
+    return filename[:255]
+
+
+def _attachment_record(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "attachmentId": row["id"],
+        "name": row["filename"],
+        "size": row["size_bytes"],
+        "type": row["content_type"],
+        "lastModified": row["uploaded_at"],
+        "sha256": row["sha256"],
+        "storage": "SERVER",
+        "kind": row["kind"],
+        "uploadedAt": row["uploaded_at"],
+        "uploadedBy": row["uploaded_by"],
+        "downloadUrl": f"/api/switching/drafts/{row['draft_id']}/attachments/{row['id']}",
+    }
+
+
+def _validate_attachment_content(suffix: str, content: bytes) -> None:
+    signatures = {
+        ".pdf": lambda value: value.startswith(b"%PDF-"),
+        ".png": lambda value: value.startswith(b"\x89PNG\r\n\x1a\n"),
+        ".jpg": lambda value: value.startswith(b"\xff\xd8\xff"),
+        ".jpeg": lambda value: value.startswith(b"\xff\xd8\xff"),
+        ".webp": lambda value: len(value) >= 12 and value[:4] == b"RIFF" and value[8:12] == b"WEBP",
+        ".doc": lambda value: value.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"),
+        ".docx": lambda value: value.startswith(b"PK\x03\x04"),
+    }
+    if suffix in signatures and not signatures[suffix](content):
+        raise ValueError("attachment content does not match its filename")
+    if suffix == ".json":
+        try:
+            parsed = json.loads(content.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("one-line JSON attachment is invalid") from exc
+        if not isinstance(parsed, dict):
+            raise ValueError("one-line JSON attachment must contain an object")
+    if suffix == ".txt":
+        try:
+            content.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValueError("text attachment must be UTF-8") from exc
+
+
+def _switching_manifest_digest(payload: dict[str, Any]) -> str:
+    manifest = {
+        "diagrams": sorted(
+            [
+                {
+                    key: item.get(key, "")
+                    for key in ("attachmentId", "name", "size", "type", "sha256")
+                }
+                for item in payload.get("diagrams", [])
+                if isinstance(item, dict)
+            ],
+            key=lambda item: (str(item["name"]), str(item["attachmentId"])),
+        ),
+        "ruleSources": sorted(
+            [
+                {
+                    key: item.get(key, "")
+                    for key in ("attachmentId", "name", "size", "type", "sha256")
+                }
+                for item in payload.get("ruleSources", [])
+                if isinstance(item, dict)
+            ],
+            key=lambda item: (str(item["name"]), str(item["attachmentId"])),
+        ),
+        "schematicId": payload.get("schematicId", ""),
+        "schematicRevision": payload.get("schematicRevision", 0),
+    }
+    encoded = json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def add_switching_attachment(
+    draft_id: str,
+    kind: str,
+    filename: str,
+    content_type: str,
+    content: bytes,
+    actor: str = "operator",
+) -> dict[str, Any] | None:
+    if kind not in _SWITCHING_ATTACHMENT_TYPES:
+        raise ValueError("attachment kind must be diagram or source")
+    filename = _safe_attachment_name(filename)
+    suffix = Path(filename).suffix.lower()
+    if suffix not in _SWITCHING_ATTACHMENT_TYPES[kind]:
+        raise ValueError(f"unsupported {kind} attachment type")
+    if not content:
+        raise ValueError("attachment is empty")
+    if len(content) > MAX_SWITCHING_ATTACHMENT_BYTES:
+        raise ValueError("attachment exceeds 25 MB")
+    _validate_attachment_content(suffix, content)
+    expected_type = _SWITCHING_ATTACHMENT_TYPES[kind][suffix]
+    supplied_type = _switching_clip(content_type, 120).split(";", 1)[0].lower()
+    if supplied_type not in {"", "application/octet-stream", expected_type}:
+        raise ValueError("attachment content type does not match its filename")
+    content_type = expected_type
+    digest = hashlib.sha256(content).hexdigest()
+    timestamp = now_iso()
+    actor = _switching_clip(actor, 80) or "operator"
+    with _LOCK, _session() as connection:
+        draft = connection.execute(
+            "SELECT * FROM switching_drafts WHERE id=?", (draft_id,)
+        ).fetchone()
+        if draft is None:
+            return None
+        if draft["status"] == SWITCHING_REVIEWED:
+            raise ValueError("reviewed packages are immutable; start a new revision")
+        row = connection.execute(
+            "SELECT * FROM switching_attachments"
+            " WHERE draft_id=? AND kind=? AND filename=? AND sha256=?",
+            (draft_id, kind, filename, digest),
+        ).fetchone()
+        if row is None:
+            attachment_id = _unique_id(connection, "switching_attachments", "attachment")
+            connection.execute(
+                "INSERT INTO switching_attachments"
+                " (id,draft_id,kind,filename,content_type,size_bytes,sha256,content,uploaded_at,uploaded_by)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (
+                    attachment_id,
+                    draft_id,
+                    kind,
+                    filename,
+                    content_type,
+                    len(content),
+                    digest,
+                    sqlite3.Binary(content),
+                    timestamp,
+                    actor,
+                ),
+            )
+            row = connection.execute(
+                "SELECT * FROM switching_attachments WHERE id=?", (attachment_id,)
+            ).fetchone()
+        try:
+            payload = json.loads(draft["payload"] or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+        payload = payload if isinstance(payload, dict) else {}
+        key = "diagrams" if kind == "diagram" else "ruleSources"
+        files = [
+            item for item in payload.get(key, [])
+            if isinstance(item, dict)
+            and item.get("attachmentId") != row["id"]
+            and not (
+                not item.get("attachmentId")
+                and item.get("name") == filename
+                and int(item.get("size", 0) or 0) == len(content)
+            )
+        ]
+        files.append(_attachment_record(row))
+        payload[key] = files
+        payload["sourceManifestDigest"] = _switching_manifest_digest(payload)
+        data = _normalise_switching_payload(payload)
+        prior_status = draft["status"]
+        new_status = SWITCHING_DRAFT if prior_status == SWITCHING_READY else prior_status
+        connection.execute(
+            "UPDATE switching_drafts SET payload=?, status=?, record_version=record_version+1, updated_at=? WHERE id=?",
+            (json.dumps(data, ensure_ascii=False, separators=(",", ":")), new_status, timestamp, draft_id),
+        )
+        _append_switching_event(
+            connection,
+            draft_id=draft_id,
+            actor=actor,
+            event="attachment-stored",
+            prior_status=prior_status,
+            new_status=new_status,
+            details=f"{kind} source stored: {filename} ({digest[:12]})",
+            at=timestamp,
+        )
+    return get_switching_draft(draft_id)
+
+
+def get_switching_attachment(draft_id: str, attachment_id: str) -> dict[str, Any] | None:
+    with _LOCK, _session() as connection:
+        row = connection.execute(
+            "SELECT * FROM switching_attachments WHERE draft_id=? AND id=?",
+            (draft_id, attachment_id),
+        ).fetchone()
+        if row is None:
+            return None
+        record = _attachment_record(row)
+        record["content"] = bytes(row["content"])
+        return record
+
+
+def remove_switching_attachment(
+    draft_id: str, attachment_id: str, actor: str = "operator"
+) -> dict[str, Any] | None:
+    actor = _switching_clip(actor, 80) or "operator"
+    with _LOCK, _session() as connection:
+        draft = connection.execute(
+            "SELECT * FROM switching_drafts WHERE id=?", (draft_id,)
+        ).fetchone()
+        if draft is None:
+            return None
+        if draft["status"] == SWITCHING_REVIEWED:
+            raise ValueError("reviewed packages are immutable; start a new revision")
+        row = connection.execute(
+            "SELECT * FROM switching_attachments WHERE draft_id=? AND id=?",
+            (draft_id, attachment_id),
+        ).fetchone()
+        if row is None:
+            raise ValueError("attachment not found")
+        connection.execute("DELETE FROM switching_attachments WHERE id=?", (attachment_id,))
+        try:
+            payload = json.loads(draft["payload"] or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+        payload = payload if isinstance(payload, dict) else {}
+        for key in ("diagrams", "ruleSources"):
+            payload[key] = [
+                item for item in payload.get(key, [])
+                if isinstance(item, dict) and item.get("attachmentId") != attachment_id
+            ]
+        payload["sourceManifestDigest"] = _switching_manifest_digest(payload)
+        data = _normalise_switching_payload(payload)
+        timestamp = now_iso()
+        prior_status = draft["status"]
+        new_status = SWITCHING_DRAFT if prior_status == SWITCHING_READY else prior_status
+        connection.execute(
+            "UPDATE switching_drafts SET payload=?, status=?, record_version=record_version+1, updated_at=? WHERE id=?",
+            (json.dumps(data, ensure_ascii=False, separators=(",", ":")), new_status, timestamp, draft_id),
+        )
+        _append_switching_event(
+            connection,
+            draft_id=draft_id,
+            actor=actor,
+            event="attachment-removed",
+            prior_status=prior_status,
+            new_status=new_status,
+            details=f"stored source removed: {row['filename']}",
+            at=timestamp,
+        )
+    return get_switching_draft(draft_id)
+
+
+ONE_LINE_SYMBOL_TYPES = {
+    "source", "bus", "line", "junction", "terminal", "ground", "disconnect",
+    "breaker", "fuse", "transformer", "generator", "motor", "capacitor", "reactor",
+    "battery", "surge-arrester", "load", "ct", "vt", "relay", "lockout",
+}
+
+
+def _normalise_one_line_record(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("schematic record must be a JSON object")
+    raw_symbols = value.get("symbols", [])
+    raw_edges = value.get("edges", [])
+    if not isinstance(raw_symbols, list) or not isinstance(raw_edges, list):
+        raise ValueError("schematic symbols and edges must be arrays")
+    symbols: list[dict[str, Any]] = []
+    used: set[str] = set()
+    for index, item in enumerate(raw_symbols[:500], 1):
+        if not isinstance(item, dict) or item.get("type") not in ONE_LINE_SYMBOL_TYPES:
+            continue
+        raw_id = _switching_clip(item.get("id"), 80)
+        symbol_id = "".join(c for c in raw_id if c.isalnum() or c in "-_.") or f"S-{index:03d}"
+        if symbol_id in used:
+            symbol_id = f"S-{index:03d}"
+        used.add(symbol_id)
+        symbols.append({
+            "id": symbol_id,
+            "type": item["type"],
+            "x": _bounded_int(item.get("x"), 0, 1000, 100),
+            "y": _bounded_int(item.get("y"), 0, 560, 100),
+            "rotation": _bounded_int(item.get("rotation"), 0, 270, 0) // 90 * 90,
+            "label": _switching_clip(item.get("label"), 160),
+            "deviceFunction": _switching_clip(item.get("deviceFunction"), 80),
+        })
+    edges: list[dict[str, str]] = []
+    pairs: set[tuple[str, str]] = set()
+    for index, item in enumerate(raw_edges[:1000], 1):
+        if not isinstance(item, dict):
+            continue
+        start = _switching_clip(item.get("from"), 80)
+        end = _switching_clip(item.get("to"), 80)
+        pair = tuple(sorted((start, end)))
+        if start not in used or end not in used or start == end or pair in pairs:
+            continue
+        pairs.add(pair)
+        edges.append({"id": f"E-{index:03d}", "from": start, "to": end})
+    record = {
+        "version": 2,
+        "state": "draft",
+        "symbolLibraryProfile": "NorthStar IEEE compatibility profile v2",
+        "graphicalStandard": "IEEE/ANSI 315-1975 convention (inactive-reserved)",
+        "designationStandard": "IEEE C37.2-2022",
+        "symbols": symbols,
+        "edges": edges,
+        "provenanceLabel": "SERVER DRAFT · NOT OPERATIONAL RELEASE",
+    }
+    encoded = json.dumps(record, ensure_ascii=False, separators=(",", ":"))
+    if len(encoded.encode("utf-8")) > 512 * 1024:
+        raise ValueError("schematic record exceeds 512 KB")
+    return record
+
+
+def _schematic_document_record(
+    row: sqlite3.Row, include_record: bool = True, history: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "id": row["id"],
+        "name": row["name"],
+        "outageId": row["outage_id"],
+        "standardApprovalRef": row["standard_approval_ref"],
+        "revision": row["current_revision"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+        "createdBy": row["created_by"],
+        "updatedBy": row["updated_by"],
+    }
+    try:
+        payload = json.loads(row["current_payload"] or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+    record["symbolCount"] = len(payload.get("symbols", [])) if isinstance(payload, dict) else 0
+    record["connectionCount"] = len(payload.get("edges", [])) if isinstance(payload, dict) else 0
+    if include_record:
+        record["record"] = payload
+    if history is not None:
+        record["history"] = history
+    return record
+
+
+def _validate_schematic_outage(connection: sqlite3.Connection, outage_id: str) -> None:
+    if outage_id and connection.execute("SELECT 1 FROM outages WHERE id=?", (outage_id,)).fetchone() is None:
+        raise ValueError("linked outage not found")
+
+
+def create_one_line_document(payload: dict[str, Any], actor: str = "operator") -> dict[str, Any]:
+    name = _switching_clip(payload.get("name"), 160) or "Untitled one-line"
+    outage_id = _switching_clip(payload.get("outageId"), 120)
+    approval_ref = _switching_clip(payload.get("standardApprovalRef"), 240)
+    record = _normalise_one_line_record(payload.get("record"))
+    encoded = json.dumps(record, ensure_ascii=False, separators=(",", ":"))
+    digest = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    timestamp = now_iso()
+    actor = _switching_clip(actor, 80) or "operator"
+    with _LOCK, _session() as connection:
+        _validate_schematic_outage(connection, outage_id)
+        document_id = _unique_id(connection, "one_line_documents", "schematic")
+        connection.execute(
+            "INSERT INTO one_line_documents"
+            " (id,name,outage_id,standard_approval_ref,current_revision,current_payload,created_at,updated_at,created_by,updated_by)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (document_id, name, outage_id, approval_ref, 1, encoded, timestamp, timestamp, actor, actor),
+        )
+        connection.execute(
+            "INSERT INTO one_line_revisions(document_id,revision,payload,sha256,at,actor) VALUES (?,?,?,?,?,?)",
+            (document_id, 1, encoded, digest, timestamp, actor),
+        )
+    return get_one_line_document(document_id)  # type: ignore[return-value]
+
+
+def save_one_line_document(
+    document_id: str, payload: dict[str, Any], actor: str = "operator"
+) -> dict[str, Any] | None:
+    actor = _switching_clip(actor, 80) or "operator"
+    expected = _bounded_int(payload.get("revision"), 0, 1000000)
+    name = _switching_clip(payload.get("name"), 160) or "Untitled one-line"
+    outage_id = _switching_clip(payload.get("outageId"), 120)
+    approval_ref = _switching_clip(payload.get("standardApprovalRef"), 240)
+    record = _normalise_one_line_record(payload.get("record"))
+    encoded = json.dumps(record, ensure_ascii=False, separators=(",", ":"))
+    digest = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    with _LOCK, _session() as connection:
+        row = connection.execute(
+            "SELECT * FROM one_line_documents WHERE id=?", (document_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        if expected and expected != row["current_revision"]:
+            raise SchematicConflict(
+                f"stale schematic revision; server is at revision {row['current_revision']}"
+            )
+        _validate_schematic_outage(connection, outage_id)
+        revision = row["current_revision"] + 1
+        timestamp = now_iso()
+        connection.execute(
+            "UPDATE one_line_documents SET name=?,outage_id=?,standard_approval_ref=?,current_revision=?,current_payload=?,updated_at=?,updated_by=? WHERE id=?",
+            (name, outage_id, approval_ref, revision, encoded, timestamp, actor, document_id),
+        )
+        connection.execute(
+            "INSERT INTO one_line_revisions(document_id,revision,payload,sha256,at,actor) VALUES (?,?,?,?,?,?)",
+            (document_id, revision, encoded, digest, timestamp, actor),
+        )
+    return get_one_line_document(document_id)
+
+
+def get_one_line_document(document_id: str, revision: int | None = None) -> dict[str, Any] | None:
+    with _LOCK, _session() as connection:
+        row = connection.execute(
+            "SELECT * FROM one_line_documents WHERE id=?", (document_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        history_rows = connection.execute(
+            "SELECT revision,sha256,at,actor FROM one_line_revisions WHERE document_id=? ORDER BY revision DESC",
+            (document_id,),
+        ).fetchall()
+        record = _schematic_document_record(
+            row,
+            True,
+            [dict(item) for item in history_rows],
+        )
+        if revision is not None and revision != row["current_revision"]:
+            revision_row = connection.execute(
+                "SELECT payload FROM one_line_revisions WHERE document_id=? AND revision=?",
+                (document_id, revision),
+            ).fetchone()
+            if revision_row is None:
+                return None
+            record["record"] = json.loads(revision_row["payload"])
+            record["revision"] = revision
+        return record
+
+
+def list_one_line_documents(
+    query: str | None = None, outage_id: str | None = None, limit: int = 100
+) -> list[dict[str, Any]]:
+    query = _switching_clip(query, 160)
+    outage_id = _switching_clip(outage_id, 120)
+    limit = max(1, min(limit, 500))
+    clauses: list[str] = []
+    values: list[Any] = []
+    if query:
+        clauses.append("(name LIKE ? OR id LIKE ? OR standard_approval_ref LIKE ?)")
+        pattern = f"%{query}%"
+        values.extend([pattern, pattern, pattern])
+    if outage_id:
+        clauses.append("outage_id=?")
+        values.append(outage_id)
+    where = " WHERE " + " AND ".join(clauses) if clauses else ""
+    with _LOCK, _session() as connection:
+        rows = connection.execute(
+            f"SELECT * FROM one_line_documents{where} ORDER BY updated_at DESC,id DESC LIMIT ?",
+            (*values, limit),
+        ).fetchall()
+    return [_schematic_document_record(row, False) for row in rows]
 
 
 def _append_outage_event(

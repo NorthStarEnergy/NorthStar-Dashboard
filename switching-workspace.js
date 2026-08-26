@@ -11,6 +11,10 @@
     packageName: '',
     site: '',
     asset: '',
+    outageId: '',
+    schematicId: '',
+    schematicRevision: 0,
+    symbolProfileApprovalRef: '',
     canonicalAssetId: '',
     topologySnapshotId: '',
     topologyRevision: '',
@@ -37,6 +41,8 @@
   };
   let selectedFiles = [];
   let selectedRuleFiles = [];
+  let outageRecords = [];
+  let schematicRecords = [];
 
   function buildEngineeringHub() {
     const workspace = document.querySelector('#switching .switching-workspace');
@@ -69,7 +75,7 @@
   }
 
   function renderEngineeringHub() {
-    const diagrams = selectedFiles.length || state.diagrams.length;
+    const diagrams = (selectedFiles.length || state.diagrams.length) + (state.schematicId ? 1 : 0);
     const sources = selectedRuleFiles.length || state.ruleSources.length;
     const sourceStatus = document.querySelector('#engineeringSourceStatus');
     const draftStatus = document.querySelector('#engineeringDraftStatus');
@@ -118,6 +124,10 @@
       packageName: state.packageName,
       site: state.site,
       asset: state.asset,
+      outageId: state.outageId,
+      schematicId: state.schematicId,
+      schematicRevision: state.schematicRevision,
+      symbolProfileApprovalRef: state.symbolProfileApprovalRef,
       canonicalAssetId: state.canonicalAssetId,
       topologySnapshotId: state.topologySnapshotId,
       topologyRevision: state.topologyRevision,
@@ -151,9 +161,10 @@
     state.serverUpdatedAt = record.updatedAt || state.serverUpdatedAt;
     state.savedAt = state.serverUpdatedAt || state.savedAt;
     state.storage = 'SERVER';
-    ['packageName', 'site', 'asset', 'canonicalAssetId', 'topologySnapshotId', 'topologyRevision', 'revision', 'ruleSet', 'authorityProcedureId', 'authorityProcedureRevision', 'qualificationEvidenceRef', 'sourceManifestDigest', 'scope', 'reviewerName', 'reviewerRole', 'reviewComments'].forEach(key => {
+    ['packageName', 'site', 'asset', 'outageId', 'schematicId', 'symbolProfileApprovalRef', 'canonicalAssetId', 'topologySnapshotId', 'topologyRevision', 'revision', 'ruleSet', 'authorityProcedureId', 'authorityProcedureRevision', 'qualificationEvidenceRef', 'sourceManifestDigest', 'scope', 'reviewerName', 'reviewerRole', 'reviewComments'].forEach(key => {
       if (typeof record[key] === 'string') state[key] = record[key];
     });
+    state.schematicRevision = Number(record.schematicRevision) || 0;
     ['diagrams', 'ruleSources', 'isolation', 'sequence', 'verification', 'permission', 'restoration'].forEach(key => {
       if (Array.isArray(record[key])) state[key] = record[key];
     });
@@ -164,18 +175,46 @@
         message: `${entry.event || 'record event'}${entry.details ? ` - ${entry.details}` : ''}`
       }));
     }
-    if (!selectedFiles.length) selectedFiles = state.diagrams.map(file => ({ ...file }));
-    if (!selectedRuleFiles.length) selectedRuleFiles = state.ruleSources.map(file => ({ ...file }));
+    selectedFiles = state.diagrams.map(file => ({ ...file }));
+    selectedRuleFiles = state.ruleSources.map(file => ({ ...file }));
   }
 
   async function persistServer() {
     syncDiagramRecords(); syncRuleRecords();
     await refreshSourceManifestDigest();
+    const pending = [
+      ...selectedFiles.filter(file => file.file && !file.attachmentId).map(file => ({ kind:'diagram', file:file.file, url:file.url })),
+      ...selectedRuleFiles.filter(file => file.file && !file.attachmentId).map(file => ({ kind:'source', file:file.file, url:file.url }))
+    ];
     const path = state.id ? `/api/switching/drafts/${encodeURIComponent(state.id)}` : '/api/switching/drafts';
-    const record = await serverRequest(path, 'POST', serverPayload());
+    let record = await serverRequest(path, 'POST', serverPayload());
     applyServerRecord(record);
+    for (let index = 0; index < pending.length; index += 1) {
+      const upload = pending[index];
+      try {
+        const response = await fetch(`/api/switching/drafts/${encodeURIComponent(state.id)}/attachments?kind=${upload.kind}`, {
+          method:'POST',
+          headers:{ 'Content-Type':upload.file.type || 'application/octet-stream', 'X-Northstar-Filename':encodeURIComponent(upload.file.name) },
+          body:upload.file
+        });
+        let uploaded = null;
+        try { uploaded = await response.json(); } catch { /* response error handled below */ }
+        if (!response.ok) throw new Error(uploaded?.error || `${upload.file.name} upload returned ${response.status}`);
+        record = uploaded;
+        applyServerRecord(record);
+        if (upload.url) URL.revokeObjectURL(upload.url);
+      } catch (error) {
+        pending.slice(index).forEach(item => {
+          const target = item.kind === 'diagram' ? selectedFiles : selectedRuleFiles;
+          target.push({ name:item.file.name, size:item.file.size, type:item.file.type, lastModified:item.file.lastModified, url:item.url || URL.createObjectURL(item.file), file:item.file });
+        });
+        syncDiagramRecords(); syncRuleRecords(); renderFields();
+        throw error;
+      }
+    }
     write(false);
     renderFields();
+    await loadDraftLibrary();
     return record;
   }
 
@@ -183,6 +222,10 @@
     state.packageName = $('wpPackageName').value.trim();
     state.site = $('wpSite').value.trim();
     state.asset = $('wpAsset').value.trim();
+    state.outageId = $('wpOutageId').value;
+    state.schematicId = $('wpSchematicId').value;
+    state.schematicRevision = Number($('wpSchematicId').selectedOptions[0]?.dataset.revision) || 0;
+    state.symbolProfileApprovalRef = $('wpSymbolProfileApprovalRef').value.trim();
     state.canonicalAssetId = $('wpCanonicalAssetId').value.trim();
     state.topologySnapshotId = $('wpTopologySnapshotId').value.trim();
     state.topologyRevision = $('wpTopologyRevision').value.trim();
@@ -198,17 +241,19 @@
   }
 
   function syncDiagramRecords() {
-    state.diagrams = selectedFiles.map(file => ({ name: file.name, size: file.size, type: file.type, lastModified: file.lastModified }));
+    state.diagrams = selectedFiles.map(file => ({ attachmentId:file.attachmentId || '', name: file.name, size: file.size, type: file.type, lastModified: file.lastModified, sha256:file.sha256 || '', storage:file.attachmentId ? 'SERVER' : 'LOCAL' }));
   }
 
   function syncRuleRecords() {
-    state.ruleSources = selectedRuleFiles.map(file => ({ name: file.name, size: file.size, type: file.type, lastModified: file.lastModified }));
+    state.ruleSources = selectedRuleFiles.map(file => ({ attachmentId:file.attachmentId || '', name: file.name, size: file.size, type: file.type, lastModified: file.lastModified, sha256:file.sha256 || '', storage:file.attachmentId ? 'SERVER' : 'LOCAL' }));
   }
 
   async function refreshSourceManifestDigest() {
     const manifest = JSON.stringify({
       diagrams: [...state.diagrams].sort((a, b) => `${a.name}:${a.lastModified}`.localeCompare(`${b.name}:${b.lastModified}`)),
-      ruleSources: [...state.ruleSources].sort((a, b) => `${a.name}:${a.lastModified}`.localeCompare(`${b.name}:${b.lastModified}`))
+      ruleSources: [...state.ruleSources].sort((a, b) => `${a.name}:${a.lastModified}`.localeCompare(`${b.name}:${b.lastModified}`)),
+      schematicId: state.schematicId,
+      schematicRevision: state.schematicRevision
     });
     if (!window.crypto?.subtle || !window.TextEncoder) { state.sourceManifestDigest = ''; return; }
     const bytes = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(manifest));
@@ -220,6 +265,116 @@
     state.audit = state.audit.slice(0, 30);
   }
 
+  function renderSourceSelectors() {
+    const outageSelect = $('wpOutageId');
+    const schematicSelect = $('wpSchematicId');
+    if (outageSelect) {
+      outageSelect.innerHTML = '<option value="">No linked outage</option>';
+      outageRecords.forEach(outage => {
+        const option = document.createElement('option');
+        option.value = outage.id;
+        option.textContent = `${outage.status === 'Open' ? 'OPEN' : outage.status} · ${outage.site || 'Unknown site'} · ${outage.asset || outage.title}`;
+        outageSelect.append(option);
+      });
+      outageSelect.value = state.outageId;
+    }
+    if (schematicSelect) {
+      schematicSelect.innerHTML = '<option value="">No server schematic</option>';
+      schematicRecords.forEach(schematic => {
+        const option = document.createElement('option');
+        option.value = schematic.id;
+        option.dataset.revision = schematic.revision;
+        option.textContent = `${schematic.name} · REV ${schematic.revision} · ${schematic.symbolCount} symbols`;
+        schematicSelect.append(option);
+      });
+      schematicSelect.value = state.schematicId;
+    }
+  }
+
+  async function loadReferenceData() {
+    try {
+      const [outages, schematics] = await Promise.all([
+        serverRequest('/api/outages'),
+        serverRequest('/api/schematics')
+      ]);
+      outageRecords = Array.isArray(outages) ? outages : [];
+      schematicRecords = Array.isArray(schematics) ? schematics : [];
+      renderSourceSelectors();
+    } catch (error) {
+      setNote(`Reference records unavailable: ${error.message}.`, 'warn');
+    }
+  }
+
+  async function loadDraftRecord(draftId) {
+    try {
+      const record = await serverRequest(`/api/switching/drafts/${encodeURIComponent(draftId)}`);
+      applyServerRecord(record); write(false); renderFields();
+      setNote(`Server draft ${record.id} loaded. Stored sources are available on any signed-in operator browser.`);
+    } catch (error) {
+      setNote(`Draft could not be loaded: ${error.message}.`, 'error');
+    }
+  }
+
+  async function loadDraftLibrary() {
+    const list = $('wpLibraryList');
+    if (!list) return;
+    list.innerHTML = '<div class="switching-empty">Loading server drafts…</div>';
+    const params = new URLSearchParams();
+    const query = $('wpLibrarySearch')?.value.trim();
+    const status = $('wpLibraryStatus')?.value;
+    if (query) params.set('q', query);
+    if (status) params.set('status', status);
+    try {
+      const records = await serverRequest('/api/switching/drafts' + (params.size ? `?${params}` : ''));
+      list.replaceChildren();
+      if (!records.length) { list.innerHTML = '<div class="switching-empty">No matching server drafts.</div>'; return; }
+      records.forEach(record => {
+        const row = document.createElement('div'); row.className = 'switching-library-row';
+        const name = document.createElement('strong'); name.textContent = record.packageName || record.id;
+        const asset = document.createElement('span'); asset.textContent = `${record.site || '—'} · ${record.asset || '—'}`;
+        const stateLabel = document.createElement('small'); stateLabel.textContent = `${record.status} · ${displayTime(record.updatedAt)}`;
+        const open = document.createElement('button'); open.type = 'button'; open.textContent = 'OPEN'; open.onclick = () => loadDraftRecord(record.id);
+        row.append(name, asset, stateLabel, open); list.append(row);
+      });
+    } catch (error) {
+      list.innerHTML = `<div class="switching-empty">Server library unavailable: ${String(error.message || error).replace(/[<>&]/g, '')}</div>`;
+    }
+  }
+
+  function prefillOutage(outageOrId) {
+    const outage = typeof outageOrId === 'string' ? outageRecords.find(item => item.id === outageOrId) : outageOrId;
+    if (!outage) return false;
+    state.outageId = outage.id;
+    state.site = outage.site || state.site;
+    state.asset = outage.asset || outage.title || state.asset;
+    if (!state.packageName) state.packageName = `${state.asset || 'Asset'} outage switching review`;
+    if (!state.scope) state.scope = `Prepare a controlled switching review package for outage ${outage.id}: ${outage.title || state.asset}.`;
+    write(); renderFields();
+    document.querySelector("[data-module-id='switching-intake']")?.scrollIntoView({ behavior:'smooth', block:'start' });
+    return true;
+  }
+
+  async function attachSchematic(schematic) {
+    if (!schematic?.id) throw new Error('Save the schematic to the server first.');
+    if (state.status === 'REVIEW RECORDED · NOT RELEASE') throw new Error('Reviewed packages are immutable; start a new revision.');
+    if (!schematicRecords.some(item => item.id === schematic.id)) schematicRecords.unshift(schematic);
+    state.schematicId = schematic.id;
+    state.schematicRevision = Number(schematic.revision) || 0;
+    state.symbolProfileApprovalRef = schematic.standardApprovalRef || state.symbolProfileApprovalRef;
+    if (schematic.outageId && !state.outageId) state.outageId = schematic.outageId;
+    await refreshSourceManifestDigest();
+    renderSourceSelectors(); renderFields(); write();
+    if (state.id) await saveDraft('Server schematic attached.');
+    else setNote('Server schematic selected. Create the switching package to retain the link.');
+    return true;
+  }
+
+  window.NorthStarSwitching = {
+    attachSchematic,
+    prefillOutage,
+    currentDraft: () => ({ id:state.id, status:state.status, schematicId:state.schematicId })
+  };
+
   function renderFiles() {
     const list = $('wpFileList');
     list.replaceChildren();
@@ -228,11 +383,17 @@
     records.forEach((file, index) => {
       const row = document.createElement('div'); row.className = 'switching-file';
       const name = document.createElement('strong'); name.textContent = file.name;
-      const meta = document.createElement('small'); meta.textContent = `${file.type || 'file'} · ${fileSize(file.size || 0)}`;
+      const meta = document.createElement('small'); meta.textContent = `${file.type || 'file'} · ${fileSize(file.size || 0)} · ${file.attachmentId ? 'SERVER' : file.file ? 'PENDING UPLOAD' : 'LOCAL METADATA ONLY'}`;
       row.append(name, meta);
-      if (file.url) { const open = document.createElement('a'); open.href = file.url; open.target = '_blank'; open.rel = 'noopener'; open.textContent = 'OPEN'; row.append(open); }
+      if (file.url || file.attachmentId) { const open = document.createElement('a'); open.href = file.url || `/api/switching/drafts/${encodeURIComponent(state.id)}/attachments/${encodeURIComponent(file.attachmentId)}`; open.target = '_blank'; open.rel = 'noopener'; open.textContent = 'OPEN'; row.append(open); }
       const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'REMOVE'; remove.title = 'Remove source file';
-      remove.addEventListener('click', () => {
+      remove.addEventListener('click', async () => {
+        if (file.attachmentId && state.id) {
+          try {
+            const record = await serverRequest(`/api/switching/drafts/${encodeURIComponent(state.id)}/attachments/${encodeURIComponent(file.attachmentId)}`, 'DELETE');
+            applyServerRecord(record); write(false); renderFields(); await loadDraftLibrary(); return;
+          } catch (error) { setNote(`Stored source could not be removed: ${error.message}.`, 'error'); return; }
+        }
         const removed = selectedFiles.splice(index, 1)[0];
         if (removed?.url) URL.revokeObjectURL(removed.url);
         syncDiagramRecords();
@@ -251,11 +412,17 @@
     records.forEach((file, index) => {
       const row = document.createElement('div'); row.className = 'switching-file';
       const name = document.createElement('strong'); name.textContent = file.name;
-      const meta = document.createElement('small'); meta.textContent = `${file.type || 'file'} · ${fileSize(file.size || 0)}`;
+      const meta = document.createElement('small'); meta.textContent = `${file.type || 'file'} · ${fileSize(file.size || 0)} · ${file.attachmentId ? 'SERVER' : file.file ? 'PENDING UPLOAD' : 'LOCAL METADATA ONLY'}`;
       row.append(name, meta);
-      if (file.url) { const open = document.createElement('a'); open.href = file.url; open.target = '_blank'; open.rel = 'noopener'; open.textContent = 'OPEN'; row.append(open); }
+      if (file.url || file.attachmentId) { const open = document.createElement('a'); open.href = file.url || `/api/switching/drafts/${encodeURIComponent(state.id)}/attachments/${encodeURIComponent(file.attachmentId)}`; open.target = '_blank'; open.rel = 'noopener'; open.textContent = 'OPEN'; row.append(open); }
       const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'REMOVE'; remove.title = 'Remove governing source';
-      remove.addEventListener('click', () => {
+      remove.addEventListener('click', async () => {
+        if (file.attachmentId && state.id) {
+          try {
+            const record = await serverRequest(`/api/switching/drafts/${encodeURIComponent(state.id)}/attachments/${encodeURIComponent(file.attachmentId)}`, 'DELETE');
+            applyServerRecord(record); write(false); renderFields(); await loadDraftLibrary(); return;
+          } catch (error) { setNote(`Stored source could not be removed: ${error.message}.`, 'error'); return; }
+        }
         const removed = selectedRuleFiles.splice(index, 1)[0];
         if (removed?.url) URL.revokeObjectURL(removed.url);
         syncRuleRecords();
@@ -296,6 +463,10 @@
     $('wpPackageName').value = state.packageName;
     $('wpSite').value = state.site;
     $('wpAsset').value = state.asset;
+    renderSourceSelectors();
+    $('wpOutageId').value = state.outageId;
+    $('wpSchematicId').value = state.schematicId;
+    $('wpSymbolProfileApprovalRef').value = state.symbolProfileApprovalRef;
     $('wpCanonicalAssetId').value = state.canonicalAssetId;
     $('wpTopologySnapshotId').value = state.topologySnapshotId;
     $('wpTopologyRevision').value = state.topologyRevision;
@@ -315,7 +486,7 @@
     $('wpControlStatus').textContent = state.status;
     $('wpReviewPill').textContent = state.status === 'REVIEW RECORDED · NOT RELEASE' ? 'RECORDED' : state.status === 'READY FOR QUALIFIED REVIEW' ? 'READY' : 'NOT READY';
     $('wpReviewPill').className = `switching-state-pill ${state.status === 'REVIEW RECORDED · NOT RELEASE' ? 'reviewed' : state.status === 'READY FOR QUALIFIED REVIEW' ? 'ready' : ''}`;
-    $('wpFormStatus').textContent = state.packageName ? `${state.diagrams.length} diagram(s) · ${state.ruleSources.length} governing source(s) · source-derived fields remain subject to qualified review.` : 'Create a package after attaching the current source diagrams. The fields below are intentionally blank until a qualified reviewer verifies the source.';
+    $('wpFormStatus').textContent = state.packageName ? `${state.diagrams.length} uploaded diagram(s) · ${state.schematicId ? `server schematic rev ${state.schematicRevision} · ` : ''}${state.ruleSources.length} governing source(s) · source-derived fields remain subject to qualified review.` : 'Create a package after attaching the current source diagrams. The fields below are intentionally blank until a qualified reviewer verifies the source.';
     $('wpRecordReview').disabled = state.status !== 'READY FOR QUALIFIED REVIEW';
     renderEngineeringHub();
     renderAudit();
@@ -362,7 +533,7 @@
 
   async function createDraft() {
     collectFields();
-    if (!state.packageName || !state.site || !state.asset || !state.revision || !state.ruleSet || !state.scope || !(selectedFiles.length || state.diagrams.length)) {
+    if (!state.packageName || !state.site || !state.asset || !state.revision || !state.ruleSet || !state.scope || !(selectedFiles.length || state.diagrams.length || state.schematicId)) {
       $('wpIntakeStatus').textContent = 'PACKAGE, SITE, ASSET, REVISION, RULE SET, SCOPE, AND A SOURCE DIAGRAM ARE REQUIRED.'; return;
     }
     syncDiagramRecords(); syncRuleRecords(); state.status = 'DRAFT';
@@ -394,8 +565,8 @@
     if (!state.qualificationEvidenceRef) missing.push('qualification evidence reference');
     if (!state.sourceManifestDigest) missing.push('source manifest digest');
     if (!state.scope) missing.push('scope');
-    if (!(selectedFiles.length || state.diagrams.length)) missing.push('source diagram');
-    if (!(selectedRuleFiles.length || state.ruleSources.length)) missing.push('governing rule/procedure source');
+    if (!selectedFiles.some(file => file.attachmentId) && !state.schematicId) missing.push('server-stored source diagram or server schematic');
+    if (!selectedRuleFiles.some(file => file.attachmentId)) missing.push('server-stored governing rule/procedure source');
     if (incomplete('isolation')) missing.push('complete isolation review rows');
     if (incomplete('sequence')) missing.push('complete sequence/checkback rows');
     if (incomplete('verification')) missing.push('complete verification rows');
@@ -454,7 +625,7 @@
     if (!confirm('Start a new local draft? The current local draft will be cleared.')) return;
     selectedFiles.forEach(file => file.url && URL.revokeObjectURL(file.url));
     Object.keys(state).forEach(key => { if (Array.isArray(state[key])) state[key] = []; else if (typeof state[key] === 'object' && state[key] !== null) state[key] = {}; else state[key] = ''; });
-    state.schema = 1; state.version = 0; state.status = 'DRAFT'; state.storage = 'LOCAL'; state.serverUpdatedAt = '';
+    state.schema = 1; state.version = 0; state.schematicRevision = 0; state.status = 'DRAFT'; state.storage = 'LOCAL'; state.serverUpdatedAt = '';
     try { localStorage.removeItem(KEY); } catch { /* optional */ }
     selectedFiles = []; selectedRuleFiles = []; renderFields(); setNote('New local draft ready.'); $('wpIntakeStatus').textContent = '';
   }
@@ -473,13 +644,13 @@
 
   function bind() {
     buildEngineeringHub();
-    read(); renderFields(); void hydrateServer();
+    read(); renderFields(); void loadReferenceData().then(() => { renderFields(); void hydrateServer(); }); void loadDraftLibrary();
     $('wpAddDiagram').onclick = () => $('wpDiagramFiles').click();
     $('wpDiagramFiles').onchange = event => {
       const rejected = [];
       [...event.target.files].forEach(file => {
         if (file.size > MAX_FILE_BYTES) { rejected.push(`${file.name} exceeds 25 MB`); return; }
-        selectedFiles.push({ name: file.name, size: file.size, type: file.type, lastModified: file.lastModified, url: URL.createObjectURL(file) });
+        selectedFiles.push({ name: file.name, size: file.size, type: file.type, lastModified: file.lastModified, url: URL.createObjectURL(file), file });
       });
       renderFiles(); $('wpIntakeStatus').textContent = rejected.length ? rejected.join(' · ') : `${selectedFiles.length} diagram(s) selected locally.`; event.target.value = '';
     };
@@ -488,11 +659,24 @@
       const rejected = [];
       [...event.target.files].forEach(file => {
         if (file.size > MAX_FILE_BYTES) { rejected.push(`${file.name} exceeds 25 MB`); return; }
-        selectedRuleFiles.push({ name: file.name, size: file.size, type: file.type, lastModified: file.lastModified, url: URL.createObjectURL(file) });
+        selectedRuleFiles.push({ name: file.name, size: file.size, type: file.type, lastModified: file.lastModified, url: URL.createObjectURL(file), file });
       });
       renderRuleFiles(); $('wpIntakeStatus').textContent = rejected.length ? rejected.join(' · ') : `${selectedRuleFiles.length} governing source(s) selected locally.`; event.target.value = '';
     };
     $('wpCreateDraft').onclick = createDraft; $('wpSaveDraft').onclick = () => saveDraft(); $('wpReadyReview').onclick = readyForReview; $('wpRecordReview').onclick = recordReview; $('wpPrintPacket').onclick = printPacket; $('wpExportDraft').onclick = exportLocalRecord; $('wpNewDraft').onclick = newDraft;
+    $('wpRefreshLibrary').onclick = loadDraftLibrary;
+    $('wpLibraryStatus').onchange = loadDraftLibrary;
+    let libraryTimer = null;
+    $('wpLibrarySearch').oninput = () => { clearTimeout(libraryTimer); libraryTimer = setTimeout(loadDraftLibrary, 250); };
+    $('wpOutageId').onchange = () => { const outage = outageRecords.find(item => item.id === $('wpOutageId').value); if (outage) prefillOutage(outage); else { state.outageId = ''; write(); } };
+    $('wpSchematicId').onchange = () => { const schematic = schematicRecords.find(item => item.id === $('wpSchematicId').value); if (schematic) void attachSchematic(schematic); else { state.schematicId = ''; state.schematicRevision = 0; write(); renderFields(); } };
+    document.addEventListener('northstar:schematics-changed', event => {
+      const schematic = event.detail;
+      const index = schematicRecords.findIndex(item => item.id === schematic?.id);
+      if (schematic?.id && index >= 0) schematicRecords.splice(index, 1, schematic);
+      else if (schematic?.id) schematicRecords.unshift(schematic);
+      renderSourceSelectors();
+    });
     [['wpAddIsolation', 'isolation'], ['wpAddSequence', 'sequence'], ['wpAddVerification', 'verification'], ['wpAddPermission', 'permission'], ['wpAddRestoration', 'restoration']].forEach(([id, kind]) => $(id).onclick = () => { state[kind].push({ first: '', second: '' }); renderRows(kind); write(); });
     document.querySelectorAll('[data-approval-check]').forEach(check => check.addEventListener('change', () => { state.checks[check.dataset.approvalCheck] = check.checked; write(); }));
     document.querySelectorAll('#switching input:not([type="file"]),#switching textarea').forEach(input => input.addEventListener('input', () => { collectFields(); write(); }));

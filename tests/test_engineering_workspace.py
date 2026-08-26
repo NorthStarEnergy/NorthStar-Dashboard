@@ -21,6 +21,17 @@ class EngineeringWorkspaceTests(unittest.TestCase):
         self.assertIn("Engineering Drawings & Work Protection", switching)
         self.assertIn("data-open-engineering", outages)
 
+    def test_outages_can_prefill_a_server_backed_switching_package(self):
+        html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
+        switching = (ROOT / "switching-workspace.js").read_text(encoding="utf-8")
+        outages = (ROOT / "outages-workspace.js").read_text(encoding="utf-8")
+        self.assertIn('id="wpLibraryList"', html)
+        self.assertIn('id="wpOutageId"', html)
+        self.assertIn('id="wpSchematicId"', html)
+        self.assertIn("loadDraftLibrary", switching)
+        self.assertIn("attachSchematic", switching)
+        self.assertIn("data-create-switching", outages)
+
 
 if __name__ == "__main__":
     unittest.main()

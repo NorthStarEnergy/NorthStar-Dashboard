@@ -19,7 +19,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
@@ -74,6 +74,7 @@ OPERATOR_ROUTES = {
     "/api/retention": ("GET", "POST"),
     "/api/site-policies": ("GET", "POST"),
     "/api/switching/drafts": ("GET", "POST"),
+    "/api/schematics": ("GET", "POST"),
     # Voice content is recorded speech: worker names, locations, and whatever
     # else was said on an open channel. Operator-only, all of it.
     "/api/voice": ("GET",),
@@ -96,6 +97,9 @@ OPERATOR_ROUTE_PATTERNS = (
     ("POST", re.compile(r"^/api/outages/[^/]+/close$")),
     ("GET", re.compile(r"^/api/switching/drafts/.+$")),
     ("POST", re.compile(r"^/api/switching/drafts/.+$")),
+    ("DELETE", re.compile(r"^/api/switching/drafts/[^/]+/attachments/[^/]+$")),
+    ("GET", re.compile(r"^/api/schematics/.+$")),
+    ("POST", re.compile(r"^/api/schematics/[^/]+$")),
     ("GET", re.compile(r"^/api/voice/recordings/.+$")),
     ("POST", re.compile(r"^/api/voice/segments/[^/]+/review$")),
 )
@@ -996,6 +1000,8 @@ class Handler(SimpleHTTPRequestHandler):
             return None
         route = self.path.split("?", 1)[0]
         if route == "/api/switching/drafts" or route.startswith("/api/switching/drafts/"):
+            allowed_methods = ("GET", "POST", "DELETE")
+        elif route == "/api/schematics" or route.startswith("/api/schematics/"):
             allowed_methods = ("GET", "POST")
         else:
             allowed_methods = OPERATOR_ROUTES.get(route, ())
@@ -1140,7 +1146,12 @@ class Handler(SimpleHTTPRequestHandler):
                 limit = int(query.get("limit", ["100"])[0])
             except ValueError:
                 limit = 100
-            self._send_json(store.list_switching_drafts(query.get("status", [None])[0], limit))
+            self._send_json(store.list_switching_drafts(
+                query.get("status", [None])[0],
+                limit,
+                query.get("q", [None])[0],
+                query.get("outageId", [None])[0],
+            ))
             return
         if route.startswith("/api/switching/drafts/"):
             suffix = route[len("/api/switching/drafts/"):]
@@ -1149,12 +1160,49 @@ class Handler(SimpleHTTPRequestHandler):
                 evidence = store.get_switching_review_evidence(draft_id)
                 self._send_json(evidence or {"error": "switching draft not found"}, 200 if evidence else 404)
                 return
+            attachment_match = re.fullmatch(r"([^/]+)/attachments/([^/]+)", suffix)
+            if attachment_match:
+                attachment = store.get_switching_attachment(*attachment_match.groups())
+                if attachment is None:
+                    self._send_json({"error": "switching attachment not found"}, 404)
+                    return
+                self._send_binary(
+                    attachment.pop("content"),
+                    attachment["type"],
+                    attachment["name"],
+                    attachment["sha256"],
+                )
+                return
             draft_id = suffix
             if not draft_id or "/" in draft_id:
                 self.send_error(404)
                 return
             record = store.get_switching_draft(draft_id)
             self._send_json(record or {"error": "switching draft not found"}, 200 if record else 404)
+            return
+        if route == "/api/schematics":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                limit = int(query.get("limit", ["100"])[0])
+            except ValueError:
+                limit = 100
+            self._send_json(store.list_one_line_documents(
+                query.get("q", [None])[0], query.get("outageId", [None])[0], limit
+            ))
+            return
+        if route.startswith("/api/schematics/"):
+            suffix = route[len("/api/schematics/"):]
+            revision_match = re.fullmatch(r"([^/]+)/revisions/(\d+)", suffix)
+            if revision_match:
+                record = store.get_one_line_document(
+                    revision_match.group(1), int(revision_match.group(2))
+                )
+            elif suffix and "/" not in suffix:
+                record = store.get_one_line_document(suffix)
+            else:
+                self.send_error(404)
+                return
+            self._send_json(record or {"error": "schematic not found"}, 200 if record else 404)
             return
         if route == "/api/checkin-tokens":
             query = parse_qs(urlparse(self.path).query)
@@ -1301,15 +1349,15 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_error(404)
         return None
 
-    def _json_body(self) -> dict[str, Any]:
+    def _json_body(self, maximum: int = MAX_JSON_BODY) -> dict[str, Any]:
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError as exc:
             raise APIError(400, "invalid Content-Length") from exc
         if length < 0:
             raise APIError(400, "invalid Content-Length")
-        if length > MAX_JSON_BODY:
-            raise APIError(413, f"JSON request body exceeds {MAX_JSON_BODY} bytes")
+        if length > maximum:
+            raise APIError(413, f"JSON request body exceeds {maximum} bytes")
         if not length:
             return {}
         try:
@@ -1319,6 +1367,20 @@ class Handler(SimpleHTTPRequestHandler):
         if not isinstance(value, dict):
             raise APIError(400, "request body must be a JSON object")
         return value
+
+    def _binary_body(self, maximum: int) -> bytes:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError as exc:
+            raise APIError(400, "invalid Content-Length") from exc
+        if length < 1:
+            raise APIError(400, "binary request body is required")
+        if length > maximum:
+            raise APIError(413, f"binary request body exceeds {maximum} bytes")
+        content = self.rfile.read(length)
+        if len(content) != length:
+            raise APIError(400, "binary request body ended early")
+        return content
 
     def do_POST(self) -> None:
         if self._refused_before_dispatch():
@@ -1481,6 +1543,33 @@ class Handler(SimpleHTTPRequestHandler):
             write_dashboard_layout_default(saved)
             self._send_json({"saved": True})
             return
+        if route == "/api/schematics":
+            payload = self._json_body(600 * 1024)
+            try:
+                record = store.create_one_line_document(payload, self._operator_actor())
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+                return
+            self._send_json(record, 201)
+            return
+        if route.startswith("/api/schematics/"):
+            schematic_id = route[len("/api/schematics/"):]
+            if not schematic_id or "/" in schematic_id:
+                self.send_error(404)
+                return
+            payload = self._json_body(600 * 1024)
+            try:
+                record = store.save_one_line_document(
+                    schematic_id, payload, self._operator_actor()
+                )
+            except store.SchematicConflict as exc:
+                self._send_json({"error": str(exc)}, 409)
+                return
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+                return
+            self._send_json(record or {"error": "schematic not found"}, 200 if record else 404)
+            return
         if route == "/api/switching/drafts":
             payload = self._json_body()
             actor = self._operator_actor()
@@ -1518,6 +1607,23 @@ class Handler(SimpleHTTPRequestHandler):
                 except store.SwitchingConflict as exc:
                     self._send_json({"error": str(exc)}, 409)
                     return
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, 400)
+                    return
+            elif parts[1] == "attachments":
+                query = parse_qs(urlparse(self.path).query)
+                kind = query.get("kind", [""])[0]
+                filename = unquote(self.headers.get("X-Northstar-Filename", ""))
+                try:
+                    content = self._binary_body(store.MAX_SWITCHING_ATTACHMENT_BYTES)
+                    record = store.add_switching_attachment(
+                        draft_id,
+                        kind,
+                        filename,
+                        self.headers.get("Content-Type", "application/octet-stream"),
+                        content,
+                        actor,
+                    )
                 except ValueError as exc:
                     self._send_json({"error": str(exc)}, 400)
                     return
@@ -1880,6 +1986,20 @@ class Handler(SimpleHTTPRequestHandler):
     def do_DELETE(self) -> None:
         if self._refused_before_dispatch():
             return
+        route = self.path.split("?", 1)[0]
+        attachment_match = re.fullmatch(
+            r"/api/switching/drafts/([^/]+)/attachments/([^/]+)", route
+        )
+        if attachment_match:
+            try:
+                record = store.remove_switching_attachment(
+                    *attachment_match.groups(), self._operator_actor()
+                )
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+                return
+            self._send_json(record or {"error": "switching draft not found"}, 200 if record else 404)
+            return
         prefix = "/api/checkins/"
         if self.path.startswith(prefix):
             # Checking out closes the record; the operational history is retained.
@@ -1896,6 +2016,19 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_binary(
+        self, body: bytes, content_type: str, filename: str, digest: str = ""
+    ) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", content_type or "application/octet-stream")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Disposition", f"attachment; filename*=UTF-8''{quote(filename)}")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        if digest:
+            self.send_header("X-Content-SHA256", digest)
         self.end_headers()
         self.wfile.write(body)
 

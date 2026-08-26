@@ -8,7 +8,7 @@ def test_dashboard_loads_symbol_library_before_editor() -> None:
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
 
     library = 'src="one-line-symbol-library.js?v=20260826-2"'
-    editor = 'src="one-line-editor-ui.js?v=20260826-2"'
+    editor = 'src="one-line-editor-ui.js?v=20260826-3"'
     assert library in html
     assert editor in html
     assert html.index(library) < html.index(editor)
@@ -67,3 +67,15 @@ def test_status_updates_preserve_the_symbol_count_target() -> None:
 
     assert 'strong id="oneLineCount"' in editor
     assert "if (count) count.textContent" in editor
+
+
+def test_server_revisions_and_operator_exports_are_wired() -> None:
+    html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
+    editor = (ROOT / "one-line-editor-ui.js").read_text(encoding="utf-8")
+
+    for control in ("oneLineSaveServer", "oneLineServerSelect", "oneLineAttachPackage", "oneLineExportSvg", "oneLineExportPng", "oneLinePrint"):
+        assert f'id="{control}"' in html
+    assert "'/api/schematics'" in editor
+    assert "saveServer" in editor
+    assert "standaloneSvg" in editor
+    assert "NorthStarSwitching.attachSchematic" in editor

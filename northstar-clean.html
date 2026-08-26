@@ -9,16 +9,16 @@
        operator data as soon as it parses. -->
   <script src="operator-session.js"></script>
   <link rel="stylesheet" href="lamination-dashboard.css">
-  <link rel="stylesheet" href="switching-workspace.css">
-  <link rel="stylesheet" href="one-line-editor.css?v=20260826-2">
+  <link rel="stylesheet" href="switching-workspace.css?v=20260826-3">
+  <link rel="stylesheet" href="one-line-editor.css?v=20260826-3">
   <link rel="stylesheet" href="market-workspace.css?v=3">
   <link rel="stylesheet" href="events-workspace.css">
   <link rel="stylesheet" href="outages-workspace.css">
   <link rel="stylesheet" href="logbook-editor.css?v=20260826-1">
-  <script src="switching-workspace.js" defer></script>
+  <script src="switching-workspace.js?v=20260826-3" defer></script>
   <script src="one-line-symbol-library.js?v=20260826-2" defer></script>
-  <script src="one-line-editor-ui.js?v=20260826-2" defer></script>
-  <script src="outages-workspace.js?v=2" defer></script>
+  <script src="one-line-editor-ui.js?v=20260826-3" defer></script>
+  <script src="outages-workspace.js?v=3" defer></script>
   <title>Northstar Control Room · Clean Live</title>
   <style>
     :root{--bg:#0b1117;--rail:#0b141b;--panel:#121d25;--panel2:#0d161d;--line:#293943;--text:#edf3f5;--muted:#82929d;--gold:#f2b84b;--blue:#69b7e8;--green:#65d5a2;--red:#ff7169}
@@ -439,6 +439,13 @@
         </div>
         <section class="panel one-line-editor" id="oneLineEditor" data-module-id="one-line-editor">
           <div class="one-line-head"><div><label>PACKET 05 · GRAPHICAL ONE-LINE EDITOR</label><h2>Build a circuit diagram with symbols</h2><p>Draft, arrange, connect, label, and export a topology-aware one-line record.</p></div><span class="one-line-badge">DRAFTING ONLY · NOT RELEASE</span></div>
+          <div class="one-line-server-bar">
+            <label>DRAWING NAME<input id="oneLineName" placeholder="e.g. FDR-01 one-line"></label>
+            <label>LINKED OUTAGE<select id="oneLineOutage"><option value="">No linked outage</option></select></label>
+            <label>UTILITY SYMBOL PROFILE APPROVAL REF<input id="oneLineApprovalRef" placeholder="Controlled catalogue / revision"></label>
+            <label>SERVER DRAWINGS<select id="oneLineServerSelect"><option value="">New server drawing</option></select></label>
+            <button class="secondary-btn" type="button" id="oneLineLoadServer">LOAD</button>
+          </div>
           <div class="one-line-layout">
             <aside class="one-line-tools" aria-label="One-line editor tools">
               <h3>IEEE COMPATIBILITY LIBRARY</h3>
@@ -448,7 +455,7 @@
                 <label class="symbol-search-label">FILTER<input id="oneLineSymbolSearch" type="search" placeholder="Breaker, relay, CT…"></label>
                 <div id="oneLineSymbolLibrary"></div>
               </div>
-              <div class="one-line-actions"><button type="button" id="oneLineDemo">LOAD EXAMPLE</button><button type="button" id="oneLineClear">CLEAR</button><button type="button" id="oneLineImport">IMPORT JSON</button><input id="oneLineImportFile" type="file" accept="application/json,.json" hidden><button type="button" id="oneLineExport">EXPORT JSON</button><button class="primary-btn" type="button" id="oneLineSave">SAVE LOCAL REVISION</button></div>
+              <div class="one-line-actions"><button type="button" id="oneLineDemo">LOAD EXAMPLE</button><button type="button" id="oneLineClear">CLEAR</button><button type="button" id="oneLineImport">IMPORT JSON</button><input id="oneLineImportFile" type="file" accept="application/json,.json" hidden><button type="button" id="oneLineExport">EXPORT JSON</button><button type="button" id="oneLineExportSvg">EXPORT SVG</button><button type="button" id="oneLineExportPng">EXPORT PNG</button><button type="button" id="oneLinePrint">PRINT / PDF</button><button type="button" id="oneLineSave">SAVE LOCAL REVISION</button><button class="primary-btn" type="button" id="oneLineSaveServer">SAVE SERVER REVISION</button><button class="primary-btn" type="button" id="oneLineAttachPackage">ATTACH TO CURRENT PACKAGE</button></div>
             </aside>
             <div class="one-line-canvas-wrap"><svg class="one-line-canvas" id="oneLineCanvas" viewBox="0 0 1000 560" role="img" aria-label="Interactive electrical one-line diagram editor"></svg><div class="one-line-empty" id="oneLineEmpty" hidden>Choose a symbol, then click the canvas.<br>Use CONNECT to join two symbols.</div></div>
             <aside class="one-line-inspector"><h3>INSPECTOR</h3><div id="oneLineInspectorBody"><p class="hint">Select a symbol to edit its label, designation, rotation, or position. Use CONNECT to draw a conductor between two symbols.</p></div><div class="one-line-help"><b>Standards profile</b><br>Graphics: IEEE/ANSI 315-1975 convention (inactive-reserved).<br>Designations: IEEE C37.2-2022 (active).<br><br><b>Controls</b><br>Click a palette item to add a symbol.<br>Drag symbols to reposition.<br>CONNECT, then click two symbols.<br>Save creates a local numbered revision.</div></aside>
@@ -456,6 +463,11 @@
           <div class="one-line-status" id="oneLineStatus"><span>LOCAL DRAFT READY</span><strong id="oneLineCount">0 SYMBOLS · 0 CONNECTIONS</strong></div>
         </section>
         <div class="switching-notice"><strong>DRAFTING ONLY.</strong> This workspace does not issue switching commands, authorize work, or replace your utility’s current UWPC/EUSR procedures. Source diagrams and instructions require qualified-person review before any operational use.</div>
+        <section class="panel switching-library" data-module-id="switching-library">
+          <div class="switching-module-head"><div><label>SERVER RECORDS</label><h3>Switching package library</h3></div><button class="secondary-btn" id="wpRefreshLibrary" type="button">REFRESH</button></div>
+          <div class="switching-library-filters"><input id="wpLibrarySearch" type="search" placeholder="Search package, site, asset, or record ID"><select id="wpLibraryStatus"><option value="">All states</option><option>DRAFT</option><option>READY FOR QUALIFIED REVIEW</option><option>REVIEW RECORDED · NOT RELEASE</option></select></div>
+          <div class="switching-library-list" id="wpLibraryList"><div class="switching-empty">Loading server drafts…</div></div>
+        </section>
         <div class="switching-grid" id="switchingGrid">
           <section class="panel switching-module switching-intake" data-module-id="switching-intake">
             <div class="switching-module-head"><div><label>SOURCE PACKAGE</label><h3>Diagram intake</h3></div><span class="switching-module-state" id="wpIntakeState">LOCAL ONLY</span></div>
@@ -463,6 +475,9 @@
               <label>WORK PACKAGE<input id="wpPackageName" placeholder="e.g. Feeder isolation review"></label>
               <label>STATION / SITE<input id="wpSite" placeholder="Station or work area"></label>
               <label>CIRCUIT / ASSET<input id="wpAsset" placeholder="Circuit, feeder, device, or line"></label>
+              <label>LINKED OUTAGE<select id="wpOutageId"><option value="">No linked outage</option></select></label>
+              <label>SERVER SCHEMATIC<select id="wpSchematicId"><option value="">No server schematic</option></select></label>
+              <label>SYMBOL PROFILE APPROVAL REF<input id="wpSymbolProfileApprovalRef" placeholder="Controlled catalogue / revision"></label>
               <label>CANONICAL ASSET ID<input id="wpCanonicalAssetId" placeholder="Packet 12 asset ID"></label>
               <label>TOPOLOGY SNAPSHOT ID<input id="wpTopologySnapshotId" placeholder="Canonical snapshot ID"></label>
               <label>TOPOLOGY REVISION<input id="wpTopologyRevision" placeholder="Canonical topology revision"></label>
@@ -473,11 +488,11 @@
               <label>QUALIFICATION EVIDENCE REF<input id="wpQualificationEvidenceRef" placeholder="External verification reference"></label>
               <label class="switching-wide">WORK SCOPE<textarea id="wpWorkScope" rows="3" placeholder="Describe the work scope. Do not enter a live command here."></textarea></label>
             </div>
-            <div class="switching-upload-row"><input id="wpDiagramFiles" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" multiple hidden><button class="primary-btn" id="wpAddDiagram" type="button">ADD CIRCUIT DIAGRAMS</button><span class="muted-note">PDF or image · retained in this browser only</span></div>
+            <div class="switching-upload-row"><input id="wpDiagramFiles" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.json" multiple hidden><button class="primary-btn" id="wpAddDiagram" type="button">ADD CIRCUIT DIAGRAMS</button><span class="muted-note">PDF, image, or one-line JSON · stored with the server draft</span></div>
             <div class="switching-file-list" id="wpFileList"><div class="switching-empty">No source diagrams attached.</div></div>
-            <div class="switching-upload-row"><input id="wpSourceFiles" type="file" accept=".pdf,.txt,.doc,.docx" multiple hidden><button class="secondary-btn" id="wpAddSource" type="button">ADD RULE / PROCEDURE SOURCES</button><span class="muted-note">UWPC, EUSR, utility forms · local only</span></div>
+            <div class="switching-upload-row"><input id="wpSourceFiles" type="file" accept=".pdf,.txt,.doc,.docx" multiple hidden><button class="secondary-btn" id="wpAddSource" type="button">ADD RULE / PROCEDURE SOURCES</button><span class="muted-note">UWPC, EUSR, utility forms · stored with the server draft</span></div>
             <div class="switching-file-list" id="wpRuleFileList"><div class="switching-empty">No governing sources attached.</div></div>
-            <div class="switching-actions"><button class="primary-btn" id="wpCreateDraft" type="button">CREATE DRAFT PACKAGE</button><button class="secondary-btn" id="wpSaveDraft" type="button">SAVE LOCAL DRAFT</button><span class="switching-status" id="wpIntakeStatus" role="status"></span></div>
+            <div class="switching-actions"><button class="primary-btn" id="wpCreateDraft" type="button">CREATE DRAFT PACKAGE</button><button class="secondary-btn" id="wpSaveDraft" type="button">SAVE DRAFT</button><span class="switching-status" id="wpIntakeStatus" role="status"></span></div>
           </section>
 
           <section class="panel switching-module switching-form-module" data-module-id="switching-form">

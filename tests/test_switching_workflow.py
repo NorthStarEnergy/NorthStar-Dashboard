@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import sqlite3
 import sys
 import tempfile
 import threading
@@ -14,6 +15,53 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+
+class SwitchingMigrationTest(unittest.TestCase):
+    def test_legacy_switching_table_adds_link_columns_before_outage_index(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "legacy-switching.db"
+            connection = sqlite3.connect(database)
+            try:
+                connection.execute(
+                    """CREATE TABLE switching_drafts (
+                    id TEXT PRIMARY KEY, status TEXT NOT NULL,
+                    updated_at TEXT NOT NULL, record_version INTEGER NOT NULL DEFAULT 1
+                    )"""
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            prior_database = os.environ.get("NORTHSTAR_DB")
+            os.environ["NORTHSTAR_DB"] = str(database)
+            try:
+                import northstar_store
+
+                store = importlib.reload(northstar_store)
+                store.init_db()
+                connection = sqlite3.connect(database)
+                try:
+                    columns = {
+                        row[1] for row in connection.execute(
+                            "PRAGMA table_info(switching_drafts)"
+                        )
+                    }
+                    indexes = {
+                        row[1] for row in connection.execute(
+                            "PRAGMA index_list(switching_drafts)"
+                        )
+                    }
+                finally:
+                    connection.close()
+                self.assertIn("outage_id", columns)
+                self.assertIn("schematic_id", columns)
+                self.assertIn("idx_switching_drafts_outage", indexes)
+            finally:
+                if prior_database is None:
+                    os.environ.pop("NORTHSTAR_DB", None)
+                else:
+                    os.environ["NORTHSTAR_DB"] = prior_database
 
 
 class SwitchingWorkflowTest(unittest.TestCase):
@@ -67,6 +115,20 @@ class SwitchingWorkflowTest(unittest.TestCase):
         body = response.read()
         return response.status, json.loads(body) if body else None
 
+    def raw_request(
+        self,
+        method: str,
+        path: str,
+        data: bytes | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> tuple[int, bytes, object]:
+        request = Request(self.base + path, data=data, method=method, headers=headers or {})
+        try:
+            response = urlopen(request, timeout=5)
+        except HTTPError as error:
+            response = error
+        return response.status, response.read(), response.headers
+
     @staticmethod
     def payload() -> dict[str, object]:
         row = {"first": "FDR-01", "second": "Confirm source-derived condition and responsible role."}
@@ -115,6 +177,18 @@ class SwitchingWorkflowTest(unittest.TestCase):
         self.assertEqual(status, 409)
         self.assertIn("stale draft version", conflict["error"])
 
+        for kind, filename, content_type, content in (
+            ("diagram", "fdr-01-rev7.pdf", "application/pdf", b"%PDF-1.7\ndiagram"),
+            ("source", "uwpc-procedure.pdf", "application/pdf", b"%PDF-1.7\nprocedure"),
+        ):
+            upload_status, _, _ = self.raw_request(
+                "POST",
+                f"/api/switching/drafts/{draft_id}/attachments?kind={kind}",
+                content,
+                {"Content-Type": content_type, "X-Northstar-Filename": filename},
+            )
+            self.assertEqual(upload_status, 200)
+
         status, ready = self.request("POST", f"/api/switching/drafts/{draft_id}/ready", {})
         self.assertEqual(status, 200)
         self.assertEqual(ready["status"], self.store.SWITCHING_READY)
@@ -145,7 +219,8 @@ class SwitchingWorkflowTest(unittest.TestCase):
         self.assertEqual(evidence["packet"], "13")
         self.assertEqual(evidence["evidenceType"], "UWPC_EUSR_REVIEW_EVIDENCE")
         self.assertTrue(evidence["terminalNonRelease"])
-        self.assertEqual(evidence["sourceManifestDigest"], "a" * 64)
+        self.assertEqual(len(evidence["sourceManifestDigest"]), 64)
+        self.assertNotEqual(evidence["sourceManifestDigest"], "a" * 64)
         self.assertNotIn("approve", evidence)
         self.assertNotIn("release", evidence)
 
@@ -185,6 +260,133 @@ class SwitchingWorkflowTest(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertEqual(allowed, [])
+
+    def test_source_bytes_are_stored_downloaded_and_removed_through_operator_routes(self) -> None:
+        payload = self.payload()
+        payload["diagrams"] = [{"name": "fdr-01-rev7.pdf", "size": 16, "type": "application/pdf"}]
+        status, created = self.request("POST", "/api/switching/drafts", payload)
+        self.assertEqual(status, 201)
+        draft_id = created["id"]
+        source = b"%PDF-1.7\nsource\n"
+        status, body, _ = self.raw_request(
+            "POST",
+            f"/api/switching/drafts/{draft_id}/attachments?kind=diagram",
+            source,
+            {
+                "Content-Type": "application/pdf",
+                "X-Northstar-Filename": "fdr-01-rev7.pdf",
+            },
+        )
+        self.assertEqual(status, 200)
+        stored = json.loads(body)
+        self.assertEqual(len(stored["diagrams"]), 1)
+        attachment = stored["diagrams"][0]
+        self.assertEqual(attachment["storage"], "SERVER")
+        self.assertEqual(len(attachment["sha256"]), 64)
+
+        status, downloaded, headers = self.raw_request(
+            "GET", f"/api/switching/drafts/{draft_id}/attachments/{attachment['attachmentId']}"
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(downloaded, source)
+        self.assertEqual(headers["X-Content-SHA256"], attachment["sha256"])
+
+        status, body, _ = self.raw_request(
+            "DELETE", f"/api/switching/drafts/{draft_id}/attachments/{attachment['attachmentId']}"
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["diagrams"], [])
+
+    def test_one_line_documents_are_server_versioned_and_link_to_outages(self) -> None:
+        status, outage = self.request(
+            "POST",
+            "/api/outages",
+            {"title": "Feeder outage", "asset": "FDR-01", "site": "Iroquois Falls"},
+        )
+        self.assertEqual(status, 201)
+        record = {
+            "version": 2,
+            "symbols": [
+                {"id": "BUS-01", "type": "bus", "x": 300, "y": 200, "label": "Main bus"},
+                {"id": "CB-01", "type": "breaker", "x": 500, "y": 200, "deviceFunction": "52"},
+            ],
+            "edges": [{"id": "old", "from": "BUS-01", "to": "CB-01"}],
+        }
+        status, created = self.request(
+            "POST",
+            "/api/schematics",
+            {
+                "name": "FDR-01 one-line",
+                "outageId": outage["id"],
+                "standardApprovalRef": "UTILITY-CATALOGUE-REV-3",
+                "record": record,
+            },
+        )
+        self.assertEqual(status, 201)
+        self.assertEqual(created["revision"], 1)
+        self.assertEqual(created["outageId"], outage["id"])
+        self.assertEqual(created["record"]["designationStandard"], "IEEE C37.2-2022")
+
+        changed = dict(record)
+        changed["symbols"] = [*record["symbols"], {"id": "GND-01", "type": "ground", "x": 500, "y": 350}]
+        status, saved = self.request(
+            "POST",
+            f"/api/schematics/{created['id']}",
+            {
+                "name": created["name"],
+                "outageId": outage["id"],
+                "standardApprovalRef": "UTILITY-CATALOGUE-REV-3",
+                "revision": 1,
+                "record": changed,
+            },
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(saved["revision"], 2)
+        self.assertEqual(len(saved["history"]), 2)
+
+        status, conflict = self.request(
+            "POST",
+            f"/api/schematics/{created['id']}",
+            {"name": created["name"], "revision": 1, "record": record},
+        )
+        self.assertEqual(status, 409)
+        self.assertIn("stale schematic revision", conflict["error"])
+
+        status, listed = self.request("GET", f"/api/schematics?outageId={outage['id']}")
+        self.assertEqual(status, 200)
+        self.assertEqual([item["id"] for item in listed], [created["id"]])
+
+    def test_switching_package_accepts_current_server_schematic_as_diagram_source(self) -> None:
+        status, schematic = self.request(
+            "POST",
+            "/api/schematics",
+            {
+                "name": "Server one-line",
+                "standardApprovalRef": "UTILITY-CATALOGUE-REV-3",
+                "record": {
+                    "symbols": [{"id": "BUS-01", "type": "bus", "x": 200, "y": 200}],
+                    "edges": [],
+                },
+            },
+        )
+        self.assertEqual(status, 201)
+        payload = self.payload()
+        payload["diagrams"] = []
+        payload["schematicId"] = schematic["id"]
+        payload["schematicRevision"] = schematic["revision"]
+        payload["symbolProfileApprovalRef"] = "UTILITY-CATALOGUE-REV-3"
+        status, created = self.request("POST", "/api/switching/drafts", payload)
+        self.assertEqual(status, 201)
+        upload_status, _, _ = self.raw_request(
+            "POST",
+            f"/api/switching/drafts/{created['id']}/attachments?kind=source",
+            b"%PDF-1.7\nprocedure",
+            {"Content-Type": "application/pdf", "X-Northstar-Filename": "uwpc-procedure.pdf"},
+        )
+        self.assertEqual(upload_status, 200)
+        status, ready = self.request("POST", f"/api/switching/drafts/{created['id']}/ready", {})
+        self.assertEqual(status, 200)
+        self.assertEqual(ready["status"], self.store.SWITCHING_READY)
 
 
 if __name__ == "__main__":

@@ -13,6 +13,20 @@ Full completion reports for recent packets are in `docs/packets/`.
 
 ---
 
+## Packet 25 — durable engineering packages and schematic revisions (2026-08-26)
+
+Tag `packet-25-engineering-persistence` · report
+`docs/packets/packet-25-engineering-persistence.md`
+
+Moved switching source files and one-line drawing revisions from browser-only state into the
+operator-gated, backed-up SQLite record. Outages can open a prefilled Engineering package;
+operators can search and reopen drafts from another browser; schematics can be saved as append-only
+server revisions and attached directly to a package. Diagram/procedure uploads are extension,
+content-type, signature, size, hash, and authentication checked. Drawing export now includes JSON,
+SVG, PNG, and print/PDF. Ready-for-review now requires durable source records and a current server
+schematic with a matching utility symbol-profile approval reference when a schematic is used.
+Suite: 151 passed.
+
 ## Packet 24 — IEEE compatibility symbol library (2026-08-26)
 
 Tag `packet-24-ieee-symbol-library` · report

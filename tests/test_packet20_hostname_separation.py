@@ -255,6 +255,8 @@ class HostnameSeparationTest(unittest.TestCase):
             ("POST", "/api/outages"),
             ("GET", "/api/checkin-tokens"),
             ("GET", "/api/switching/drafts"),
+            ("GET", "/api/schematics"),
+            ("POST", "/api/schematics"),
             ("GET", "/api/voice"),
         )
         for method, path in operator_routes:
