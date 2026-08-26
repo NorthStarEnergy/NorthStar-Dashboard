@@ -13,6 +13,18 @@ Full completion reports for recent packets are in `docs/packets/`.
 
 ---
 
+## Packet 23 — recovered sanitised rich-text logbook editor (2026-08-26)
+
+Tag `packet-23-logbook-rich-editor` · report
+`docs/packets/packet-23-logbook-rich-editor.md`
+
+Recovered the text editor behavior into the current email-style Logbook without restoring the
+stale dashboard snapshot around it. Operators can apply bold, italic, underline, bulleted and
+numbered lists, and block quotes. Content is allowlist-sanitised, remains on the existing
+operator-gated `/api/logbook` route, and continues through the append-only hash-chained store.
+Deprecated `execCommand`, executable markup, and inline image data URLs were not restored. Suite:
+139 passed; authenticated live desktop smoke check passed on `ops.northstarenergy.ca`.
+
 ## Packet 21 — dashboard UI, layout zones and workspace modules (2026-08-13)
 
 Tag `packet-21-field-staff-auto-height` · shipped build

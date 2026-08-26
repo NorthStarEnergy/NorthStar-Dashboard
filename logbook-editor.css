@@ -1,0 +1,69 @@
+.logbook-rich-editor {
+  min-height: 220px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.logbook-rich-editor:empty::before {
+  color: var(--muted);
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
+.logbook-rich-editor:focus {
+  border-color: var(--blue);
+  outline: 2px solid rgb(105 183 232 / 18%);
+  outline-offset: 1px;
+}
+
+.logbook-rich-editor p,
+.logbook-rich-editor blockquote,
+.event-rich-details p,
+.event-rich-details blockquote {
+  margin: 0 0 8px;
+}
+
+.logbook-rich-editor ul,
+.logbook-rich-editor ol,
+.event-rich-details ul,
+.event-rich-details ol {
+  margin: 6px 0 8px;
+  padding-left: 24px;
+}
+
+.logbook-rich-editor blockquote,
+.event-rich-details blockquote {
+  border-left: 3px solid var(--blue);
+  color: #c5d4dc;
+  padding-left: 10px;
+}
+
+.logbook-toolbar button[aria-pressed="true"] {
+  background: #214155;
+  border-color: var(--blue);
+  color: #fff;
+}
+
+.logbook-format-note {
+  color: var(--muted);
+  font: 8px/1.4 monospace;
+  margin-top: 5px;
+}
+
+.event-rich-details {
+  color: #b4c1c8;
+  font: 10px/1.45 Arial, sans-serif;
+  margin-top: 4px;
+}
+
+.event-rich-meta,
+.event-rich-attachments {
+  color: var(--muted);
+  font: 8px/1.45 monospace;
+  margin-bottom: 7px;
+  white-space: pre-line;
+}
+
+.event-rich-attachments {
+  margin: 7px 0 0;
+}
