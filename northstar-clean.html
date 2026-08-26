@@ -10,13 +10,14 @@
   <script src="operator-session.js"></script>
   <link rel="stylesheet" href="lamination-dashboard.css">
   <link rel="stylesheet" href="switching-workspace.css">
-  <link rel="stylesheet" href="one-line-editor.css">
+  <link rel="stylesheet" href="one-line-editor.css?v=20260826-2">
   <link rel="stylesheet" href="market-workspace.css?v=3">
   <link rel="stylesheet" href="events-workspace.css">
   <link rel="stylesheet" href="outages-workspace.css">
   <link rel="stylesheet" href="logbook-editor.css?v=20260826-1">
   <script src="switching-workspace.js" defer></script>
-  <script src="one-line-editor-ui.js" defer></script>
+  <script src="one-line-symbol-library.js?v=20260826-2" defer></script>
+  <script src="one-line-editor-ui.js?v=20260826-2" defer></script>
   <script src="outages-workspace.js?v=2" defer></script>
   <title>Northstar Control Room · Clean Live</title>
   <style>
@@ -440,24 +441,17 @@
           <div class="one-line-head"><div><label>PACKET 05 · GRAPHICAL ONE-LINE EDITOR</label><h2>Build a circuit diagram with symbols</h2><p>Draft, arrange, connect, label, and export a topology-aware one-line record.</p></div><span class="one-line-badge">DRAFTING ONLY · NOT RELEASE</span></div>
           <div class="one-line-layout">
             <aside class="one-line-tools" aria-label="One-line editor tools">
-              <h3>SYMBOL PALETTE</h3>
+              <h3>IEEE COMPATIBILITY LIBRARY</h3>
               <div class="symbol-palette">
                 <button class="symbol-tool active" type="button" data-symbol-type="select"><span class="symbol-glyph">↖</span>SELECT / MOVE</button>
                 <button class="symbol-tool" type="button" data-symbol-type="connect"><span class="symbol-glyph">⌁</span>CONNECT</button>
-                <button class="symbol-tool" type="button" data-symbol-type="source"><span class="symbol-glyph">⌁</span>SOURCE</button>
-                <button class="symbol-tool" type="button" data-symbol-type="bus"><span class="symbol-glyph">━</span>BUS</button>
-                <button class="symbol-tool" type="button" data-symbol-type="disconnect"><span class="symbol-glyph">◇</span>DISCONNECT</button>
-                <button class="symbol-tool" type="button" data-symbol-type="breaker"><span class="symbol-glyph">□</span>BREAKER</button>
-                <button class="symbol-tool" type="button" data-symbol-type="transformer"><span class="symbol-glyph">◎</span>TRANSFORMER</button>
-                <button class="symbol-tool" type="button" data-symbol-type="line"><span class="symbol-glyph">╱</span>LINE</button>
-                <button class="symbol-tool" type="button" data-symbol-type="load"><span class="symbol-glyph">▱</span>LOAD</button>
-                <button class="symbol-tool" type="button" data-symbol-type="terminal"><span class="symbol-glyph">●</span>TERMINAL</button>
-                <button class="symbol-tool" type="button" data-symbol-type="edge"><span class="symbol-glyph">—</span>EDGE</button>
+                <label class="symbol-search-label">FILTER<input id="oneLineSymbolSearch" type="search" placeholder="Breaker, relay, CT…"></label>
+                <div id="oneLineSymbolLibrary"></div>
               </div>
               <div class="one-line-actions"><button type="button" id="oneLineDemo">LOAD EXAMPLE</button><button type="button" id="oneLineClear">CLEAR</button><button type="button" id="oneLineImport">IMPORT JSON</button><input id="oneLineImportFile" type="file" accept="application/json,.json" hidden><button type="button" id="oneLineExport">EXPORT JSON</button><button class="primary-btn" type="button" id="oneLineSave">SAVE LOCAL REVISION</button></div>
             </aside>
             <div class="one-line-canvas-wrap"><svg class="one-line-canvas" id="oneLineCanvas" viewBox="0 0 1000 560" role="img" aria-label="Interactive electrical one-line diagram editor"></svg><div class="one-line-empty" id="oneLineEmpty" hidden>Choose a symbol, then click the canvas.<br>Use CONNECT to join two symbols.</div></div>
-            <aside class="one-line-inspector"><h3>INSPECTOR</h3><div id="oneLineInspectorBody"><p class="hint">Select a symbol to edit its label, rotation, or position. Use CONNECT to draw a wire between two symbols.</p></div><div class="one-line-help"><b>Controls</b><br>Click a palette item to add a symbol.<br>Drag symbols to reposition.<br>CONNECT, then click two symbols.<br>Save creates a local numbered revision.</div></aside>
+            <aside class="one-line-inspector"><h3>INSPECTOR</h3><div id="oneLineInspectorBody"><p class="hint">Select a symbol to edit its label, designation, rotation, or position. Use CONNECT to draw a conductor between two symbols.</p></div><div class="one-line-help"><b>Standards profile</b><br>Graphics: IEEE/ANSI 315-1975 convention (inactive-reserved).<br>Designations: IEEE C37.2-2022 (active).<br><br><b>Controls</b><br>Click a palette item to add a symbol.<br>Drag symbols to reposition.<br>CONNECT, then click two symbols.<br>Save creates a local numbered revision.</div></aside>
           </div>
           <div class="one-line-status" id="oneLineStatus"><span>LOCAL DRAFT READY</span><strong id="oneLineCount">0 SYMBOLS · 0 CONNECTIONS</strong></div>
         </section>

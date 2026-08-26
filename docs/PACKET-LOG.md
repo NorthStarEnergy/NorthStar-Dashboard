@@ -13,6 +13,19 @@ Full completion reports for recent packets are in `docs/packets/`.
 
 ---
 
+## Packet 24 — IEEE compatibility symbol library (2026-08-26)
+
+Tag `packet-24-ieee-symbol-library` · report
+`docs/packets/packet-24-ieee-symbol-library.md`
+
+Expanded the graphical one-line builder from nine generic shapes to 21 searchable symbols grouped
+by network, primary equipment, and measurement/protection. The profile distinguishes the familiar
+IEEE/ANSI 315-1975 graphical convention, which IEEE marks inactive-reserved, from the active IEEE
+C37.2-2022 device-function designations. Version-2 JSON exports carry the standards profile while
+legacy local drafts remain loadable. The inspector now supports C37.2 numbers and suffixes, and a
+pre-existing status update bug that broke selected-symbol inspection was corrected. Suite: 145
+passed; authenticated live browser smoke passed.
+
 ## Packet 23 — recovered sanitised rich-text logbook editor (2026-08-26)
 
 Tag `packet-23-logbook-rich-editor` · report
