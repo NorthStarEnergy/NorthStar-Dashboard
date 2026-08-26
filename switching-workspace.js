@@ -487,7 +487,11 @@
     $('wpReviewPill').textContent = state.status === 'REVIEW RECORDED · NOT RELEASE' ? 'RECORDED' : state.status === 'READY FOR QUALIFIED REVIEW' ? 'READY' : 'NOT READY';
     $('wpReviewPill').className = `switching-state-pill ${state.status === 'REVIEW RECORDED · NOT RELEASE' ? 'reviewed' : state.status === 'READY FOR QUALIFIED REVIEW' ? 'ready' : ''}`;
     $('wpFormStatus').textContent = state.packageName ? `${state.diagrams.length} uploaded diagram(s) · ${state.schematicId ? `server schematic rev ${state.schematicRevision} · ` : ''}${state.ruleSources.length} governing source(s) · source-derived fields remain subject to qualified review.` : 'Create a package after attaching the current source diagrams. The fields below are intentionally blank until a qualified reviewer verifies the source.';
+    const immutable = state.status === 'REVIEW RECORDED · NOT RELEASE';
+    document.querySelectorAll("[data-module-id='switching-intake'] input,[data-module-id='switching-intake'] textarea,[data-module-id='switching-intake'] select,[data-module-id='switching-intake'] button,[data-module-id='switching-form'] input,[data-module-id='switching-form'] textarea,[data-module-id='switching-form'] button,[data-module-id='switching-approval'] input,[data-module-id='switching-approval'] textarea,[data-module-id='switching-approval'] button").forEach(control => { control.disabled = immutable; });
     $('wpRecordReview').disabled = state.status !== 'READY FOR QUALIFIED REVIEW';
+    $('wpDownloadBundle').disabled = !state.id || state.storage !== 'SERVER';
+    $('wpCloneRevision').disabled = !state.id || state.storage !== 'SERVER';
     renderEngineeringHub();
     renderAudit();
   }
@@ -608,9 +612,38 @@
     }
   }
 
+  function downloadControlledBundle() {
+    if (!state.id || state.storage !== 'SERVER') {
+      setNote('Save the server draft before downloading a controlled bundle.', 'warn');
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = `/api/switching/drafts/${encodeURIComponent(state.id)}/bundle`;
+    link.download = '';
+    document.body.append(link); link.click(); link.remove();
+    setNote('Controlled bundle requested. It includes the server package, audit trail, hashes, review evidence, and stored sources; it is not an operational release.');
+  }
+
+  async function cloneServerRevision() {
+    if (!state.id || state.storage !== 'SERVER') {
+      setNote('Save the server draft before starting a server revision.', 'warn');
+      return;
+    }
+    if (!confirm('Create a new server draft revision? Stored sources and work rows will be copied; diagram revision, qualification evidence, reviewer fields, and review checks will be cleared.')) return;
+    try {
+      const sourceId = state.id;
+      const record = await serverRequest(`/api/switching/drafts/${encodeURIComponent(sourceId)}/clone`, 'POST', { version: state.version });
+      applyServerRecord(record); write(false); renderFields(); await loadDraftLibrary();
+      setNote(`New server revision ${record.id} created from ${sourceId}. Enter the new diagram revision and qualification evidence before review.`);
+      $('wpIntakeStatus').textContent = `REVISION DRAFT CREATED - SERVER RECORD ${record.id}.`;
+    } catch (error) {
+      setNote(`Server revision was not created: ${error.message}.`, 'error');
+    }
+  }
+
   function exportLocalRecord() {
     collectFields(); syncDiagramRecords(); syncRuleRecords(); addAudit('Local draft record exported without file contents.'); write(); renderFields();
-    const payload = { ...state, exportedAt: new Date().toISOString(), fileContents: 'not included; source files remain local to the browser' };
+    const payload = { ...state, exportedAt: new Date().toISOString(), fileContents: 'not included; use the controlled server bundle for stored source bytes and review evidence' };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const link = document.createElement('a');
     const slug = (state.packageName || 'switching-draft').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -663,7 +696,7 @@
       });
       renderRuleFiles(); $('wpIntakeStatus').textContent = rejected.length ? rejected.join(' · ') : `${selectedRuleFiles.length} governing source(s) selected locally.`; event.target.value = '';
     };
-    $('wpCreateDraft').onclick = createDraft; $('wpSaveDraft').onclick = () => saveDraft(); $('wpReadyReview').onclick = readyForReview; $('wpRecordReview').onclick = recordReview; $('wpPrintPacket').onclick = printPacket; $('wpExportDraft').onclick = exportLocalRecord; $('wpNewDraft').onclick = newDraft;
+    $('wpCreateDraft').onclick = createDraft; $('wpSaveDraft').onclick = () => saveDraft(); $('wpReadyReview').onclick = readyForReview; $('wpRecordReview').onclick = recordReview; $('wpDownloadBundle').onclick = downloadControlledBundle; $('wpCloneRevision').onclick = cloneServerRevision; $('wpPrintPacket').onclick = printPacket; $('wpExportDraft').onclick = exportLocalRecord; $('wpNewDraft').onclick = newDraft;
     $('wpRefreshLibrary').onclick = loadDraftLibrary;
     $('wpLibraryStatus').onchange = loadDraftLibrary;
     let libraryTimer = null;

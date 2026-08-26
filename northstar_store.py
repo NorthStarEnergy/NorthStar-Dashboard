@@ -1618,19 +1618,7 @@ def get_switching_draft(draft_id: str) -> dict[str, Any] | None:
         return _switching_record(row, _switching_history_from_connection(connection, draft_id))
 
 
-def get_switching_review_evidence(draft_id: str) -> dict[str, Any] | None:
-    """Return the dashboard's Packet 13-compatible immutable review projection.
-
-    This is evidence only: it deliberately exposes no approval, certification,
-    release, or equipment-command capability.
-    """
-    with _LOCK, _session() as connection:
-        row = connection.execute(
-            "SELECT * FROM switching_drafts WHERE id=?", (draft_id,)
-        ).fetchone()
-        if row is None:
-            return None
-        record = _switching_record(row, _switching_history_from_connection(connection, draft_id))
+def _switching_review_evidence(record: dict[str, Any]) -> dict[str, Any]:
     return {
         "packet": "13",
         "evidenceType": "UWPC_EUSR_REVIEW_EVIDENCE",
@@ -1654,6 +1642,188 @@ def get_switching_review_evidence(draft_id: str) -> dict[str, Any] | None:
         "reviewedBy": record.get("reviewedBy"),
         "audit": record.get("audit", []),
     }
+
+
+def get_switching_review_evidence(draft_id: str) -> dict[str, Any] | None:
+    """Return the dashboard's Packet 13-compatible immutable review projection.
+
+    This is evidence only: it deliberately exposes no approval, certification,
+    release, or equipment-command capability.
+    """
+    with _LOCK, _session() as connection:
+        row = connection.execute(
+            "SELECT * FROM switching_drafts WHERE id=?", (draft_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        record = _switching_record(row, _switching_history_from_connection(connection, draft_id))
+    return _switching_review_evidence(record)
+
+
+def get_switching_bundle(
+    draft_id: str, actor: str = "operator"
+) -> dict[str, Any] | None:
+    """Return one transactionally consistent package/source export snapshot."""
+    actor = _switching_clip(actor, 80) or "operator"
+    with _LOCK, _session() as connection:
+        row = connection.execute(
+            "SELECT * FROM switching_drafts WHERE id=?", (draft_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        _append_switching_event(
+            connection,
+            draft_id=draft_id,
+            actor=actor,
+            event="controlled-bundle-exported",
+            prior_status=row["status"],
+            new_status=row["status"],
+            details="package, evidence, audit, hashes, and stored sources exported; no operational release",
+        )
+        record = _switching_record(row, _switching_history_from_connection(connection, draft_id))
+        attachments = connection.execute(
+            "SELECT * FROM switching_attachments WHERE draft_id=?"
+            " ORDER BY kind, uploaded_at, id",
+            (draft_id,),
+        ).fetchall()
+        sources = []
+        for attachment in attachments:
+            source = _attachment_record(attachment)
+            source["content"] = bytes(attachment["content"])
+            sources.append(source)
+    return {
+        "package": record,
+        "reviewEvidence": _switching_review_evidence(record),
+        "attachments": sources,
+    }
+
+
+def clone_switching_draft(
+    draft_id: str,
+    actor: str = "operator",
+    expected_version: int | str | None = None,
+) -> dict[str, Any] | None:
+    """Create a new draft revision with copied sources and cleared review evidence."""
+    actor = _switching_clip(actor, 80) or "operator"
+    if expected_version is not None:
+        expected_version = _switching_expected_version({"version": expected_version})
+    timestamp = now_iso()
+    with _LOCK, _session() as connection:
+        source = connection.execute(
+            "SELECT * FROM switching_drafts WHERE id=?", (draft_id,)
+        ).fetchone()
+        if source is None:
+            return None
+        if expected_version is not None and expected_version != source["record_version"]:
+            raise SwitchingConflict(
+                f"stale draft version; server is at version {source['record_version']}"
+            )
+        try:
+            payload = json.loads(source["payload"] or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+        payload = payload if isinstance(payload, dict) else {}
+        new_id = _unique_id(connection, "switching_drafts", "switching")
+        base_name = _switching_clip(
+            payload.get("packageName") or source["package_name"] or "Switching package", 140
+        )
+        cloned_payload = {
+            **payload,
+            "packageName": f"{base_name} - REVISION DRAFT",
+            "revision": "",
+            "qualificationEvidenceRef": "",
+            "reviewerName": "",
+            "reviewerRole": "",
+            "reviewComments": "",
+            "checks": {key: False for key in SWITCHING_REVIEW_CHECKS},
+            "diagrams": [],
+            "ruleSources": [],
+        }
+        cloned_payload["sourceManifestDigest"] = _switching_manifest_digest(cloned_payload)
+        data = _normalise_switching_payload(cloned_payload)
+        connection.execute(
+            "INSERT INTO switching_drafts"
+            " (id,package_name,site,asset,outage_id,schematic_id,diagram_revision,rule_set,work_scope,status,record_version,payload,created_at,updated_at,created_by)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                new_id,
+                data["packageName"],
+                data["site"],
+                data["asset"],
+                data["outageId"],
+                data["schematicId"],
+                data["revision"],
+                data["ruleSet"],
+                data["scope"],
+                SWITCHING_DRAFT,
+                1,
+                json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+                timestamp,
+                timestamp,
+                actor,
+            ),
+        )
+        copied_files: dict[str, list[dict[str, Any]]] = {"diagram": [], "source": []}
+        attachments = connection.execute(
+            "SELECT * FROM switching_attachments WHERE draft_id=?"
+            " ORDER BY kind, uploaded_at, id",
+            (draft_id,),
+        ).fetchall()
+        for attachment in attachments:
+            attachment_id = _unique_id(connection, "switching_attachments", "attachment")
+            connection.execute(
+                "INSERT INTO switching_attachments"
+                " (id,draft_id,kind,filename,content_type,size_bytes,sha256,content,uploaded_at,uploaded_by)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (
+                    attachment_id,
+                    new_id,
+                    attachment["kind"],
+                    attachment["filename"],
+                    attachment["content_type"],
+                    attachment["size_bytes"],
+                    attachment["sha256"],
+                    attachment["content"],
+                    timestamp,
+                    actor,
+                ),
+            )
+            copied = dict(attachment)
+            copied.update({"id": attachment_id, "draft_id": new_id, "uploaded_at": timestamp, "uploaded_by": actor})
+            copied_files[attachment["kind"]].append(_attachment_record(copied))
+
+        cloned_payload = {
+            **data,
+            "diagrams": copied_files["diagram"],
+            "ruleSources": copied_files["source"],
+        }
+        cloned_payload["sourceManifestDigest"] = _switching_manifest_digest(cloned_payload)
+        data = _normalise_switching_payload(cloned_payload)
+        connection.execute(
+            "UPDATE switching_drafts SET payload=? WHERE id=?",
+            (json.dumps(data, ensure_ascii=False, separators=(",", ":")), new_id),
+        )
+        _append_switching_event(
+            connection,
+            draft_id=new_id,
+            actor=actor,
+            event="revision-created",
+            prior_status=None,
+            new_status=SWITCHING_DRAFT,
+            details=f"cloned from {draft_id}; review evidence cleared; no operational release",
+            at=timestamp,
+        )
+        _append_switching_event(
+            connection,
+            draft_id=draft_id,
+            actor=actor,
+            event="revision-cloned",
+            prior_status=source["status"],
+            new_status=source["status"],
+            details=f"new draft revision {new_id} created; source package remains unchanged",
+            at=timestamp,
+        )
+    return get_switching_draft(new_id)
 
 
 def list_switching_drafts(

@@ -13,6 +13,19 @@ Full completion reports for recent packets are in `docs/packets/`.
 
 ---
 
+## Packet 26 — controlled engineering bundles and server revisions (2026-08-26)
+
+Tag `packet-26-controlled-engineering-bundles` · report
+`docs/packets/packet-26-controlled-engineering-bundles.md`
+
+Added an operator-gated controlled ZIP export containing the switching package, append-only audit,
+Packet 13 review evidence, attachment manifest and hashes, and exact stored diagram/procedure bytes.
+Each export is audited and carries a whole-bundle SHA-256 response header. Reviewed packages remain
+immutable; a new server revision action copies stored sources under new IDs while clearing diagram
+revision, qualification evidence, reviewer identity/comments, and every review check. Reviewed UI
+controls are locked until a new revision is created. The workflow still ends at REVIEW RECORDED -
+NOT RELEASE. Suite: 153 passed.
+
 ## Packet 25 — durable engineering packages and schematic revisions (2026-08-26)
 
 Tag `packet-25-engineering-persistence` · report

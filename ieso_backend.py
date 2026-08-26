@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import mimetypes
@@ -12,6 +13,7 @@ import re
 import socket
 import threading
 import time
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -38,6 +40,61 @@ OVERDUE_SCAN_SECONDS = 30
 SCADA_POLL_SECONDS = max(15, int(os.environ.get("NORTHSTAR_SCADA_POLL_SECONDS", "60")))
 VOICE_POLL_SECONDS = max(15, int(os.environ.get("NORTHSTAR_VOICE_POLL_SECONDS", "45")))
 MAX_JSON_BODY = 64 * 1024
+MAX_SWITCHING_BUNDLE_BYTES = 100 * 1024 * 1024
+
+
+def build_switching_bundle(snapshot: dict[str, Any]) -> tuple[bytes, str]:
+    """Build a bounded, self-verifying export without creating a release artifact."""
+    package = snapshot["package"]
+    attachments = snapshot.get("attachments", [])
+    source_bytes = sum(len(item.get("content", b"")) for item in attachments)
+    if source_bytes > MAX_SWITCHING_BUNDLE_BYTES:
+        raise ValueError("controlled bundle exceeds 100 MB")
+    manifest_sources = []
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for item in attachments:
+            folder = "diagrams" if item.get("kind") == "diagram" else "governing-sources"
+            filename = f"{item['attachmentId']}-{item['name']}"
+            path = posixpath.join("sources", folder, filename)
+            archive.writestr(path, item["content"])
+            manifest_sources.append(
+                {
+                    "path": path,
+                    "attachmentId": item["attachmentId"],
+                    "kind": item["kind"],
+                    "name": item["name"],
+                    "contentType": item["type"],
+                    "sizeBytes": item["size"],
+                    "sha256": item["sha256"],
+                }
+            )
+        manifest = {
+            "schema": 1,
+            "generatedAt": datetime.now(TZ).isoformat(),
+            "draftId": package["id"],
+            "status": package["status"],
+            "terminalNonRelease": package["status"] == store.SWITCHING_REVIEWED,
+            "sourceManifestDigest": package.get("sourceManifestDigest", ""),
+            "attachmentCount": len(manifest_sources),
+            "attachmentBytes": source_bytes,
+            "sources": manifest_sources,
+            "notice": "Evidence package only. Not an operational release or equipment command.",
+        }
+        archive.writestr(
+            "package.json",
+            json.dumps(package, ensure_ascii=False, indent=2, sort_keys=True),
+        )
+        archive.writestr(
+            "review-evidence.json",
+            json.dumps(snapshot["reviewEvidence"], ensure_ascii=False, indent=2, sort_keys=True),
+        )
+        archive.writestr(
+            "bundle-manifest.json",
+            json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True),
+        )
+    body = buffer.getvalue()
+    return body, hashlib.sha256(body).hexdigest()
 
 # Wildcard suits localhost development. A public deployment should pin this to
 # the check-in hostname; the operator gate below is what actually protects the
@@ -1155,6 +1212,32 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if route.startswith("/api/switching/drafts/"):
             suffix = route[len("/api/switching/drafts/"):]
+            if suffix.endswith("/bundle"):
+                draft_id = suffix[:-len("/bundle")]
+                if not draft_id or "/" in draft_id:
+                    self.send_error(404)
+                    return
+                snapshot = store.get_switching_bundle(draft_id, self._operator_actor())
+                if snapshot is None:
+                    self._send_json({"error": "switching draft not found"}, 404)
+                    return
+                try:
+                    body, digest = build_switching_bundle(snapshot)
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, 413)
+                    return
+                slug = re.sub(
+                    r"[^a-z0-9]+",
+                    "-",
+                    str(snapshot["package"].get("packageName") or draft_id).lower(),
+                ).strip("-")[:80]
+                self._send_binary(
+                    body,
+                    "application/zip",
+                    f"northstar-{slug or draft_id}-controlled-bundle.zip",
+                    digest,
+                )
+                return
             if suffix.endswith("/review-evidence"):
                 draft_id = suffix[:-len("/review-evidence")]
                 evidence = store.get_switching_review_evidence(draft_id)
@@ -1637,6 +1720,18 @@ class Handler(SimpleHTTPRequestHandler):
                 except ValueError as exc:
                     self._send_json({"error": str(exc)}, 400)
                     return
+            elif parts[1] == "clone":
+                payload = self._json_body()
+                try:
+                    record = store.clone_switching_draft(
+                        draft_id, actor, payload.get("version")
+                    )
+                except store.SwitchingConflict as exc:
+                    self._send_json({"error": str(exc)}, 409)
+                    return
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, 400)
+                    return
             elif parts[1] == "review":
                 payload = self._json_body()
                 try:
@@ -1654,9 +1749,14 @@ class Handler(SimpleHTTPRequestHandler):
                 action = {
                     "ready": "Marked ready for qualified review",
                     "review": "Qualified review recorded - not release",
+                    "clone": "New draft revision created",
                 }.get(parts[1], "Draft saved") if len(parts) == 2 else "Draft saved"
                 log_switching_event(record, action, actor)
-            self._send_json(record or {"error": "switching draft not found"}, 200 if record else 404)
+            response_status = 201 if len(parts) == 2 and parts[1] == "clone" else 200
+            self._send_json(
+                record or {"error": "switching draft not found"},
+                response_status if record else 404,
+            )
             return
         if self.path == "/api/checkin-tokens":
             payload = self._json_body()

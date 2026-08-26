@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib
+import hashlib
+import io
 import json
 import os
 import sqlite3
@@ -10,6 +12,7 @@ import sys
 import tempfile
 import threading
 import unittest
+import zipfile
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -296,6 +299,98 @@ class SwitchingWorkflowTest(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body)["diagrams"], [])
+
+    def test_controlled_bundle_and_server_revision_preserve_sources_without_release(self) -> None:
+        status, created = self.request("POST", "/api/switching/drafts", self.payload())
+        self.assertEqual(status, 201)
+        draft_id = created["id"]
+        source_bytes = {
+            "diagram": b"%PDF-1.7\ncontrolled diagram",
+            "source": b"%PDF-1.7\ncontrolled procedure",
+        }
+        for kind, filename in (("diagram", "fdr-01.pdf"), ("source", "uwpc.pdf")):
+            upload_status, _, _ = self.raw_request(
+                "POST",
+                f"/api/switching/drafts/{draft_id}/attachments?kind={kind}",
+                source_bytes[kind],
+                {"Content-Type": "application/pdf", "X-Northstar-Filename": filename},
+            )
+            self.assertEqual(upload_status, 200)
+        status, ready = self.request("POST", f"/api/switching/drafts/{draft_id}/ready", {})
+        self.assertEqual(status, 200)
+        status, reviewed = self.request(
+            "POST",
+            f"/api/switching/drafts/{draft_id}/review",
+            {
+                "reviewerName": "Qualified Reviewer",
+                "reviewerRole": "Authorized switching authority",
+                "reviewComments": "Evidence review complete; this is not an operational release.",
+                "checks": {key: True for key in self.store.SWITCHING_REVIEW_CHECKS},
+                "version": ready["version"],
+            },
+        )
+        self.assertEqual(status, 200)
+
+        status, bundle_bytes, headers = self.raw_request(
+            "GET", f"/api/switching/drafts/{draft_id}/bundle"
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get_content_type(), "application/zip")
+        self.assertEqual(headers["X-Content-SHA256"], hashlib.sha256(bundle_bytes).hexdigest())
+        with zipfile.ZipFile(io.BytesIO(bundle_bytes)) as archive:
+            names = archive.namelist()
+            self.assertIn("package.json", names)
+            self.assertIn("review-evidence.json", names)
+            self.assertIn("bundle-manifest.json", names)
+            manifest = json.loads(archive.read("bundle-manifest.json"))
+            package = json.loads(archive.read("package.json"))
+            evidence = json.loads(archive.read("review-evidence.json"))
+            self.assertEqual(manifest["attachmentCount"], 2)
+            self.assertTrue(manifest["terminalNonRelease"])
+            self.assertTrue(evidence["terminalNonRelease"])
+            self.assertEqual(package["status"], self.store.SWITCHING_REVIEWED)
+            self.assertEqual(
+                {archive.read(item["path"]) for item in manifest["sources"]},
+                set(source_bytes.values()),
+            )
+            self.assertTrue(
+                any(event["event"] == "controlled-bundle-exported" for event in package["audit"])
+            )
+
+        status, stale = self.request(
+            "POST", f"/api/switching/drafts/{draft_id}/clone", {"version": 1}
+        )
+        self.assertEqual(status, 409)
+        self.assertIn("stale draft version", stale["error"])
+        status, cloned = self.request(
+            "POST",
+            f"/api/switching/drafts/{draft_id}/clone",
+            {"version": reviewed["version"]},
+        )
+        self.assertEqual(status, 201)
+        self.assertNotEqual(cloned["id"], draft_id)
+        self.assertEqual(cloned["status"], self.store.SWITCHING_DRAFT)
+        self.assertEqual(cloned["version"], 1)
+        self.assertEqual(cloned["revision"], "")
+        self.assertEqual(cloned["qualificationEvidenceRef"], "")
+        self.assertEqual(cloned["reviewerName"], "")
+        self.assertFalse(any(cloned["checks"].values()))
+        self.assertEqual(len(cloned["diagrams"]), 1)
+        self.assertEqual(len(cloned["ruleSources"]), 1)
+        self.assertNotEqual(
+            cloned["diagrams"][0]["attachmentId"], reviewed["diagrams"][0]["attachmentId"]
+        )
+        self.assertTrue(any(event["event"] == "revision-created" for event in cloned["audit"]))
+        status, copied, _ = self.raw_request(
+            "GET",
+            f"/api/switching/drafts/{cloned['id']}/attachments/{cloned['diagrams'][0]['attachmentId']}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(copied, source_bytes["diagram"])
+        status, original = self.request("GET", f"/api/switching/drafts/{draft_id}")
+        self.assertEqual(status, 200)
+        self.assertEqual(original["status"], self.store.SWITCHING_REVIEWED)
+        self.assertTrue(any(event["event"] == "revision-cloned" for event in original["audit"]))
 
     def test_one_line_documents_are_server_versioned_and_link_to_outages(self) -> None:
         status, outage = self.request(

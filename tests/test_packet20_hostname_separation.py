@@ -255,6 +255,8 @@ class HostnameSeparationTest(unittest.TestCase):
             ("POST", "/api/outages"),
             ("GET", "/api/checkin-tokens"),
             ("GET", "/api/switching/drafts"),
+            ("GET", "/api/switching/drafts/example/bundle"),
+            ("POST", "/api/switching/drafts/example/clone"),
             ("GET", "/api/schematics"),
             ("POST", "/api/schematics"),
             ("GET", "/api/voice"),

@@ -32,6 +32,15 @@ class EngineeringWorkspaceTests(unittest.TestCase):
         self.assertIn("attachSchematic", switching)
         self.assertIn("data-create-switching", outages)
 
+    def test_reviewed_packages_have_controlled_export_and_revision_actions(self):
+        html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
+        switching = (ROOT / "switching-workspace.js").read_text(encoding="utf-8")
+        self.assertIn('id="wpDownloadBundle"', html)
+        self.assertIn('id="wpCloneRevision"', html)
+        self.assertIn("downloadControlledBundle", switching)
+        self.assertIn("cloneServerRevision", switching)
+        self.assertIn("review evidence, and stored sources", switching)
+
 
 if __name__ == "__main__":
     unittest.main()
