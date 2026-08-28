@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import northstar_events as events
+
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("NORTHSTAR_DB", ROOT / "data" / "northstar.db"))
 BACKUP_DIR = DB_PATH.parent / "backups"
@@ -61,6 +63,12 @@ SWITCHING_REVIEW_CHECKS = (
     "changes",
     "release",
 )
+
+FIELD_REPORT_STATES = (
+    "DRAFT", "SUBMITTED", "ACKNOWLEDGED", "ASSIGNED", "IN PROGRESS",
+    "RESOLVED", "VERIFIED", "CLOSED",
+)
+ACTION_ITEM_STATES = ("OPEN", "ASSIGNED", "IN PROGRESS", "RESOLVED", "VERIFIED", "CLOSED")
 
 
 class SwitchingConflict(ValueError):
@@ -131,6 +139,38 @@ CREATE TABLE IF NOT EXISTS logbook (
     prev_hash  TEXT,
     entry_hash TEXT
 );
+
+CREATE TABLE IF NOT EXISTS audit_events (
+    seq            INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id       TEXT NOT NULL UNIQUE,
+    event_type     TEXT NOT NULL,
+    schema_version INTEGER NOT NULL,
+    occurred_at    TEXT NOT NULL,
+    recorded_at    TEXT NOT NULL,
+    actor_id       TEXT NOT NULL,
+    aggregate_type TEXT NOT NULL,
+    aggregate_id   TEXT NOT NULL,
+    correlation_id TEXT NOT NULL,
+    causation_id   TEXT,
+    source          TEXT NOT NULL,
+    severity        TEXT NOT NULL DEFAULT 'info',
+    summary         TEXT NOT NULL DEFAULT '',
+    payload         TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    migration_id TEXT PRIMARY KEY,
+    applied_at   TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_events_occurred
+    ON audit_events(occurred_at DESC, seq DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_events_aggregate
+    ON audit_events(aggregate_type, aggregate_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_events_correlation
+    ON audit_events(correlation_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_events_type
+    ON audit_events(event_type, occurred_at DESC);
 
 CREATE TABLE IF NOT EXISTS outages (
     id        TEXT PRIMARY KEY,
@@ -319,6 +359,134 @@ CREATE TABLE IF NOT EXISTS artifact_repository_refs (
 
 CREATE INDEX IF NOT EXISTS idx_artifact_repository_refs_repository
     ON artifact_repository_refs(repository_id);
+
+CREATE TABLE IF NOT EXISTS field_reports (
+    id TEXT PRIMARY KEY,
+    station TEXT NOT NULL,
+    area TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL,
+    priority TEXT NOT NULL,
+    title TEXT NOT NULL,
+    conditions TEXT NOT NULL,
+    immediate_actions TEXT NOT NULL DEFAULT '',
+    outstanding_work TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL,
+    assigned_to TEXT NOT NULL DEFAULT '',
+    outage_id TEXT NOT NULL DEFAULT '',
+    record_version INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    updated_by TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS field_report_events (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id TEXT NOT NULL REFERENCES field_reports(id),
+    at TEXT NOT NULL,
+    actor TEXT NOT NULL,
+    event TEXT NOT NULL,
+    prior_status TEXT,
+    new_status TEXT,
+    details TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS field_report_attachments (
+    id TEXT PRIMARY KEY,
+    report_id TEXT NOT NULL REFERENCES field_reports(id),
+    filename TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    sha256 TEXT NOT NULL,
+    content BLOB NOT NULL,
+    uploaded_at TEXT NOT NULL,
+    uploaded_by TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS action_items (
+    id TEXT PRIMARY KEY,
+    report_id TEXT NOT NULL DEFAULT '',
+    station TEXT NOT NULL,
+    title TEXT NOT NULL,
+    details TEXT NOT NULL DEFAULT '',
+    priority TEXT NOT NULL,
+    status TEXT NOT NULL,
+    assigned_to TEXT NOT NULL DEFAULT '',
+    due_at TEXT,
+    record_version INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    updated_by TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS action_item_events (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    action_id TEXT NOT NULL REFERENCES action_items(id),
+    at TEXT NOT NULL,
+    actor TEXT NOT NULL,
+    event TEXT NOT NULL,
+    prior_status TEXT,
+    new_status TEXT,
+    details TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_field_reports_status ON field_reports(status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_field_reports_station ON field_reports(station, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_field_report_events_report ON field_report_events(report_id, seq DESC);
+CREATE INDEX IF NOT EXISTS idx_field_report_attachments_report ON field_report_attachments(report_id, uploaded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_action_items_status ON action_items(status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_action_items_report ON action_items(report_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_action_item_events_action ON action_item_events(action_id, seq DESC);
+
+CREATE TABLE IF NOT EXISTS controlled_sources (
+    id TEXT PRIMARY KEY,
+    source_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    revision TEXT NOT NULL,
+    document_owner TEXT NOT NULL DEFAULT '',
+    effective_at TEXT,
+    reference_uri TEXT NOT NULL DEFAULT '',
+    sha256 TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'PROPOSED',
+    notes TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    updated_by TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS asset_registry (
+    id TEXT PRIMARY KEY,
+    station TEXT NOT NULL,
+    designation TEXT NOT NULL,
+    asset_type TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    topology_revision TEXT NOT NULL DEFAULT '',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    updated_by TEXT NOT NULL,
+    UNIQUE(station, designation)
+);
+
+CREATE TABLE IF NOT EXISTS governance_decisions (
+    id TEXT PRIMARY KEY,
+    decision_key TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    owner TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'OPEN',
+    decision TEXT NOT NULL DEFAULT '',
+    evidence_ref TEXT NOT NULL DEFAULT '',
+    review_due_at TEXT,
+    updated_at TEXT NOT NULL,
+    updated_by TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_controlled_sources_type ON controlled_sources(source_type,status,updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_asset_registry_station ON asset_registry(station,designation);
+CREATE INDEX IF NOT EXISTS idx_governance_decisions_status ON governance_decisions(status,updated_at DESC);
 """
 
 _LOCK = threading.Lock()
@@ -362,11 +530,114 @@ def init_db() -> None:
         from northstar_voice import init_schema as init_voice_schema
 
         init_voice_schema(connection)
+        _migrate_unified_events(connection)
+        _seed_readiness_registry(connection)
         connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_checkins_help_state"
             " ON checkins(help_state) WHERE help_state IN ('requested','acknowledged')"
         )
         connection.execute("PRAGMA optimize")
+
+
+def _seed_readiness_registry(connection: sqlite3.Connection) -> None:
+    timestamp = now_iso()
+    defaults = (
+        ("procedure_owner", "Authoritative UWPC/EUSR procedure owner"),
+        ("authority_matrix", "Draft, review, approve, issue, execute and close authority matrix"),
+        ("electronic_signature", "Electronic acknowledgement and signature acceptance"),
+        ("identity_provider", "Production per-person identity provider and role claims"),
+        ("device_credentials", "Revocable field-device credential and recovery policy"),
+        ("tag_templates", "Approved tag types, fields, formats and reprint rules"),
+        ("notification_channel", "Approved notification channel and escalation rules"),
+        ("pilot_station", "Controlled pilot station and operating group"),
+    )
+    for key, title in defaults:
+        connection.execute(
+            "INSERT OR IGNORE INTO governance_decisions"
+            " (id,decision_key,title,status,updated_at,updated_by) VALUES (?,?,?,?,?,?)",
+            (f"decision-{key}", key, title, "OPEN", timestamp, "system seed"),
+        )
+
+
+def _migrate_unified_events(connection: sqlite3.Connection) -> None:
+    """Backfill the common timeline once, without altering legacy histories."""
+    migration_id = "2026-08-27-unified-event-backbone-v1"
+    if connection.execute(
+        "SELECT 1 FROM schema_migrations WHERE migration_id=?", (migration_id,)
+    ).fetchone():
+        return
+
+    for row in connection.execute("SELECT * FROM logbook ORDER BY rowid").fetchall():
+        events.append_event(
+            connection,
+            event_id=f"legacy_logbook_{row['id']}",
+            event_type="operations.logbook.entry_added",
+            occurred_at=row["at"],
+            actor_id=row["source"],
+            aggregate_type="logbook",
+            aggregate_id=row["id"],
+            correlation_id=f"legacy:logbook:{row['id']}",
+            source="logbook",
+            summary=row["subject"],
+            payload={"type": row["type"], "details": row["details"], "legacyEntryHash": row["entry_hash"]},
+        )
+
+    for row in connection.execute("SELECT * FROM checkin_events ORDER BY seq").fetchall():
+        events.append_event(
+            connection,
+            event_id=f"legacy_checkin_{row['seq']}",
+            event_type=events.event_type("workforce", row["event"]),
+            occurred_at=row["at"],
+            actor_id=row["actor"],
+            aggregate_type="checkin",
+            aggregate_id=row["checkin_id"],
+            correlation_id=f"legacy:checkin:{row['seq']}",
+            source="workforce",
+            severity="critical" if "help requested" in row["event"].lower() else "info",
+            summary=f"{row['worker']}: {row['event']}",
+            payload={
+                "site": row["site"], "worker": row["worker"],
+                "priorStatus": row["prior_status"], "newStatus": row["new_status"],
+                "priorHelpState": row["prior_help_state"], "newHelpState": row["new_help_state"],
+                "details": row["details"],
+            },
+        )
+
+    for table, aggregate_type, domain, id_column, detail_column in (
+        ("outage_events", "outage", "outage", "outage_id", "details"),
+        ("alert_events", "price_alert", "market", "alert_id", "details"),
+        ("switching_draft_events", "switching_draft", "switching", "draft_id", "details"),
+        ("voice_events", "voice_recording", "voice", "recording_id", "detail"),
+    ):
+        rows = connection.execute(f"SELECT * FROM {table} ORDER BY rowid").fetchall()
+        for row in rows:
+            legacy_key = row["seq"] if "seq" in row.keys() else row["event_id"]
+            event_name = row["event"]
+            actor = row["actor"]
+            aggregate_id = row[id_column]
+            payload = {"details": row[detail_column]}
+            for key in ("site", "node", "prior_status", "new_status", "prior_state", "new_state", "price"):
+                if key in row.keys():
+                    payload[key] = row[key]
+            events.append_event(
+                connection,
+                event_id=f"legacy_{table}_{legacy_key}",
+                event_type=events.event_type(domain, event_name),
+                occurred_at=row["at"],
+                actor_id=actor,
+                aggregate_type=aggregate_type,
+                aggregate_id=aggregate_id,
+                correlation_id=f"legacy:{table}:{legacy_key}",
+                source=domain,
+                severity="warning" if any(term in event_name.lower() for term in ("open", "raised", "review")) else "info",
+                summary=event_name,
+                payload=payload,
+            )
+
+    connection.execute(
+        "INSERT INTO schema_migrations (migration_id, applied_at) VALUES (?,?)",
+        (migration_id, now_iso()),
+    )
 
 
 def _migrate_schema(connection: sqlite3.Connection) -> None:
@@ -435,6 +706,36 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
             chain_added = True
     if chain_added:
         _rebuild_logbook_chain(connection)
+
+    field_columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(field_reports)").fetchall()
+    }
+    for name, definition in {
+        "impact": "TEXT NOT NULL DEFAULT ''",
+        "clarification_request": "TEXT NOT NULL DEFAULT ''",
+        "escalated_at": "TEXT",
+        "escalated_by": "TEXT",
+    }.items():
+        if name not in field_columns:
+            connection.execute(f"ALTER TABLE field_reports ADD COLUMN {name} {definition}")
+
+    action_columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(action_items)").fetchall()
+    }
+    for name, definition in {
+        "closure_criteria": "TEXT NOT NULL DEFAULT ''",
+        "resolution_evidence": "TEXT NOT NULL DEFAULT ''",
+        "verified_by": "TEXT NOT NULL DEFAULT ''",
+        "verified_at": "TEXT",
+        "escalated_at": "TEXT",
+        "escalated_by": "TEXT",
+    }.items():
+        if name not in action_columns:
+            connection.execute(f"ALTER TABLE action_items ADD COLUMN {name} {definition}")
+    connection.execute(
+        "INSERT OR IGNORE INTO schema_migrations (migration_id, applied_at) VALUES (?,?)",
+        ("2026-08-27-field-operations-accountability-v2", now_iso()),
+    )
 
 
 def _logbook_hash(
@@ -600,13 +901,15 @@ def _append_event(
     details: str = "",
     at: str | None = None,
 ) -> None:
+    timestamp = at or now_iso()
+    stored_details = details[:2000]
     connection.execute(
         "INSERT INTO checkin_events"
         " (checkin_id, at, actor, event, site, worker, prior_status, new_status,"
         " prior_help_state, new_help_state, details) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         (
             checkin_id,
-            at or now_iso(),
+            timestamp,
             actor,
             event,
             site,
@@ -615,8 +918,31 @@ def _append_event(
             new_status,
             prior_help_state,
             new_help_state,
-            details[:2000],
+            stored_details,
         ),
+    )
+    severity = "critical" if "help requested" in event.lower() else (
+        "warning" if "overdue" in event.lower() else "info"
+    )
+    events.append_event(
+        connection,
+        event_type=events.event_type("workforce", event),
+        occurred_at=timestamp,
+        actor_id=actor,
+        aggregate_type="checkin",
+        aggregate_id=checkin_id,
+        source="workforce",
+        severity=severity,
+        summary=f"{worker}: {event}",
+        payload={
+            "site": site,
+            "worker": worker,
+            "priorStatus": prior_status,
+            "newStatus": new_status,
+            "priorHelpState": prior_help_state,
+            "newHelpState": new_help_state,
+            "details": stored_details,
+        },
     )
 
 
@@ -1105,6 +1431,26 @@ def add_logbook_entry(
                 digest,
             ),
         )
+        events.append_event(
+            connection,
+            event_type="operations.logbook.entry_added",
+            occurred_at=timestamp,
+            actor_id=stored_source,
+            aggregate_type="logbook",
+            aggregate_id=record_id,
+            source="logbook",
+            severity=(
+                "critical" if any(term in stored_type.lower() for term in ("help", "trip", "emergency"))
+                else "warning" if any(term in stored_type.lower() for term in ("alarm", "outage", "overdue"))
+                else "info"
+            ),
+            summary=stored_subject,
+            payload={
+                "type": stored_type,
+                "details": stored_details,
+                "legacyEntryHash": digest,
+            },
+        )
     return {
         "id": record_id,
         "type": stored_type,
@@ -1133,6 +1479,58 @@ def list_logbook(limit: int = 250) -> list[dict[str, Any]]:
         }
         for row in rows
     ]
+
+
+def list_audit_events(
+    limit: int = 250,
+    *,
+    query: str = "",
+    event_type: str = "",
+    aggregate_type: str = "",
+    aggregate_id: str = "",
+    actor_id: str = "",
+    source: str = "",
+    severity: str = "",
+    correlation_id: str = "",
+    occurred_from: str = "",
+    occurred_to: str = "",
+) -> list[dict[str, Any]]:
+    """Query the unified timeline without changing any legacy event reads."""
+    limit = max(1, min(int(limit), 1000))
+    clauses: list[str] = []
+    values: list[Any] = []
+    exact = {
+        "event_type": event_type,
+        "aggregate_type": aggregate_type,
+        "aggregate_id": aggregate_id,
+        "actor_id": actor_id,
+        "source": source,
+        "severity": severity,
+        "correlation_id": correlation_id,
+    }
+    for column, value in exact.items():
+        if value:
+            clauses.append(f"{column}=?")
+            values.append(value)
+    if occurred_from:
+        clauses.append("occurred_at>=?")
+        values.append(occurred_from)
+    if occurred_to:
+        clauses.append("occurred_at<=?")
+        values.append(occurred_to)
+    if query:
+        clauses.append(
+            "(summary LIKE ? OR payload LIKE ? OR actor_id LIKE ? OR aggregate_id LIKE ?)"
+        )
+        pattern = f"%{query}%"
+        values.extend([pattern, pattern, pattern, pattern])
+    where = " WHERE " + " AND ".join(clauses) if clauses else ""
+    with _LOCK, _session() as connection:
+        rows = connection.execute(
+            f"SELECT * FROM audit_events{where} ORDER BY occurred_at DESC, seq DESC LIMIT ?",
+            (*values, limit),
+        ).fetchall()
+    return [events.record(row) for row in rows]
 
 
 def _switching_clip(value: Any, limit: int) -> str:
@@ -1287,19 +1685,35 @@ def _append_switching_event(
     details: str = "",
     at: str | None = None,
 ) -> None:
+    timestamp = at or now_iso()
+    stored_actor = _switching_clip(actor, 80) or "operator"
+    stored_event = _switching_clip(event, 80)
+    stored_details = _switching_clip(details, 4000)
     connection.execute(
         "INSERT INTO switching_draft_events"
         " (draft_id, at, actor, event, prior_status, new_status, details)"
         " VALUES (?,?,?,?,?,?,?)",
         (
             draft_id,
-            at or now_iso(),
-            _switching_clip(actor, 80) or "operator",
-            _switching_clip(event, 80),
+            timestamp,
+            stored_actor,
+            stored_event,
             prior_status,
             new_status,
-            _switching_clip(details, 4000),
+            stored_details,
         ),
+    )
+    events.append_event(
+        connection,
+        event_type=events.event_type("switching", stored_event),
+        occurred_at=timestamp,
+        actor_id=stored_actor,
+        aggregate_type="switching_draft",
+        aggregate_id=draft_id,
+        source="switching",
+        severity="warning" if "review" in stored_event.lower() else "info",
+        summary=stored_event,
+        payload={"priorStatus": prior_status, "newStatus": new_status, "details": stored_details},
     )
 
 
@@ -2338,20 +2752,42 @@ def _append_outage_event(
     details: str = "",
     at: str | None = None,
 ) -> None:
+    timestamp = at or now_iso()
+    stored_actor = actor[:80]
+    stored_event = event[:60]
+    stored_site = site[:80]
+    stored_details = details[:2000]
     connection.execute(
         "INSERT INTO outage_events"
         " (outage_id, at, actor, event, site, prior_status, new_status, details)"
         " VALUES (?,?,?,?,?,?,?,?)",
         (
             outage_id,
-            at or now_iso(),
-            actor[:80],
-            event[:60],
-            site[:80],
+            timestamp,
+            stored_actor,
+            stored_event,
+            stored_site,
             prior_status,
             new_status,
-            details[:2000],
+            stored_details,
         ),
+    )
+    events.append_event(
+        connection,
+        event_type=events.event_type("outage", stored_event),
+        occurred_at=timestamp,
+        actor_id=stored_actor,
+        aggregate_type="outage",
+        aggregate_id=outage_id,
+        source="outages",
+        severity="warning" if new_status == "Open" else "info",
+        summary=f"{stored_site}: {stored_event}",
+        payload={
+            "site": stored_site,
+            "priorStatus": prior_status,
+            "newStatus": new_status,
+            "details": stored_details,
+        },
     )
 
 
@@ -2569,11 +3005,31 @@ def _append_alert_event(
     details: str = "",
     at: str | None = None,
 ) -> None:
+    timestamp = at or now_iso()
+    stored_details = details[:2000]
     connection.execute(
         "INSERT INTO alert_events"
         " (alert_id, at, actor, event, node, prior_state, new_state, price, details)"
         " VALUES (?,?,?,?,?,?,?,?,?)",
-        (alert_id, at or now_iso(), actor, event, node, prior_state, new_state, price, details[:2000]),
+        (alert_id, timestamp, actor, event, node, prior_state, new_state, price, stored_details),
+    )
+    events.append_event(
+        connection,
+        event_type=events.event_type("market", event),
+        occurred_at=timestamp,
+        actor_id=actor,
+        aggregate_type="price_alert",
+        aggregate_id=alert_id,
+        source="market",
+        severity="warning" if new_state in ALERT_OPEN_STATES else "info",
+        summary=f"{node}: {event}",
+        payload={
+            "node": node,
+            "priorState": prior_state,
+            "newState": new_state,
+            "price": price,
+            "details": stored_details,
+        },
     )
 
 
@@ -2822,3 +3278,405 @@ def list_alert_settings() -> dict[str, dict[str, Any]]:
         }
         for row in rows
     }
+
+
+def _field_report_record(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": row["id"], "station": row["station"], "area": row["area"],
+        "category": row["category"], "priority": row["priority"], "title": row["title"],
+        "conditions": row["conditions"], "immediateActions": row["immediate_actions"],
+        "impact": row["impact"], "clarificationRequest": row["clarification_request"],
+        "outstandingWork": row["outstanding_work"], "status": row["status"],
+        "assignedTo": row["assigned_to"], "outageId": row["outage_id"],
+        "version": row["record_version"], "createdAt": row["created_at"],
+        "createdBy": row["created_by"], "updatedAt": row["updated_at"],
+        "updatedBy": row["updated_by"],
+        "escalatedAt": row["escalated_at"], "escalatedBy": row["escalated_by"],
+    }
+
+
+def _append_field_event(connection: sqlite3.Connection, report_id: str, actor: str,
+                        event: str, prior: str | None, new: str | None, details: str = "") -> None:
+    timestamp = now_iso()
+    stored_details = details.strip()[:4000]
+    connection.execute(
+        "INSERT INTO field_report_events (report_id,at,actor,event,prior_status,new_status,details)"
+        " VALUES (?,?,?,?,?,?,?)",
+        (report_id, timestamp, actor, event, prior, new, stored_details),
+    )
+    events.append_event(
+        connection, event_type=events.event_type("field_operations", event), occurred_at=timestamp,
+        actor_id=actor, aggregate_type="field_report", aggregate_id=report_id,
+        source="field_operations", severity="warning" if event in {"submitted", "reopened"} else "info",
+        summary=event.replace("_", " ").title(),
+        payload={"priorStatus": prior, "newStatus": new, "details": stored_details},
+    )
+
+
+def create_field_report(payload: dict[str, Any], actor: str) -> dict[str, Any]:
+    station = str(payload.get("station", "")).strip()[:120]
+    title = str(payload.get("title", "")).strip()[:200]
+    conditions = str(payload.get("conditions", "")).strip()[:8000]
+    if not station or not title or not conditions:
+        raise ValueError("station, title, and conditions are required")
+    status = str(payload.get("status", "SUBMITTED")).strip().upper()
+    if status not in {"DRAFT", "SUBMITTED"}:
+        status = "SUBMITTED"
+    priority = str(payload.get("priority", "ROUTINE")).strip().upper()
+    if priority not in {"ROUTINE", "PRIORITY", "URGENT"}:
+        priority = "ROUTINE"
+    category = str(payload.get("category", "FIELD CONDITION")).strip().upper()[:80]
+    timestamp = now_iso()
+    actor = actor.strip()[:160] or "operator console"
+    with _LOCK, _session() as connection:
+        report_id = _unique_id(connection, "field_reports", "field")
+        connection.execute(
+            "INSERT INTO field_reports (id,station,area,category,priority,title,conditions,"
+            "immediate_actions,outstanding_work,status,assigned_to,outage_id,created_at,created_by,"
+            "updated_at,updated_by,impact) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (report_id, station, str(payload.get("area", "")).strip()[:160], category, priority,
+             title, conditions, str(payload.get("immediateActions", "")).strip()[:4000],
+             str(payload.get("outstandingWork", "")).strip()[:4000], status,
+             str(payload.get("assignedTo", "")).strip()[:160],
+             str(payload.get("outageId", "")).strip()[:120], timestamp, actor, timestamp, actor,
+             str(payload.get("impact", "")).strip()[:4000]),
+        )
+        _append_field_event(connection, report_id, actor, "drafted" if status == "DRAFT" else "submitted", None, status, title)
+        row = connection.execute("SELECT * FROM field_reports WHERE id=?", (report_id,)).fetchone()
+    return _field_report_record(row)
+
+
+def list_field_reports(status: str | None = None, station: str | None = None,
+                       limit: int = 250) -> list[dict[str, Any]]:
+    clauses, args = [], []
+    if status:
+        clauses.append("status=?"); args.append(status.upper())
+    if station:
+        clauses.append("station=?"); args.append(station)
+    where = " WHERE " + " AND ".join(clauses) if clauses else ""
+    args.append(max(1, min(limit, 1000)))
+    with _LOCK, _session() as connection:
+        rows = connection.execute(
+            "SELECT * FROM field_reports" + where + " ORDER BY updated_at DESC,id DESC LIMIT ?", args
+        ).fetchall()
+    return [_field_report_record(row) for row in rows]
+
+
+def get_field_report(report_id: str) -> dict[str, Any] | None:
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM field_reports WHERE id=?", (report_id,)).fetchone()
+    return _field_report_record(row) if row else None
+
+
+def transition_field_report(report_id: str, payload: dict[str, Any], actor: str) -> dict[str, Any] | None:
+    target = str(payload.get("status", "")).strip().upper()
+    if target not in FIELD_REPORT_STATES:
+        raise ValueError("invalid field report status")
+    actor = actor.strip()[:160] or "operator console"
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM field_reports WHERE id=?", (report_id,)).fetchone()
+        if not row:
+            return None
+        expected = payload.get("version")
+        if expected is not None and int(expected) != row["record_version"]:
+            raise ValueError("field report changed; refresh and try again")
+        timestamp = now_iso()
+        assigned = str(payload.get("assignedTo", row["assigned_to"])).strip()[:160]
+        clarification = str(payload.get("clarificationRequest", row["clarification_request"])).strip()[:4000]
+        escalated = bool(payload.get("escalated"))
+        connection.execute(
+            "UPDATE field_reports SET status=?,assigned_to=?,clarification_request=?,"
+            "escalated_at=CASE WHEN ? THEN ? ELSE escalated_at END,"
+            "escalated_by=CASE WHEN ? THEN ? ELSE escalated_by END,record_version=record_version+1,"
+            "updated_at=?,updated_by=? WHERE id=?",
+            (target, assigned, clarification, escalated, timestamp, escalated, actor,
+             timestamp, actor, report_id),
+        )
+        _append_field_event(connection, report_id, actor, "status_changed", row["status"], target,
+                            str(payload.get("details", "")))
+        row = connection.execute("SELECT * FROM field_reports WHERE id=?", (report_id,)).fetchone()
+    return _field_report_record(row)
+
+
+def add_field_report_update(report_id: str, payload: dict[str, Any], actor: str) -> dict[str, Any] | None:
+    details = str(payload.get("details", "")).strip()[:8000]
+    if not details:
+        raise ValueError("update details are required")
+    actor = actor.strip()[:160] or "operator console"
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM field_reports WHERE id=?", (report_id,)).fetchone()
+        if not row:
+            return None
+        connection.execute("UPDATE field_reports SET record_version=record_version+1,updated_at=?,updated_by=? WHERE id=?",
+                           (now_iso(), actor, report_id))
+        _append_field_event(connection, report_id, actor, "update_added", row["status"], row["status"], details)
+        row = connection.execute("SELECT * FROM field_reports WHERE id=?", (report_id,)).fetchone()
+    return _field_report_record(row)
+
+
+MAX_FIELD_ATTACHMENT_BYTES = 10 * 1024 * 1024
+
+
+def add_field_report_attachment(report_id: str, filename: str, content_type: str,
+                                content: bytes, actor: str) -> dict[str, Any] | None:
+    filename = Path(filename).name.strip()[:255]
+    if not filename or not content:
+        raise ValueError("attachment filename and content are required")
+    if len(content) > MAX_FIELD_ATTACHMENT_BYTES:
+        raise ValueError("field attachment exceeds 10 MB")
+    digest, timestamp = hashlib.sha256(content).hexdigest(), now_iso()
+    with _LOCK, _session() as connection:
+        report = connection.execute("SELECT * FROM field_reports WHERE id=?", (report_id,)).fetchone()
+        if not report:
+            return None
+        attachment_id = _unique_id(connection, "field_report_attachments", "fieldfile")
+        connection.execute("INSERT INTO field_report_attachments (id,report_id,filename,content_type,size_bytes,sha256,content,uploaded_at,uploaded_by) VALUES (?,?,?,?,?,?,?,?,?)",
+                           (attachment_id, report_id, filename, content_type[:120] or "application/octet-stream", len(content), digest, content, timestamp, actor[:160]))
+        _append_field_event(connection, report_id, actor[:160], "attachment_added", report["status"], report["status"], f"{filename} · {digest}")
+    return {"attachmentId": attachment_id, "reportId": report_id, "name": filename,
+            "type": content_type[:120], "size": len(content), "sha256": digest,
+            "uploadedAt": timestamp, "uploadedBy": actor[:160]}
+
+
+def list_field_report_attachments(report_id: str) -> list[dict[str, Any]]:
+    with _LOCK, _session() as connection:
+        rows = connection.execute("SELECT id,report_id,filename,content_type,size_bytes,sha256,uploaded_at,uploaded_by FROM field_report_attachments WHERE report_id=? ORDER BY uploaded_at DESC", (report_id,)).fetchall()
+    return [{"attachmentId": r["id"], "reportId": r["report_id"], "name": r["filename"],
+             "type": r["content_type"], "size": r["size_bytes"], "sha256": r["sha256"],
+             "uploadedAt": r["uploaded_at"], "uploadedBy": r["uploaded_by"]} for r in rows]
+
+
+def get_field_report_attachment(report_id: str, attachment_id: str) -> dict[str, Any] | None:
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM field_report_attachments WHERE report_id=? AND id=?", (report_id, attachment_id)).fetchone()
+    if not row: return None
+    return {"name": row["filename"], "type": row["content_type"], "size": row["size_bytes"],
+            "sha256": row["sha256"], "content": row["content"]}
+
+
+def field_report_history(report_id: str | None = None, limit: int = 250) -> list[dict[str, Any]]:
+    limit = max(1, min(limit, 1000))
+    with _LOCK, _session() as connection:
+        rows = connection.execute(
+            "SELECT * FROM field_report_events" + (" WHERE report_id=?" if report_id else "") +
+            " ORDER BY seq DESC LIMIT ?", ((report_id, limit) if report_id else (limit,))
+        ).fetchall()
+    return [{"seq": r["seq"], "reportId": r["report_id"], "at": r["at"], "actor": r["actor"],
+             "event": r["event"], "priorStatus": r["prior_status"], "newStatus": r["new_status"],
+             "details": r["details"]} for r in rows]
+
+
+def _action_record(row: sqlite3.Row) -> dict[str, Any]:
+    return {"id": row["id"], "reportId": row["report_id"], "station": row["station"],
+            "title": row["title"], "details": row["details"], "priority": row["priority"],
+            "status": row["status"], "assignedTo": row["assigned_to"], "dueAt": row["due_at"],
+            "version": row["record_version"], "createdAt": row["created_at"],
+            "createdBy": row["created_by"], "updatedAt": row["updated_at"], "updatedBy": row["updated_by"],
+            "closureCriteria": row["closure_criteria"], "resolutionEvidence": row["resolution_evidence"],
+            "verifiedBy": row["verified_by"], "verifiedAt": row["verified_at"],
+            "escalatedAt": row["escalated_at"], "escalatedBy": row["escalated_by"]}
+
+
+def create_action_item(payload: dict[str, Any], actor: str) -> dict[str, Any]:
+    station, title = str(payload.get("station", "")).strip()[:120], str(payload.get("title", "")).strip()[:200]
+    if not station or not title:
+        raise ValueError("station and title are required")
+    priority = str(payload.get("priority", "ROUTINE")).strip().upper()
+    if priority not in {"ROUTINE", "PRIORITY", "URGENT"}: priority = "ROUTINE"
+    actor, timestamp = actor.strip()[:160] or "operator console", now_iso()
+    with _LOCK, _session() as connection:
+        action_id = _unique_id(connection, "action_items", "action")
+        connection.execute(
+            "INSERT INTO action_items (id,report_id,station,title,details,priority,status,assigned_to,due_at,"
+            "created_at,created_by,updated_at,updated_by,closure_criteria) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (action_id, str(payload.get("reportId", "")).strip()[:120], station, title,
+             str(payload.get("details", "")).strip()[:4000], priority, "OPEN",
+             str(payload.get("assignedTo", "")).strip()[:160], payload.get("dueAt") or None,
+             timestamp, actor, timestamp, actor, str(payload.get("closureCriteria", "")).strip()[:4000]),
+        )
+        connection.execute("INSERT INTO action_item_events (action_id,at,actor,event,prior_status,new_status,details) VALUES (?,?,?,?,?,?,?)",
+                           (action_id, timestamp, actor, "created", None, "OPEN", title))
+        events.append_event(connection, event_type="field_operations.action.created", occurred_at=timestamp,
+                            actor_id=actor, aggregate_type="action_item", aggregate_id=action_id,
+                            source="field_operations", summary=title, payload={"station": station, "reportId": payload.get("reportId", "")})
+        row = connection.execute("SELECT * FROM action_items WHERE id=?", (action_id,)).fetchone()
+    return _action_record(row)
+
+
+def list_action_items(include_closed: bool = False, limit: int = 250) -> list[dict[str, Any]]:
+    with _LOCK, _session() as connection:
+        rows = connection.execute(
+            "SELECT * FROM action_items" + ("" if include_closed else " WHERE status!='CLOSED'") +
+            " ORDER BY CASE priority WHEN 'URGENT' THEN 0 WHEN 'PRIORITY' THEN 1 ELSE 2 END,updated_at DESC LIMIT ?",
+            (max(1, min(limit, 1000)),),
+        ).fetchall()
+    return [_action_record(row) for row in rows]
+
+
+def transition_action_item(action_id: str, payload: dict[str, Any], actor: str) -> dict[str, Any] | None:
+    target = str(payload.get("status", "")).strip().upper()
+    if target not in ACTION_ITEM_STATES: raise ValueError("invalid action item status")
+    actor = actor.strip()[:160] or "operator console"
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM action_items WHERE id=?", (action_id,)).fetchone()
+        if not row: return None
+        expected = payload.get("version")
+        if expected is not None and int(expected) != row["record_version"]:
+            raise ValueError("action item changed; refresh and try again")
+        timestamp, assigned = now_iso(), str(payload.get("assignedTo", row["assigned_to"])).strip()[:160]
+        evidence = str(payload.get("resolutionEvidence", row["resolution_evidence"])).strip()[:4000]
+        if target in {"VERIFIED", "CLOSED"} and not (evidence or row["resolution_evidence"]):
+            raise ValueError("resolution evidence is required before verification or closure")
+        verified_by = actor if target in {"VERIFIED", "CLOSED"} else row["verified_by"]
+        verified_at = timestamp if target in {"VERIFIED", "CLOSED"} else row["verified_at"]
+        escalated = bool(payload.get("escalated"))
+        due_at = payload.get("dueAt", row["due_at"]) or None
+        connection.execute("UPDATE action_items SET status=?,assigned_to=?,due_at=?,resolution_evidence=?,verified_by=?,verified_at=?,"
+                           "escalated_at=CASE WHEN ? THEN ? ELSE escalated_at END,escalated_by=CASE WHEN ? THEN ? ELSE escalated_by END,"
+                           "record_version=record_version+1,updated_at=?,updated_by=? WHERE id=?",
+                           (target, assigned, due_at, evidence, verified_by, verified_at, escalated, timestamp,
+                            escalated, actor, timestamp, actor, action_id))
+        connection.execute("INSERT INTO action_item_events (action_id,at,actor,event,prior_status,new_status,details) VALUES (?,?,?,?,?,?,?)",
+                           (action_id, timestamp, actor, "status_changed", row["status"], target, str(payload.get("details", ""))[:4000]))
+        events.append_event(connection, event_type="field_operations.action.status_changed", occurred_at=timestamp,
+                            actor_id=actor, aggregate_type="action_item", aggregate_id=action_id,
+                            source="field_operations", summary=f"{row['status']} → {target}", payload={"assignedTo": assigned})
+        row = connection.execute("SELECT * FROM action_items WHERE id=?", (action_id,)).fetchone()
+    return _action_record(row)
+
+
+def field_operations_summary() -> dict[str, Any]:
+    with _LOCK, _session() as connection:
+        reports = connection.execute("SELECT * FROM field_reports ORDER BY updated_at DESC").fetchall()
+        actions = connection.execute("SELECT * FROM action_items ORDER BY updated_at DESC").fetchall()
+    now = datetime.now(TZ)
+    report_records, action_records = [_field_report_record(r) for r in reports], [_action_record(r) for r in actions]
+    open_reports = [r for r in report_records if r["status"] != "CLOSED"]
+    open_actions = [a for a in action_records if a["status"] != "CLOSED"]
+    overdue = [a for a in open_actions if a["dueAt"] and datetime.fromisoformat(a["dueAt"]) < now]
+    stations = sorted({r["station"] for r in open_reports} | {a["station"] for a in open_actions})
+    return {"generatedAt": now.isoformat(), "openReports": len(open_reports),
+            "unacknowledged": sum(r["status"] == "SUBMITTED" for r in open_reports),
+            "urgent": sum(r["priority"] == "URGENT" for r in open_reports),
+            "openActions": len(open_actions), "overdueActions": len(overdue), "stations": stations,
+            "reports": open_reports, "actions": open_actions}
+
+
+def list_controlled_sources() -> list[dict[str, Any]]:
+    with _LOCK, _session() as connection:
+        rows = connection.execute("SELECT * FROM controlled_sources ORDER BY updated_at DESC").fetchall()
+    return [{"id": r["id"], "sourceType": r["source_type"], "title": r["title"],
+             "revision": r["revision"], "documentOwner": r["document_owner"],
+             "effectiveAt": r["effective_at"], "referenceUri": r["reference_uri"],
+             "sha256": r["sha256"], "status": r["status"], "notes": r["notes"],
+             "updatedAt": r["updated_at"], "updatedBy": r["updated_by"]} for r in rows]
+
+
+def save_controlled_source(payload: dict[str, Any], actor: str) -> dict[str, Any]:
+    title, revision = str(payload.get("title", "")).strip()[:240], str(payload.get("revision", "")).strip()[:120]
+    if not title or not revision: raise ValueError("source title and revision are required")
+    status = str(payload.get("status", "PROPOSED")).strip().upper()
+    if status not in {"PROPOSED", "CURRENT", "SUPERSEDED", "WITHDRAWN"}: raise ValueError("invalid controlled source status")
+    source_type = str(payload.get("sourceType", "PROCEDURE")).strip().upper()[:80]
+    if source_type not in {"PROCEDURE", "FORM", "TAG TEMPLATE", "STANDARD"}: raise ValueError("invalid controlled source type")
+    document_owner = str(payload.get("documentOwner", "")).strip()[:160]
+    effective_at = payload.get("effectiveAt") or None
+    reference_uri = str(payload.get("referenceUri", "")).strip()[:1000]
+    if status == "CURRENT" and (not document_owner or not effective_at or not reference_uri):
+        raise ValueError("current sources require an owner, effective date, and controlled reference")
+    source_id, timestamp = str(payload.get("id", "")).strip()[:120], now_iso()
+    actor = actor.strip()[:160] or "operator console"
+    with _LOCK, _session() as connection:
+        if not source_id: source_id = _unique_id(connection, "controlled_sources", "source")
+        existing = connection.execute("SELECT id FROM controlled_sources WHERE id=?", (source_id,)).fetchone()
+        duplicate = connection.execute("SELECT id FROM controlled_sources WHERE lower(title)=lower(?) AND lower(revision)=lower(?) AND id<>?", (title, revision, source_id)).fetchone()
+        if duplicate: raise ValueError("that controlled document revision is already registered")
+        values = (source_type, title, revision, document_owner, effective_at,
+                  reference_uri, str(payload.get("sha256", "")).strip().lower()[:64],
+                  status, str(payload.get("notes", "")).strip()[:4000], timestamp, actor)
+        if existing:
+            connection.execute("UPDATE controlled_sources SET source_type=?,title=?,revision=?,document_owner=?,effective_at=?,reference_uri=?,sha256=?,status=?,notes=?,updated_at=?,updated_by=? WHERE id=?", (*values, source_id))
+        else:
+            connection.execute("INSERT INTO controlled_sources (id,source_type,title,revision,document_owner,effective_at,reference_uri,sha256,status,notes,created_at,created_by,updated_at,updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (source_id, *values[:9], timestamp, actor, timestamp, actor))
+        events.append_event(connection, event_type="governance.controlled_source.saved", occurred_at=timestamp,
+                            actor_id=actor, aggregate_type="controlled_source", aggregate_id=source_id,
+                            source="governance", summary=f"{title} · {revision}", payload={"status": status})
+    return next(item for item in list_controlled_sources() if item["id"] == source_id)
+
+
+def list_assets() -> list[dict[str, Any]]:
+    with _LOCK, _session() as connection:
+        rows = connection.execute("SELECT * FROM asset_registry ORDER BY station,designation").fetchall()
+    return [{"id": r["id"], "station": r["station"], "designation": r["designation"],
+             "assetType": r["asset_type"], "description": r["description"],
+             "topologyRevision": r["topology_revision"], "active": bool(r["active"]),
+             "updatedAt": r["updated_at"], "updatedBy": r["updated_by"]} for r in rows]
+
+
+def save_asset(payload: dict[str, Any], actor: str) -> dict[str, Any]:
+    station, designation = str(payload.get("station", "")).strip()[:120], str(payload.get("designation", "")).strip()[:160]
+    if not station or not designation: raise ValueError("station and designation are required")
+    asset_id, timestamp = str(payload.get("id", "")).strip()[:120], now_iso(); actor = actor.strip()[:160] or "operator console"
+    with _LOCK, _session() as connection:
+        if not asset_id: asset_id = _unique_id(connection, "asset_registry", "asset")
+        existing = connection.execute("SELECT id FROM asset_registry WHERE id=?", (asset_id,)).fetchone()
+        duplicate = connection.execute("SELECT id FROM asset_registry WHERE lower(station)=lower(?) AND lower(designation)=lower(?) AND id<>?", (station, designation, asset_id)).fetchone()
+        if duplicate: raise ValueError("that station and equipment designation is already registered")
+        active_value = payload.get("active", True)
+        active = active_value if isinstance(active_value, bool) else str(active_value).strip().lower() not in {"0", "false", "no", "off"}
+        values = (station, designation, str(payload.get("assetType", "")).strip()[:80],
+                  str(payload.get("description", "")).strip()[:1000], str(payload.get("topologyRevision", "")).strip()[:160],
+                  1 if active else 0)
+        if existing:
+            connection.execute("UPDATE asset_registry SET station=?,designation=?,asset_type=?,description=?,topology_revision=?,active=?,updated_at=?,updated_by=? WHERE id=?", (*values, timestamp, actor, asset_id))
+        else:
+            connection.execute("INSERT INTO asset_registry (id,station,designation,asset_type,description,topology_revision,active,created_at,created_by,updated_at,updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)", (asset_id, *values, timestamp, actor, timestamp, actor))
+        events.append_event(connection, event_type="governance.asset.saved", occurred_at=timestamp, actor_id=actor,
+                            aggregate_type="asset", aggregate_id=asset_id, source="governance",
+                            summary=f"{station} · {designation}", payload={"topologyRevision": values[4]})
+    return next(item for item in list_assets() if item["id"] == asset_id)
+
+
+def list_governance_decisions() -> list[dict[str, Any]]:
+    with _LOCK, _session() as connection:
+        rows = connection.execute("SELECT * FROM governance_decisions ORDER BY status,title").fetchall()
+    return [{"id": r["id"], "key": r["decision_key"], "title": r["title"], "owner": r["owner"],
+             "status": r["status"], "decision": r["decision"], "evidenceRef": r["evidence_ref"],
+             "reviewDueAt": r["review_due_at"], "updatedAt": r["updated_at"], "updatedBy": r["updated_by"]} for r in rows]
+
+
+def save_governance_decision(key: str, payload: dict[str, Any], actor: str) -> dict[str, Any] | None:
+    status = str(payload.get("status", "OPEN")).strip().upper()
+    if status not in {"OPEN", "IN REVIEW", "APPROVED", "BLOCKED"}: raise ValueError("invalid governance decision status")
+    owner = str(payload.get("owner", "")).strip()[:160]
+    decision = str(payload.get("decision", "")).strip()[:4000]
+    evidence_ref = str(payload.get("evidenceRef", "")).strip()[:1000]
+    if status == "APPROVED" and (not owner or not decision or not evidence_ref):
+        raise ValueError("approved decisions require an owner, decision record, and evidence reference")
+    timestamp, actor = now_iso(), actor.strip()[:160] or "operator console"
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM governance_decisions WHERE decision_key=?", (key,)).fetchone()
+        if not row: return None
+        connection.execute("UPDATE governance_decisions SET owner=?,status=?,decision=?,evidence_ref=?,review_due_at=?,updated_at=?,updated_by=? WHERE decision_key=?",
+                           (owner, status, decision, evidence_ref,
+                            payload.get("reviewDueAt", row["review_due_at"]) or None, timestamp, actor, key))
+        events.append_event(connection, event_type="governance.decision.updated", occurred_at=timestamp, actor_id=actor,
+                            aggregate_type="governance_decision", aggregate_id=row["id"], source="governance",
+                            summary=row["title"], payload={"status": status})
+    return next(item for item in list_governance_decisions() if item["key"] == key)
+
+
+def readiness_summary() -> dict[str, Any]:
+    decisions, sources, assets = list_governance_decisions(), list_controlled_sources(), list_assets()
+    approved = sum(item["status"] == "APPROVED" for item in decisions)
+    current_sources = [item for item in sources if item["status"] == "CURRENT" and item["documentOwner"] and item["effectiveAt"] and item["referenceUri"]]
+    active_assets = [item for item in assets if item["active"]]
+    topology_missing = [item for item in active_assets if not item["topologyRevision"]]
+    return {"decisions": decisions, "sources": sources, "assets": assets,
+            "approvedDecisions": approved, "totalDecisions": len(decisions),
+            "currentSources": len(current_sources), "registeredAssets": len(active_assets),
+            "switchingReleaseEnabled": False,
+            "releaseBlockers": [item["title"] for item in decisions if item["status"] != "APPROVED"] +
+                               ([] if current_sources else ["No complete current authoritative source registered"]) +
+                               ([] if active_assets else ["No active canonical assets registered"]) +
+                               ([f"{len(topology_missing)} active asset(s) missing topology revision"] if topology_missing else [])}

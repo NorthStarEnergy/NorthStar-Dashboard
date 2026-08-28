@@ -434,6 +434,60 @@ class APITest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(records, [])
 
+    def test_field_operations_api_supports_handoff_accountability_workflow(self) -> None:
+        status, report, _ = self.request("POST", "/api/field-reports", {
+            "station": "Kenora", "title": "Intake debris", "conditions": "Debris accumulation observed",
+            "impact": "Reduced intake margin", "priority": "URGENT",
+        })
+        self.assertEqual(status, 201)
+        status, report, _ = self.request("POST", f"/api/field-reports/{report['id']}/status", {
+            "status": "ACKNOWLEDGED", "assignedTo": "station lead", "escalated": True,
+            "version": report["version"],
+        })
+        self.assertEqual(status, 200)
+        status, _, _ = self.request("POST", f"/api/field-reports/{report['id']}/updates", {
+            "details": "Station lead contacted and inspection arranged."
+        })
+        self.assertEqual(status, 200)
+        status, action, _ = self.request("POST", "/api/action-items", {
+            "reportId": report["id"], "station": "Kenora", "title": "Inspect intake",
+            "dueAt": "2020-01-01T00:00:00-04:00", "closureCriteria": "Inspection record attached",
+        })
+        self.assertEqual(status, 201)
+        status, summary, _ = self.request("GET", "/api/field-operations/summary")
+        self.assertEqual(status, 200)
+        self.assertEqual(summary["overdueActions"], 1)
+        self.assertEqual(summary["actions"][0]["reportId"], report["id"])
+        status, body, _ = self.request("POST", f"/api/action-items/{action['id']}/status", {
+            "status": "CLOSED", "version": action["version"]
+        })
+        self.assertEqual(status, 400)
+        self.assertIn("evidence", body["error"])
+
+    def test_readiness_api_registers_sources_assets_and_decisions_without_release(self) -> None:
+        status, readiness, _ = self.request("GET", "/api/readiness")
+        self.assertEqual(status, 200)
+        self.assertFalse(readiness["switchingReleaseEnabled"])
+        status, source, _ = self.request("POST", "/api/controlled-sources", {
+            "title": "Controlled test procedure", "revision": "TEST-1", "status": "CURRENT",
+            "documentOwner": "test owner", "effectiveAt": "2026-08-27", "referenceUri": "controlled://test-1"
+        })
+        self.assertEqual(status, 201)
+        status, asset, _ = self.request("POST", "/api/assets", {
+            "station": "Kenora", "designation": "TEST-52A", "assetType": "BREAKER"
+        })
+        self.assertEqual(status, 201)
+        status, decision, _ = self.request("POST", "/api/governance-decisions/procedure_owner", {
+            "owner": "test owner", "status": "APPROVED", "decision": "Approved for pilot governance.",
+            "evidenceRef": "TEST-REF"
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(source["status"], "CURRENT")
+        self.assertEqual(asset["designation"], "TEST-52A")
+        self.assertEqual(decision["status"], "APPROVED")
+        _, readiness, _ = self.request("GET", "/api/readiness")
+        self.assertFalse(readiness["switchingReleaseEnabled"])
+
     def test_oversized_json_is_rejected(self) -> None:
         status, body, _ = self.request(
             "POST", "/api/logbook", {"subject": "large", "details": "x" * 70000}

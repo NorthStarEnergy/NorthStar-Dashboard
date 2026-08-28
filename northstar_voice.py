@@ -37,6 +37,8 @@ from pathlib import Path
 from typing import Any, Iterator
 from zoneinfo import ZoneInfo
 
+import northstar_events as events
+
 ROOT = Path(__file__).resolve().parent
 TZ = ZoneInfo("America/Toronto")
 
@@ -325,10 +327,24 @@ def transcribe_audio(audio: Path) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 
 def _log(connection: Any, recording_id: str, event: str, detail: str = "", actor: str = "system") -> None:
+    timestamp = now_iso()
+    event_id = uuid.uuid4().hex
     connection.execute(
         "INSERT INTO voice_events (event_id, recording_id, at, event, detail, actor)"
         " VALUES (?,?,?,?,?,?)",
-        (uuid.uuid4().hex, recording_id, now_iso(), event, detail, actor),
+        (event_id, recording_id, timestamp, event, detail, actor),
+    )
+    events.append_event(
+        connection,
+        event_type=events.event_type("voice", event),
+        occurred_at=timestamp,
+        actor_id=actor,
+        aggregate_type="voice_recording",
+        aggregate_id=recording_id,
+        source="voice",
+        severity="critical" if "safety" in event.lower() else "info",
+        summary=event,
+        payload={"detail": detail, "legacyEventId": event_id},
     )
 
 

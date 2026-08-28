@@ -29,6 +29,7 @@ import northstar_store as store
 import northstar_phase1 as phase1
 import northstar_voice as voice
 import northstar_auth as auth
+import northstar_events as events
 
 ROOT = Path(__file__).resolve().parent
 HOST = os.environ.get("NORTHSTAR_BIND_HOST", "127.0.0.1").strip()
@@ -119,6 +120,7 @@ OPERATOR_ROUTES = {
     "/api/checkins/history": ("GET",),
     "/api/checkin-tokens": ("GET", "POST"),
     "/api/logbook": ("GET", "POST"),
+    "/api/events": ("GET",),
     "/api/outages": ("GET", "POST"),
     "/api/outages/history": ("GET",),
     "/api/alerts": ("GET",),
@@ -131,6 +133,13 @@ OPERATOR_ROUTES = {
     "/api/retention": ("GET", "POST"),
     "/api/site-policies": ("GET", "POST"),
     "/api/switching/drafts": ("GET", "POST"),
+    "/api/field-reports": ("GET", "POST"),
+    "/api/field-reports/history": ("GET",),
+    "/api/action-items": ("GET", "POST"),
+    "/api/field-operations/summary": ("GET",),
+    "/api/readiness": ("GET",),
+    "/api/controlled-sources": ("GET", "POST"),
+    "/api/assets": ("GET", "POST"),
     "/api/schematics": ("GET", "POST"),
     # Voice content is recorded speech: worker names, locations, and whatever
     # else was said on an open channel. Operator-only, all of it.
@@ -157,6 +166,14 @@ OPERATOR_ROUTE_PATTERNS = (
     ("DELETE", re.compile(r"^/api/switching/drafts/[^/]+/attachments/[^/]+$")),
     ("GET", re.compile(r"^/api/schematics/.+$")),
     ("POST", re.compile(r"^/api/schematics/[^/]+$")),
+    ("GET", re.compile(r"^/api/field-reports/[^/]+$")),
+    ("POST", re.compile(r"^/api/field-reports/[^/]+/status$")),
+    ("POST", re.compile(r"^/api/field-reports/[^/]+/updates$")),
+    ("GET", re.compile(r"^/api/field-reports/[^/]+/attachments$")),
+    ("POST", re.compile(r"^/api/field-reports/[^/]+/attachments$")),
+    ("GET", re.compile(r"^/api/field-reports/[^/]+/attachments/[^/]+$")),
+    ("POST", re.compile(r"^/api/action-items/[^/]+/status$")),
+    ("POST", re.compile(r"^/api/governance-decisions/[^/]+$")),
     ("GET", re.compile(r"^/api/voice/recordings/.+$")),
     ("POST", re.compile(r"^/api/voice/segments/[^/]+/review$")),
 )
@@ -977,8 +994,11 @@ class Handler(SimpleHTTPRequestHandler):
         if allowed_origin:
             self.send_header("Access-Control-Allow-Origin", allowed_origin)
             self.send_header("Vary", "Origin")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Correlation-Id")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+            self.send_header("Access-Control-Expose-Headers", "X-Correlation-Id")
+        if getattr(self, "correlation_id", ""):
+            self.send_header("X-Correlation-Id", self.correlation_id)
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()
@@ -1147,6 +1167,7 @@ class Handler(SimpleHTTPRequestHandler):
         verification matrix expects. Everything else that is not the worker app
         then 404s, because it does not exist on that hostname.
         """
+        self.correlation_id = events.set_correlation_id(self.headers.get("X-Correlation-Id"))
         denial = self._operator_gate_denial()
         if denial:
             self._refuse_operator_request(denial)
@@ -1196,6 +1217,56 @@ class Handler(SimpleHTTPRequestHandler):
             elif OPERATOR_GATE == "demo" and not self._demo_actor():
                 snapshot = public_health(snapshot)
             self._send_json(snapshot)
+            return
+        if route == "/api/field-reports":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                limit = int(query.get("limit", ["250"])[0])
+            except ValueError:
+                limit = 250
+            self._send_json(store.list_field_reports(
+                query.get("status", [None])[0], query.get("station", [None])[0], limit
+            ))
+            return
+        if route == "/api/field-reports/history":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                limit = int(query.get("limit", ["250"])[0])
+            except ValueError:
+                limit = 250
+            self._send_json(store.field_report_history(query.get("id", [None])[0], limit))
+            return
+        if route.startswith("/api/field-reports/") and "/" not in route[len("/api/field-reports/"):]:
+            record = store.get_field_report(route[len("/api/field-reports/"):])
+            self._send_json(record or {"error": "field report not found"}, 200 if record else 404)
+            return
+        if route == "/api/action-items":
+            query = parse_qs(urlparse(self.path).query)
+            self._send_json(store.list_action_items(query.get("include", [""])[0] == "all"))
+            return
+        if route == "/api/field-operations/summary":
+            self._send_json(store.field_operations_summary())
+            return
+        if route == "/api/readiness":
+            self._send_json(store.readiness_summary())
+            return
+        if route == "/api/controlled-sources":
+            self._send_json(store.list_controlled_sources())
+            return
+        if route == "/api/assets":
+            self._send_json(store.list_assets())
+            return
+        field_attachments = re.fullmatch(r"/api/field-reports/([^/]+)/attachments", route)
+        if field_attachments:
+            self._send_json(store.list_field_report_attachments(field_attachments.group(1)))
+            return
+        field_attachment = re.fullmatch(r"/api/field-reports/([^/]+)/attachments/([^/]+)", route)
+        if field_attachment:
+            attachment = store.get_field_report_attachment(*field_attachment.groups())
+            if not attachment:
+                self._send_json({"error": "field attachment not found"}, 404)
+                return
+            self._send_binary(attachment.pop("content"), attachment["type"], attachment["name"], attachment["sha256"])
             return
         if route == "/api/switching/drafts":
             query = parse_qs(urlparse(self.path).query)
@@ -1378,6 +1449,26 @@ class Handler(SimpleHTTPRequestHandler):
             except ValueError:
                 limit = 250
             self._send_json(store.list_logbook(limit))
+            return
+        if self.path.split("?", 1)[0] == "/api/events":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                limit = int(query.get("limit", ["250"])[0])
+            except ValueError:
+                limit = 250
+            self._send_json(store.list_audit_events(
+                limit,
+                query=query.get("q", [""])[0],
+                event_type=query.get("eventType", [""])[0],
+                aggregate_type=query.get("aggregateType", [""])[0],
+                aggregate_id=query.get("aggregateId", [""])[0],
+                actor_id=query.get("actorId", [""])[0],
+                source=query.get("source", [""])[0],
+                severity=query.get("severity", [""])[0],
+                correlation_id=query.get("correlationId", [""])[0],
+                occurred_from=query.get("from", [""])[0],
+                occurred_to=query.get("to", [""])[0],
+            ))
             return
         if self.path.split("?", 1)[0] == "/api/outages":
             self._send_json(store.list_outages())
@@ -1620,6 +1711,78 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def _do_POST(self) -> None:
+        route = self.path.split("?", 1)[0]
+        if route == "/api/field-reports":
+            try:
+                record = store.create_field_report(self._json_body(), self._operator_actor())
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record, 201)
+            return
+        if route == "/api/controlled-sources":
+            try:
+                record = store.save_controlled_source(self._json_body(), self._operator_actor())
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record, 201)
+            return
+        if route == "/api/assets":
+            try:
+                record = store.save_asset(self._json_body(), self._operator_actor())
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record, 201)
+            return
+        decision_route = re.fullmatch(r"/api/governance-decisions/([^/]+)", route)
+        if decision_route:
+            try:
+                record = store.save_governance_decision(unquote(decision_route.group(1)), self._json_body(), self._operator_actor())
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record or {"error": "governance decision not found"}, 200 if record else 404)
+            return
+        field_status = re.fullmatch(r"/api/field-reports/([^/]+)/status", route)
+        if field_status:
+            try:
+                record = store.transition_field_report(field_status.group(1), self._json_body(), self._operator_actor())
+            except (ValueError, TypeError) as exc:
+                raise APIError(409 if "changed" in str(exc) else 400, str(exc)) from exc
+            self._send_json(record or {"error": "field report not found"}, 200 if record else 404)
+            return
+        field_update = re.fullmatch(r"/api/field-reports/([^/]+)/updates", route)
+        if field_update:
+            try:
+                record = store.add_field_report_update(field_update.group(1), self._json_body(), self._operator_actor())
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record or {"error": "field report not found"}, 200 if record else 404)
+            return
+        field_attachment = re.fullmatch(r"/api/field-reports/([^/]+)/attachments", route)
+        if field_attachment:
+            filename = unquote(self.headers.get("X-Northstar-Filename", ""))
+            content_type = self.headers.get("Content-Type", "application/octet-stream")
+            try:
+                content = self._binary_body(store.MAX_FIELD_ATTACHMENT_BYTES)
+                record = store.add_field_report_attachment(field_attachment.group(1), filename, content_type, content, self._operator_actor())
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record or {"error": "field report not found"}, 201 if record else 404)
+            return
+        if route == "/api/action-items":
+            try:
+                record = store.create_action_item(self._json_body(), self._operator_actor())
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record, 201)
+            return
+        action_status = re.fullmatch(r"/api/action-items/([^/]+)/status", route)
+        if action_status:
+            try:
+                record = store.transition_action_item(action_status.group(1), self._json_body(), self._operator_actor())
+            except (ValueError, TypeError) as exc:
+                raise APIError(409 if "changed" in str(exc) else 400, str(exc)) from exc
+            self._send_json(record or {"error": "action item not found"}, 200 if record else 404)
+            return
         route = self.path.split("?", 1)[0]
         if route == "/api/dashboard-layout-default":
             saved = normalize_dashboard_layout(self._json_body())
@@ -2112,6 +2275,8 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_error(404)
 
     def _send_json(self, value: Any, status: int = 200) -> None:
+        if status >= 400 and isinstance(value, dict) and "correlationId" not in value:
+            value = {**value, "correlationId": getattr(self, "correlation_id", "") or events.current_correlation_id()}
         body = json.dumps(value, separators=(",", ":")).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
