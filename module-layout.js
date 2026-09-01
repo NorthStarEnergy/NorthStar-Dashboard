@@ -19,7 +19,7 @@
     { id: 'market',  container: '#nodeCards',       item: '.node-card',    step: [20, 20], min: [200, 120] },
     // APIROQ and IESO float across the complete Overview surface, including the
     // open area beside the weather strip.
-    { id: 'marketTop', container: '#marketTopTiles', item: '*', step: [20, 20], min: [200, 112], resize: true, freeform: true, boundY: true, anchorWeather: true, version: 3, defaults: { APIROQ: { w: 240, h: 148 }, IESO: { w: 240, h: 148 } } },
+    { id: 'marketTop', container: '#marketTopTiles', item: '*', step: [20, 20], min: [200, 112], resize: true, freeform: true, boundY: true, version: 4, defaults: { APIROQ: { x: 0, y: 0, w: 240, h: 148 }, IESO: { x: 246, y: 0, w: 240, h: 148 } } },
     // Weather-tab station tiles can be resized independently.
     { id: 'weather', container: '#weatherGridFull', item: '.weather-card', step: [10, 10], min: [320, 60], resize: true, sizesInEditOnly: true },
     // The header strip renders the same station cards as the Weather tab, so it
@@ -217,6 +217,11 @@
     itemsOf(zone, container).forEach((el, i) => {
       const saved = size[keyOf(el, i)];
       if (saved) setSize(el, saved.w, saved.h);
+      if (zone.id === 'weatherStrip' && !editing()) {
+        el.style.setProperty('width', 'auto', 'important');
+        el.style.setProperty('min-width', '64px', 'important');
+        el.style.setProperty('flex', '1 1 0', 'important');
+      }
     });
   }
 

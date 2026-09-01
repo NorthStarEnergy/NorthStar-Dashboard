@@ -76,13 +76,20 @@
     button.textContent = 'SIGN OUT';
     button.title = 'End this demo operator session';
     button.addEventListener('click', function () {
-      button.disabled = true;
-      nativeFetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: '{}',
-      }).catch(function () { /* the redirect below is what the operator sees */ })
-        .then(function () { window.location.replace(LOGIN_PAGE); });
+      var modal = document.createElement('div');
+      modal.className = 'logout-modal-backdrop';
+      modal.innerHTML = '<div class="logout-modal" role="dialog" aria-modal="true" aria-labelledby="logout-title"><h2 id="logout-title">Log out?</h2><p>End the current operator session?</p><div class="logout-modal-actions"><button class="logout-cancel" type="button">CANCEL</button><button class="logout-confirm" type="button">LOG OUT</button></div></div>';
+      document.body.appendChild(modal);
+      modal.querySelector('.logout-cancel').focus();
+      modal.querySelector('.logout-cancel').onclick = function () { modal.remove(); button.focus(); };
+      modal.querySelector('.logout-confirm').onclick = function () {
+        button.disabled = true;
+        modal.querySelector('.logout-confirm').disabled = true;
+        nativeFetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+          .catch(function () { /* the redirect below is what the operator sees */ })
+          .then(function () { window.location.replace(LOGIN_PAGE); });
+      };
+      modal.onclick = function (event) { if (event.target === modal) modal.remove(); };
     });
     var host = document.querySelector('.app > aside') || document.body;
     var linkState = host.querySelector ? host.querySelector('.link-state') : null;

@@ -25,3 +25,18 @@ body{background:#0a0f15!important;color:#e7edf2!important}aside,main .panel,main
 body{background:#071515!important;color:#e5f6f2!important}aside,main .panel,main .ticker,main .hourly-prices{background:#0d2222!important;border-color:#22504d!important}h2,h3{color:#e5f6f2!important}
 body{background:#101116!important;color:#edeaf4!important}aside,main .panel,main .ticker,main .hourly-prices{background:#1a1c27!important;border-color:#3d4057!important}h2,h3{color:#edeaf4!important}
 .menu-toggle{position:fixed;left:220px;top:50%;z-index:21;width:24px;height:48px;transform:translateY(-50%);border:1px solid var(--l);border-left:0;border-radius:0 7px 7px 0;background:#17252e;color:var(--g);font:700 20px/1 Arial;cursor:pointer;transition:left .2s ease,background .2s ease}.menu-toggle:hover{background:#263b45}.menu-toggle[aria-expanded="false"]{left:0}.menu-scrim{display:none}body.menu-collapsed aside{width:0;padding-left:0;padding-right:0;overflow:hidden;border-right:0}body.menu-collapsed main{max-width:1650px}@media(max-width:700px){.menu-toggle{left:0;top:50%;width:22px;height:44px}.menu-toggle[aria-expanded="true"]{left:min(280px,85vw)}body.menu-open aside{display:block!important;position:fixed;inset:0 auto 0 0;width:min(280px,85vw);z-index:20;box-shadow:18px 0 40px #0008;overflow-y:auto}.menu-scrim{position:fixed;inset:0;z-index:19;background:#0008}.menu-scrim.show{display:block}body.menu-open{overflow:hidden}}
+/* Sidebar menu scale: 125% size, spacing, graphics, weight, and borders. */
+aside{width:275px;padding:35px 25px;border-right-width:1.25px}
+.site-logo{width:238px;height:95px;margin:-12px 0 -15px}
+aside small{font-size:12.5px;font-weight:700}
+nav{margin-top:88px;gap:10px}
+nav a{padding:16px;color:var(--m);font-size:17.5px;font-weight:700;border-radius:9px;border:1.25px solid transparent}
+nav a.active,nav a:hover{border-color:var(--l)}
+nav a.active{box-shadow:inset 4px 0 var(--g)}
+.offline{font-size:12.5px;font-weight:700;line-height:2.25}
+.menu-toggle{left:275px;width:30px;height:60px;border-width:1.25px;font-size:25px}
+@media(max-width:850px) and (min-width:701px){aside{width:88px;padding:35px 12px}.site-logo{width:53px;height:53px}nav a{padding:16px 6px;font-size:0}.menu-toggle{left:88px}}
+@media(max-width:700px){.menu-toggle{width:28px;height:55px}.menu-toggle[aria-expanded="true"]{left:min(350px,85vw)}body.menu-open aside{width:min(350px,85vw);padding:35px 25px}body.menu-open aside .site-logo{width:238px;height:95px}body.menu-open aside nav a{font-size:17.5px;padding:16px}.menu-toggle{font-size:25px}}
+/* Current build marker */
+.build-version{position:fixed;left:14px;bottom:12px;z-index:30;color:var(--m);font:700 11px monospace;letter-spacing:1px;background:#111a24e6;border:1.25px solid var(--l);border-radius:5px;padding:6px 8px;box-shadow:0 3px 12px #0006}
+@media(max-width:700px){.build-version{left:10px;bottom:78px;font-size:10px;padding:5px 7px}}
