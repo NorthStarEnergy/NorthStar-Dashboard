@@ -30,6 +30,7 @@ import northstar_phase1 as phase1
 import northstar_voice as voice
 import northstar_auth as auth
 import northstar_events as events
+import northstar_ai as ai
 
 ROOT = Path(__file__).resolve().parent
 HOST = os.environ.get("NORTHSTAR_BIND_HOST", "127.0.0.1").strip()
@@ -146,6 +147,9 @@ OPERATOR_ROUTES = {
     "/api/voice": ("GET",),
     "/api/voice/recordings": ("GET",),
     "/api/voice/scan": ("POST",),
+    "/api/ai": ("POST",),
+    "/api/ai/query": ("POST",),
+    "/api/ai/status": ("GET",),
 }
 
 # The table above matches exact paths, which left every /api/<thing>/<id>/<action>
@@ -1450,6 +1454,9 @@ class Handler(SimpleHTTPRequestHandler):
                 limit = 250
             self._send_json(store.list_logbook(limit))
             return
+        if self.path.split("?", 1)[0] == "/api/ai/status":
+            self._send_json(ai.status())
+            return
         if self.path.split("?", 1)[0] == "/api/events":
             query = parse_qs(urlparse(self.path).query)
             try:
@@ -1712,6 +1719,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _do_POST(self) -> None:
         route = self.path.split("?", 1)[0]
+        if route in {"/api/ai", "/api/ai/query"}:
+            self._ai_query()
+            return
         if route == "/api/field-reports":
             try:
                 record = store.create_field_report(self._json_body(), self._operator_actor())
@@ -2273,6 +2283,41 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json(record or {"error": "check-in not found"}, 200 if record else 404)
             return
         self.send_error(404)
+
+    def _ai_query(self) -> None:
+        payload = self._json_body()
+        question = str(payload.get("question") or payload.get("message") or "").strip()
+        scope = str(payload.get("context_scope") or payload.get("scope") or "general").strip().lower()
+        try:
+            response = ai.query(
+                question,
+                context_scope=scope,
+                actor=self._audit_actor(payload.get("actor")),
+                market_snapshot=STORE.get(),
+                event_filter=str(payload.get("event_filter") or "").strip(),
+                section=str(payload.get("section") or "").strip(),
+            )
+        except ai.AssistantUnavailable as exc:
+            self._send_json(
+                {
+                    "error": "ai surface not configured",
+                    "detail": str(exc),
+                    "disclaimer": ai.DISCLAIMER,
+                },
+                501,
+            )
+            return
+        except ai.ScopeDenied as exc:
+            self._send_json({"error": str(exc)}, 403)
+            return
+        except ValueError as exc:
+            self._send_json({"error": str(exc)}, 400)
+            return
+        except Exception as exc:
+            print(f"AI query failed: {exc}")
+            self._send_json({"error": "ai query failed"}, 500)
+            return
+        self._send_json(response)
 
     def _send_json(self, value: Any, status: int = 200) -> None:
         if status >= 400 and isinstance(value, dict) and "correlationId" not in value:

@@ -1,0 +1,246 @@
+.ai-assistant-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.ai-assistant-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-assistant-banner h2 {
+  margin: 4px 0 0;
+  color: var(--blue);
+  font: 700 18px Arial, sans-serif;
+}
+
+.ai-assistant-badge {
+  align-self: flex-start;
+  padding: 6px 8px;
+  border: 1px solid #5a6d2a;
+  border-radius: 5px;
+  background: #1a2410;
+  color: #c8e08a;
+  font: 800 9px monospace;
+  letter-spacing: .6px;
+  white-space: nowrap;
+}
+
+.ai-assistant-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 420px;
+}
+
+.ai-assistant-sidebar,
+.ai-assistant-panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.ai-assistant-sidebar label,
+.ai-assistant-panel label {
+  display: block;
+  color: var(--muted);
+  font: 800 9px monospace;
+  letter-spacing: .6px;
+}
+
+.ai-assistant-scope {
+  display: grid;
+  gap: 6px;
+}
+
+.ai-assistant-scope button {
+  padding: 8px 10px;
+  background: #17252e;
+  border: 1px solid #39505b;
+  border-radius: 4px;
+  color: var(--muted);
+  text-align: left;
+  font: 700 10px monospace;
+  cursor: pointer;
+}
+
+.ai-assistant-scope button.active,
+.ai-assistant-scope button:hover {
+  border-color: var(--gold);
+  color: #fff;
+}
+
+.ai-assistant-prompts {
+  display: grid;
+  gap: 6px;
+}
+
+.ai-assistant-prompts button {
+  padding: 8px 10px;
+  background: #0f1a21;
+  border: 1px solid #355567;
+  border-radius: 4px;
+  color: #d6e1e6;
+  text-align: left;
+  font: 600 10px monospace;
+  cursor: pointer;
+}
+
+.ai-assistant-prompts button:hover {
+  border-color: var(--blue);
+}
+
+.ai-assistant-log {
+  display: grid;
+  gap: 8px;
+  min-height: 280px;
+  max-height: 52vh;
+  overflow: auto;
+  padding: 10px;
+  background: #091218;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.ai-assistant-msg {
+  max-width: 92%;
+  padding: 9px 11px;
+  border-radius: 7px;
+  background: #172730;
+  color: #edf3f5;
+  font: 600 11px/1.45 monospace;
+  white-space: pre-wrap;
+}
+
+.ai-assistant-msg.user {
+  justify-self: end;
+  background: #1d3340;
+}
+
+.ai-assistant-msg.system {
+  background: #1a2410;
+  color: #c8e08a;
+  font-size: 10px;
+}
+
+.ai-assistant-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--muted);
+  font: 700 8px monospace;
+}
+
+.ai-assistant-meta span {
+  padding: 3px 5px;
+  border: 1px solid #39505b;
+  border-radius: 3px;
+}
+
+.ai-assistant-citations {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #2a3d48;
+}
+
+.ai-assistant-citations strong {
+  color: var(--blue);
+  font: 800 9px monospace;
+}
+
+.ai-assistant-citations div {
+  color: #9eb0b8;
+  font: 600 9px monospace;
+}
+
+.ai-assistant-compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.ai-assistant-compose input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: #091218;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: #fff;
+  font: 600 11px monospace;
+}
+
+.ai-assistant-compose button {
+  padding: 10px 14px;
+  background: var(--blue);
+  border: 0;
+  border-radius: 4px;
+  color: #071118;
+  font: 800 10px monospace;
+  cursor: pointer;
+}
+
+.ai-assistant-compose button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.ai-assistant-inline {
+  margin-top: 10px;
+  padding: 10px;
+  background: #0b151c;
+  border: 1px solid #355567;
+  border-radius: 6px;
+}
+
+.ai-assistant-inline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ai-assistant-inline-head strong {
+  color: var(--blue);
+  font: 800 11px monospace;
+}
+
+.ai-assistant-inline .ai-assistant-log {
+  min-height: 140px;
+  max-height: 220px;
+}
+
+.ai-assistant-inline .ai-assistant-compose {
+  margin-top: 8px;
+}
+
+.ai-assistant-launcher {
+  padding: 6px 8px;
+  background: #132936;
+  border: 1px solid #3b6478;
+  border-radius: 4px;
+  color: #79c8f3;
+  font: 800 9px monospace;
+  cursor: pointer;
+}
+
+.ai-assistant-launcher:hover {
+  border-color: #69b7e8;
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .ai-assistant-layout {
+    grid-template-columns: 1fr;
+  }
+}
