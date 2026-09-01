@@ -31,6 +31,7 @@ import northstar_voice as voice
 import northstar_auth as auth
 import northstar_events as events
 import northstar_ai as ai
+import northstar_dispatch as dispatch
 
 ROOT = Path(__file__).resolve().parent
 HOST = os.environ.get("NORTHSTAR_BIND_HOST", "127.0.0.1").strip()
@@ -40,6 +41,7 @@ IESO_ROOT = "https://reports-public.ieso.ca/public"
 REFRESH_SECONDS = 300
 OVERDUE_SCAN_SECONDS = 30
 SCADA_POLL_SECONDS = max(15, int(os.environ.get("NORTHSTAR_SCADA_POLL_SECONDS", "60")))
+DISPATCH_TICK_SECONDS = max(3, int(os.environ.get("NORTHSTAR_DISPATCH_TICK_SECONDS", "5")))
 VOICE_POLL_SECONDS = max(15, int(os.environ.get("NORTHSTAR_VOICE_POLL_SECONDS", "45")))
 MAX_JSON_BODY = 64 * 1024
 MAX_SWITCHING_BUNDLE_BYTES = 100 * 1024 * 1024
@@ -150,6 +152,7 @@ OPERATOR_ROUTES = {
     "/api/ai": ("POST",),
     "/api/ai/query": ("POST",),
     "/api/ai/status": ("GET",),
+    "/api/dispatch/apiroq": ("GET",),
 }
 
 # The table above matches exact paths, which left every /api/<thing>/<id>/<action>
@@ -584,6 +587,16 @@ class MarketStore:
                 "daTenN": number(da_or_now, "LMP 10N"),
                 "daThirtyR": number(da_or_now, "LMP 30R"),
             }
+            apiroq_dispatch = dispatch.snapshot()
+            output_mw = apiroq_dispatch.get("outputMw")
+            dispatch_mw = apiroq_dispatch.get("dispatchMw")
+            if output_mw is not None and dispatch_mw is not None:
+                nodes["APIROQ"]["operations"] = {
+                    "commit": dispatch_mw,
+                    "rtTransfer": output_mw,
+                    "dayAhead": dispatch_mw,
+                    "source": "APIROQ dispatch telemetry",
+                }
             rt_total_rows = reports["rt_totals"].rows
             predisp_rows = reports["predisp_totals"].rows
             rt_total = rt_total_rows[-1] if rt_total_rows else None
@@ -941,6 +954,16 @@ def scada_loop() -> None:
         except Exception as exc:  # a feed fault must not stop the server
             print(f"SCADA polling failed: {exc}")
         time.sleep(SCADA_POLL_SECONDS)
+
+
+def dispatch_loop() -> None:
+    """Advance APIROQ output/dispatch simulation for the operator dispatch client."""
+    while True:
+        try:
+            dispatch.tick()
+        except Exception as exc:  # a telemetry fault must not stop the server
+            print(f"dispatch simulation failed: {exc}")
+        time.sleep(DISPATCH_TICK_SECONDS)
 
 
 def voice_loop() -> None:
@@ -1456,6 +1479,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path.split("?", 1)[0] == "/api/ai/status":
             self._send_json(ai.status())
+            return
+        if self.path.split("?", 1)[0] == "/api/dispatch/apiroq":
+            self._send_json(dispatch.snapshot())
             return
         if self.path.split("?", 1)[0] == "/api/events":
             query = parse_qs(urlparse(self.path).query)
@@ -2394,6 +2420,7 @@ if __name__ == "__main__":
     threading.Thread(target=refresh_loop, daemon=True).start()
     threading.Thread(target=overdue_loop, daemon=True).start()
     threading.Thread(target=scada_loop, daemon=True).start()
+    threading.Thread(target=dispatch_loop, daemon=True).start()
     threading.Thread(target=voice_loop, daemon=True).start()
     voice.inbox_path().mkdir(parents=True, exist_ok=True)
     print(f"Northstar check-in database: {store.DB_PATH}", flush=True)
