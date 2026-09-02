@@ -1,0 +1,257 @@
+/* APIROQ dispatch client — output vs IESO dispatch instruction */
+
+#dispatchClient {
+  grid-template-columns: 118px minmax(0, 1fr) 132px !important;
+  gap: 0 !important;
+  min-height: 88px !important;
+  height: 88px !important;
+  width: 460px !important;
+  padding: 8px 10px !important;
+  border: 1px solid #315866 !important;
+  border-radius: 7px !important;
+  background: linear-gradient(135deg, #102029 0%, #0e1a21 100%) !important;
+  box-shadow: 0 5px 16px #0005 !important;
+}
+
+#dispatchClient[hidden] {
+  display: none !important;
+}
+
+#dispatchClient .dispatch-client-main {
+  padding-right: 10px !important;
+}
+
+#dispatchClient .dispatch-client-title {
+  font-size: 12px !important;
+  letter-spacing: 0.5px !important;
+}
+
+#dispatchClient .dispatch-client-label {
+  margin-top: 8px !important;
+  font-size: 8px !important;
+  letter-spacing: 0.6px !important;
+}
+
+#dispatchClient .dispatch-mw {
+  margin-top: 3px !important;
+  font-size: 17px !important;
+  letter-spacing: 0.2px !important;
+  white-space: nowrap;
+}
+
+#dispatchClient .dispatch-mw .dispatch-output-value {
+  color: #8fe8c8;
+}
+
+#dispatchClient .dispatch-mw .dispatch-target-value {
+  color: #fff;
+}
+
+#dispatchClient .dispatch-delta {
+  margin-top: 4px;
+  color: #8fa9b1;
+  font: 700 8px monospace;
+  letter-spacing: 0.4px;
+}
+
+#dispatchClient .dispatch-delta.on-target {
+  color: #6fd7a8;
+}
+
+#dispatchClient .dispatch-delta.minor-deviation {
+  color: #ffc267;
+}
+
+#dispatchClient .dispatch-delta.off-target {
+  color: #ff8d7d;
+}
+
+#dispatchClient .dispatch-chart {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  min-width: 0;
+  border-left: 1px solid #29434d;
+  border-right: 1px solid #29434d;
+  padding: 0 10px;
+}
+
+#dispatchClient .dispatch-chart svg {
+  display: block;
+  width: 100%;
+  height: 38px;
+}
+
+#dispatchClient .dispatch-chart-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #7896a0;
+  font: 700 6px monospace;
+  letter-spacing: 0.6px;
+}
+
+#dispatchClient .dispatch-chart-legend .output::before,
+#dispatchClient .dispatch-chart-legend .dispatch::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+#dispatchClient .dispatch-chart-legend .output::before {
+  background: #58d7b0;
+}
+
+#dispatchClient .dispatch-chart-legend .dispatch::before {
+  background: #ff9b73;
+}
+
+#dispatchClient .dispatch-values {
+  grid-template-columns: 1fr !important;
+  grid-template-rows: repeat(3, auto) !important;
+  align-content: center !important;
+  gap: 4px !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  padding: 0 0 0 10px !important;
+}
+
+#dispatchClient .dispatch-field span {
+  font-size: 7px !important;
+  letter-spacing: 0.8px !important;
+  color: #7896a0 !important;
+}
+
+#dispatchClient .dispatch-field b {
+  font-size: 11px !important;
+  letter-spacing: 0.2px !important;
+}
+
+#dispatchClient .dispatch-field.activation {
+  padding: 4px 6px !important;
+  border-color: #845d2d !important;
+  background: #2b2117 !important;
+}
+
+#dispatchClient .dispatch-field.activation.active {
+  border-color: #d28b35 !important;
+  background: #3a2818 !important;
+}
+
+#dispatchClient .dispatch-field.activation b {
+  color: #ffc267 !important;
+}
+
+#dispatchClient .dispatch-reserve {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  border-left: 1px solid #29434d !important;
+  padding: 0 0 0 10px !important;
+}
+
+#dispatchClient .dispatch-reserve span {
+  font-size: 7px !important;
+  letter-spacing: 0.7px !important;
+  color: #7896a0 !important;
+}
+
+#dispatchClient .dispatch-reserve b {
+  font-size: 11px !important;
+  letter-spacing: 0.2px !important;
+  white-space: nowrap;
+}
+
+#dispatchClient .dispatch-health.stale {
+  background: #d7a243;
+  box-shadow: 0 0 8px #d7a243;
+}
+
+#dispatchClient .dispatch-health.fault {
+  background: #e05b4f;
+  box-shadow: 0 0 8px #e05b4f;
+}
+
+@media (min-width: 1051px) {
+  .page-header {
+    position: relative !important;
+    min-height: 180px !important;
+  }
+
+  .page-header > #dispatchClient {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    width: 460px !important;
+    margin: 0 !important;
+  }
+
+  .page-header > #marketTopTiles {
+    position: absolute !important;
+    left: 466px !important;
+    top: 0 !important;
+    right: 0 !important;
+    z-index: 30 !important;
+  }
+
+  .page-header > #weatherStrip {
+    margin-left: 0 !important;
+    padding-top: 170px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+@media (max-width: 1050px) {
+  .page-header > #dispatchClient {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    order: 1 !important;
+    width: min(460px, 100%) !important;
+    height: auto !important;
+    min-height: 88px !important;
+  }
+
+  .page-header > #marketTopTiles {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    order: 2 !important;
+  }
+
+  .page-header > #weatherStrip {
+    padding-top: 0 !important;
+  }
+}
+
+@media (max-width: 700px) {
+  #dispatchClient {
+    grid-template-columns: 1fr 1fr !important;
+    height: auto !important;
+    min-height: 120px !important;
+  }
+
+  #dispatchClient .dispatch-chart {
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-right: 0;
+    border-top: 1px solid #29434d;
+    padding: 8px 0 0;
+  }
+
+  #dispatchClient .dispatch-reserve {
+    grid-column: 1 / -1;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    border-top: 1px solid #29434d;
+    margin-top: 4px;
+    padding-top: 6px !important;
+  }
+}
