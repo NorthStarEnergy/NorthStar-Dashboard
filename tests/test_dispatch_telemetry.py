@@ -56,6 +56,15 @@ class DispatchTelemetryTest(unittest.TestCase):
         payload = self.dispatch.snapshot()
         self.assertLessEqual(len(payload["history"]), 72)
 
+    def test_reserve_standby_stays_within_zero_to_twenty_mw(self) -> None:
+        moment = 4_000.0
+        for step in range(50):
+            payload = self.dispatch.tick(now=moment + step * 5)
+            reserve = payload["reserveStandby"]
+            for key in ("tenS", "tenN", "thirtyR"):
+                self.assertGreaterEqual(reserve[key], 0.0)
+                self.assertLessEqual(reserve[key], 20.0)
+
     def test_sim_off_returns_unavailable_snapshot(self) -> None:
         os.environ["NORTHSTAR_DISPATCH_SIM"] = "off"
         importlib.reload(self.dispatch)

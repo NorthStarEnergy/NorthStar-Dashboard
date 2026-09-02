@@ -17,6 +17,7 @@
   const overview = document.querySelector('#overview');
 
   const mw = value => (Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)} MW` : '— MW');
+  const reserveMw = value => (Number.isFinite(Number(value)) ? Number(value).toFixed(0) : '—');
 
   function setHealthState(kind) {
     if (!healthButton) return;
@@ -97,7 +98,7 @@
 
     const reserve = payload?.reserveStandby || {};
     if (reserveNode) {
-      reserveNode.textContent = `${reserve.tenS ?? 10}S / ${reserve.tenN ?? 10}N / ${reserve.thirtyR ?? 30}R`;
+      reserveNode.textContent = `${reserveMw(reserve.tenS)}S / ${reserveMw(reserve.tenN)}N / ${reserveMw(reserve.thirtyR)}R MW`;
     }
 
     if (detailNode) {

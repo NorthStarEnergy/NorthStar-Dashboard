@@ -161,8 +161,9 @@
 }
 
 #dispatchClient .dispatch-reserve b {
-  font-size: 12px !important;
-  letter-spacing: 0.3px !important;
+  font-size: 11px !important;
+  letter-spacing: 0.2px !important;
+  white-space: nowrap;
 }
 
 #dispatchClient .dispatch-health.stale {

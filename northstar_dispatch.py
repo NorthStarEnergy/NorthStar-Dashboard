@@ -25,6 +25,7 @@ TZ = ZoneInfo("America/Toronto")
 MW_MIN = 30.0
 MW_MAX = 70.0
 MW_CAPACITY = 80.0
+OR_RESERVE_MAX_MW = 20.0
 TICK_SECONDS = 5
 HISTORY_LIMIT = 72  # six minutes at 5 s intervals
 
@@ -58,6 +59,31 @@ def _clamp(value: float, low: float = 0.0, high: float = MW_CAPACITY) -> float:
     return max(low, min(high, value))
 
 
+def _clamp_or_reserve(value: float) -> float:
+    return round(_clamp(value, 0.0, OR_RESERVE_MAX_MW), 1)
+
+
+def _random_reserve_standby() -> dict[str, float]:
+    return {
+        "tenS": _clamp_or_reserve(_RNG.uniform(4.0, 16.0)),
+        "tenN": _clamp_or_reserve(_RNG.uniform(4.0, 16.0)),
+        "thirtyR": _clamp_or_reserve(_RNG.uniform(0.0, 20.0)),
+    }
+
+
+def _advance_reserve_standby(state: dict[str, Any]) -> None:
+    reserve = dict(state.get("reserveStandby") or _random_reserve_standby())
+    for key in ("tenS", "tenN", "thirtyR"):
+        current = float(reserve.get(key, 0.0))
+        if _RNG.random() < 0.18:
+            target = _RNG.uniform(0.0, OR_RESERVE_MAX_MW)
+            current += (target - current) * _RNG.uniform(0.25, 0.55)
+        else:
+            current += _RNG.uniform(-1.2, 1.2)
+        reserve[key] = _clamp_or_reserve(current)
+    state["reserveStandby"] = reserve
+
+
 def _initial_state() -> dict[str, Any]:
     dispatch = round(_RNG.uniform(44.0, 56.0), 1)
     output = round(dispatch + _RNG.uniform(-1.2, 1.2), 1)
@@ -73,7 +99,7 @@ def _initial_state() -> dict[str, Any]:
         "tracking": "on-target",
         "capacityMw": MW_CAPACITY,
         "orActivation": None,
-        "reserveStandby": {"tenS": 10.0, "tenN": 10.0, "thirtyR": 30.0},
+        "reserveStandby": _random_reserve_standby(),
         "history": [
             {
                 "time": _now_iso(),
@@ -104,11 +130,15 @@ def _maybe_or_activation(state: dict[str, Any]) -> None:
             state.pop("orTicks", None)
         return
     if _RNG.random() < 0.02:
+        reserve = state.get("reserveStandby") or {}
         product = _RNG.choice(["10S", "10N", "30R"])
+        key = {"10S": "tenS", "10N": "tenN", "30R": "thirtyR"}[product]
+        standby = float(reserve.get(key, 0.0) or 0.0)
+        if standby <= 0.0:
+            return
         state["orActivation"] = product
         state["orTicks"] = 0
-        bump = {"10S": 8.0, "10N": 6.0, "30R": 12.0}[product]
-        state["dispatchMw"] = _clamp(round(float(state["dispatchMw"]) + bump, 1))
+        state["dispatchMw"] = _clamp(round(float(state["dispatchMw"]) + standby, 1))
 
 
 def tick(now: float | None = None) -> dict[str, Any]:
@@ -154,6 +184,7 @@ def tick(now: float | None = None) -> dict[str, Any]:
 
             _maybe_or_activation(_STATE)
             dispatch = float(_STATE["dispatchMw"])
+            _advance_reserve_standby(_STATE)
 
             # Output tracks dispatch with plant inertia and measurement noise.
             lag = 0.34 if abs(dispatch - output) > 4 else 0.24
@@ -217,7 +248,7 @@ def _placeholder_snapshot(*, stale: bool) -> dict[str, Any]:
         "tracking": "unknown",
         "capacityMw": MW_CAPACITY,
         "orActivation": None,
-        "reserveStandby": {"tenS": 10.0, "tenN": 10.0, "thirtyR": 30.0},
+        "reserveStandby": {"tenS": 0.0, "tenN": 0.0, "thirtyR": 0.0},
         "history": [],
         "healthy": False,
         "stale": stale,
