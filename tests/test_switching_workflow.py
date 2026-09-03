@@ -420,7 +420,9 @@ class SwitchingWorkflowTest(unittest.TestCase):
         self.assertEqual(status, 201)
         self.assertEqual(created["revision"], 1)
         self.assertEqual(created["outageId"], outage["id"])
-        self.assertEqual(created["record"]["designationStandard"], "IEEE C37.2-2022")
+        self.assertEqual(created["record"]["designationStandard"], "IEEE C37.2-2022 (active)")
+        self.assertEqual(created["record"]["symbolLibraryProfile"], "northstar-ieee-compat-2026.2")
+        self.assertEqual(created["record"]["catalogueVersion"], "2026.2")
 
         changed = dict(record)
         changed["symbols"] = [*record["symbols"], {"id": "GND-01", "type": "ground", "x": 500, "y": 350}]
@@ -482,6 +484,38 @@ class SwitchingWorkflowTest(unittest.TestCase):
         status, ready = self.request("POST", f"/api/switching/drafts/{created['id']}/ready", {})
         self.assertEqual(status, 200)
         self.assertEqual(ready["status"], self.store.SWITCHING_READY)
+
+    def test_schematic_records_keep_terminals_drawn_state_and_utility_types(self) -> None:
+        status, created = self.request(
+            "POST",
+            "/api/schematics",
+            {
+                "name": "Catalogue 2026.2 feeder",
+                "standardApprovalRef": "UTILITY-CATALOGUE-REV-3",
+                "record": {
+                    "symbols": [
+                        {"id": "BUS-01", "type": "bus", "x": 200, "y": 200},
+                        {"id": "RCL-01", "type": "recloser", "x": 360, "y": 200, "operatingState": "open"},
+                        {"id": "XF3-01", "type": "transformer-3winding", "x": 520, "y": 200, "windingConfig": "dy"},
+                        {"id": "DROP-01", "type": "mystery-device", "x": 10, "y": 10},
+                    ],
+                    "edges": [
+                        {"from": "BUS-01", "to": "RCL-01", "fromTerminal": "span", "toTerminal": "L"},
+                        {"from": "RCL-01", "to": "XF3-01", "fromTerminal": "R", "toTerminal": "L"},
+                    ],
+                },
+            },
+        )
+        self.assertEqual(status, 201)
+        record = created["record"]
+        types = {item["type"] for item in record["symbols"]}
+        by_id = {item["id"]: item for item in record["symbols"]}
+        self.assertEqual(record["symbolLibraryProfile"], "northstar-ieee-compat-2026.2")
+        self.assertNotIn("mystery-device", types)
+        self.assertEqual(by_id["RCL-01"]["operatingState"], "open")
+        self.assertEqual(by_id["XF3-01"]["windingConfig"], "dy")
+        self.assertEqual(record["edges"][0]["fromTerminal"], "span")
+        self.assertEqual(record["edges"][0]["toTerminal"], "L")
 
 
 if __name__ == "__main__":

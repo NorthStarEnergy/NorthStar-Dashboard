@@ -1,0 +1,50 @@
+{
+  "profile": "northstar-ieee-compat-2026.2",
+  "catalogueVersion": "2026.2",
+  "graphicalStandard": "IEEE/ANSI 315-1975 (inactive-reserved)",
+  "designationStandard": "IEEE C37.2-2022 (active)",
+  "windingConfigs": [
+    ["", "Unspecified"],
+    ["dy", "Delta–Wye (Δ-Y)"],
+    ["yd", "Wye–Delta (Y-Δ)"],
+    ["yy", "Wye–Wye (Y-Y)"],
+    ["dd", "Delta–Delta (Δ-Δ)"]
+  ],
+  "operatingStates": [
+    ["closed", "Closed (drawn position)"],
+    ["open", "Open (drawn position)"]
+  ],
+  "aliases": {},
+  "symbols": [
+    {"id": "source", "name": "AC source / utility", "category": "Network", "prefix": "SRC", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "bus", "name": "Bus", "category": "Network", "prefix": "BUS", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "line", "name": "Line / cable", "category": "Network", "prefix": "LIN", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "junction", "name": "Connected junction", "category": "Network", "prefix": "JCT", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "terminal", "name": "Terminal", "category": "Network", "prefix": "TER", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "ground", "name": "Ground / earth", "category": "Network", "prefix": "GND", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "disconnect", "name": "Disconnect switch", "category": "Primary equipment", "prefix": "DSC", "functionNumber": "89", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
+    {"id": "breaker", "name": "AC circuit breaker", "category": "Primary equipment", "prefix": "CBR", "functionNumber": "52", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
+    {"id": "fuse", "name": "Fuse", "category": "Primary equipment", "prefix": "FUS", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": true, "winding": false, "hidden": false},
+    {"id": "load-break", "name": "Load-break switch", "category": "Primary equipment", "prefix": "LBS", "functionNumber": "89", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
+    {"id": "recloser", "name": "Recloser", "category": "Primary equipment", "prefix": "RCL", "functionNumber": "52", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
+    {"id": "sectionalizer", "name": "Sectionalizer", "category": "Primary equipment", "prefix": "SEC", "functionNumber": "89", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
+    {"id": "grounding-switch", "name": "Grounding switch", "category": "Primary equipment", "prefix": "GSW", "functionNumber": "89", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
+    {"id": "ats", "name": "Automatic transfer switch", "category": "Primary equipment", "prefix": "ATS", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": true, "winding": false, "hidden": false},
+    {"id": "transformer", "name": "Power transformer", "category": "Primary equipment", "prefix": "XFMR", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": true, "hidden": false},
+    {"id": "transformer-3winding", "name": "Three-winding transformer", "category": "Primary equipment", "prefix": "XF3", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": true, "hidden": false},
+    {"id": "autotransformer", "name": "Autotransformer", "category": "Primary equipment", "prefix": "ATX", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": true, "hidden": false},
+    {"id": "generator", "name": "Generator", "category": "Primary equipment", "prefix": "GEN", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "motor", "name": "Motor", "category": "Primary equipment", "prefix": "MTR", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "capacitor", "name": "Capacitor bank", "category": "Primary equipment", "prefix": "CAP", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "reactor", "name": "Reactor", "category": "Primary equipment", "prefix": "REA", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "battery", "name": "Battery", "category": "Primary equipment", "prefix": "BAT", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "surge-arrester", "name": "Surge arrester", "category": "Primary equipment", "prefix": "SA", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "load", "name": "General load", "category": "Primary equipment", "prefix": "LOD", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "ct", "name": "Current transformer", "category": "Measurement & protection", "prefix": "CT", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "vt", "name": "Voltage transformer", "category": "Measurement & protection", "prefix": "VT", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "pt", "name": "Potential transformer", "category": "Measurement & protection", "prefix": "PT", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
+    {"id": "relay", "name": "Protective relay", "category": "Measurement & protection", "prefix": "RLY", "functionNumber": "51", "standard": "IEEE C37.2-2022 designation", "switching": false, "winding": false, "hidden": false},
+    {"id": "lockout", "name": "Lockout relay", "category": "Measurement & protection", "prefix": "LOR", "functionNumber": "86", "standard": "IEEE C37.2-2022 designation", "switching": false, "winding": false, "hidden": false},
+    {"id": "edge", "name": "Legacy conductor", "category": "Legacy compatibility", "prefix": "EDG", "functionNumber": "", "standard": "NorthStar legacy alias", "switching": false, "winding": false, "hidden": true}
+  ]
+}

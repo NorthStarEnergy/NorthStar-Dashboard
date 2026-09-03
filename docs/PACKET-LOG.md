@@ -13,6 +13,18 @@ Full completion reports for recent packets are in `docs/packets/`.
 
 ---
 
+## Packet 27 — one-line catalogue 2026.2 (2026-09-03)
+
+Tag `packet-27-one-line-catalogue-2026-2` · report
+`docs/packets/packet-27-one-line-catalogue-2026-2.md`
+
+Aligned the one-line editor, symbol library, and server on a single catalogue identity
+(`northstar-ieee-compat-2026.2`). Conductors snap to terminals, switching devices record a
+drafting OPEN/CLOSED position, transformers can store Δ/Y winding configuration, and the library
+gains recloser, sectionalizer, load-break, grounding switch, ATS, three-winding transformer,
+autotransformer, and PT. Unknown types are dropped instead of rendering as a utility source, and
+the legacy `edge` alias survives a server save. Suite: 194 passed.
+
 ## Packet 26 — controlled engineering bundles and server revisions (2026-08-26)
 
 Tag `packet-26-controlled-engineering-bundles` · report
