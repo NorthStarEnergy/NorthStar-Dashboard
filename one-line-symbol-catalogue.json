@@ -1,6 +1,7 @@
 {
-  "profile": "northstar-ieee-compat-2026.2",
-  "catalogueVersion": "2026.2",
+  "profile": "northstar-ieee-compat-2026.3",
+  "catalogueVersion": "2026.3",
+  "notationSource": "Workplace Figure A-1 circuit notation",
   "graphicalStandard": "IEEE/ANSI 315-1975 (inactive-reserved)",
   "designationStandard": "IEEE C37.2-2022 (active)",
   "windingConfigs": [
@@ -14,7 +15,14 @@
     ["closed", "Closed (drawn position)"],
     ["open", "Open (drawn position)"]
   ],
-  "aliases": {},
+  "aliases": {
+    "ldr": "light-sensor",
+    "photoresistor": "light-sensor",
+    "capacitior": "capacitor-element",
+    "line-switch": "disconnect",
+    "circuit-switching": "circuit-switcher",
+    "circuit-switch": "circuit-switcher"
+  },
   "symbols": [
     {"id": "source", "name": "AC source / utility", "category": "Network", "prefix": "SRC", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
     {"id": "bus", "name": "Bus", "category": "Network", "prefix": "BUS", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
@@ -22,12 +30,13 @@
     {"id": "junction", "name": "Connected junction", "category": "Network", "prefix": "JCT", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
     {"id": "terminal", "name": "Terminal", "category": "Network", "prefix": "TER", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
     {"id": "ground", "name": "Ground / earth", "category": "Network", "prefix": "GND", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
-    {"id": "disconnect", "name": "Disconnect switch", "category": "Primary equipment", "prefix": "DSC", "functionNumber": "89", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
-    {"id": "breaker", "name": "AC circuit breaker", "category": "Primary equipment", "prefix": "CBR", "functionNumber": "52", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
-    {"id": "fuse", "name": "Fuse", "category": "Primary equipment", "prefix": "FUS", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": true, "winding": false, "hidden": false},
-    {"id": "load-break", "name": "Load-break switch", "category": "Primary equipment", "prefix": "LBS", "functionNumber": "89", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
-    {"id": "recloser", "name": "Recloser", "category": "Primary equipment", "prefix": "RCL", "functionNumber": "52", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
-    {"id": "sectionalizer", "name": "Sectionalizer", "category": "Primary equipment", "prefix": "SEC", "functionNumber": "89", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
+    {"id": "disconnect", "name": "Line switch", "category": "Primary equipment", "prefix": "DSC", "functionNumber": "89", "standard": "Workplace one-line convention", "switching": true, "winding": false, "hidden": false},
+    {"id": "breaker", "name": "AC circuit breaker", "category": "Primary equipment", "prefix": "CBR", "functionNumber": "52", "standard": "Workplace one-line convention", "switching": true, "winding": false, "hidden": false},
+    {"id": "circuit-switcher", "name": "Circuit switcher", "category": "Primary equipment", "prefix": "CS", "functionNumber": "52", "standard": "Workplace one-line convention", "switching": true, "winding": false, "hidden": false},
+    {"id": "fuse", "name": "Fuse", "category": "Primary equipment", "prefix": "FUS", "functionNumber": "", "standard": "Workplace one-line convention", "switching": true, "winding": false, "hidden": false},
+    {"id": "load-break", "name": "Load-break switch", "category": "Primary equipment", "prefix": "LBS", "functionNumber": "89", "standard": "Workplace one-line convention", "switching": true, "winding": false, "hidden": false},
+    {"id": "recloser", "name": "Recloser", "category": "Primary equipment", "prefix": "RCL", "functionNumber": "52", "standard": "Workplace one-line convention", "switching": true, "winding": false, "hidden": false},
+    {"id": "sectionalizer", "name": "Sectionalizer", "category": "Primary equipment", "prefix": "SEC", "functionNumber": "89", "standard": "Workplace one-line convention", "switching": true, "winding": false, "hidden": false},
     {"id": "grounding-switch", "name": "Grounding switch", "category": "Primary equipment", "prefix": "GSW", "functionNumber": "89", "standard": "IEEE C37.2-2022 designation", "switching": true, "winding": false, "hidden": false},
     {"id": "ats", "name": "Automatic transfer switch", "category": "Primary equipment", "prefix": "ATS", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": true, "winding": false, "hidden": false},
     {"id": "transformer", "name": "Power transformer", "category": "Primary equipment", "prefix": "XFMR", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": true, "hidden": false},
@@ -45,6 +54,17 @@
     {"id": "pt", "name": "Potential transformer", "category": "Measurement & protection", "prefix": "PT", "functionNumber": "", "standard": "IEEE/ANSI 315 convention", "switching": false, "winding": false, "hidden": false},
     {"id": "relay", "name": "Protective relay", "category": "Measurement & protection", "prefix": "RLY", "functionNumber": "51", "standard": "IEEE C37.2-2022 designation", "switching": false, "winding": false, "hidden": false},
     {"id": "lockout", "name": "Lockout relay", "category": "Measurement & protection", "prefix": "LOR", "functionNumber": "86", "standard": "IEEE C37.2-2022 designation", "switching": false, "winding": false, "hidden": false},
+    {"id": "capacitor-element", "name": "Capacitor", "category": "Circuit notation", "prefix": "CEL", "functionNumber": "", "standard": "Workplace Figure A-1 circuit notation", "switching": false, "winding": false, "hidden": false},
+    {"id": "resistor", "name": "Resistor", "category": "Circuit notation", "prefix": "RES", "functionNumber": "", "standard": "Workplace Figure A-1 circuit notation", "switching": false, "winding": false, "hidden": false},
+    {"id": "light-sensor", "name": "Light resistive sensor", "category": "Circuit notation", "prefix": "LDR", "functionNumber": "", "standard": "Workplace Figure A-1 circuit notation", "switching": false, "winding": false, "hidden": false},
+    {"id": "diode", "name": "Diode", "category": "Circuit notation", "prefix": "DIO", "functionNumber": "", "standard": "Workplace Figure A-1 circuit notation", "switching": false, "winding": false, "hidden": false},
+    {"id": "transistor", "name": "Transistor", "category": "Circuit notation", "prefix": "Q", "functionNumber": "", "standard": "Workplace Figure A-1 circuit notation", "switching": false, "winding": false, "hidden": false},
+    {"id": "inductor", "name": "Inductor", "category": "Circuit notation", "prefix": "IND", "functionNumber": "", "standard": "Workplace Figure A-1 circuit notation", "switching": false, "winding": false, "hidden": false},
+    {"id": "switch", "name": "Switch", "category": "Circuit notation", "prefix": "SW", "functionNumber": "", "standard": "Workplace Figure A-1 circuit notation", "switching": true, "winding": false, "hidden": false},
+    {"id": "lamp", "name": "Lamp", "category": "Circuit notation", "prefix": "LMP", "functionNumber": "", "standard": "Workplace Figure A-1 circuit notation", "switching": false, "winding": false, "hidden": false},
+    {"id": "power", "name": "Power", "category": "Circuit notation", "prefix": "PWR", "functionNumber": "", "standard": "Workplace Figure A-1 circuit notation", "switching": false, "winding": false, "hidden": false},
+    {"id": "potentiometer", "name": "Potentiometer", "category": "Circuit notation", "prefix": "POT", "functionNumber": "", "standard": "Workplace Figure A-1 circuit notation", "switching": false, "winding": false, "hidden": false},
+    {"id": "led", "name": "LED", "category": "Circuit notation", "prefix": "LED", "functionNumber": "", "standard": "Workplace Figure A-1 circuit notation", "switching": false, "winding": false, "hidden": false},
     {"id": "edge", "name": "Legacy conductor", "category": "Legacy compatibility", "prefix": "EDG", "functionNumber": "", "standard": "NorthStar legacy alias", "switching": false, "winding": false, "hidden": true}
   ]
 }

@@ -13,6 +13,18 @@ Full completion reports for recent packets are in `docs/packets/`.
 
 ---
 
+## Packet 28 — one-line catalogue 2026.3 (2026-09-03)
+
+Tag `packet-28-one-line-catalogue-2026-3` · report
+`docs/packets/packet-28-one-line-catalogue-2026-3.md`
+
+Aligned the one-line library to the workplace sheet: Figure A-1 circuit notation plus
+shop switching glyphs. Line switches are a circle with a line that follows the circuit
+when closed and sits 90° off when open. Breakers use that same rotary contact inside a
+square. Circuit switchers keep the circle, line, and square. Fuses are an open-switch
+arm with the cartridge on the blade. AC source, transformer, battery, and the
+electronics switch stay in the Figure A-1 family. Suite: 196 passed.
+
 ## Packet 27 — one-line catalogue 2026.2 (2026-09-03)
 
 Tag `packet-27-one-line-catalogue-2026-2` · report

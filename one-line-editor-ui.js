@@ -33,7 +33,7 @@
     return `${prefix}-${String(number).padStart(2, '0')}`;
   }
   function normaliseSymbol(item, index) {
-    const info = library.definitions.find(definition => definition.id === item?.type);
+    const info = library.get(item?.type);
     if (!info) return null;
     const rotation = [0, 90, 180, 270].includes(Number(item?.rotation)) ? Number(item.rotation) : 0;
     const windingConfig = info.winding && windingValues.has(String(item?.windingConfig || '')) ? String(item.windingConfig) : '';
@@ -139,7 +139,7 @@
   }
   function renderPalette(filter = '') {
     const query = filter.trim().toLowerCase();
-    const visible = library.definitions.filter(item => !item.hidden && (!query || `${item.name} ${item.id} ${item.functionNumber || ''} ${item.category}`.toLowerCase().includes(query)));
+    const visible = library.definitions.filter(item => !item.hidden && (!query || `${item.name} ${item.id} ${item.functionNumber || ''} ${item.category} ${item.standard} figure a-1 workplace`.toLowerCase().includes(query)));
     const groups = [...new Set(visible.map(item => item.category))];
     $('#oneLineSymbolLibrary').innerHTML = groups.map(category => `<section class="symbol-group"><h4>${esc(category)}</h4>${visible.filter(item => item.category === category).map(item => `<button class="symbol-tool" type="button" data-symbol-type="${esc(item.id)}" title="${esc(item.standard)}"><span class="symbol-glyph">${esc(item.glyph)}</span><span>${esc(item.name)}${item.functionNumber ? `<small>IEEE ${esc(item.functionNumber)}</small>` : ''}${item.switching ? '<small>OPEN/CLOSED</small>' : ''}${item.winding ? '<small>WINDING</small>' : ''}</span></button>`).join('')}</section>`).join('') || '<p class="hint">No matching symbols.</p>';
     bindToolButtons($('#oneLineSymbolLibrary'));
@@ -179,7 +179,8 @@
       { id:'LOD-01', type:'load', x:900, y:220, label:'FEEDER 1' },
       { id:'RCL-01', type:'recloser', x:390, y:380, label:'RCL-1', operatingState:'closed' },
       { id:'LBS-01', type:'load-break', x:540, y:380, label:'LBS-1', operatingState:'closed' },
-      { id:'LOD-02', type:'load', x:720, y:380, label:'TAP 2' },
+      { id:'CS-01', type:'circuit-switcher', x:720, y:380, label:'CS-1', operatingState:'closed' },
+      { id:'LOD-02', type:'load', x:880, y:380, label:'TAP 2' },
     ];
     state.symbols = raw.map(normaliseSymbol).filter(Boolean);
     state.edges = [
@@ -190,12 +191,42 @@
       { from:'XF3-01', to:'LOD-01' },
       { from:'BUS-01', to:'RCL-01' },
       { from:'RCL-01', to:'LBS-01' },
-      { from:'LBS-01', to:'LOD-02' },
+      { from:'LBS-01', to:'CS-01' },
+      { from:'CS-01', to:'LOD-02' },
     ];
     state.edges = normaliseEdges(state.edges);
     state.selected = null;
     state.revision = 0;
-    markDirty('IEEE compatibility catalogue 2026.2 example loaded');
+    markDirty('Workplace catalogue 2026.3 feeder example loaded');
+    render();
+  }
+  function startCircuitDemo() {
+    const raw = [
+      { id:'PWR-01', type:'power', x:80, y:200, label:'POWER' },
+      { id:'SW-01', type:'switch', x:230, y:200, label:'SW', operatingState:'open' },
+      { id:'RES-01', type:'resistor', x:390, y:200, label:'R1' },
+      { id:'LED-01', type:'led', x:550, y:200, label:'LED' },
+      { id:'LMP-01', type:'lamp', x:720, y:200, label:'LAMP' },
+      { id:'GND-01', type:'ground', x:880, y:200, label:'GND' },
+      { id:'CEL-01', type:'capacitor-element', x:390, y:360, label:'C1' },
+      { id:'IND-01', type:'inductor', x:550, y:360, label:'L1' },
+      { id:'Q-01', type:'transistor', x:720, y:360, label:'Q1' },
+    ];
+    state.symbols = raw.map(normaliseSymbol).filter(Boolean);
+    state.edges = [
+      { from:'PWR-01', to:'SW-01' },
+      { from:'SW-01', to:'RES-01' },
+      { from:'RES-01', to:'LED-01' },
+      { from:'LED-01', to:'LMP-01' },
+      { from:'LMP-01', to:'GND-01' },
+      { from:'RES-01', to:'CEL-01' },
+      { from:'CEL-01', to:'IND-01' },
+      { from:'IND-01', to:'Q-01' },
+    ];
+    state.edges = normaliseEdges(state.edges);
+    state.selected = null;
+    state.revision = 0;
+    markDirty('Figure A-1 circuit example loaded');
     render();
   }
   function recordPayload(nextRevision = state.revision) {
@@ -417,6 +448,7 @@
   renderPalette();
   $('#oneLineSymbolSearch').oninput = event => renderPalette(event.target.value);
   $('#oneLineDemo').onclick = startDemo;
+  $('#oneLineCircuitExample').onclick = startCircuitDemo;
   $('#oneLineSave').onclick = save;
   $('#oneLineSaveServer').onclick = async () => { try { await saveServer(); } catch (error) { setStatus(`Server save failed: ${error.message}`); } };
   $('#oneLineLoadServer').onclick = loadSelectedServer;

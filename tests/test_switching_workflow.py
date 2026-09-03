@@ -421,8 +421,8 @@ class SwitchingWorkflowTest(unittest.TestCase):
         self.assertEqual(created["revision"], 1)
         self.assertEqual(created["outageId"], outage["id"])
         self.assertEqual(created["record"]["designationStandard"], "IEEE C37.2-2022 (active)")
-        self.assertEqual(created["record"]["symbolLibraryProfile"], "northstar-ieee-compat-2026.2")
-        self.assertEqual(created["record"]["catalogueVersion"], "2026.2")
+        self.assertEqual(created["record"]["symbolLibraryProfile"], "northstar-ieee-compat-2026.3")
+        self.assertEqual(created["record"]["catalogueVersion"], "2026.3")
 
         changed = dict(record)
         changed["symbols"] = [*record["symbols"], {"id": "GND-01", "type": "ground", "x": 500, "y": 350}]
@@ -490,7 +490,7 @@ class SwitchingWorkflowTest(unittest.TestCase):
             "POST",
             "/api/schematics",
             {
-                "name": "Catalogue 2026.2 feeder",
+                "name": "Catalogue 2026.3 feeder",
                 "standardApprovalRef": "UTILITY-CATALOGUE-REV-3",
                 "record": {
                     "symbols": [
@@ -510,7 +510,7 @@ class SwitchingWorkflowTest(unittest.TestCase):
         record = created["record"]
         types = {item["type"] for item in record["symbols"]}
         by_id = {item["id"]: item for item in record["symbols"]}
-        self.assertEqual(record["symbolLibraryProfile"], "northstar-ieee-compat-2026.2")
+        self.assertEqual(record["symbolLibraryProfile"], "northstar-ieee-compat-2026.3")
         self.assertNotIn("mystery-device", types)
         self.assertEqual(by_id["RCL-01"]["operatingState"], "open")
         self.assertEqual(by_id["XF3-01"]["windingConfig"], "dy")

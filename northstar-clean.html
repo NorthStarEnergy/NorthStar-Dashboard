@@ -10,7 +10,7 @@
   <script src="operator-session.js"></script>
   <link rel="stylesheet" href="lamination-dashboard.css">
   <link rel="stylesheet" href="switching-workspace.css?v=20260826-4">
-  <link rel="stylesheet" href="one-line-editor.css?v=20260903-2">
+  <link rel="stylesheet" href="one-line-editor.css?v=20260903-3">
   <link rel="stylesheet" href="market-workspace.css?v=3">
   <link rel="stylesheet" href="events-workspace.css">
   <link rel="stylesheet" href="ai-assistant-workspace.css">
@@ -20,8 +20,8 @@
   <link rel="stylesheet" href="readiness-workspace.css?v=2">
   <link rel="stylesheet" href="logbook-editor.css?v=20260826-1">
   <script src="switching-workspace.js?v=20260826-4" defer></script>
-  <script src="one-line-symbol-library.js?v=20260903-1" defer></script>
-  <script src="one-line-editor-ui.js?v=20260903-2" defer></script>
+  <script src="one-line-symbol-library.js?v=20260903-3" defer></script>
+  <script src="one-line-editor-ui.js?v=20260903-3" defer></script>
   <script src="outages-workspace.js?v=3" defer></script>
   <script src="field-operations-workspace.js?v=2" defer></script>
   <title>Northstar Control Room · Clean Live</title>
@@ -506,7 +506,7 @@
           <span class="switching-safety-badge">NO EQUIPMENT COMMANDS</span>
         </div>
         <section class="panel one-line-editor" id="oneLineEditor" data-module-id="one-line-editor">
-          <div class="one-line-head"><div><label>PACKET 05 · GRAPHICAL ONE-LINE EDITOR</label><h2>Build a circuit diagram with symbols</h2><p>Draft, snap terminals, set drawn open/closed position, and export a topology-aware one-line record. Catalogue 2026.2 is an IEEE compatibility profile, not a certified utility legend.</p></div><span class="one-line-badge">DRAFTING ONLY · NOT RELEASE</span></div>
+          <div class="one-line-head"><div><label>PACKET 05 · GRAPHICAL ONE-LINE EDITOR</label><h2>Build a circuit diagram with symbols</h2><p>Draft, snap terminals, set drawn open/closed position, and export a topology-aware one-line record. Catalogue 2026.3 uses workplace line-switch / breaker / fuse glyphs and Figure A-1 circuit notation. It is a compatibility profile, not a certified utility legend.</p></div><span class="one-line-badge">DRAFTING ONLY · NOT RELEASE</span></div>
           <div class="one-line-server-bar">
             <label>DRAWING NAME<input id="oneLineName" placeholder="e.g. FDR-01 one-line"></label>
             <label>LINKED OUTAGE<select id="oneLineOutage"><option value="">No linked outage</option></select></label>
@@ -516,17 +516,17 @@
           </div>
           <div class="one-line-layout">
             <aside class="one-line-tools" aria-label="One-line editor tools">
-              <h3>IEEE COMPATIBILITY LIBRARY · 2026.2</h3>
+              <h3>WORKPLACE LIBRARY · 2026.3</h3>
               <div class="symbol-palette">
                 <button class="symbol-tool active" type="button" data-symbol-type="select"><span class="symbol-glyph">↖</span>SELECT / MOVE</button>
                 <button class="symbol-tool" type="button" data-symbol-type="connect"><span class="symbol-glyph">⌁</span>CONNECT</button>
-                <label class="symbol-search-label">FILTER<input id="oneLineSymbolSearch" type="search" placeholder="Breaker, relay, CT…"></label>
+                <label class="symbol-search-label">FILTER<input id="oneLineSymbolSearch" type="search" placeholder="Breaker, resistor, figure…"></label>
                 <div id="oneLineSymbolLibrary"></div>
               </div>
-              <div class="one-line-actions"><button type="button" id="oneLineDemo">LOAD EXAMPLE</button><button type="button" id="oneLineClear">CLEAR</button><button type="button" id="oneLineImport">IMPORT JSON</button><input id="oneLineImportFile" type="file" accept="application/json,.json" hidden><button type="button" id="oneLineExport">EXPORT JSON</button><button type="button" id="oneLineExportSvg">EXPORT SVG</button><button type="button" id="oneLineExportPng">EXPORT PNG</button><button type="button" id="oneLinePrint">PRINT / PDF</button><button type="button" id="oneLineSave">SAVE LOCAL REVISION</button><button class="primary-btn" type="button" id="oneLineSaveServer">SAVE SERVER REVISION</button><button class="primary-btn" type="button" id="oneLineAttachPackage">ATTACH TO CURRENT PACKAGE</button></div>
+              <div class="one-line-actions"><button type="button" id="oneLineDemo">LOAD EXAMPLE</button><button type="button" id="oneLineCircuitExample">LOAD CIRCUIT EXAMPLE</button><button type="button" id="oneLineClear">CLEAR</button><button type="button" id="oneLineImport">IMPORT JSON</button><input id="oneLineImportFile" type="file" accept="application/json,.json" hidden><button type="button" id="oneLineExport">EXPORT JSON</button><button type="button" id="oneLineExportSvg">EXPORT SVG</button><button type="button" id="oneLineExportPng">EXPORT PNG</button><button type="button" id="oneLinePrint">PRINT / PDF</button><button type="button" id="oneLineSave">SAVE LOCAL REVISION</button><button class="primary-btn" type="button" id="oneLineSaveServer">SAVE SERVER REVISION</button><button class="primary-btn" type="button" id="oneLineAttachPackage">ATTACH TO CURRENT PACKAGE</button></div>
             </aside>
             <div class="one-line-canvas-wrap"><svg class="one-line-canvas" id="oneLineCanvas" viewBox="0 0 1000 560" role="img" aria-label="Interactive electrical one-line diagram editor"></svg><div class="one-line-empty" id="oneLineEmpty" hidden>Choose a symbol, then click the canvas.<br>Use CONNECT to join two symbols.</div></div>
-            <aside class="one-line-inspector"><h3>INSPECTOR</h3><div id="oneLineInspectorBody"><p class="hint">Select a symbol to edit its label, designation, drawn position, winding, rotation, or terminals. Use CONNECT to snap a conductor between two terminals.</p></div><div class="one-line-help"><b>Catalogue 2026.2</b><br>Profile: northstar-ieee-compat-2026.2.<br>Graphics: IEEE/ANSI 315-1975 convention (inactive-reserved).<br>Designations: IEEE C37.2-2022 (active).<br>Not a certified utility symbol catalogue.<br><br><b>Controls</b><br>Click a palette item to add a symbol.<br>Drag symbols to reposition.<br>CONNECT snaps to terminals; click a port to choose one.<br>OPEN/CLOSED is a drafting position, not live state.<br>Save creates a local numbered revision.</div></aside>
+            <aside class="one-line-inspector"><h3>INSPECTOR</h3><div id="oneLineInspectorBody"><p class="hint">Select a symbol to edit its label, designation, drawn position, winding, rotation, or terminals. Use CONNECT to snap a conductor between two terminals.</p></div><div class="one-line-help"><b>Catalogue 2026.3</b><br>Profile: northstar-ieee-compat-2026.3.<br>Workplace line switch: circle + line aligned when closed, 90° when open.<br>Breaker: same rotary contact inside a square.<br>Circuit switcher: circle + line through a square.<br>Fuse: open-switch arm with the fuse on the blade.<br>Circuit notation follows workplace Figure A-1.<br>Graphics: IEEE/ANSI 315-1975 convention (inactive-reserved).<br>Designations: IEEE C37.2-2022 (active).<br>Not a certified utility symbol catalogue.<br><br><b>Controls</b><br>Click a palette item to add a symbol.<br>Drag symbols to reposition.<br>CONNECT snaps to terminals; click a port to choose one.<br>OPEN/CLOSED is a drafting position, not live state.<br>Save creates a local numbered revision.</div></aside>
           </div>
           <div class="one-line-status" id="oneLineStatus"><span>LOCAL DRAFT READY</span><strong id="oneLineCount">0 SYMBOLS · 0 CONNECTIONS</strong></div>
         </section>

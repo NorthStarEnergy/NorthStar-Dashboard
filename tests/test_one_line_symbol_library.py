@@ -24,15 +24,17 @@ def _eval_library() -> dict:
 def test_dashboard_loads_symbol_library_before_editor() -> None:
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
 
-    library = 'src="one-line-symbol-library.js?v=20260903-1"'
-    editor = 'src="one-line-editor-ui.js?v=20260903-2"'
+    library = 'src="one-line-symbol-library.js?v=20260903-3"'
+    editor = 'src="one-line-editor-ui.js?v=20260903-3"'
     assert library in html
     assert editor in html
     assert html.index(library) < html.index(editor)
     assert 'id="oneLineSymbolLibrary"' in html
     assert 'id="oneLineSymbolSearch"' in html
-    assert "Catalogue 2026.2" in html
-    assert 'href="one-line-editor.css?v=20260903-2"' in html
+    assert 'id="oneLineCircuitExample"' in html
+    assert "Catalogue 2026.3" in html
+    assert "Workplace line switch" in html
+    assert 'href="one-line-editor.css?v=20260903-3"' in html
     assert ".one-line-empty[hidden]{display:none!important}" in (ROOT / "one-line-editor.css").read_text(encoding="utf-8")
 
 
@@ -40,8 +42,8 @@ def test_profile_distinguishes_graphics_convention_from_active_designations() ->
     script = (ROOT / "one-line-symbol-library.js").read_text(encoding="utf-8")
     catalogue = _catalogue()
 
-    assert catalogue["profile"] == "northstar-ieee-compat-2026.2"
-    assert catalogue["catalogueVersion"] == "2026.2"
+    assert catalogue["profile"] == "northstar-ieee-compat-2026.3"
+    assert catalogue["catalogueVersion"] == "2026.3"
     assert "IEEE/ANSI 315-1975 (inactive-reserved)" in script
     assert "IEEE C37.2-2022 (active)" in script
     assert catalogue["profile"] in script
@@ -51,11 +53,13 @@ def test_profile_distinguishes_graphics_convention_from_active_designations() ->
 def test_library_covers_core_one_line_equipment_and_protection() -> None:
     expected = {
         "source", "bus", "line", "junction", "terminal", "ground",
-        "disconnect", "breaker", "fuse", "load-break", "recloser",
-        "sectionalizer", "grounding-switch", "ats", "transformer",
+        "disconnect", "breaker", "circuit-switcher", "fuse", "load-break",
+        "recloser", "sectionalizer", "grounding-switch", "ats", "transformer",
         "transformer-3winding", "autotransformer", "generator", "motor",
         "capacitor", "reactor", "battery", "surge-arrester", "load",
-        "ct", "vt", "pt", "relay", "lockout",
+        "ct", "vt", "pt", "relay", "lockout", "capacitor-element", "resistor",
+        "light-sensor", "diode", "transistor", "inductor", "switch", "lamp",
+        "power", "potentiometer", "led",
     }
     catalogue_ids = {item["id"] for item in _catalogue()["symbols"] if not item.get("hidden")}
     assert expected == catalogue_ids
@@ -95,9 +99,17 @@ def test_catalogue_matches_javascript_and_server_constants() -> None:
 def test_library_runtime_snaps_terminals_and_refuses_unknown_types() -> None:
     runtime = _eval_library()
 
-    assert runtime["closedHasSlash"] is True
+    assert runtime["closedLineAligned"] is True
+    assert runtime["openedLinePerp"] is True
+    assert runtime["closedBreakerBoxed"] is True
     assert runtime["openedHasSlash"] is False
     assert runtime["openedDashed"] is True
+    assert runtime["fuseHasArmCartridge"] is True
+    assert runtime["circuitSwitcherThroughSquare"] is True
+    assert runtime["resistorHasZigzag"] is True
+    assert runtime["aliasCapacitior"] == "capacitor-element"
+    assert runtime["aliasCircuitSwitching"] == "circuit-switcher"
+    assert runtime["aliasLineSwitch"] == "disconnect"
     assert runtime["unknownIsNotSource"] is True
     assert runtime["sourceHasSine"] is True
     assert runtime["busSnap"]["id"] == "span"
@@ -147,7 +159,7 @@ def test_server_revisions_and_operator_exports_are_wired() -> None:
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
     editor = (ROOT / "one-line-editor-ui.js").read_text(encoding="utf-8")
 
-    for control in ("oneLineSaveServer", "oneLineServerSelect", "oneLineAttachPackage", "oneLineExportSvg", "oneLineExportPng", "oneLinePrint"):
+    for control in ("oneLineSaveServer", "oneLineServerSelect", "oneLineAttachPackage", "oneLineExportSvg", "oneLineExportPng", "oneLinePrint", "oneLineCircuitExample"):
         assert f'id="{control}"' in html
     assert "'/api/schematics'" in editor
     assert "saveServer" in editor
@@ -173,8 +185,8 @@ def test_store_stamps_catalogue_identity_and_drops_unknown_types() -> None:
         ],
     })
     types = {item["id"]: item for item in record["symbols"]}
-    assert record["symbolLibraryProfile"] == "northstar-ieee-compat-2026.2"
-    assert record["catalogueVersion"] == "2026.2"
+    assert record["symbolLibraryProfile"] == "northstar-ieee-compat-2026.3"
+    assert record["catalogueVersion"] == "2026.3"
     assert record["version"] == 3
     assert "DROP-01" not in types
     assert types["CBR-01"]["operatingState"] == "open"
@@ -184,3 +196,31 @@ def test_store_stamps_catalogue_identity_and_drops_unknown_types() -> None:
     assert record["edges"] == [
         {"id": "E-001", "from": "BUS-01", "to": "CBR-01", "fromTerminal": "span", "toTerminal": "L"}
     ]
+
+
+def test_store_resolves_workplace_aliases() -> None:
+    import northstar_store as store
+
+    record = store._normalise_one_line_record({
+        "symbols": [
+            {"id": "C1", "type": "capacitior", "x": 100, "y": 200},
+            {"id": "LS1", "type": "line-switch", "x": 240, "y": 200, "operatingState": "open"},
+            {"id": "CS1", "type": "circuit-switching", "x": 380, "y": 200},
+        ],
+        "edges": [],
+    })
+    by_id = {item["id"]: item for item in record["symbols"]}
+    assert by_id["C1"]["type"] == "capacitor-element"
+    assert by_id["LS1"]["type"] == "disconnect"
+    assert by_id["LS1"]["operatingState"] == "open"
+    assert by_id["CS1"]["type"] == "circuit-switcher"
+    assert by_id["CS1"]["operatingState"] == "closed"
+
+
+def test_editor_loads_figure_a1_circuit_example() -> None:
+    editor = (ROOT / "one-line-editor-ui.js").read_text(encoding="utf-8")
+
+    assert "function startCircuitDemo" in editor
+    assert "Figure A-1 circuit example loaded" in editor
+    assert "library.get(item?.type)" in editor
+    assert "figure a-1 workplace" in editor
