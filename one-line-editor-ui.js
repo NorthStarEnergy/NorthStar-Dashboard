@@ -137,9 +137,13 @@
     $('#oneLineDelete').onclick = () => { state.symbols = state.symbols.filter(item => item.id !== symbol.id); state.edges = state.edges.filter(edge => edge.from !== symbol.id && edge.to !== symbol.id); state.selected = null; markDirty('Symbol deleted'); render(); };
     $('#oneLineRotate').onclick = () => { symbol.rotation = (symbol.rotation + 90) % 360; markDirty(); render(); };
   }
+  function paletteHaystack(item) {
+    const aliasKeys = Object.entries(library.aliases || {}).filter(([, id]) => id === item.id).map(([key]) => key);
+    return `${item.name} ${item.id} ${item.functionNumber || ''} ${item.category} ${item.standard || ''} ${aliasKeys.join(' ')}`.toLowerCase();
+  }
   function renderPalette(filter = '') {
     const query = filter.trim().toLowerCase();
-    const visible = library.definitions.filter(item => !item.hidden && (!query || `${item.name} ${item.id} ${item.functionNumber || ''} ${item.category} ${item.standard}`.toLowerCase().includes(query)));
+    const visible = library.definitions.filter(item => !item.hidden && (!query || paletteHaystack(item).includes(query)));
     const groups = [...new Set(visible.map(item => item.category))];
     $('#oneLineSymbolLibrary').innerHTML = groups.map(category => `<section class="symbol-group"><h4>${esc(category)}</h4>${visible.filter(item => item.category === category).map(item => `<button class="symbol-tool" type="button" data-symbol-type="${esc(item.id)}" title="${esc(item.standard)}"><span class="symbol-glyph">${esc(item.glyph)}</span><span>${esc(item.name)}${item.functionNumber ? `<small>IEEE ${esc(item.functionNumber)}</small>` : ''}${item.switching ? '<small>OPEN/CLOSED</small>' : ''}${item.winding ? '<small>WINDING</small>' : ''}</span></button>`).join('')}</section>`).join('') || '<p class="hint">No matching symbols.</p>';
     bindToolButtons($('#oneLineSymbolLibrary'));

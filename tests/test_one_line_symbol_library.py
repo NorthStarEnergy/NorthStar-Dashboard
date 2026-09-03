@@ -223,4 +223,4 @@ def test_editor_loads_figure_a1_circuit_example() -> None:
     assert "function startCircuitDemo" in editor
     assert "Figure A-1 circuit example loaded" in editor
     assert "library.get(item?.type)" in editor
-    assert "${item.standard}" in editor
+    assert "function paletteHaystack" in editor

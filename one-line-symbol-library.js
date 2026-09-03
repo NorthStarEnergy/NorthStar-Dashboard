@@ -320,7 +320,7 @@
       id:'lamp', name:'Lamp', category:'Circuit notation', glyph:'*', prefix:'LMP',
       standard:'Workplace Figure A-1 circuit notation',
       terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
-      draw:({x,y}) => path(`M${x-38} ${y}h18M${x+20} ${y}h18`)+circle(x,y,20)+path(`M${x-8} ${y-2}q8 14 16 0`),
+      draw:({x,y}) => path(`M${x-38} ${y}h18M${x+20} ${y}h18`)+circle(x,y,20)+path(`M${x-10} ${y+8}a4 3 0 0 1 0-8c4-8 16-8 20 0a4 3 0 0 1 0 8`),
     },
     {
       id:'power', name:'Power', category:'Circuit notation', glyph:'+', prefix:'PWR',
@@ -331,14 +331,14 @@
     {
       id:'potentiometer', name:'Potentiometer', category:'Circuit notation', glyph:'⊢', prefix:'POT',
       standard:'Workplace Figure A-1 circuit notation',
-      terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}, {id:'WIPER', dx:-28, dy:0}],
-      draw:({x,y}) => path(`M${x-38} ${y}h16M${x+22} ${y}h16M${x-30} ${y}h14`)+`<rect class="node-shape" x="${x-16}" y="${y-14}" width="32" height="28" rx="1"/>`+path(`M${x-20} ${y-6}L${x-8} ${y}L${x-20} ${y+6}`),
+      terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}, {id:'WIPER', dx:36, dy:0}],
+      draw:({x,y}) => path(`M${x-38} ${y}h22M${x+16} ${y}h22`)+`<rect class="node-shape" x="${x-12}" y="${y-22}" width="24" height="44" rx="1"/>`+path(`M${x+36} ${y}L${x+12} ${y}M${x+20} ${y-6}L${x+12} ${y}L${x+20} ${y+6}`),
     },
     {
       id:'led', name:'LED', category:'Circuit notation', glyph:'▷', prefix:'LED',
       standard:'Workplace Figure A-1 circuit notation',
       terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
-      draw:({x,y}) => diodeBody(x,y)+path(`M${x} ${y-22}l12-12M${x+10} ${y-18}l12-12`),
+      draw:({x,y}) => diodeBody(x,y)+path(`M${x-2} ${y-20}l14-12M${x+8} ${y-18}l14-12M${x+8} ${y-32}h5v5M${x+18} ${y-30}h5v5`),
     },
     {
       id:'edge', name:'Legacy conductor', category:'Legacy compatibility', glyph:'—', prefix:'EDG',
