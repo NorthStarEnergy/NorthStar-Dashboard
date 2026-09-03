@@ -185,7 +185,8 @@ class APITest(unittest.TestCase):
     def test_static_tree_does_not_serve_secrets_or_the_database(self) -> None:
         """The web root is the project directory; only web assets may be served."""
         for path in ("/data/northstar.db", "/data/.northstar-qr-secret", "/data/",
-                     "/ieso_backend.py", "/tests/test_api_workflows.py", "/AGENTS.md"):
+                     "/ieso_backend.py", "/tests/test_api_workflows.py", "/AGENTS.md",
+                     "/one-line-symbol-catalogue.json"):
             with self.subTest(path=path):
                 self.assertEqual(self.gated_request("GET", path), 404)
         for path in ("/northstar-clean.html", "/module-layout.js", "/manifest.webmanifest"):

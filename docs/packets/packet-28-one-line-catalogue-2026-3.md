@@ -43,8 +43,11 @@ diode, transistor, inductor, switch, lamp, power, potentiometer, LED. Ground and
 motor already matched the sheet and stay in Network / Primary equipment. The
 workplace typo `capacitior` is accepted as an alias of `capacitor-element`.
 
-`LOAD CIRCUIT EXAMPLE` places a Figure A-1 fragment on the canvas. `LOAD EXAMPLE`
-still loads the feeder one-line, now including a circuit switcher.
+`LOAD CIRCUIT EXAMPLE` places the Figure A-1 set on the canvas and resolves
+workplace aliases on import (`capacitior` → capacitor, `ldr` → light-sensor).
+Palette search matches name, id, standard, and aliases, so “resistor” and
+“figure a-1” find the circuit-notation group without matching the whole library.
+`LOAD EXAMPLE` still loads the feeder one-line, now including a circuit switcher.
 
 ## Safety boundary
 
@@ -55,4 +58,4 @@ catalogue.
 ## Verification
 
 - JavaScript syntax checks passed for the symbol library and editor.
-- Full suite: **196 passed**.
+- Full suite: **197 passed**.

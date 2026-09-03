@@ -23,7 +23,8 @@ shop switching glyphs. Line switches are a circle with a line that follows the c
 when closed and sits 90° off when open. Breakers use that same rotary contact inside a
 square. Circuit switchers keep the circle, line, and square. Fuses are an open-switch
 arm with the cartridge on the blade. AC source, transformer, battery, and the
-electronics switch stay in the Figure A-1 family. Suite: 196 passed.
+electronics switch stay in the Figure A-1 family. Palette search matches
+standard and aliases so “figure a-1” finds Circuit notation. Suite: 197 passed.
 
 ## Packet 27 — one-line catalogue 2026.2 (2026-09-03)
 

@@ -24,7 +24,7 @@ def _eval_library() -> dict:
 def test_dashboard_loads_symbol_library_before_editor() -> None:
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
 
-    library = 'src="one-line-symbol-library.js?v=20260903-3"'
+    library = 'src="one-line-symbol-library.js?v=20260903-4"'
     editor = 'src="one-line-editor-ui.js?v=20260903-4"'
     assert library in html
     assert editor in html
@@ -33,8 +33,9 @@ def test_dashboard_loads_symbol_library_before_editor() -> None:
     assert 'id="oneLineSymbolSearch"' in html
     assert 'id="oneLineCircuitExample"' in html
     assert "Catalogue 2026.3" in html
+    assert "Figure A-1" in html
     assert "Workplace line switch" in html
-    assert 'href="one-line-editor.css?v=20260903-3"' in html
+    assert 'href="one-line-editor.css?v=20260903-4"' in html
     assert ".one-line-empty[hidden]{display:none!important}" in (ROOT / "one-line-editor.css").read_text(encoding="utf-8")
 
 
@@ -86,6 +87,7 @@ def test_catalogue_matches_javascript_and_server_constants() -> None:
 
     assert runtime["profile"] == catalogue["profile"] == store.ONE_LINE_SYMBOL_PROFILE
     assert runtime["catalogueVersion"] == catalogue["catalogueVersion"] == store.ONE_LINE_CATALOGUE_VERSION
+    assert runtime["notationSource"] == catalogue["notationSource"]
     assert runtime["graphicalStandard"] == catalogue["graphicalStandard"] == store.ONE_LINE_GRAPHICAL_STANDARD
     assert runtime["designationStandard"] == catalogue["designationStandard"] == store.ONE_LINE_DESIGNATION_STANDARD
     assert set(runtime["ids"]) == catalogue_ids == store.ONE_LINE_SYMBOL_TYPES
@@ -221,6 +223,57 @@ def test_editor_loads_figure_a1_circuit_example() -> None:
     editor = (ROOT / "one-line-editor-ui.js").read_text(encoding="utf-8")
 
     assert "function startCircuitDemo" in editor
+    assert "function paletteHaystack" in editor
     assert "Figure A-1 circuit example loaded" in editor
     assert "library.get(item?.type)" in editor
-    assert "function paletteHaystack" in editor
+    assert "library.aliases" in editor
+    assert "type:'capacitior'" in editor
+    assert "type:'ldr'" in editor
+
+
+def test_figure_a1_circuit_notation_and_workplace_typo_alias() -> None:
+    import northstar_store as store
+
+    catalogue = _catalogue()
+    runtime = _eval_library()
+    figure_ids = {
+        "capacitor-element", "resistor", "light-sensor", "diode", "transistor",
+        "inductor", "switch", "lamp", "power", "potentiometer", "led",
+    }
+    by_id = {item["id"]: item for item in catalogue["symbols"]}
+    circuit = {item["id"] for item in catalogue["symbols"] if item.get("category") == "Circuit notation"}
+
+    assert circuit == figure_ids
+    assert by_id["ground"]["category"] == "Network"
+    assert by_id["motor"]["category"] == "Primary equipment"
+    assert by_id["switch"]["switching"] is True
+    assert by_id["reactor"]["category"] == "Primary equipment"
+    assert catalogue["aliases"]["capacitior"] == "capacitor-element"
+    assert catalogue["aliases"]["ldr"] == "light-sensor"
+    assert catalogue["aliases"]["photoresistor"] == "light-sensor"
+    assert catalogue["notationSource"] == "Workplace Figure A-1 circuit notation"
+    assert runtime["notationSource"] == catalogue["notationSource"]
+    assert runtime["aliasCapacitior"] == "capacitor-element"
+    assert runtime["aliasLdr"] == "light-sensor"
+    assert runtime["aliasPhotoresistor"] == "light-sensor"
+    assert runtime["resistorHasZigzag"] is True
+    assert runtime["inductorHasFourLoops"] is True
+    assert runtime["ledHasEmission"] is True
+    assert runtime["reactorIsSine"] is True
+    assert runtime["capacitorElementShorter"] is True
+    assert runtime["switchHasBlade"] is True
+
+    record = store._normalise_one_line_record({
+        "symbols": [
+            {"id": "C1", "type": "capacitior", "x": 100, "y": 200},
+            {"id": "R1", "type": "resistor", "x": 220, "y": 200},
+            {"id": "LDR1", "type": "photoresistor", "x": 340, "y": 200},
+            {"id": "SW1", "type": "switch", "x": 460, "y": 200, "operatingState": "open"},
+        ],
+        "edges": [],
+    })
+    types = {item["id"]: item for item in record["symbols"]}
+    assert types["C1"]["type"] == "capacitor-element"
+    assert types["R1"]["type"] == "resistor"
+    assert types["LDR1"]["type"] == "light-sensor"
+    assert types["SW1"]["operatingState"] == "open"
