@@ -25,7 +25,7 @@ def test_dashboard_loads_symbol_library_before_editor() -> None:
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
 
     library = 'src="one-line-symbol-library.js?v=20260903-3"'
-    editor = 'src="one-line-editor-ui.js?v=20260903-3"'
+    editor = 'src="one-line-editor-ui.js?v=20260903-4"'
     assert library in html
     assert editor in html
     assert html.index(library) < html.index(editor)
@@ -223,4 +223,4 @@ def test_editor_loads_figure_a1_circuit_example() -> None:
     assert "function startCircuitDemo" in editor
     assert "Figure A-1 circuit example loaded" in editor
     assert "library.get(item?.type)" in editor
-    assert "figure a-1 workplace" in editor
+    assert "${item.standard}" in editor

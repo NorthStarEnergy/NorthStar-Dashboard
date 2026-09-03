@@ -139,7 +139,7 @@
   }
   function renderPalette(filter = '') {
     const query = filter.trim().toLowerCase();
-    const visible = library.definitions.filter(item => !item.hidden && (!query || `${item.name} ${item.id} ${item.functionNumber || ''} ${item.category} ${item.standard} figure a-1 workplace`.toLowerCase().includes(query)));
+    const visible = library.definitions.filter(item => !item.hidden && (!query || `${item.name} ${item.id} ${item.functionNumber || ''} ${item.category} ${item.standard}`.toLowerCase().includes(query)));
     const groups = [...new Set(visible.map(item => item.category))];
     $('#oneLineSymbolLibrary').innerHTML = groups.map(category => `<section class="symbol-group"><h4>${esc(category)}</h4>${visible.filter(item => item.category === category).map(item => `<button class="symbol-tool" type="button" data-symbol-type="${esc(item.id)}" title="${esc(item.standard)}"><span class="symbol-glyph">${esc(item.glyph)}</span><span>${esc(item.name)}${item.functionNumber ? `<small>IEEE ${esc(item.functionNumber)}</small>` : ''}${item.switching ? '<small>OPEN/CLOSED</small>' : ''}${item.winding ? '<small>WINDING</small>' : ''}</span></button>`).join('')}</section>`).join('') || '<p class="hint">No matching symbols.</p>';
     bindToolButtons($('#oneLineSymbolLibrary'));
@@ -177,6 +177,7 @@
       { id:'CBR-01', type:'breaker', x:540, y:220, label:'52-1', operatingState:'closed' },
       { id:'XF3-01', type:'transformer-3winding', x:720, y:220, label:'T1', windingConfig:'dy' },
       { id:'LOD-01', type:'load', x:900, y:220, label:'FEEDER 1' },
+      { id:'FUS-01', type:'fuse', x:230, y:380, label:'F1', operatingState:'open' },
       { id:'RCL-01', type:'recloser', x:390, y:380, label:'RCL-1', operatingState:'closed' },
       { id:'LBS-01', type:'load-break', x:540, y:380, label:'LBS-1', operatingState:'closed' },
       { id:'CS-01', type:'circuit-switcher', x:720, y:380, label:'CS-1', operatingState:'closed' },
@@ -189,6 +190,7 @@
       { from:'DSC-01', to:'CBR-01' },
       { from:'CBR-01', to:'XF3-01' },
       { from:'XF3-01', to:'LOD-01' },
+      { from:'BUS-01', to:'FUS-01' },
       { from:'BUS-01', to:'RCL-01' },
       { from:'RCL-01', to:'LBS-01' },
       { from:'LBS-01', to:'CS-01' },
@@ -202,26 +204,32 @@
   }
   function startCircuitDemo() {
     const raw = [
-      { id:'PWR-01', type:'power', x:80, y:200, label:'POWER' },
-      { id:'SW-01', type:'switch', x:230, y:200, label:'SW', operatingState:'open' },
-      { id:'RES-01', type:'resistor', x:390, y:200, label:'R1' },
-      { id:'LED-01', type:'led', x:550, y:200, label:'LED' },
-      { id:'LMP-01', type:'lamp', x:720, y:200, label:'LAMP' },
-      { id:'GND-01', type:'ground', x:880, y:200, label:'GND' },
-      { id:'CEL-01', type:'capacitor-element', x:390, y:360, label:'C1' },
-      { id:'IND-01', type:'inductor', x:550, y:360, label:'L1' },
-      { id:'Q-01', type:'transistor', x:720, y:360, label:'Q1' },
+      { id:'PWR-01', type:'power', x:80, y:140, label:'POWER' },
+      { id:'SW-01', type:'switch', x:240, y:140, label:'SW', operatingState:'open' },
+      { id:'RES-01', type:'resistor', x:400, y:140, label:'R1' },
+      { id:'LED-01', type:'led', x:560, y:140, label:'LED' },
+      { id:'GND-01', type:'ground', x:720, y:140, label:'GND' },
+      { id:'CEL-01', type:'capacitior', x:80, y:300, label:'C1' },
+      { id:'IND-01', type:'inductor', x:240, y:300, label:'L1' },
+      { id:'DIO-01', type:'diode', x:400, y:300, label:'D1' },
+      { id:'LMP-01', type:'lamp', x:560, y:300, label:'LAMP' },
+      { id:'MTR-01', type:'motor', x:720, y:300, label:'M1' },
+      { id:'LDR-01', type:'ldr', x:240, y:460, label:'LDR' },
+      { id:'POT-01', type:'potentiometer', x:400, y:460, label:'POT' },
+      { id:'Q-01', type:'transistor', x:560, y:460, label:'Q1' },
     ];
     state.symbols = raw.map(normaliseSymbol).filter(Boolean);
     state.edges = [
       { from:'PWR-01', to:'SW-01' },
       { from:'SW-01', to:'RES-01' },
       { from:'RES-01', to:'LED-01' },
-      { from:'LED-01', to:'LMP-01' },
-      { from:'LMP-01', to:'GND-01' },
-      { from:'RES-01', to:'CEL-01' },
+      { from:'LED-01', to:'GND-01' },
       { from:'CEL-01', to:'IND-01' },
-      { from:'IND-01', to:'Q-01' },
+      { from:'IND-01', to:'DIO-01' },
+      { from:'DIO-01', to:'LMP-01' },
+      { from:'LMP-01', to:'MTR-01' },
+      { from:'LDR-01', to:'POT-01' },
+      { from:'POT-01', to:'Q-01' },
     ];
     state.edges = normaliseEdges(state.edges);
     state.selected = null;
