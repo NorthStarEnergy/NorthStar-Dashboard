@@ -25,14 +25,15 @@ def test_dashboard_loads_symbol_library_before_editor() -> None:
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
 
     library = 'src="one-line-symbol-library.js?v=20260903-1"'
-    editor = 'src="one-line-editor-ui.js?v=20260903-1"'
+    editor = 'src="one-line-editor-ui.js?v=20260903-2"'
     assert library in html
     assert editor in html
     assert html.index(library) < html.index(editor)
     assert 'id="oneLineSymbolLibrary"' in html
     assert 'id="oneLineSymbolSearch"' in html
     assert "Catalogue 2026.2" in html
-    assert 'href="one-line-editor.css?v=20260903-1"' in html
+    assert 'href="one-line-editor.css?v=20260903-2"' in html
+    assert ".one-line-empty[hidden]{display:none!important}" in (ROOT / "one-line-editor.css").read_text(encoding="utf-8")
 
 
 def test_profile_distinguishes_graphics_convention_from_active_designations() -> None:

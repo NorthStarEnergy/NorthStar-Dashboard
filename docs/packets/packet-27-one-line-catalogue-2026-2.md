@@ -37,6 +37,8 @@ profile on save.
   three-winding transformer, autotransformer, PT. Legacy `edge` is accepted on the server so old
   drafts are not silently rewritten as utility sources.
 - Unknown types are dropped, not drawn as an AC source.
+- The empty-canvas hint no longer paints over a populated drawing (`display:grid` had
+  overridden the `hidden` attribute).
 - Version-3 records carry `catalogueVersion`, `operatingState`, `windingConfig`, and
   `fromTerminal` / `toTerminal`. Version-1 local drafts and version-2 server records still load.
 

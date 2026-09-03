@@ -399,7 +399,7 @@
     state.selected = symbol.id;
     const point = canvasPoint(event);
     drag = { id:symbol.id, dx:symbol.x - point.x, dy:symbol.y - point.y };
-    svg.setPointerCapture(event.pointerId);
+    try { svg.setPointerCapture(event.pointerId); } catch { /* synthetic or non-pointer events */ }
     render();
   });
   svg.addEventListener('pointermove', event => {

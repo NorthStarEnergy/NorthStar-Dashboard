@@ -17,7 +17,7 @@
   };
   const blade = (x, y, open) => open
     ? `M${x-20} ${y}L${x+4} ${y-19}`
-    : `M${x-20} ${y}L${x+16} ${y-5}`;
+    : `M${x-20} ${y}L${x+16} ${y}`;
 
   const definitions = [
     {
