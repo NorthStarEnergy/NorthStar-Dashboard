@@ -530,6 +530,9 @@ def init_db() -> None:
         from northstar_voice import init_schema as init_voice_schema
 
         init_voice_schema(connection)
+        from northstar_chat import init_schema as init_chat_schema
+
+        init_chat_schema(connection)
         _migrate_unified_events(connection)
         _seed_readiness_registry(connection)
         connection.execute(

@@ -14,7 +14,7 @@
  */
 (() => {
   const ZONES = [
-    { id: 'overview', container: '#overviewModules', item: '[data-overview-module]', step: [20, 20], min: [240, 120], freeform: true, version: 3, defaults: { 'overview-field-tracker': { w: 200, h: 220 } }, minimums: { 'overview-field-tracker': [180, 200] }, autoHeight: ['overview-staff', 'overview-field-tracker'] },
+    { id: 'overview', container: '#overviewModules', item: '[data-overview-module]', step: [20, 20], min: [240, 120], freeform: true, version: 3, defaults: { 'overview-field-tracker': { w: 200, h: 220 }, 'overview-chat': { w: 420, h: 360 } }, minimums: { 'overview-field-tracker': [180, 200], 'overview-chat': [320, 280] }, autoHeight: ['overview-staff', 'overview-field-tracker'] },
     { id: 'staff',   container: '#staffGroups',     item: '.staff-group',  step: [20, 20], min: [180, 90] },
     { id: 'market',  container: '#nodeCards',       item: '.node-card',    step: [20, 20], min: [200, 120] },
     // APIROQ and IESO float across the complete Overview surface, including the
