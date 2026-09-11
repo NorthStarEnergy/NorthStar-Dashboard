@@ -106,3 +106,149 @@ def record(row: Any) -> dict[str, Any]:
         "summary": row["summary"],
         "payload": payload,
     }
+
+
+def _detail_text(record: dict[str, Any]) -> str:
+    payload = record.get("payload") or {}
+    if payload.get("details"):
+        return str(payload["details"])
+    parts = [
+        payload.get("site"),
+        payload.get("worker"),
+        payload.get("node"),
+    ]
+    if payload.get("priorStatus") and payload.get("newStatus"):
+        parts.append(f"{payload['priorStatus']} → {payload['newStatus']}")
+    elif payload.get("priorState") and payload.get("newState"):
+        parts.append(f"{payload['priorState']} → {payload['newState']}")
+    if payload.get("price") is not None:
+        parts.append(f"${float(payload['price']):.2f}")
+    joined = " · ".join(str(part) for part in parts if part not in (None, ""))
+    if joined:
+        return joined
+    return f"{record.get('aggregateType', 'record')} · {record.get('aggregateId', '')}"
+
+
+def _contains_any(text: str, *terms: str) -> bool:
+    lowered = text.lower()
+    return any(term in lowered for term in terms)
+
+
+def classify_display(record: dict[str, Any]) -> dict[str, str]:
+    """Map a normalized audit event to a control-room log presentation channel."""
+    event_type = str(record.get("eventType") or "").lower()
+    source = str(record.get("source") or "").lower()
+    severity = str(record.get("severity") or "info").lower()
+    summary = str(record.get("summary") or "")
+    aggregate = str(record.get("aggregateType") or "").lower()
+    payload = record.get("payload") or {}
+    entry_type = str(payload.get("type") or "").lower()
+    text = " ".join(
+        part for part in (summary, _detail_text(record), event_type, source, entry_type) if part
+    ).lower()
+
+    channel = "operator"
+    log_class = "OPERATIONAL"
+    filter_group = "operator"
+
+    if event_type.startswith("ai."):
+        channel, log_class, filter_group = "ai", "OPERATIONAL", "system"
+    elif event_type.startswith("voice.") or source == "voice" or aggregate == "voice_recording":
+        channel, log_class, filter_group = "voice", "COMMUNICATION", "comms"
+    elif event_type.startswith("switching.") or aggregate == "switching_draft":
+        channel, log_class, filter_group = "engineering", "ENGINEERING", "engineering"
+    elif event_type.startswith("outage.") or aggregate == "outage":
+        channel, log_class, filter_group = "outage", "OPERATIONAL", "dispatch"
+    elif event_type.startswith("market.") or aggregate == "price_alert" or "ieso update" in entry_type:
+        if aggregate == "price_alert" or _contains_any(text, "alert", "alarm", "limit reached"):
+            channel, log_class, filter_group = "alarm", "MARKET", "alarms"
+        else:
+            channel, log_class, filter_group = "market", "MARKET", "market"
+    elif event_type.startswith("field_operations.") or aggregate.startswith("field_"):
+        channel, log_class, filter_group = "field", "OPERATIONAL", "dispatch"
+    elif (
+        event_type.startswith("workforce.")
+        or aggregate == "checkin"
+        or "staff movement" in entry_type
+    ) and _contains_any(text, "help", "distress", "overdue", "mayday", "provisional"):
+        channel, log_class, filter_group = "safety", "SAFETY", "safety"
+    elif severity in {"critical", "warn", "warning"} and _contains_any(
+        text, "help", "alarm", "alert", "distress", "overdue"
+    ):
+        channel, log_class, filter_group = "alarm", "SAFETY", "alarms"
+    elif "outlook" in entry_type or _contains_any(text, "outlook", "email", "e-mail"):
+        channel, log_class, filter_group = "email", "COMMUNICATION", "comms"
+    elif "teams" in entry_type or _contains_any(text, "teams message", "teams notice"):
+        channel, log_class, filter_group = "teams", "COMMUNICATION", "comms"
+    elif _contains_any(text, "phone", "voicemail", "call from", "called"):
+        channel, log_class, filter_group = "phone", "COMMUNICATION", "comms"
+    elif "scada" in entry_type or event_type.startswith("scada.") or source == "scada":
+        channel, log_class, filter_group = "scada", "OPERATIONAL", "dispatch"
+    elif _contains_any(
+        text,
+        " unit trip",
+        "generator trip",
+        "tripped",
+        " trip ",
+    ):
+        channel, log_class, filter_group = "trip", "OPERATIONAL", "dispatch"
+    elif _contains_any(text, "generator", "unit", "gen ") and _contains_any(
+        text, "start", "started", "online", "synchron"
+    ):
+        channel, log_class, filter_group = "generator-start", "OPERATIONAL", "dispatch"
+    elif _contains_any(text, "generator", "unit", "gen ") and _contains_any(
+        text, "stop", "stopped", "shutdown", "offline"
+    ):
+        channel, log_class, filter_group = "generator-stop", "OPERATIONAL", "dispatch"
+    elif _contains_any(text, "dispatch", "mw", "operating reserve", "commit"):
+        channel, log_class, filter_group = "dispatch", "OPERATIONAL", "dispatch"
+    elif severity in {"critical", "warn", "warning"} or _contains_any(text, "alarm", "alert"):
+        channel, log_class, filter_group = "alarm", "SAFETY", "alarms"
+    elif _contains_any(text, "retention", "backup", "health", "imported", "purge", "watchdog"):
+        channel, log_class, filter_group = "system", "SYSTEM", "system"
+    elif source == "logbook":
+        channel, log_class, filter_group = "operator", "OPERATIONAL", "operator"
+
+    severity_label = {
+        "critical": "CRITICAL",
+        "warn": "WARN",
+        "warning": "WARN",
+        "info": "INFO",
+    }.get(severity, severity.upper() or "INFO")
+
+    channel_labels = {
+        "alarm": "ALARM",
+        "market": "MARKET",
+        "dispatch": "DISPATCH",
+        "email": "EMAIL",
+        "teams": "TEAMS",
+        "phone": "PHONE",
+        "voice": "VOICE",
+        "safety": "SAFETY",
+        "outage": "OUTAGE",
+        "engineering": "ENGINEERING",
+        "operator": "OPERATOR",
+        "scada": "SCADA",
+        "field": "FIELD OPS",
+        "ai": "AI ASSIST",
+        "system": "SYSTEM",
+        "trip": "UNIT TRIP",
+        "generator-start": "UNIT START",
+        "generator-stop": "UNIT STOP",
+    }
+
+    return {
+        "channel": channel,
+        "channelLabel": channel_labels.get(channel, channel.upper()),
+        "logClass": log_class,
+        "filterGroup": filter_group,
+        "severityLabel": severity_label,
+        "detail": _detail_text(record),
+    }
+
+
+def present(row: Any) -> dict[str, Any]:
+    """Return a normalized event with control-room display metadata attached."""
+    normalized = record(row)
+    normalized["display"] = classify_display(normalized)
+    return normalized

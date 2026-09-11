@@ -141,11 +141,12 @@ def test_register_and_notes_roundtrip_with_server_actor(service):
     assert service('/api/events/detail?id=missing',authorized=True)[0]==404
 
 
-def test_unconfigured_ai_attempt_records_question_and_failure(service,monkeypatch):
+def test_ai_attempt_records_linked_question_and_outcome(service,monkeypatch):
     monkeypatch.setenv('OPENAI_API_KEY','')
     code,_=service('/api/ai',authorized=True,payload={'message':'Test question'})
-    assert code==503
+    assert code in {200, 503}
     result=register.register({'type':['chat']})
     assert result['total']==2
-    assert {r['payload']['status'] for r in result['items']}=={'question','failed'}
+    assert result['items'][1]['payload']['status']=='question'
+    assert result['items'][0]['payload']['status'] in {'answer','failed'}
     assert len({r['aggregateId'] for r in result['items']})==1

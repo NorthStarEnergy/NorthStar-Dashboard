@@ -43,6 +43,10 @@ clean would have destroyed two days of work. Do not let that recur.
 - **One packet, one commit.** Commit before packaging anything. A packet that is only a ZIP is a
   packet the next agent cannot see, diff, or revert.
 - **Tag the packet** — `git tag -a packet-NN-short-name`. The tag is what a ZIP is built *from*.
+- **Publish every completed packet to GitHub.** After the commit, tag and verification, push the
+  exact branch and its tags to the configured `github` remote. A local-only commit is incomplete.
+  Fetch first; if GitHub has advanced, merge its changes, resolve conflicts without discarding
+  either release, re-run the relevant verification, then push the combined history.
 - **`outputs/` and the Drive upload are derived artifacts.** They are delivery, not source. Never
   copy code back out of one; `Where to work` above already forbids it, and this is why.
 - **Leave the tree clean.** Ending a session with 39 uncommitted files is how the next agent

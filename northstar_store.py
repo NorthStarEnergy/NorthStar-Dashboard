@@ -1534,7 +1534,7 @@ def list_audit_events(
             f"SELECT * FROM audit_events{where} ORDER BY occurred_at DESC, seq DESC LIMIT ?",
             (*values, limit),
         ).fetchall()
-    return [events.record(row) for row in rows]
+    return [events.present(row) for row in rows]
 
 
 def _switching_clip(value: Any, limit: int) -> str:
