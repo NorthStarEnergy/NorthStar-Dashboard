@@ -1,3 +1,7 @@
+## 2026-09-11 — Microsoft Events integration structure
+
+Added disabled Outlook/Teams ingestion contracts, idempotent audit mapping, Communications filtering and a setup-pending indicator. No Microsoft connections are enabled. See [handoff](packets/2026-09-11-microsoft-events-structure.md).
+
 ## 2026-09-11 — Compact dispatch
 
 Reduced dispatch to a compact card and replaced the oversized OR activation box with an inline status badge. See [report](packets/2026-09-11-compact-dispatch.md).

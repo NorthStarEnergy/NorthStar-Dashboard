@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "enabled": false,
+  "sources": [],
+  "capture": {"previewCharacters": 500, "downloadAttachments": false, "sendMessages": false},
+  "note": "Configuration contract only. No collector is running. Populate approved source resources after Microsoft permissions are granted; never put credentials in this file."
+}

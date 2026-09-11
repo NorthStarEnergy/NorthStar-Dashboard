@@ -100,3 +100,5 @@ body main :is(button,a,input):focus-visible {outline:2px solid var(--blue);outli
   body main #overviewStaff .staff-panel-head {flex-wrap:wrap!important;gap:12px;}
   body main #weatherStrip .periods {width:min(340px,85vw)!important;min-width:0!important;}
 }
+
+.events-integration-status{padding:8px 0;color:var(--muted);font-size:12px;line-height:1.4}.events-filters{flex-wrap:wrap}
