@@ -193,3 +193,9 @@ as live behavior:
 - Expanded the Tools flowchart prototype into a full diagram workspace with a larger shape and device library, configurable colors and connector styles, undo/redo, layering, zoom, local autosave, and JSON/SVG interchange.
 - Details: `docs/packets/2026-09-11-flowchart-operations-graphics.md`.
 - Verification: 209 tests passed.
+
+# 2026-09-11 — Weather module layout repair
+
+- Removed the override that expanded every Overview weather module and permanently exposed its forecast periods.
+- Details: `docs/packets/2026-09-11-weather-module-layout-repair.md`.
+- Verification: 209 tests passed.
