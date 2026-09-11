@@ -1,10 +1,8 @@
 /**
  * Layout zones for the operator dashboard.
  *
- * A zone is a container whose child modules the operator can rearrange inside
- * that section while EDIT LAYOUT is active. Modules reorder and reflow — they
- * never float free and never overlap — and they resize in fixed steps, so a
- * section still lays out correctly when the window or monitor changes.
+ * Overview uses one shared canvas for independently positioned leaf modules.
+ * Other workspaces retain their section-local reordering and resize controls.
  *
  * Adding a zone is one entry in ZONES. Nothing else needs to change.
  *
@@ -14,23 +12,19 @@
  */
 (() => {
   const ZONES = [
-    { id: 'overview', container: '#overviewModules', item: '[data-overview-module]', step: [20, 20], min: [240, 120], sizesInEditOnly: true },
-    { id: 'staff',   container: '#staffGroups',     item: '.staff-group',  step: [20, 20], min: [180, 90] },
+    { id: 'overview', canvas: true },
     { id: 'market',  container: '#nodeCards',       item: '.node-card',    step: [20, 20], min: [200, 120] },
-    // Main-page modules remain in document flow at every viewport width.
-    { id: 'marketTop', container: '#marketTopTiles', item: '*', step: [20, 20], min: [200, 112], sizesInEditOnly: true },
-    { id: 'command', container: '.page-header', item: '[data-command-module]', step: [20, 20], min: [180, 74], sizesInEditOnly: true },
     // Weather-tab station tiles can be resized independently.
     { id: 'weather', container: '#weatherGridFull', item: '.weather-card', step: [10, 10], min: [320, 60], resize: true, sizesInEditOnly: true },
     // The header strip renders the same station cards as the Weather tab, so it
     // keeps its own zone id — reordering the strip must not reorder the tab.
-    { id: 'weatherStrip', container: '#weatherStrip', item: '.weather-card', step: [10, 10], min: [70, 90], resize: true, sizesInEditOnly: true },
     { id: 'switching', container: '#switchingGrid', item: '.switching-module', step: [20, 20], min: [260, 180] },
   ];
 
   const STORE = 'northstarModuleLayout';
   const SAVED_STORE = 'northstarModuleLayoutSaved';
   const SNAPSHOT_KEYS = [
+    ['northstarCanvasLayoutV1', 'northstarCanvasLayoutV1Saved'],
     [STORE, SAVED_STORE],
     ['northstarTabOrder', 'northstarTabOrderSaved'],
     ['northstarClosedOverviewModules', 'northstarClosedOverviewModulesSaved'],
@@ -93,6 +87,143 @@
   const itemsOf = (zone, container) => [...container.querySelectorAll(`:scope > ${zone.item}`)];
   const snap = (value, step, min) => Math.max(min, Math.round(value / step) * step);
   const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+  // Overview has ONE coordinate system. Keep nodes in their source containers
+  // so feed renderers and delegated click handlers continue to find them.
+  function setupCanvas() {
+    const container = document.querySelector('main');
+    if (!container) return null;
+    const storageKey = 'northstarCanvasLayoutV1';
+    const groups = [
+      ['weather', '#weatherStrip > .weather-card', [170, 150], [100, 100]],
+      ['dispatch', '#dispatchClient', [360, 140], [260, 110]],
+      ['market', '#marketTopTiles > .node-card, #marketTopTiles > .ontario-market', [340, 230], [240, 150]],
+      ['events', '#eventsCard', [760, 380], [340, 220]],
+      ['staffHeading', '#overviewStaff > .staff-panel-head', [600, 80], [280, 70]],
+      ['staff', '#staffGroups > .staff-group', [320, 180], [220, 100]],
+      ['staffEmpty', '#staffGroups > .staff-empty', [320, 100], [220, 80]],
+      ['overview', '#overviewModules > [data-overview-module]:not(#overviewStaff):not(#eventsCard)', [480, 300], [240, 150]],
+    ];
+    const originals = new WeakMap(), bound = new WeakSet();
+    let positions = {}, frame = 0, gesture = false, topLayer = 30;
+    try { positions = JSON.parse(localStorage.getItem(storageKey) || 'null') || readZone('overview').position; } catch {}
+    if (!positions || typeof positions !== 'object' || Array.isArray(positions)) positions = {};
+    const valid = p => p && ['x','y','w','h'].every(k => Number.isFinite(p[k])) && p.x >= 0 && p.y >= 0 && p.w > 0 && p.h > 0;
+    positions = Object.fromEntries(Object.entries(positions).filter(([key,p]) => key.startsWith('canvas:') && valid(p)));
+    const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].map(el => ({
+      el, size, min, key: 'canvas:' + group + ':' + (el.id || el.dataset.moduleId || el.dataset.site || group)
+    })));
+    const enabled = () => document.querySelector('#overview')?.classList.contains('active');
+    function persist() {
+      try { localStorage.setItem(storageKey, JSON.stringify(positions)); } catch {}
+      writeZone('overview', {position: positions});
+    }
+    function bounds() {
+      const visible = entries().filter(({el}) => !el.closest('[hidden]'));
+      const boxes = visible.map(({key}) => positions[key]).filter(Boolean);
+      container.style.setProperty('min-height', Math.max(600, ...boxes.map(p => p.y + p.h + 80)) + 'px', 'important');
+      container.style.setProperty('min-width', Math.max(0, ...boxes.map(p => p.x + p.w + 24)) + 'px', 'important');
+    }
+    function paint(entry) {
+      const p = positions[entry.key];
+      const el = entry.el;
+      el.dataset.canvasModule = entry.key;
+      [['position','absolute'],['left',p.x+'px'],['top',p.y+'px'],['width',p.w+'px'],['height',p.h+'px'],
+       ['min-width','0'],['min-height','0'],['max-width','none'],['max-height','none'],['margin','0'],['transform','none']]
+        .forEach(([k,v]) => el.style.setProperty(k,v,'important'));
+    }
+    function bind(entry) {
+      const el = entry.el;
+      if (bound.has(el)) return;
+      bound.add(el);
+      for (const resize of [false,true]) {
+        const handle = document.createElement('button');
+        handle.type = 'button';
+        handle.className = resize ? 'canvas-resize-handle' : 'canvas-move-handle';
+        handle.textContent = resize ? '◢' : '⠿';
+        handle.setAttribute('aria-label', (resize ? 'Resize ' : 'Move ') + entry.key.split(':').slice(1).join(' '));
+        handle.title = resize ? 'Resize · Arrow keys resize' : 'Move anywhere · Arrow keys move';
+        el.append(handle);
+        const change = (dx,dy) => {
+          const p = positions[entry.key];
+          if (resize) { p.w = Math.max(entry.min[0], p.w + dx); p.h = Math.max(entry.min[1], p.h + dy); }
+          else { p.x = Math.max(0,p.x + dx); p.y = Math.max(0,p.y + dy); }
+          paint(entry); bounds();
+        };
+        handle.addEventListener('keydown', event => {
+          if (!editing() || !enabled() || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+          event.preventDefault(); event.stopPropagation();
+          const step = event.shiftKey ? 20 : 5;
+          change(event.key==='ArrowRight'?step:event.key==='ArrowLeft'?-step:0,event.key==='ArrowDown'?step:event.key==='ArrowUp'?-step:0);
+          persist();
+        });
+        handle.addEventListener('click', event => {event.preventDefault();event.stopPropagation();});
+        handle.addEventListener('pointerdown', event => {
+          if (!editing() || !enabled() || event.button !== 0) return;
+          event.preventDefault(); event.stopPropagation(); gesture = true;
+          const original = {...positions[entry.key]}, x = event.clientX + window.scrollX, y = event.clientY + window.scrollY;
+          el.style.zIndex = String(++topLayer);
+          handle.setPointerCapture(event.pointerId);
+          const move = e => {
+            positions[entry.key] = {...original};
+            change(e.clientX + window.scrollX - x,e.clientY + window.scrollY - y);
+            if (e.clientY > innerHeight-40) window.scrollBy(0,16);
+            if (e.clientY < 40) window.scrollBy(0,-16);
+            if (e.clientX > window.innerWidth-40) window.scrollBy(16,0);
+            if (e.clientX < 40) window.scrollBy(-16,0);
+          };
+          const finish = e => {
+            if (e.type === 'pointercancel' || e.type === 'lostpointercapture') {positions[entry.key] = original;paint(entry);bounds();}
+            handle.removeEventListener('pointermove', move);
+            handle.removeEventListener('pointerup', finish);
+            handle.removeEventListener('pointercancel', finish);
+            handle.removeEventListener('lostpointercapture', finish);
+            if(handle.hasPointerCapture(event.pointerId))handle.releasePointerCapture(event.pointerId);
+            gesture = false; persist(); schedule();
+          };
+          handle.addEventListener('pointermove', move);
+          handle.addEventListener('pointerup', finish);
+          handle.addEventListener('pointercancel', finish);
+          handle.addEventListener('lostpointercapture', finish);
+        });
+      }
+    }
+    function sync() {
+      frame = 0;
+      if (gesture) return;
+      const on = enabled();
+      document.body.classList.toggle('overview-canvas', on);
+      if (!on) {
+        entries().forEach(({el}) => {if(originals.has(el)){el.setAttribute('style',originals.get(el));delete el.dataset.canvasModule;}});
+        container.style.removeProperty('min-height');container.style.removeProperty('min-width');
+        return;
+      }
+      const all = entries();
+      const width = Math.max(320,container.clientWidth-48);
+      const activeKeys = new Set(all.filter(({el})=>!el.closest('[hidden]')).map(e=>e.key));
+      const occupied = Object.entries(positions).filter(([key])=>activeKeys.has(key)).map(([,p])=>p);
+      all.forEach(entry => {
+        if (!originals.has(entry.el)) originals.set(entry.el,entry.el.getAttribute('style') || '');
+        if (!positions[entry.key]) {
+          const w = Math.min(entry.size[0],width), h = entry.size[1];
+          let candidate;
+          // Pack NEW cards once. Saved/manual placements are never pushed into a group.
+          outer: for (let y=16;;y+=20) for(let x=16;x+w<=width+16;x+=20) {
+            const test={x,y,w,h};
+            if(!occupied.some(p=>overlaps(test,{x:p.x-8,y:p.y-8,w:p.w+16,h:p.h+16}))) {candidate=test;break outer;}
+          }
+          positions[entry.key]=candidate;occupied.push(candidate);
+        }
+        paint(entry);bind(entry);
+      });
+      bounds();persist();
+    }
+    function schedule() { if (!frame) frame = requestAnimationFrame(sync); }
+    new MutationObserver(schedule).observe(container,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
+    window.addEventListener('resize',schedule);
+    sync();
+    return {zone:{id:'overview',canvas:true},container,sync,save:persist};
+  }
 
   function applyFreeform(zone, container) {
     const items = itemsOf(zone, container);
@@ -358,10 +489,12 @@
   function init() {
     injectStyle();
     seedSavedLayout();
-    const active = ZONES.map(setupZone).filter(Boolean);
+    const active = ZONES.map(zone => zone.canvas ? setupCanvas() : setupZone(zone)).filter(Boolean);
     if (!active.length) return;
+    seedSavedLayout();
     document.querySelectorAll('.layout-save').forEach(button => button.addEventListener('click', () => {
-      active.forEach(({ zone, container }) => {
+      active.forEach(({ zone, container, save }) => {
+        if (zone.canvas) { save(); return; }
         if (zone.freeform) {
           savePositions(zone, container);
           return;
@@ -374,10 +507,8 @@
       snapshotSavedLayout();
       publishDefault();
     }));
-    document.querySelectorAll('.layout-reset').forEach(button => button.addEventListener('click', () => {
-      restoreSavedLayout();
-      active.forEach(({ zone, container }) => itemsOf(zone, container).forEach(clearSize));
-    }));
+    // The toolbar owns the confirmed reset and reload. A second listener here
+    // would restore preferences even when the user cancels its confirmation.
     // Entering edit mode can reveal modules rendered while it was off.
     document.querySelectorAll('.layout-edit-toggle').forEach(button =>
       button.addEventListener('click', () => setTimeout(() => active.forEach(z => z.sync()), 0)));

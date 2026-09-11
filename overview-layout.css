@@ -102,3 +102,37 @@ body main :is(button,a,input):focus-visible {outline:2px solid var(--blue);outli
 }
 
 .events-integration-status{padding:8px 0;color:var(--muted);font-size:12px;line-height:1.4}.events-filters{flex-wrap:wrap}
+
+/* Shared overview canvas. Containers remain only as feed-rendering anchors. */
+body.overview-canvas main {position:relative!important;overflow:visible!important;}
+body.overview-canvas main .page-header,
+body.overview-canvas main .page-header > #weatherStrip,
+body.overview-canvas main .page-header > #marketTopTiles,
+body.overview-canvas main #overview.active,
+body.overview-canvas main #overviewModules,
+body.overview-canvas main #overviewModules > #overviewStaff,
+body.overview-canvas main #overviewStaff #staffGroups {
+  display:contents!important;position:static!important;transform:none!important;
+  padding:0!important;margin:0!important;border:0!important;min-height:0!important;
+  height:auto!important;width:auto!important;overflow:visible!important;
+}
+body.overview-canvas main #overviewStaff > .overview-module-close {display:none!important;}
+body.overview-canvas main [data-canvas-module] {box-sizing:border-box!important;overflow:auto!important;align-self:auto!important;}
+body.overview-canvas main #weatherStrip > [data-canvas-module] {overflow:visible!important;}
+body.overview-canvas main #overviewStaff > .staff-panel-head {background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px!important;align-items:center!important;gap:12px;}
+body.overview-canvas main .staff-panel-head #staffHeading {font-size:16px!important;}
+body.overview-canvas main #marketTopTiles .node-card.featured .price-row {grid-template-columns:minmax(0,1fr) minmax(90px,1fr)!important;}
+body.overview-canvas main #marketTopTiles .node-card.featured .price-row > span {white-space:normal!important;}
+body.overview-canvas main [data-canvas-module] > .module-resize-handle {display:none!important;}
+body.overview-canvas.layout-edit main [data-canvas-module] {outline:1px dashed var(--blue);outline-offset:3px;}
+body main :is(.canvas-move-handle,.canvas-resize-handle) {display:none!important;}
+body.overview-canvas.layout-edit main :is(.canvas-move-handle,.canvas-resize-handle) {
+  display:grid!important;place-items:center!important;position:absolute!important;
+  width:26px!important;height:26px!important;min-height:0!important;padding:0!important;
+  z-index:100!important;background:var(--panel2)!important;color:var(--blue)!important;
+  border:1px solid var(--blue)!important;border-radius:5px!important;line-height:1!important;
+  font-size:18px!important;touch-action:none;user-select:none;
+}
+body.overview-canvas.layout-edit main .canvas-move-handle {right:32px;top:3px;cursor:grab;}
+body.overview-canvas.layout-edit main .canvas-resize-handle {right:3px;bottom:3px;cursor:nwse-resize;}
+body.overview-canvas main [hidden] {display:none!important;}

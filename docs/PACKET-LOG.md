@@ -1,3 +1,7 @@
+## 2026-09-11 — Shared dashboard canvas
+
+Removed Overview group confines. Leaf cards now move and resize independently across one canvas with persistent geometry. See [report](packets/2026-09-11-shared-dashboard-canvas.md).
+
 ## 2026-09-11 — Microsoft Events integration structure
 
 Added disabled Outlook/Teams ingestion contracts, idempotent audit mapping, Communications filtering and a setup-pending indicator. No Microsoft connections are enabled. See [handoff](packets/2026-09-11-microsoft-events-structure.md).
