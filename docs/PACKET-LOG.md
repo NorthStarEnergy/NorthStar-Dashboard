@@ -199,3 +199,9 @@ as live behavior:
 - Removed the override that expanded every Overview weather module and permanently exposed its forecast periods.
 - Details: `docs/packets/2026-09-11-weather-module-layout-repair.md`.
 - Verification: 209 tests passed.
+
+# 2026-09-11 — Field tracker demo-data repair
+
+- Restored a refreshable six-worker mock roster with site GPS points and current heartbeats for the Field Tracker and Mobile views.
+- Details: `docs/packets/2026-09-11-field-tracker-demo-data-repair.md`.
+- Verification: idempotent refresh confirmed; 209 tests passed.
