@@ -14,17 +14,17 @@
  */
 (() => {
   const ZONES = [
-    { id: 'overview', container: '#overviewModules', item: '[data-overview-module]', step: [20, 20], min: [240, 120], freeform: true, version: 3, defaults: { 'overview-field-tracker': { w: 200, h: 220 } }, minimums: { 'overview-field-tracker': [180, 200] }, autoHeight: ['overview-staff', 'overview-field-tracker'] },
+    { id: 'overview', container: '#overviewModules', item: '[data-overview-module]', step: [20, 20], min: [240, 120], sizesInEditOnly: true },
     { id: 'staff',   container: '#staffGroups',     item: '.staff-group',  step: [20, 20], min: [180, 90] },
     { id: 'market',  container: '#nodeCards',       item: '.node-card',    step: [20, 20], min: [200, 120] },
-    // APIROQ and IESO float across the complete Overview surface, including the
-    // open area beside the weather strip.
-    { id: 'marketTop', container: '#marketTopTiles', item: '*', step: [20, 20], min: [200, 112], resize: true, freeform: true, boundY: true, version: 4, defaults: { APIROQ: { x: 0, y: 0, w: 240, h: 148 }, IESO: { x: 246, y: 0, w: 240, h: 148 } } },
+    // Main-page modules remain in document flow at every viewport width.
+    { id: 'marketTop', container: '#marketTopTiles', item: '*', step: [20, 20], min: [200, 112], sizesInEditOnly: true },
+    { id: 'command', container: '.page-header', item: '[data-command-module]', step: [20, 20], min: [180, 74], sizesInEditOnly: true },
     // Weather-tab station tiles can be resized independently.
     { id: 'weather', container: '#weatherGridFull', item: '.weather-card', step: [10, 10], min: [320, 60], resize: true, sizesInEditOnly: true },
     // The header strip renders the same station cards as the Weather tab, so it
     // keeps its own zone id — reordering the strip must not reorder the tab.
-    { id: 'weatherStrip', container: '#weatherStrip', item: '.weather-card', step: [10, 10], min: [70, 90], resize: true, alwaysDrag: true },
+    { id: 'weatherStrip', container: '#weatherStrip', item: '.weather-card', step: [10, 10], min: [70, 90], resize: true, sizesInEditOnly: true },
     { id: 'switching', container: '#switchingGrid', item: '.switching-module', step: [20, 20], min: [260, 180] },
   ];
 
@@ -343,10 +343,7 @@
     const style = document.createElement('style');
     style.textContent = [
       '[data-layout-zone] > *{position:relative}',
-      '[data-layout-zone="overview"]{position:relative!important;display:block!important}',
-      '[data-layout-zone="overview"] > [data-overview-module]{position:absolute!important;inset:auto!important;transform:none!important}',
       'main{position:relative!important}',
-      '#marketTopTiles[data-layout-zone="marketTop"]{position:absolute!important;inset:0!important;width:auto!important;height:auto!important;margin:0!important;display:block!important;overflow:visible!important;z-index:18!important;pointer-events:none!important}',
       '#marketTopTiles[data-layout-zone="marketTop"] > *{pointer-events:auto!important}',
       '#marketTopTiles[hidden]{display:none!important}',
       'body.layout-edit [data-layout-zone] > *{cursor:move;outline:1px dashed #2f5d74;outline-offset:2px}',

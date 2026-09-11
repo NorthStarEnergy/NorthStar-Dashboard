@@ -58,7 +58,8 @@ def test_imported_labels_and_designations_are_bounded_and_escaped() -> None:
 
     assert "cleanText(item?.label)" in editor
     assert "cleanText(item?.deviceFunction" in editor
-    assert "${esc(symbol.label || symbol.id)}" in editor
+    assert ("${esc(symbol.label || symbol.id)}" in editor or
+            ("const label = esc(symbol.label || symbol.id);" in editor and "${label}</text>" in editor))
     assert "${esc(symbol.deviceFunction)}" in editor
 
 

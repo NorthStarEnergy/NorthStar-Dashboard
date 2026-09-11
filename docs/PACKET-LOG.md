@@ -1,3 +1,7 @@
+## 2026-09-11 — Main page repair
+
+Restored the weather lineup, IESO/APIROQ panels and field tracking with responsive flow layout and one-time preference migration. Restored single-account authentication compatibility. See [completion report](packets/2026-09-11-main-page-repair.md).
+
 # NorthStar packet log
 
 History, newest first. **`AGENTS.md` holds the invariants an agent must not violate; this file

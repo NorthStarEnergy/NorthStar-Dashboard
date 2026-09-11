@@ -126,6 +126,29 @@ def build_config(
 
 
 def normalise_config(raw: dict[str, Any]) -> dict[str, Any]:
+    accounts = raw.get("accounts")
+    if isinstance(accounts, list):
+        normalised_accounts = []
+        for item in accounts:
+            if not isinstance(item, dict):
+                continue
+            username = str(item.get("username", "")).strip()
+            verifier = str(item.get("verifier") or item.get("passwordHash") or "").strip()
+            if not username or len(verifier.split("$")) != 3:
+                continue
+            normalised_accounts.append({
+                "username": username,
+                "verifier": verifier,
+                "disabled": bool(item.get("disabled", False)),
+                "message": str(item.get("message", "")).strip(),
+            })
+        if not normalised_accounts:
+            raise AuthConfigError("Demo credential configuration has no usable accounts.")
+        try:
+            session_seconds = int(raw.get("sessionSeconds") or DEFAULT_SESSION_SECONDS)
+        except (TypeError, ValueError):
+            session_seconds = DEFAULT_SESSION_SECONDS
+        return {"mode": "demo", "accounts": normalised_accounts, "sessionSeconds": max(900, session_seconds)}
     username = str(raw.get("username", "")).strip()
     verifier = str(raw.get("verifier") or raw.get("passwordHash") or "").strip()
     if not username:
@@ -142,6 +165,7 @@ def normalise_config(raw: dict[str, Any]) -> dict[str, Any]:
         session_seconds = DEFAULT_SESSION_SECONDS
     return {
         "mode": "demo",
+        "accounts": [{"username": username, "verifier": verifier, "disabled": False, "message": ""}],
         "username": username,
         "verifier": verifier,
         "sessionSeconds": max(900, session_seconds),
@@ -197,11 +221,27 @@ def authenticates(config: dict[str, Any] | None, username: str, password: str) -
     if not candidate or not password:
         return False
     # compare_digest on bytes: a non-ASCII username must fail, not raise.
-    if not hmac.compare_digest(
-        candidate.encode("utf-8"), str(config["username"]).encode("utf-8")
-    ):
+    # build_config and older credential files use the original single-account shape.
+    accounts = config.get("accounts")
+    if accounts is None:
+        accounts = [config] if config.get("username") and config.get("verifier") else []
+    account = next((item for item in accounts if hmac.compare_digest(candidate.encode("utf-8"), str(item["username"]).encode("utf-8"))), None)
+    if account is None or account.get("disabled"):
         return False
-    return password_matches(config["verifier"], password)
+    return password_matches(account["verifier"], password)
+
+
+def account_message(config: dict[str, Any] | None, username: str) -> str | None:
+    """Return a configured account-specific denial message, if applicable."""
+    if not config:
+        return None
+    candidate = str(username or "").strip()
+    for account in config.get("accounts", []):
+        if hmac.compare_digest(candidate.encode("utf-8"), str(account["username"]).encode("utf-8")):
+            if account.get("disabled"):
+                return account.get("message") or "This account is disabled."
+            return None
+    return None
 
 
 class SessionStore:
