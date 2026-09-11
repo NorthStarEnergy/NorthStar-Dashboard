@@ -188,3 +188,8 @@ as live behavior:
    to `server/index.js`. The source fix is now in place; the proposed copy remains for traceability.
    No separate Sites deployment was needed because the current Vinext package does not use this
    retired server entrypoint, and its live routes were already verified as safe.
+# 2026-09-11 — Flowchart and operations graphics builder
+
+- Expanded the Tools flowchart prototype into a full diagram workspace with a larger shape and device library, configurable colors and connector styles, undo/redo, layering, zoom, local autosave, and JSON/SVG interchange.
+- Details: `docs/packets/2026-09-11-flowchart-operations-graphics.md`.
+- Verification: 209 tests passed.
