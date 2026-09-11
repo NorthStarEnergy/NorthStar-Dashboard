@@ -147,8 +147,29 @@ def detail(event_id, params):
             relation=("aggregate_type='communication' AND source=? AND correlation_id=?",[row["source"],row["correlation_id"]])
         elif row["aggregate_type"]=="system" and row["aggregate_id"]=="system":
             relation=("event_id=? OR causation_id=?",[event_id,event_id])
-        result=_query(connection,params,relation=relation)
-        return {"event":_record(row),"history":result,"historyOrder":"newest_first"}
+        section=_one(params,"section","history")
+        if section not in {"history","occurrences","related"}:
+            raise ValueError("Unknown event history section")
+        # Repeated transitions are only comparable within the same source,
+        # object and recorded state. Notes never inflate recurrence counts.
+        recurrence=(f"({relation[0]}) AND source=? AND event_type=? AND ({STATE})=? AND event_type NOT LIKE '%.note.added'",
+                    [*relation[1],row['source'],row['event_type'],row['event_status']])
+        links=["causation_id=?", "event_id=?"]
+        linked_values=[event_id,row['causation_id'] or '']
+        if row['correlation_id']:
+            links.append("(source=? AND correlation_id=?)")
+            linked_values.extend([row['source'],row['correlation_id']])
+        related=("event_id!=? AND ("+' OR '.join(links)+")",[event_id,*linked_values])
+        selected={"history":relation,"occurrences":recurrence,"related":related}[section]
+        result=_query(connection,params,relation=selected)
+        stats=connection.execute(f"SELECT count(*) AS total, MIN({SORT}) AS first, MAX({SORT}) AS last, SUM(CASE WHEN ({SORT})<? THEN 1 ELSE 0 END) AS prior FROM audit_events WHERE ({recurrence[0]}) AND seq<=?",
+            [connection.execute('SELECT '+SORT+' FROM audit_events WHERE event_id=?',(event_id,)).fetchone()[0],*recurrence[1],result['snapshot']]).fetchone()
+        return {"event":_record(row),"history":result,"historyOrder":"newest_first", "section":section,
+                "recurrence":{"total":stats['total'],"prior":stats['prior'] or 0,
+                    "firstOccurredAt":connection.execute('SELECT strftime(\'%Y-%m-%dT%H:%M:%fZ\',?)',(stats['first'],)).fetchone()[0],
+                    "lastOccurredAt":connection.execute('SELECT strftime(\'%Y-%m-%dT%H:%M:%fZ\',?)',(stats['last'],)).fetchone()[0],
+                    "basis":"Same source, object or provider thread, event type and recorded state; operator notes excluded."},
+                "relationshipBasis":"Recorded object lifecycle" if section=='history' else "Explicit cause or same source correlation ID" if section=='related' else "Matching recorded transitions"}
 
 
 def add_note(event_id, text, actor, request_id):
@@ -208,5 +229,9 @@ def sources():
         state="Setup pending" if name in {"outlook","teams"} else "Recording supported"
         items.append({"id":name,"label":label,"state":state,"count":row['count'] if row else 0,
                       "lastRecordedAt":row['last'] if row else None})
+    for name,label in [('weather','Weather observations'),('dispatch','Dispatch telemetry')]:
+        if name not in names:
+            items.append({'id':name,'label':label,'state':'Telemetry is not archived in the event ledger',
+                          'count':0,'lastRecordedAt':None})
     return {"sources":items,"types":[{"id":k,"label":v} for k,v in KINDS.items()],"statuses":statuses,
             "note":"Recorded history is not proof of a live connection. Outlook and Teams collection is not enabled."}

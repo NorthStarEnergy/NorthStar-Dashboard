@@ -1,3 +1,7 @@
+# Event reporting — 2026-09-11
+
+Dedicated event pages, recurrence metrics, explicit linked history, persistent filters and source coverage gaps. 211 Python tests pass; two Node UI checks pass. Backend restart remains blocked by Windows process ownership. See [report](packets/2026-09-11-event-reporting.md).
+
 ## 2026-09-11 — Brand version button
 
 Moved the version badge beside the NorthStar logo/name. 207 tests passed. See [report](packets/2026-09-11-brand-version-button.md).

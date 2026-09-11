@@ -40,6 +40,33 @@ def test_snapshot_pagination_beyond_250_with_identical_times(database):
     assert 'fixture-new' not in seen and 'fixture-late' not in seen
 
 
+def test_recurrence_counts_same_type_state_and_object_only(database):
+    add('old',at='2026-09-10T10:00:00Z',payload={'newState':'open'})
+    add('current',payload={'newState':'open'})
+    add('closed',payload={'newState':'closed'})
+    add('other-object',aggregate='alarm-2',payload={'newState':'open'})
+    register.add_note('fixture-current','Context','operator','one')
+    result=register.detail('fixture-current',{'section':'occurrences'})
+    assert result['recurrence']['total']==2
+    assert result['recurrence']['prior']==1
+    assert result['recurrence']['firstOccurredAt'].startswith('2026-09-10')
+    assert {e['eventId'] for e in result['history']['items']}=={'fixture-old','fixture-current'}
+
+
+def test_related_uses_recorded_links_not_titles_or_cross_provider_threads(database):
+    add('selected',correlation='thread')
+    add('linked',aggregate='another',correlation='thread')
+    add('unrelated',aggregate='another',source='teams',correlation='thread')
+    note=register.add_note('fixture-selected','Context','operator','one')
+    result=register.detail('fixture-selected',{'section':'related','limit':'1'})
+    seen=[e['eventId'] for e in result['history']['items']]
+    while result['history']['nextCursor']:
+        result=register.detail('fixture-selected',{'section':'related','limit':'1','cursor':result['history']['nextCursor']})
+        seen.extend(e['eventId'] for e in result['history']['items'])
+    assert set(seen)=={'fixture-linked',note['eventId']}
+    with pytest.raises(ValueError):register.detail('fixture-selected',{'section':'invalid'})
+
+
 def test_filters_apply_before_paging_and_recoveries_remain_alarms(database):
     add('old',payload={'site':'North','newState':'resolved'},at='2020-01-01T00:00:00Z')
     for i in range(260):add(i,source='logbook',kind='logbook_entry',aggregate=str(i))

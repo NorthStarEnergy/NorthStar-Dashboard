@@ -20,14 +20,11 @@
       <div class="er-table-scroll"><table class="er-table"><thead><tr><th scope="col">Occurred</th><th scope="col">Severity</th><th scope="col">Event</th><th scope="col">Source / actor</th><th scope="col">Site</th><th scope="col">State at event</th></tr></thead><tbody id="erRows"></tbody></table><p id="erEmpty" hidden>No matching events. Change or clear your filters.</p></div>
       <footer class="er-footer"><button type="button" id="erMore" hidden>Load older events</button><span>History is append-only. Notes do not acknowledge or clear alarms.</span></footer>`;
     host.prepend(root);
-    const dialog=document.createElement('dialog');dialog.className='er-detail';dialog.setAttribute('aria-labelledby','erDetailTitle');
-    dialog.innerHTML=`<header><h2 id="erDetailTitle">Event history</h2><button id="erClose" type="button">Close</button></header><div id="erDetailStatus" role="status"></div><div id="erSelected"></div><h3>Related history <small>Newest first</small></h3><ol id="erHistory"></ol><button type="button" id="erHistoryMore" hidden>Load older history</button><form id="erNoteForm"><label>Append an operator note<textarea id="erNote" maxlength="8000" required rows="3" placeholder="Record context or follow-up for this event"></textarea></label><button type="submit">Add note</button><span id="erNoteStatus" role="status"></span></form>`;
-    document.body.append(dialog);
     const $=id=>document.getElementById(id);
     const form=$('erFilters');
     let rows=[],cursor=null,filters=new URLSearchParams(),snapshot=0,total=0,loading=false,listRequest=0;
-    let selectedId=null,historyCursor=null,detailRequest=0,history=[],noteAttempt=null;
-    let lastSuccess=null,lastSelectionTrigger=null;
+    try{filters=new URLSearchParams(sessionStorage.getItem('northstarEventFilters')||'');}catch{}
+    let lastSuccess=null;
     async function json(url,options={}) {
       const response=await fetch(url,{cache:'no-store',...options});
       let body;try{body=await response.json();}catch{throw Error('The service returned an unreadable response.');}
@@ -39,13 +36,14 @@
     function chips(){ $('erChips').innerHTML=[...filters].map(([k,v],i)=>`<button type="button" data-chip="${i}" title="Remove this filter">${esc(k)}: ${esc(k==='from'||k==='to'?date(v):v)} ×</button>`).join(''); }
     function render(){
       const focus=document.activeElement?.dataset.eventId;
-      $('erRows').innerHTML=rows.map(e=>`<tr class="er-severity-${['critical','warning'].includes(e.severity)?e.severity:'info'}"><td>${esc(date(e.occurredAt))}</td><td><span class="er-severity">${esc(e.severity)}</span></td><td><button class="er-open" type="button" data-event-id="${esc(e.eventId)}">${esc(e.summary||e.eventType)}</button><small>${esc(e.category)} · ${esc(e.eventType)}</small></td><td>${esc(e.source)}<small>${esc(e.actorId)}</small></td><td>${esc(e.site||'—')}</td><td>${esc(e.status||'—')}</td></tr>`).join('');
+      $('erRows').innerHTML=rows.map(e=>`<tr class="er-severity-${['critical','warning'].includes(e.severity)?e.severity:'info'}"><td>${esc(date(e.occurredAt))}</td><td><span class="er-severity">${esc(e.severity)}</span></td><td><a class="er-open" href="event-detail.html?id=${encodeURIComponent(e.eventId)}" data-event-id="${esc(e.eventId)}">${esc(e.summary||e.eventType)}</a><small>${esc(e.category)} · ${esc(e.eventType)}</small></td><td>${esc(e.source)}<small>${esc(e.actorId)}</small></td><td>${esc(e.site||'—')}</td><td>${esc(e.status||'—')}</td></tr>`).join('');
       if(focus)[...$('erRows').querySelectorAll('[data-event-id]')].find(b=>b.dataset.eventId===focus)?.focus();
       $('erCount').textContent=`${rows.length.toLocaleString()} shown · ${total.toLocaleString()} matching events`;
       $('erMore').hidden=!cursor;$('erMore').disabled=loading;$('erEmpty').hidden=rows.length>0;
     }
     async function load(older=false){
       if(older&&(!cursor||loading))return;
+      try{sessionStorage.setItem('northstarEventFilters',filters.toString());}catch{}
       const request=++listRequest, p=new URLSearchParams(filters);p.set('limit','50');if(older)p.set('cursor',cursor);
       loading=true;$('erMore').disabled=true;$('erRefresh').disabled=true;$('erFreshness').textContent='Refreshing…';
       try {
@@ -56,35 +54,6 @@
       } catch(error){if(request!==listRequest)return;$('erError').hidden=false;$('erError').textContent=error.status===404?'The Events update needs a backend service restart. The existing logbook is available below.':`Unable to refresh: ${error.message} Previous results are retained; the requested filters have not been applied.`;if(error.status===404&&original)original.hidden=false;$('erFreshness').textContent=lastSuccess?'Stale · last successful update '+date(lastSuccess):'Event service unavailable';}
       finally{if(request===listRequest){loading=false;$('erRefresh').disabled=false;$('erMore').disabled=false;}}
     }
-    function safeLink(value){try{const u=new URL(value);return u.protocol==='https:'&&['outlook.office.com','outlook.office365.com','teams.microsoft.com','teams.cloud.microsoft'].includes(u.hostname)&&!u.username?u.href:null;}catch{return null;}}
-    function detailsText(e){const p=e.payload||{};return p.details||p.detail||p.text||'';}
-    function selectedHtml(e){const original=safeLink(e.payload?.originalUrl);return `<section class="er-selected"><h3>${esc(e.summary||e.eventType)}</h3><dl><dt>Occurred</dt><dd>${esc(date(e.occurredAt))}</dd><dt>Recorded</dt><dd>${esc(date(e.recordedAt))}</dd><dt>Source</dt><dd>${esc(e.source)}</dd><dt>Actor</dt><dd>${esc(e.actorId)}</dd><dt>Type / severity</dt><dd>${esc(e.category)} / ${esc(e.severity)}</dd><dt>State at event</dt><dd>${esc(e.status||'Not supplied')}</dd><dt>Event ID</dt><dd>${esc(e.eventId)}</dd><dt>Record</dt><dd>${esc(e.aggregateType)} · ${esc(e.aggregateId)}</dd></dl><p class="er-message">${esc(detailsText(e))}</p>${e.payload?.assistiveOnly?'<p class="er-caution">AI content is assistive and does not authorize an operational action.</p>':''}${original?`<a href="${esc(original)}" target="_blank" rel="noopener noreferrer">Open original in ${esc(e.source)}</a>`:''}<details><summary>Recorded fields</summary><pre>${esc(JSON.stringify(e.payload,null,2))}</pre></details></section>`;}
-    function historyHtml(){ $('erHistory').innerHTML=history.map(e=>`<li class="${e.eventId===selectedId?'er-selected-history':''}"><time>${esc(date(e.occurredAt))}</time><strong>${esc(e.summary||e.eventType)}</strong><small>${esc(e.actorId)} · ${esc(e.source)}${e.status?' · '+esc(e.status):''}</small><p class="er-message">${esc(detailsText(e))}</p></li>`).join('');$('erHistoryMore').hidden=!historyCursor; }
-    async function openEvent(id,older=false){
-      if(!id)return;
-      if(!older&&id!==selectedId){$('erNote').value='';noteAttempt=null;$('erNoteStatus').textContent='';}
-      selectedId=id;const request=++detailRequest;
-      if(!dialog.open){lastSelectionTrigger=document.activeElement;dialog.showModal();}
-      $('erDetailStatus').textContent='Loading history…';$('erHistoryMore').disabled=true;
-      if(!older){$('erSelected').innerHTML='';$('erHistory').innerHTML='';history=[];historyCursor=null;$('erHistoryMore').hidden=true;}
-      const p=new URLSearchParams({id,limit:'50'});if(older&&historyCursor)p.set('cursor',historyCursor);
-      try{const result=await json(url('/api/events/detail',p));if(request!==detailRequest||!dialog.open)return;
-        $('erSelected').innerHTML=selectedHtml(result.event);history=older?[...history,...result.history.items]:result.history.items;
-        historyCursor=result.history.nextCursor;historyHtml();$('erDetailStatus').textContent=`${history.length} of ${result.history.total} related records · newest first`;
-      }catch(error){if(request===detailRequest)$('erDetailStatus').textContent='Unable to load history: '+error.message;}
-      finally{if(request===detailRequest)$('erHistoryMore').disabled=false;}
-    }
-    $('erRows').addEventListener('click',e=>{const button=e.target.closest('[data-event-id]');if(button)openEvent(button.dataset.eventId);});
-    $('erClose').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{detailRequest++;lastSelectionTrigger?.isConnected&&lastSelectionTrigger.focus();});
-    $('erHistoryMore').onclick=()=>openEvent(selectedId,true);
-    $('erNote').addEventListener('input',()=>noteAttempt=null);
-    $('erNoteForm').onsubmit=async event=>{event.preventDefault();const text=$('erNote').value.trim();if(!text||!selectedId)return;
-      const button=event.submitter||$('erNoteForm').querySelector('button');button.disabled=true;
-      const id=selectedId;noteAttempt=noteAttempt||crypto.randomUUID();$('erNoteStatus').textContent='Saving…';
-      try{await json('/api/events/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({eventId:id,text,requestId:noteAttempt})});if(id!==selectedId)return;$('erNote').value='';noteAttempt=null;$('erNoteStatus').textContent='Note recorded.';await openEvent(id);$('erNew').hidden=false;}
-      catch(error){if(id===selectedId)$('erNoteStatus').textContent='Not confirmed: '+error.message+' Retry to check/save the same note.';}
-      finally{button.disabled=false;}
-    };
     form.onsubmit=e=>{e.preventDefault();try{filters=currentFilters();chips();form.querySelectorAll('details').forEach(d=>d.open=false);load();}catch(error){$('erError').hidden=false;$('erError').textContent=error.message;}};
     $('erClear').onclick=()=>{form.reset();filters=new URLSearchParams();chips();load();};
     $('erChips').onclick=e=>{const b=e.target.closest('[data-chip]');if(!b)return;const [key,value]=[...filters][Number(b.dataset.chip)];for(const input of form.elements){if(input.name!==key)continue;if(input.type==='checkbox'){if(input.value===value)input.checked=false;}else input.value='';}form.requestSubmit();};
@@ -94,10 +63,11 @@
       for(const [target,name,items] of [['erTypeOptions','type',data.types],['erSourceOptions','source',data.sources]])$(target).innerHTML=items.map(s=>`<label><input type="checkbox" name="${name}" value="${esc(s.id)}">${esc(s.label)}</label>`).join('');
       $('erStatusOptions').innerHTML='<option value="">All states</option>'+data.statuses.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
     }catch(error){$('erSources').textContent='Source information unavailable: '+error.message;}}
-    window.NorthStarEvents={open(id){document.querySelector('[data-tab="logbook"]')?.click();return openEvent(id);}};
+    window.NorthStarEvents={open(id){if(id)window.location.assign('event-detail.html?id='+encodeURIComponent(id));}};
     const stream=document.querySelector('#eventsStream');
     if(stream){stream.addEventListener('click',e=>{const row=e.target.closest('[data-event-id]');if(row)window.NorthStarEvents.open(row.dataset.eventId);});stream.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)&&e.target.matches('[data-event-id]')){e.preventDefault();window.NorthStarEvents.open(e.target.dataset.eventId);}});}
-    sourceInfo();load();
+    sourceInfo().then(()=>{for(const input of form.elements){if(!input.name)continue;const values=filters.getAll(input.name);if(input.type==='checkbox')input.checked=values.includes(input.value);else if(values.length){let value=values[0];if(input.type==='datetime-local'){const d=new Date(value);if(!Number.isNaN(d.valueOf()))value=new Date(d.valueOf()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}input.value=value;}}chips();});load();
+    if(window.location?.hash==='#logbook')document.querySelector('[data-tab="logbook"]')?.click();
     setInterval(async()=>{if(document.hidden||!host.classList.contains('active')||loading)return;
       try{const p=new URLSearchParams(filters);p.set('limit','1');const result=await json(url('/api/events/register',p));if(result.snapshot>snapshot)$('erNew').hidden=false;}
       catch{if(lastSuccess)$('erFreshness').textContent='Refresh check failed · last loaded '+date(lastSuccess);}

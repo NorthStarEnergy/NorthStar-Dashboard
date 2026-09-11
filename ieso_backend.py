@@ -1510,6 +1510,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, 404)
                 return
             self._send_json(result)
+            return
         if self.path.split("?", 1)[0] == "/api/ai/status":
             self._send_json(ai.status())
             return

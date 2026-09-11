@@ -36,3 +36,5 @@
 .er-detail #erNoteForm{display:grid;gap:10px;margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}.er-detail #erNoteForm label{display:grid;gap:6px}.er-detail #erNoteStatus,.er-detail #erDetailStatus{color:var(--muted)}.er-detail .er-caution{color:var(--gold)}
 #eventRegister [hidden],.er-detail [hidden]{display:none!important}#eventRegister :focus-visible,.er-detail :focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 @media(max-width:650px){#eventRegister .er-heading{align-items:flex-start;flex-direction:column}.er-detail{padding:16px}#eventRegister .er-picker>div{position:fixed;left:16px;right:16px;top:25vh;width:auto;max-height:50vh}}
+
+#eventRegister a.er-open{color:var(--blue,#7bc5ff);text-decoration:none;display:block}#eventRegister a.er-open:hover{text-decoration:underline}#eventRegister a.er-open:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
