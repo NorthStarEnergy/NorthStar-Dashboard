@@ -44,10 +44,24 @@ class DispatchTelemetryTest(unittest.TestCase):
             self.assertTrue(payload["simulated"])
             self.assertGreaterEqual(payload["outputMw"], 25.0)
             self.assertLessEqual(payload["outputMw"], 75.0)
-            self.assertGreaterEqual(payload["dispatchMw"], 30.0)
-            self.assertLessEqual(payload["dispatchMw"], 70.0)
+            self.assertGreaterEqual(payload["dispatchMw"], 25.0)
+            self.assertLessEqual(payload["dispatchMw"], 80.0)
             self.assertIn(payload["tracking"], {"on-target", "minor-deviation", "off-target"})
         self.assertGreater(len(second["history"]), len(first["history"]))
+
+    def test_dispatch_changes_only_at_five_minute_boundaries(self) -> None:
+        first = self.dispatch.tick(now=1_000.0)
+        before_boundary = self.dispatch.tick(now=1_199.0)
+        after_boundary = self.dispatch.tick(now=1_205.0)
+        self.assertEqual(first["dispatchMw"], before_boundary["dispatchMw"])
+        self.assertNotEqual(before_boundary["dispatchInterval"]["sequence"], after_boundary["dispatchInterval"]["sequence"])
+        self.assertEqual(after_boundary["dispatchInterval"]["cadenceSeconds"], 300)
+
+    def test_realtime_output_remains_close_to_dispatch(self) -> None:
+        self.dispatch.tick(now=3_000.0)
+        for moment in range(3_005, 3_300, 5):
+            payload = self.dispatch.tick(now=float(moment))
+            self.assertLessEqual(abs(payload["deltaMw"]), 5.0)
 
     def test_history_retains_recent_points_only(self) -> None:
         moment = 2_000.0

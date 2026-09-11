@@ -105,8 +105,12 @@
       const stamp = payload?.updated
         ? new Date(payload.updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
         : 'awaiting telemetry';
-      const source = payload?.simulated ? 'simulated stream' : (payload?.source || 'telemetry');
-      detailNode.textContent = `Last update: ${stamp} · ${source}`;
+      const source = payload?.simulated ? 'IESO-style simulated feed' : (payload?.source || 'telemetry');
+      const intervalEnd = payload?.dispatchInterval?.end
+        ? new Date(payload.dispatchInterval.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+        : null;
+      detailNode.textContent = `Last telemetry: ${stamp} · ${source}`
+        + (intervalEnd ? ` · dispatch valid to ${intervalEnd}` : '');
     }
 
     drawSparkline(payload?.history);

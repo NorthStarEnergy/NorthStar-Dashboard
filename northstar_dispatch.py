@@ -2,7 +2,7 @@
 
 The dispatch client on the operator dashboard needs a live MW stream. Until a SCADA
 or market-commitment feed is wired, this module generates realistic APIROQ values in
-the 30–70 MW operating band and exposes them through ``/api/dispatch/apiroq``.
+the 25–80 MW operating band and exposes them through ``/api/dispatch/apiroq``.
 
 Set ``NORTHSTAR_DISPATCH_SIM=off`` to disable simulation (endpoint returns stale
 placeholder). A future SCADA tag import can replace the simulator without changing
@@ -11,7 +11,6 @@ the client contract.
 
 from __future__ import annotations
 
-import math
 import os
 import random
 import threading
@@ -22,11 +21,12 @@ from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("America/Toronto")
 
-MW_MIN = 30.0
-MW_MAX = 70.0
+MW_MIN = 25.0
+MW_MAX = 80.0
 MW_CAPACITY = 80.0
 OR_RESERVE_MAX_MW = 20.0
 TICK_SECONDS = 5
+DISPATCH_INTERVAL_SECONDS = 300
 HISTORY_LIMIT = 72  # six minutes at 5 s intervals
 
 _LOCK = threading.Lock()
@@ -51,8 +51,12 @@ def _seed_rng() -> None:
         _RNG.seed()
 
 
+def _iso_at(moment: float) -> str:
+    return datetime.fromtimestamp(moment, TZ).isoformat()
+
+
 def _now_iso() -> str:
-    return datetime.now(TZ).isoformat()
+    return _iso_at(time.time())
 
 
 def _clamp(value: float, low: float = 0.0, high: float = MW_CAPACITY) -> float:
@@ -84,15 +88,20 @@ def _advance_reserve_standby(state: dict[str, Any]) -> None:
     state["reserveStandby"] = reserve
 
 
-def _initial_state() -> dict[str, Any]:
-    dispatch = round(_RNG.uniform(44.0, 56.0), 1)
+def _interval_start(moment: float) -> float:
+    return moment - (moment % DISPATCH_INTERVAL_SECONDS)
+
+
+def _initial_state(moment: float) -> dict[str, Any]:
+    dispatch = round(_RNG.uniform(MW_MIN, MW_MAX), 1)
     output = round(dispatch + _RNG.uniform(-1.2, 1.2), 1)
+    interval_start = _interval_start(moment)
     return {
         "site": "APIROQ",
         "unit": "LT.AG4",
         "source": "simulated",
         "simulated": True,
-        "updated": _now_iso(),
+        "updated": _iso_at(moment),
         "outputMw": output,
         "dispatchMw": dispatch,
         "deltaMw": round(output - dispatch, 1),
@@ -100,9 +109,15 @@ def _initial_state() -> dict[str, Any]:
         "capacityMw": MW_CAPACITY,
         "orActivation": None,
         "reserveStandby": _random_reserve_standby(),
+        "dispatchInterval": {
+            "sequence": int(interval_start // DISPATCH_INTERVAL_SECONDS),
+            "start": _iso_at(interval_start),
+            "end": _iso_at(interval_start + DISPATCH_INTERVAL_SECONDS),
+            "cadenceSeconds": DISPATCH_INTERVAL_SECONDS,
+        },
         "history": [
             {
-                "time": _now_iso(),
+                "time": _iso_at(moment),
                 "outputMw": output,
                 "dispatchMw": dispatch,
             }
@@ -133,12 +148,26 @@ def _maybe_or_activation(state: dict[str, Any]) -> None:
         reserve = state.get("reserveStandby") or {}
         product = _RNG.choice(["10S", "10N", "30R"])
         key = {"10S": "tenS", "10N": "tenN", "30R": "thirtyR"}[product]
-        standby = float(reserve.get(key, 0.0) or 0.0)
-        if standby <= 0.0:
+        if float(reserve.get(key, 0.0) or 0.0) <= 0.0:
             return
         state["orActivation"] = product
         state["orTicks"] = 0
-        state["dispatchMw"] = _clamp(round(float(state["dispatchMw"]) + standby, 1))
+
+
+def _issue_dispatch(state: dict[str, Any], interval_start: float) -> None:
+    """Issue one IESO-style energy instruction for a five-minute interval."""
+    previous = float(state["dispatchMw"])
+    requested = previous + _RNG.uniform(-12.0, 12.0)
+    if _RNG.random() < 0.12:
+        requested = _RNG.uniform(MW_MIN, MW_MAX)
+    state["dispatchMw"] = round(_clamp(requested, MW_MIN, MW_MAX), 1)
+    state["dispatchInterval"] = {
+        "sequence": int(interval_start // DISPATCH_INTERVAL_SECONDS),
+        "start": _iso_at(interval_start),
+        "end": _iso_at(interval_start + DISPATCH_INTERVAL_SECONDS),
+        "cadenceSeconds": DISPATCH_INTERVAL_SECONDS,
+    }
+    _advance_reserve_standby(state)
 
 
 def tick(now: float | None = None) -> dict[str, Any]:
@@ -158,9 +187,9 @@ def tick(now: float | None = None) -> dict[str, Any]:
     with _LOCK:
         if _STATE is None:
             _seed_rng()
-            _STATE = _initial_state()
-            _STATE["_phase"] = _RNG.uniform(0, math.tau)
+            _STATE = _initial_state(moment)
             _STATE["_last_tick"] = moment
+            _STATE["_dispatch_interval_start"] = _interval_start(moment)
             return snapshot_unlocked()
 
         elapsed = max(0.0, moment - float(_STATE.get("_last_tick", moment)))
@@ -170,32 +199,26 @@ def tick(now: float | None = None) -> dict[str, Any]:
         steps = max(1, int(elapsed // TICK_SECONDS))
         dispatch = float(_STATE["dispatchMw"])
         output = float(_STATE["outputMw"])
-        phase = float(_STATE.get("_phase", 0.0))
 
-        for _ in range(steps):
-            phase += 0.11
-            # Slow drift in the IESO dispatch instruction.
-            target = 50.0 + 14.0 * math.sin(phase) + 6.0 * math.sin(phase * 0.37)
-            if _RNG.random() < 0.08:
-                target += _RNG.uniform(-5.0, 5.0)
-            target = _clamp(target, MW_MIN, MW_MAX)
-            dispatch += (target - dispatch) * 0.22
-            dispatch = round(_clamp(dispatch, MW_MIN, MW_MAX), 1)
-
+        for step in range(steps):
+            step_moment = float(_STATE.get("_last_tick", moment)) + ((step + 1) * TICK_SECONDS)
+            interval_start = _interval_start(step_moment)
+            if interval_start > float(_STATE.get("_dispatch_interval_start", 0.0)):
+                _issue_dispatch(_STATE, interval_start)
+                _STATE["_dispatch_interval_start"] = interval_start
             _maybe_or_activation(_STATE)
             dispatch = float(_STATE["dispatchMw"])
-            _advance_reserve_standby(_STATE)
 
             # Output tracks dispatch with plant inertia and measurement noise.
             lag = 0.34 if abs(dispatch - output) > 4 else 0.24
             output += (dispatch - output) * lag
             output += _RNG.uniform(-0.35, 0.35)
-            output = round(_clamp(output, max(0.0, MW_MIN - 5.0), MW_MAX + 2.0), 1)
+            output = round(_clamp(output, MW_MIN, MW_MAX), 1)
 
             history = list(_STATE.get("history") or [])
             history.append(
                 {
-                    "time": _now_iso(),
+                    "time": _iso_at(step_moment),
                     "outputMw": output,
                     "dispatchMw": dispatch,
                 }
@@ -205,12 +228,11 @@ def tick(now: float | None = None) -> dict[str, Any]:
         delta = round(output - dispatch, 1)
         _STATE.update(
             {
-                "updated": _now_iso(),
+                "updated": _iso_at(moment),
                 "outputMw": output,
                 "dispatchMw": dispatch,
                 "deltaMw": delta,
                 "tracking": _tracking_label(delta),
-                "_phase": phase,
                 "_last_tick": moment,
                 "healthy": True,
                 "stale": False,
@@ -249,6 +271,7 @@ def _placeholder_snapshot(*, stale: bool) -> dict[str, Any]:
         "capacityMw": MW_CAPACITY,
         "orActivation": None,
         "reserveStandby": {"tenS": 0.0, "tenN": 0.0, "thirtyR": 0.0},
+        "dispatchInterval": {"sequence": None, "start": None, "end": None, "cadenceSeconds": DISPATCH_INTERVAL_SECONDS},
         "history": [],
         "healthy": False,
         "stale": stale,

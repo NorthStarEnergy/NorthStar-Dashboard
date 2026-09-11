@@ -63,7 +63,8 @@
   function symbolMarkup(symbol) {
     const info = typeInfo(symbol.type);
     const designation = symbol.deviceFunction && !['relay', 'lockout'].includes(symbol.type) ? `<text class="device-function" x="${symbol.x}" y="${symbol.y - 36}">${esc(symbol.deviceFunction)}</text>` : '';
-    return `<g class="node ${state.selected === symbol.id ? 'selected' : ''}" data-symbol-id="${esc(symbol.id)}"><title>${esc(info.name)} · ${esc(info.standard)}</title><g transform="rotate(${symbol.rotation} ${symbol.x} ${symbol.y})">${library.draw(symbol)}</g>${designation}<text x="${symbol.x}" y="${symbol.y + 42}">${esc(symbol.label || symbol.id)}</text><text class="node-type" x="${symbol.x}" y="${symbol.y + 55}">${esc(info.name.toUpperCase())}</text></g>`;
+    const label = esc(symbol.label || symbol.id);
+    return `<g class="node ${state.selected === symbol.id ? 'selected' : ''}" data-symbol-id="${esc(symbol.id)}"><title>${esc(info.name)} · ${esc(info.standard)}</title><g transform="rotate(${symbol.rotation} ${symbol.x} ${symbol.y})">${library.draw(symbol)}</g>${designation}<text class="scada-tag" x="${symbol.x}" y="${symbol.y + 42}">${label}</text><rect class="scada-value" x="${symbol.x - 22}" y="${symbol.y + 47}" width="44" height="12" rx="0"/><text class="scada-value-text" x="${symbol.x}" y="${symbol.y + 56}">0</text><text class="node-type" x="${symbol.x}" y="${symbol.y + 70}">${esc(info.name.toUpperCase())}</text></g>`;
   }
   function render() {
     const wires = state.edges.map(edge => {
