@@ -8,6 +8,8 @@ SCADA report ingestion.
 
 from __future__ import annotations
 
+import northstar_events as unified_events
+
 import base64
 import csv
 import hashlib
@@ -1066,6 +1068,10 @@ def import_scada_content(
             " consecutive_failures=excluded.consecutive_failures",
             (feed["feed_id"], maximum, processed_at if imported else None, batch_id, 0 if imported else 1),
         )
+        unified_events.append_event(connection, event_type="scada.import.completed" if imported else "scada.import.failed",
+            occurred_at=processed_at, actor_id="SCADA importer", aggregate_type="scada_batch", aggregate_id=batch_id,
+            source="scada", severity="warning" if rejected or not imported else "info",
+            summary=f"SCADA import: {feed_code}", payload={"details": f"{imported} readings imported; {rejected} rejected", "status": status, "feedCode": feed_code})
     return {
         "batchId": batch_id,
         "status": status,

@@ -171,6 +171,10 @@ CREATE INDEX IF NOT EXISTS idx_audit_events_correlation
     ON audit_events(correlation_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_events_type
     ON audit_events(event_type, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_event_register_time
+    ON audit_events(COALESCE(julianday(occurred_at),julianday(recorded_at),0) DESC,seq DESC);
+CREATE INDEX IF NOT EXISTS idx_event_register_source
+    ON audit_events(source,seq DESC);
 
 CREATE TABLE IF NOT EXISTS outages (
     id        TEXT PRIMARY KEY,

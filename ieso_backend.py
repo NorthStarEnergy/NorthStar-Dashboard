@@ -30,8 +30,20 @@ import northstar_phase1 as phase1
 import northstar_voice as voice
 import northstar_auth as auth
 import northstar_events as events
+import northstar_event_register as event_register
 
 ROOT = Path(__file__).resolve().parent
+
+def _load_local_env() -> None:
+    env_path = ROOT / ".env.local"
+    if not env_path.is_file():
+        return
+    for raw in env_path.read_text(encoding="utf-8").splitlines():
+        key, separator, value = raw.partition("=")
+        if separator and key.strip() and key.strip() not in os.environ:
+            os.environ[key.strip()] = value.strip().strip('"').strip("'")
+
+_load_local_env()
 HOST = os.environ.get("NORTHSTAR_BIND_HOST", "127.0.0.1").strip()
 PORT = int(os.environ.get("NORTHSTAR_PORT", "4180"))
 TZ = ZoneInfo("America/Toronto")
@@ -121,6 +133,10 @@ OPERATOR_ROUTES = {
     "/api/checkin-tokens": ("GET", "POST"),
     "/api/logbook": ("GET", "POST"),
     "/api/events": ("GET",),
+    "/api/events/register": ("GET",),
+    "/api/events/detail": ("GET",),
+    "/api/events/sources": ("GET",),
+    "/api/events/notes": ("POST",),
     "/api/outages": ("GET", "POST"),
     "/api/outages/history": ("GET",),
     "/api/alerts": ("GET",),
@@ -146,6 +162,7 @@ OPERATOR_ROUTES = {
     "/api/voice": ("GET",),
     "/api/voice/recordings": ("GET",),
     "/api/voice/scan": ("POST",),
+    "/api/ai": ("POST",),
 }
 
 # The table above matches exact paths, which left every /api/<thing>/<id>/<action>
@@ -1450,6 +1467,24 @@ class Handler(SimpleHTTPRequestHandler):
                 limit = 250
             self._send_json(store.list_logbook(limit))
             return
+        event_route = self.path.split("?", 1)[0]
+        if event_route in {"/api/events/register", "/api/events/detail", "/api/events/sources"}:
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                if event_route.endswith("/sources"):
+                    result = event_register.sources()
+                elif event_route.endswith("/detail"):
+                    result = event_register.detail(query.get("id", [""])[0], query)
+                else:
+                    result = event_register.register(query)
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+                return
+            except LookupError as exc:
+                self._send_json({"error": str(exc)}, 404)
+                return
+            self._send_json(result)
+            return
         if self.path.split("?", 1)[0] == "/api/events":
             query = parse_qs(urlparse(self.path).query)
             try:
@@ -1646,6 +1681,10 @@ class Handler(SimpleHTTPRequestHandler):
         payload = self._json_body()
         username = str(payload.get("username", "") or "")
         password = str(payload.get("password", "") or "")
+        disabled_message = auth.account_message(DEMO_AUTH, username)
+        if disabled_message:
+            self._send_json({"error": disabled_message}, 403)
+            return
         if not auth.authenticates(DEMO_AUTH, username, password):
             # One message for a wrong username, a wrong password and a blank
             # one: which of the three it was is not the caller's business.
@@ -1712,6 +1751,70 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _do_POST(self) -> None:
         route = self.path.split("?", 1)[0]
+        if route == "/api/events/notes":
+            payload = self._json_body(40 * 1024)
+            try:
+                result = event_register.add_note(payload.get("eventId"), payload.get("text"), self._operator_actor(), payload.get("requestId"))
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            except LookupError as exc:
+                raise APIError(404, str(exc)) from exc
+            self._send_json(result, 200 if result["duplicate"] else 201)
+            return
+        if route == "/api/ai":
+            payload = self._json_body(16 * 1024)
+            message = str(payload.get("message", "") or "").strip()
+            if not message:
+                raise APIError(400, "message is required")
+            if len(message) > 4000:
+                raise APIError(413, "message exceeds 4000 characters")
+            conversation_id, question_id = event_register.record_chat(message, self._operator_actor())
+            api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+            if not api_key:
+                event_register.record_chat("AI service is not configured", "system", conversation_id, outcome="failed", causation_id=question_id)
+                self._send_json({"error": "ai service is not configured"}, 503)
+                return
+            context = {
+                "retrieved_at": datetime.now(TZ).isoformat(),
+                "operational_summary": store.operational_summary(),
+                "field_operations": store.field_operations_summary(),
+                "recent_events": store.list_audit_events(limit=20),
+                "active_alerts": store.list_alerts(include_resolved=False, limit=20),
+                "scada_readings": phase1.latest_scada_readings(limit=20),
+            }
+            citations = [
+                {"source": "northstar:operational_summary", "retrieved_at": context["retrieved_at"]},
+                {"source": "northstar:field_operations", "retrieved_at": context["retrieved_at"]},
+                {"source": "northstar:audit_events:latest-20", "retrieved_at": context["retrieved_at"]},
+                {"source": "northstar:alerts:active", "retrieved_at": context["retrieved_at"]},
+                {"source": "northstar:scada:latest-20", "retrieved_at": context["retrieved_at"]},
+            ]
+            request_body = json.dumps({
+                "model": os.environ.get("NORTHSTAR_AI_MODEL", "gpt-5.4"),
+                "instructions": "You are NorthStar's assistive control-room analyst. Use only the supplied NorthStar snapshot. Do not invent facts or imply that you authorized, approved, executed, or changed an operational action. Every factual statement must cite one of the supplied source IDs in brackets. If the snapshot does not answer the question, say that clearly. End with 'Uncertainty: high/medium/low/unknown' and choose unknown when evidence is missing or stale.",
+                "input": "Question: " + message + "\n\nNorthStar snapshot:\n" + json.dumps({"data": context, "citation_sources": citations}, ensure_ascii=False, default=str),
+                "store": False,
+            }).encode("utf-8")
+            request = Request("https://api.openai.com/v1/responses", data=request_body, headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }, method="POST")
+            try:
+                with urlopen(request, timeout=45) as response:
+                    result = json.loads(response.read().decode("utf-8"))
+                answer = result.get("output_text", "").strip()
+                if not answer:
+                    for item in result.get("output", []):
+                        for content in item.get("content", []):
+                            if content.get("type") == "output_text":
+                                answer += content.get("text", "")
+                event_register.record_chat(answer or "No answer was returned.", "Operations AI", conversation_id, outcome="answer", causation_id=question_id)
+                self._send_json({"conversationId": conversation_id, "reply": answer or "No answer was returned.", "model": result.get("model", "unknown"), "citations": citations, "retrieved_at": context["retrieved_at"]})
+            except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+                event_register.record_chat("AI service unavailable: " + type(exc).__name__, "system", conversation_id, outcome="failed", causation_id=question_id)
+                print(f"AI request failed: {type(exc).__name__}")
+                self._send_json({"error": "ai service unavailable"}, 503)
+            return
         if route == "/api/field-reports":
             try:
                 record = store.create_field_report(self._json_body(), self._operator_actor())

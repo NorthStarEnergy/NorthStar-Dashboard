@@ -1,3 +1,7 @@
+## 2026-09-11 — Control room Events register
+
+Built searchable, paginated all-event history with source/type filters, event detail and linked history, append-only notes, AI outcome capture and SCADA import outcomes. Outlook/Teams remain pending setup. Windows denied restarting the older running backend; activation needs its service account. See [report](packets/2026-09-11-events-register.md).
+
 ## 2026-09-11 — Shared dashboard canvas
 
 Removed Overview group confines. Leaf cards now move and resize independently across one canvas with persistent geometry. See [report](packets/2026-09-11-shared-dashboard-canvas.md).

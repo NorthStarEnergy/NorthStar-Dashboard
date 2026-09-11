@@ -4,6 +4,8 @@ Read this before changing anything. It is short on purpose.
 
 ## Where to work
 
+Events uses `events-register.js`, `events-register.css` and `northstar_event_register.py` over the shared audit ledger. Preserve server-side filtering, snapshot pagination, object/thread identity and append-only notes; note entry must not acknowledge alarms. Outlook/Teams remain disconnected until authorized integration setup. See `docs/packets/2026-09-11-events-register.md`, including the required service restart.
+
 **This directory is canonical:**
 
     C:\Users\Ryan1\Documents\Work Projects\control-room-dashboard
