@@ -1,3 +1,7 @@
+## 2026-09-11 — Brand version button
+
+Moved the version badge beside the NorthStar logo/name. 207 tests passed. See [report](packets/2026-09-11-brand-version-button.md).
+
 ## 2026-09-11 — GitHub publication baseline
 
 Merged the independently advanced GitHub dashboard releases with the six local packets, preserved both feature sets, made GitHub publication mandatory and pushed the complete history and tags. 207 tests passed. See [report](packets/2026-09-11-github-publication.md).
