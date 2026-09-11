@@ -205,3 +205,9 @@ as live behavior:
 - Restored a refreshable six-worker mock roster with site GPS points and current heartbeats for the Field Tracker and Mobile views.
 - Details: `docs/packets/2026-09-11-field-tracker-demo-data-repair.md`.
 - Verification: idempotent refresh confirmed; 209 tests passed.
+
+# 2026-09-11 — Compact alarm indicator
+
+- Replaced the large persistent Events card with an `Alarms (n)` button that pulses gently only for unacknowledged alarms and opens the full Events workspace.
+- Details: `docs/packets/2026-09-11-compact-alarm-indicator.md`.
+- Verification: 209 tests passed.
