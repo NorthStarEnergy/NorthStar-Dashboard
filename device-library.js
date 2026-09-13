@@ -1,7 +1,7 @@
 /**
  * Company device library (Tools).
  *
- * Area → site → Info / Operating Conditions / Data → station folders → devices.
+ * Area → site → Operations / Equipment / Data / Notes / Reports.
  * Left pane is a Windows-style folder tree; folder glyphs are nested sunflowers.
  * Reference data only. Notes are append-only and never acknowledge alarms.
  */
@@ -30,7 +30,7 @@
       <div class="dl-head">
         <div>
           <h3>Device Library</h3>
-          <p>Company repository by area and site. Each generating station opens with Info, Operating Conditions, and Data.</p>
+          <p>Company repository by area and site. Each generating station opens with Operations, Equipment, Data, Notes, and Reports.</p>
         </div>
         <div class="dl-counts" id="dlCounts"></div>
       </div>
@@ -169,29 +169,58 @@
       const contents = (record.contents || []).map(child =>
         `<button type="button" data-open="${esc(child.id)}">${esc(child.name)}<small> ${esc(child.kind || child.className || '')}</small></button>`
       ).join('');
-      const notes = (record.notes || []).map(note =>
-        `<li><small>${esc(when(note.createdAt))} · ${esc(note.actorId)}</small>${esc(note.text)}</li>`
-      ).join('');
+      const notes = (record.notes || []).map(note => {
+        const schedule = note.expired
+          ? `Expired ${esc(when(note.expiresAt))}`
+          : note.expiresAt
+            ? `Expires ${esc(when(note.expiresAt))}`
+            : note.persistOn
+              ? `Persists on ${esc(note.persistOn)}`
+              : '';
+        return `<li class="${note.expired ? 'expired' : ''}"><small>${esc(when(note.createdAt))} · ${esc(note.actorId)}${schedule ? ` · ${schedule}` : ''}</small>${esc(note.text)}</li>`;
+      }).join('');
+      const scheduled = record.menuKey === 'notes';
       nodes.detail.innerHTML = `
         <p class="dl-crumb">${esc(crumb || record.name)}</p>
         <h4>${esc(record.name)}</h4>
         <p>${esc(record.description || record.note || '')}</p>
         ${fields(record)}
         ${contents ? `<div class="dl-contents">${contents}</div>` : ''}
-        ${record.menuKey === 'operating-conditions' ? `<div class="dl-conditions">
-          <h5>Operating conditions</h5>
-          <p class="dl-status">${esc(record.state || 'Setup pending')} · Live operating conditions are not shown until an authorized station feed is connected. This record does not invent readings or command equipment.</p>
+        ${record.state === 'Setup pending' ? `<div class="dl-conditions">
+          <h5>${esc(record.name)}</h5>
+          <p class="dl-status">${esc(record.state)} · ${esc(record.description || '')}</p>
         </div>` : ''}
         <p class="dl-status">${esc(record.note || '')}</p>
-        ${record.menuKey === 'data' ? '<div class="dl-maximo" id="dlMaximo"><p class="dl-status">Loading Maximo…</p></div>' : ''}
+        ${record.menuKey === 'maximo-database' ? '<div class="dl-maximo" id="dlMaximo"><p class="dl-status">Loading Maximo…</p></div>' : ''}
         <form class="dl-notes" id="dlNoteForm">
           <h5>Append-only notes</h5>
-          <p class="dl-status">A note is recorded against this library item. It does not acknowledge, clear, or change an alarm.</p>
+          <p class="dl-status">A note is recorded against this library item. It does not acknowledge, clear, or change an alarm.${scheduled ? ' Expired notes stay on the record.' : ''}</p>
           <textarea id="dlNoteText" maxlength="8000" required placeholder="Operator note"></textarea>
+          ${scheduled ? `<fieldset class="dl-note-schedule">
+            <legend>Schedule</legend>
+            <label><input type="radio" name="dlNoteWhen" value="persist" checked> Persist on date</label>
+            <label><input type="radio" name="dlNoteWhen" value="expire"> Time expiry</label>
+            <label><input type="radio" name="dlNoteWhen" value="none"> No schedule</label>
+            <input id="dlPersistOn" type="date" aria-label="Persist on date">
+            <input id="dlExpiresAt" type="datetime-local" aria-label="Expiry date and time" hidden>
+          </fieldset>` : ''}
           <button type="submit">ADD NOTE</button>
           <p class="dl-status" id="dlNoteStatus"></p>
           <ul class="dl-note-list">${notes || '<li class="dl-status">No notes yet.</li>'}</ul>
         </form>`;
+      if (scheduled) {
+        const persist = host.querySelector('#dlPersistOn');
+        const expiry = host.querySelector('#dlExpiresAt');
+        const syncSchedule = () => {
+          const mode = host.querySelector('input[name="dlNoteWhen"]:checked')?.value;
+          persist.hidden = mode !== 'persist';
+          expiry.hidden = mode !== 'expire';
+        };
+        host.querySelectorAll('input[name="dlNoteWhen"]').forEach(input => {
+          input.addEventListener('change', syncSchedule);
+        });
+        syncSchedule();
+      }
     }
 
     async function select(itemId, expandAncestors = true) {
@@ -208,7 +237,7 @@
         const record = await json(`/api/library/item?id=${encodeURIComponent(itemId)}`);
         if (token !== loadToken) return;
         renderDetail(record);
-        if (record.menuKey === 'data' && record.siteId) loadMaximo(record.siteId, token);
+        if (record.menuKey === 'maximo-database' && record.siteId) loadMaximo(record.siteId, token);
       } catch (error) {
         if (token !== loadToken) return;
         nodes.detail.innerHTML = `<div class="dl-error">${esc(error.status === 404
@@ -312,11 +341,27 @@
       event.preventDefault();
       const text = host.querySelector('#dlNoteText')?.value || '';
       const status = host.querySelector('#dlNoteStatus');
+      const mode = host.querySelector('input[name="dlNoteWhen"]:checked')?.value;
+      const persistOn = mode === 'persist' ? (host.querySelector('#dlPersistOn')?.value || '') : '';
+      const expiresRaw = mode === 'expire' ? (host.querySelector('#dlExpiresAt')?.value || '') : '';
+      let expiresAt = '';
+      if (mode === 'persist' && !persistOn) {
+        if (status) status.textContent = 'Enter a persist-on date.';
+        return;
+      }
+      if (mode === 'expire') {
+        const parsed = expiresRaw ? new Date(expiresRaw) : null;
+        if (!parsed || Number.isNaN(parsed.valueOf())) {
+          if (status) status.textContent = 'Enter an expiry date and time.';
+          return;
+        }
+        expiresAt = parsed.toISOString();
+      }
       try {
         await json('/api/library/notes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ itemId: selectedId, text, requestId: requestId() }),
+          body: JSON.stringify({ itemId: selectedId, text, requestId: requestId(), expiresAt, persistOn }),
         });
         if (status) status.textContent = 'Note recorded.';
         await select(selectedId, false);

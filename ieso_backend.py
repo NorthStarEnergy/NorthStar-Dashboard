@@ -1839,6 +1839,8 @@ class Handler(SimpleHTTPRequestHandler):
                     payload.get("text"),
                     self._operator_actor(),
                     payload.get("requestId"),
+                    payload.get("expiresAt"),
+                    payload.get("persistOn"),
                 )
             except ValueError as exc:
                 raise APIError(400, str(exc)) from exc

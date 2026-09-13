@@ -45,6 +45,11 @@
 #deviceLibrary .dl-notes button:hover{border-color:var(--blue)}
 #deviceLibrary .dl-note-list{list-style:none;padding:0;margin:12px 0 0}
 #deviceLibrary .dl-note-list li{padding:8px;margin:0 0 6px;background:var(--panel2);border-left:2px solid var(--line)}
+#deviceLibrary .dl-note-list li.expired{opacity:.72}
+#deviceLibrary .dl-note-schedule{margin:10px 0 0;padding:8px 10px;border:1px solid var(--line);border-radius:5px;display:grid;gap:6px}
+#deviceLibrary .dl-note-schedule legend{padding:0 4px;color:var(--muted);font:700 10px/1.3 monospace}
+#deviceLibrary .dl-note-schedule label{display:flex;gap:6px;align-items:center;font:12px/1.3 Arial,sans-serif}
+#deviceLibrary .dl-note-schedule input[type="date"],#deviceLibrary .dl-note-schedule input[type="datetime-local"]{background:#091218;border:1px solid var(--line);color:var(--text);border-radius:4px;padding:6px 8px}
 #deviceLibrary .dl-note-list small{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
 #deviceLibrary .dl-status{color:var(--muted);font:12px/1.4 Arial,sans-serif;min-height:1.2em}
 #deviceLibrary .dl-empty,#deviceLibrary .dl-error{padding:16px;color:var(--muted)}

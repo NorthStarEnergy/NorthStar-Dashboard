@@ -1,3 +1,7 @@
+# Station whiteboard menus — 2026-09-13
+
+Each generating station follows the Twin Falls board: Operations, Equipment, Data, Notes, and Reports. Maximo sits under Equipment. Pending leaves invent nothing. Station notes may expire or persist on a date. 227 Python tests pass. See [report](packets/2026-09-13-station-whiteboard.md).
+
 # Station menus — 2026-09-13
 
 Each generating station opens with Info, Operating Conditions, and Data. Equipment folders live under Info. Operating Conditions stays Setup pending. Data holds the read-only Maximo pane. 226 Python tests pass. See [report](packets/2026-09-13-station-menus.md).

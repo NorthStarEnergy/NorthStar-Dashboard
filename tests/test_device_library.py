@@ -30,8 +30,8 @@ def test_tools_module_is_wired_and_not_published_on_checkin():
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
     assert 'id="deviceLibrary"' in html
     assert 'id="openDeviceLibrary"' in html
-    assert "device-library.js?v=20260913-3" in html
-    assert "device-library.css?v=20260913-3" in html
+    assert "device-library.js?v=20260913-4" in html
+    assert "device-library.css?v=20260913-4" in html
     assert backend.OPERATOR_ROUTES["/api/maximo"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/maximo/station"] == ("GET",)
     assert "/device-library.js" not in backend.CHECKIN_PUBLIC_ROUTES
@@ -64,12 +64,17 @@ def test_catalog_is_area_then_site_then_station_folders(database):
     assert [child["name"] for child in quebec["children"]] == [
         "McDougal", "Bird GS", "Cogent", "Aiyers 1", "Aiyers 2",
     ]
-    iroquois = next(child for child in east["children"] if child["id"] == "site:iroquois-falls")
-    menus = [child["name"] for child in iroquois["children"]]
-    assert menus == ["Info", "Operating Conditions", "Data"]
-    assert [child["kind"] for child in iroquois["children"]] == ["menu", "menu", "menu"]
-    info = next(child for child in iroquois["children"] if child["id"] == "menu:site:iroquois-falls:info")
-    folders = {child["name"] for child in info["children"]}
+    twin = next(child for child in east["children"] if child["id"] == "site:twin-falls")
+    assert [child["name"] for child in twin["children"]] == [
+        "Operations", "Equipment", "Data", "Notes", "Reports",
+    ]
+    operations = next(child for child in twin["children"] if child["name"] == "Operations")
+    assert [child["name"] for child in operations["children"]] == [
+        "Operating Conditions", "Operating Instructions", "Field Notes",
+    ]
+    equipment = next(child for child in twin["children"] if child["name"] == "Equipment")
+    assert [child["name"] for child in equipment["children"][:1]] == ["Maximo Database"]
+    folders = {child["name"] for child in equipment["children"][1:]}
     assert folders == {
         "Powerhouse",
         "Switchyard",
@@ -77,17 +82,20 @@ def test_catalog_is_area_then_site_then_station_folders(database):
         "Waterways",
         "Station Service",
     }
-    powerhouse = next(child for child in info["children"] if child["name"] == "Powerhouse")
+    powerhouse = next(child for child in equipment["children"] if child["name"] == "Powerhouse")
     names = {child["name"] for child in powerhouse["children"]}
     assert {"Unit 1 Turbine", "Unit 1 Generator", "Unit 1 Governor", "Unit 1 Excitation"} <= names
-    assert all(child["kind"] == "device" for child in powerhouse["children"])
-    conditions = next(child for child in iroquois["children"] if child["name"] == "Operating Conditions")
-    data = next(child for child in iroquois["children"] if child["name"] == "Data")
-    assert conditions["children"] == []
-    assert data["children"] == []
+    data = next(child for child in twin["children"] if child["name"] == "Data")
+    assert [child["name"] for child in data["children"]] == [
+        "Water", "Pond", "Operating Data", "Historical",
+    ]
+    reports = next(child for child in twin["children"] if child["name"] == "Reports")
+    assert [child["name"] for child in reports["children"]] == [
+        "Daily Production", "Flows", "Outages", "Forecasting",
+    ]
 
 
-def test_every_station_opens_with_info_operating_conditions_and_data(database):
+def test_every_station_follows_the_twin_falls_whiteboard(database):
     snapshot = library.tree()
     stations = []
     for area in snapshot["tree"]["children"]:
@@ -95,17 +103,32 @@ def test_every_station_opens_with_info_operating_conditions_and_data(database):
     assert len(stations) == 18
     for station in stations:
         assert [child["name"] for child in station["children"]] == [
-            "Info", "Operating Conditions", "Data",
+            "Operations", "Equipment", "Data", "Notes", "Reports",
         ]
-        info = station["children"][0]
-        assert {child["name"] for child in info["children"]} == {
+        operations, equipment, data, notes, reports = station["children"]
+        assert [child["name"] for child in operations["children"]] == [
+            "Operating Conditions", "Operating Instructions", "Field Notes",
+        ]
+        assert equipment["children"][0]["name"] == "Maximo Database"
+        assert {child["name"] for child in equipment["children"][1:]} == {
             "Powerhouse", "Switchyard", "Protection & Control", "Waterways", "Station Service",
         }
-        conditions = library.item(station["children"][1]["id"])
+        conditions = library.item(operations["children"][0]["id"])
         assert conditions["state"] == "Setup pending"
         assert conditions.get("readings") in (None, [])
-        data = library.item(station["children"][2]["id"])
-        assert data["maximo"]["href"] == f"/api/maximo/station?id={station['id']}"
+        dumped = json.dumps(conditions)
+        assert "MW" not in dumped
+        maximo = library.item(equipment["children"][0]["id"])
+        assert maximo["maximo"]["href"] == f"/api/maximo/station?id={station['id']}"
+        assert "maximo" not in library.item(data["id"])
+        assert notes["children"] == []
+        assert [child["name"] for child in reports["children"]] == [
+            "Daily Production", "Flows", "Outages", "Forecasting",
+        ]
+        for leaf in (*data["children"], *reports["children"], operations["children"][1]):
+            record = library.item(leaf["id"])
+            assert record["state"] == "Setup pending"
+            assert record.get("readings") in (None, [])
 
 
 def test_search_keeps_matching_devices_and_their_folders(database):
@@ -129,14 +152,19 @@ def test_item_lookup_and_empty_id(database):
     assert "maximo" not in record
     assert record["notes"] == []
     assert "acknowledge" in record["note"]
-    station = library.item("site:iroquois-falls")
-    assert [item["name"] for item in station["contents"]] == ["Info", "Operating Conditions", "Data"]
-    assert station["maximo"]["href"] == "/api/maximo/station?id=site:iroquois-falls"
-    data = library.item("menu:site:iroquois-falls:data")
+    station = library.item("site:twin-falls")
+    assert [item["name"] for item in station["contents"]] == [
+        "Operations", "Equipment", "Data", "Notes", "Reports",
+    ]
+    assert station["maximo"]["href"] == "/api/maximo/station?id=site:twin-falls"
+    maximo = library.item("menu:site:twin-falls:maximo-database")
+    assert maximo["menuKey"] == "maximo-database"
+    assert maximo["maximo"]["href"] == "/api/maximo/station?id=site:twin-falls"
+    assert maximo["maximo"]["configured"] is False
+    data = library.item("menu:site:twin-falls:data")
     assert data["menuKey"] == "data"
-    assert data["maximo"]["href"] == "/api/maximo/station?id=site:iroquois-falls"
-    assert data["maximo"]["configured"] is False
-    conditions = library.item("menu:site:iroquois-falls:operating-conditions")
+    assert "maximo" not in data
+    conditions = library.item("menu:site:twin-falls:operating-conditions")
     assert conditions["menuKey"] == "operating-conditions"
     assert conditions["state"] == "Setup pending"
     assert "maximo" not in conditions
@@ -191,6 +219,43 @@ def test_notes_are_append_only_idempotent_and_do_not_change_alarm_state(database
     detail = register.detail("alarm-open", {})
     assert detail["event"]["status"] == "open"
     assert detail["history"]["total"] == 1
+
+
+def test_station_notes_may_expire_or_persist_and_are_not_deleted(database):
+    expired = library.add_note(
+        "menu:site:twin-falls:notes",
+        "Gate check overnight",
+        "operator console",
+        "expire-1",
+        expires_at="2020-01-01T00:00:00Z",
+    )
+    persist = library.add_note(
+        "menu:site:twin-falls:notes",
+        "Headpond watch for the day",
+        "operator console",
+        "persist-1",
+        persist_on="2026-09-13",
+    )
+    assert expired["duplicate"] is False and persist["duplicate"] is False
+    with pytest.raises(ValueError):
+        library.add_note(
+            "menu:site:twin-falls:notes",
+            "Both schedules",
+            "operator console",
+            "both-1",
+            expires_at="2026-09-14T12:00:00Z",
+            persist_on="2026-09-14",
+        )
+    record = library.item("menu:site:twin-falls:notes")
+    texts = [note["text"] for note in record["notes"]]
+    assert "Gate check overnight" in texts
+    assert "Headpond watch for the day" in texts
+    overnight = next(note for note in record["notes"] if note["text"] == "Gate check overnight")
+    assert overnight["expired"] is True
+    assert overnight["expiresAt"].startswith("2020-01-01")
+    dated = next(note for note in record["notes"] if note["text"] == "Headpond watch for the day")
+    assert dated["persistOn"] == "2026-09-13"
+    assert dated["expired"] is False
 
 
 @pytest.fixture
