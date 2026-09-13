@@ -1,6 +1,6 @@
 # Device library — 2026-09-13
 
-Tools Library module: company device repository by area and site, Windows-style sunflower folder tree, operator-gated append-only notes. Reference records only. See [report](packets/2026-09-13-device-library.md).
+Tools Library module: company device repository by area and site, Windows-style sunflower folder tree, operator-gated append-only notes. Reference records only. 218 Python tests pass. See [report](packets/2026-09-13-device-library.md).
 
 # Event reporting — 2026-09-11
 

@@ -59,7 +59,7 @@
 
     let snapshot = null;
     let selectedId = 'company:northstar';
-    let expanded = new Set(['company:northstar']);
+    let expanded = new Set();
     let query = '';
     let searchTimer = 0;
     let loadToken = 0;

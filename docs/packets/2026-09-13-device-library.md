@@ -19,7 +19,7 @@ Notes write through the operator-gated `/api/library/notes` route into `device_l
 
 ## Validation
 
-Python suite includes catalog shape, search pruning, item lookup, idempotent notes that leave an open alarm unchanged, server actor attribution, and public-host refusal (403, including a forged Access header). Node check covers Tools markup, script compile, sunflower folder glyphs, and escaped site names. Library JS/CSS stay off the check-in hostname allowlist.
+Full Python suite: 218 passed. Coverage includes catalog shape, search pruning, item lookup, idempotent notes that leave an open alarm unchanged, server actor attribution, and public-host refusal (403, including a forged Access header). Node check covers Tools markup, script compile, sunflower folder glyphs, and escaped site names. Library JS/CSS stay off the check-in hostname allowlist.
 
 ## Activation required
 
