@@ -1,7 +1,7 @@
 import json
 import threading
 from urllib.error import HTTPError
-from urllib.parse import unquote
+from urllib.parse import unquote_plus
 from urllib.request import Request, urlopen
 
 import pytest
@@ -77,7 +77,7 @@ def test_station_reads_assets_and_work_orders_when_configured(database, monkeypa
     def fetch(url, headers):
         assert headers["apikey"] == "secret-key"
         assert "https://maximo.example.invalid/maximo/oslc/os/" in url
-        decoded = unquote(url)
+        decoded = unquote_plus(url)
         assert 'location="IROQUOIS FALLS"' in decoded
         assert 'siteid="EAST"' in decoded
         if "mxapiwo" in url:
