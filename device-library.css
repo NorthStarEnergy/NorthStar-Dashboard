@@ -48,6 +48,12 @@
 #deviceLibrary .dl-note-list small{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
 #deviceLibrary .dl-status{color:var(--muted);font:12px/1.4 Arial,sans-serif;min-height:1.2em}
 #deviceLibrary .dl-empty,#deviceLibrary .dl-error{padding:16px;color:var(--muted)}
+#deviceLibrary .dl-maximo{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+#deviceLibrary .dl-maximo h5{margin:0 0 8px;font:700 13px Arial,sans-serif}
+#deviceLibrary .dl-maximo h6{margin:12px 0 6px;color:var(--muted);font:700 11px/1.3 monospace;letter-spacing:.4px}
+#deviceLibrary .dl-maximo table{width:100%;border-collapse:collapse;font:12px/1.4 Arial,sans-serif}
+#deviceLibrary .dl-maximo th,#deviceLibrary .dl-maximo td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+#deviceLibrary .dl-maximo th{color:var(--muted);font:700 10px/1.3 monospace}
 @media(max-width:800px){
   #deviceLibrary .dl-layout{grid-template-columns:1fr}
   #deviceLibrary .dl-tree-pane{border-right:0;border-bottom:1px solid var(--line);max-height:280px}

@@ -207,7 +207,7 @@ validation, and audit behaviour.
 - `#weatherStrip` pins card width with `flex:0 0 88px!important; width:88px!important`. Resizing
   works because inline `!important` outranks an author stylesheet's `!important` — which is why
   `setSize` uses `style.setProperty(..., 'important')`. Do not "simplify" it to plain assignments.
-- `device-library.js` and `device-library.css` power the Library module on the Tools tab: a company device repository (area → site → generating-station folders) with a Windows-style sunflower folder tree. Operator-gated `/api/library` routes store append-only notes. It is a reference surface only — not equipment command, SCADA control, or alarm acknowledge.
+- `device-library.js` and `device-library.css` power the Library module on the Tools tab: a company device repository (area → site → generating-station folders) with a Windows-style sunflower folder tree. Operator-gated `/api/library` routes store append-only notes. Each generating station has a read-only Maximo API (`northstar_maximo.py`, `/api/maximo/station`) that stays Setup pending until authorized runtime credentials are present. It does not invent asset records, write work orders, or acknowledge alarms.
 - `northstar_voice.py` + `voice-workspace.js/.css` power the Voice tab: audio-file intake, transcription,
   and operational/non-operational triage. Three rules are load-bearing and covered by
   `tests/test_voice_workflows.py`:

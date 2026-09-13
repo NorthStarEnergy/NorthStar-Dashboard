@@ -34,6 +34,7 @@ import northstar_event_register as event_register
 import northstar_ai as ai
 import northstar_dispatch as dispatch
 import northstar_device_library as device_library
+import northstar_maximo as maximo
 
 ROOT = Path(__file__).resolve().parent
 
@@ -169,6 +170,8 @@ OPERATOR_ROUTES = {
     "/api/library": ("GET",),
     "/api/library/item": ("GET",),
     "/api/library/notes": ("POST",),
+    "/api/maximo": ("GET",),
+    "/api/maximo/station": ("GET",),
     "/api/ai": ("POST",),
     "/api/ai/query": ("POST",),
     "/api/ai/status": ("GET",),
@@ -1497,6 +1500,21 @@ class Handler(SimpleHTTPRequestHandler):
             query = parse_qs(urlparse(self.path).query)
             try:
                 result = device_library.item(query.get("id", [""])[0])
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+                return
+            except LookupError as exc:
+                self._send_json({"error": str(exc)}, 404)
+                return
+            self._send_json(result)
+            return
+        if route == "/api/maximo":
+            self._send_json(maximo.status())
+            return
+        if route == "/api/maximo/station":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                result = maximo.station(query.get("id", [""])[0])
             except ValueError as exc:
                 self._send_json({"error": str(exc)}, 400)
                 return

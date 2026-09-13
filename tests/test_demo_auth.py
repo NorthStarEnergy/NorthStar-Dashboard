@@ -207,6 +207,8 @@ class DemoAuthTest(unittest.TestCase):
             "/api/voice/recordings",
             "/api/library",
             "/api/library/item",
+            "/api/maximo",
+            "/api/maximo/station",
         )
         for path in operator_reads:
             with self.subTest(path=path):
@@ -526,6 +528,7 @@ class DemoAuthTest(unittest.TestCase):
         self.assertIn("/api/checkins", self.backend.OPERATOR_ROUTES)
         self.assertIn("/api/voice", self.backend.OPERATOR_ROUTES)
         self.assertIn("/api/library", self.backend.OPERATOR_ROUTES)
+        self.assertIn("/api/maximo", self.backend.OPERATOR_ROUTES)
         self.assertTrue(self.backend.OPERATOR_ROUTE_PATTERNS)
 
         # With the gate off, none of this engages — the local development path

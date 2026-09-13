@@ -177,6 +177,7 @@
         ${fields(record)}
         ${contents ? `<div class="dl-contents">${contents}</div>` : ''}
         <p class="dl-status">${esc(record.note || '')}</p>
+        ${(record.kind === 'site' || record.siteId) ? '<div class="dl-maximo" id="dlMaximo"><p class="dl-status">Loading Maximo…</p></div>' : ''}
         <form class="dl-notes" id="dlNoteForm">
           <h5>Append-only notes</h5>
           <p class="dl-status">A note is recorded against this library item. It does not acknowledge, clear, or change an alarm.</p>
@@ -201,11 +202,45 @@
         const record = await json(`/api/library/item?id=${encodeURIComponent(itemId)}`);
         if (token !== loadToken) return;
         renderDetail(record);
+        const stationId = record.kind === 'site' ? record.id : record.siteId;
+        if (stationId) loadMaximo(stationId, token);
       } catch (error) {
         if (token !== loadToken) return;
         nodes.detail.innerHTML = `<div class="dl-error">${esc(error.status === 404
           ? 'The library update needs a backend service restart.'
           : error.message)}</div>`;
+      }
+    }
+
+    function renderMaximo(snapshot) {
+      const box = host.querySelector('#dlMaximo');
+      if (!box) return;
+      const rows = (items, empty) => items.length
+        ? `<table><thead><tr><th>ID</th><th>Description</th><th>Status</th></tr></thead><tbody>${
+          items.map(item => `<tr><td>${esc(item.assetNum || item.woNum)}</td><td>${esc(item.description)}</td><td>${esc(item.status)}</td></tr>`).join('')
+        }</tbody></table>`
+        : `<p class="dl-status">${esc(empty)}</p>`;
+      box.innerHTML = `
+        <h5>Maximo</h5>
+        <p class="dl-status">${esc(snapshot.state || 'Setup pending')} · ${esc(snapshot.note || '')}</p>
+        <p class="dl-crumb">${esc(snapshot.station?.maximoSiteId || '')} \\ ${esc(snapshot.station?.maximoLocation || '')}</p>
+        <h6>Assets</h6>
+        ${rows(snapshot.assets || [], snapshot.configured ? 'No Maximo assets returned for this station.' : 'Maximo is not connected. Station asset records will appear here after authorized setup.')}
+        <h6>Work orders</h6>
+        ${rows(snapshot.workOrders || [], snapshot.configured ? 'No Maximo work orders returned for this station.' : 'Work orders are read-only from Maximo. None are shown until the connection is authorized.')}`;
+    }
+
+    async function loadMaximo(stationId, token) {
+      try {
+        const snapshot = await json(`/api/maximo/station?id=${encodeURIComponent(stationId)}`);
+        if (token !== loadToken) return;
+        renderMaximo(snapshot);
+      } catch (error) {
+        if (token !== loadToken) return;
+        const box = host.querySelector('#dlMaximo');
+        if (box) box.innerHTML = `<h5>Maximo</h5><p class="dl-error">${esc(error.status === 404
+          ? 'The Maximo API needs a backend service restart.'
+          : error.message)}</p>`;
       }
     }
 

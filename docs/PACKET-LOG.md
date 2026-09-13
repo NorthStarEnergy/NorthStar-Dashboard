@@ -1,3 +1,7 @@
+# Maximo station API — 2026-09-13
+
+Read-only, operator-gated Maximo API under each generating station. Setup pending until authorized credentials; no invented assets and no Maximo writes. See [report](packets/2026-09-13-maximo-api.md).
+
 # Device library — 2026-09-13
 
 Tools Library module: company device repository by West, East and Quebec, Windows-style sunflower folder tree, operator-gated append-only notes. Reference records only. See [report](packets/2026-09-13-device-library.md).

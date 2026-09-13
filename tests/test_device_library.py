@@ -30,8 +30,10 @@ def test_tools_module_is_wired_and_not_published_on_checkin():
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
     assert 'id="deviceLibrary"' in html
     assert 'id="openDeviceLibrary"' in html
-    assert "device-library.js?v=20260913-1" in html
-    assert "device-library.css?v=20260913-1" in html
+    assert "device-library.js?v=20260913-2" in html
+    assert "device-library.css?v=20260913-2" in html
+    assert backend.OPERATOR_ROUTES["/api/maximo"] == ("GET",)
+    assert backend.OPERATOR_ROUTES["/api/maximo/station"] == ("GET",)
     assert "/device-library.js" not in backend.CHECKIN_PUBLIC_ROUTES
     assert "/device-library.css" not in backend.CHECKIN_PUBLIC_ROUTES
     assert all("library" not in prefix for prefix in backend.CHECKIN_PUBLIC_PREFIXES)
@@ -95,6 +97,8 @@ def test_item_lookup_and_empty_id(database):
     assert record["kind"] == "device"
     assert record["site"] == "Iroquois Falls"
     assert record["area"] == "East"
+    assert record["maximo"]["href"] == "/api/maximo/station?id=site:iroquois-falls"
+    assert record["maximo"]["configured"] is False
     assert record["notes"] == []
     assert "acknowledge" in record["note"]
     folder = library.item("folder:site:iroquois-falls:powerhouse")

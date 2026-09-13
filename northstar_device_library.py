@@ -292,6 +292,13 @@ def item(item_id: str) -> dict:
             {"id": child["id"], "name": child["name"], "kind": child["kind"]}
             for child in _node(record["id"]).get("children", [])
         ]
+    station_id = record["id"] if record["kind"] == "site" else record.get("siteId")
+    if station_id:
+        from northstar_maximo import reference as maximo_reference
+        try:
+            data["maximo"] = maximo_reference(station_id)
+        except LookupError:
+            pass
     return data
 
 
