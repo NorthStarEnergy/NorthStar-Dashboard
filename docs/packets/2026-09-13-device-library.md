@@ -4,8 +4,8 @@ Tools now has a Library module: a company device repository broken down by opera
 
 ## Available behavior
 
-- The left pane is a Windows-style folder tree. Areas nest inside the company, sites nest inside areas, and station folders nest inside sites. Folder glyphs are sunflowers, so nested folders read as sunflowers inside sunflowers. Devices are file rows under their folder.
-- Station folders are Powerhouse, Switchyard, Protection & Control, Waterways, and Station Service.
+- The left pane is a Windows-style folder tree. Areas nest inside the company, sites nest inside areas, and each generating station opens with Info, Operating Conditions, and Data. Folder glyphs are sunflowers, so nested folders read as sunflowers inside sunflowers. Devices are file rows under their folder.
+- Station equipment folders (Powerhouse, Switchyard, Protection & Control, Waterways, and Station Service) live under Info.
 - Selecting a folder or device loads the recorded fields on the right. Contents of a folder or site stay navigable.
 - Search is server-side and keeps matching devices with their ancestor folders.
 - Operator notes are append-only, idempotent by request ID, and attributed by the server. A note never acknowledges, clears, or otherwise changes an alarm.

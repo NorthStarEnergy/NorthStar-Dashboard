@@ -1,3 +1,7 @@
+# Station menus — 2026-09-13
+
+Each generating station opens with Info, Operating Conditions, and Data. Equipment folders live under Info. Operating Conditions stays Setup pending. Data holds the read-only Maximo pane. 226 Python tests pass. See [report](packets/2026-09-13-station-menus.md).
+
 # Maximo station API — 2026-09-13
 
 Read-only, operator-gated Maximo API under each generating station. Setup pending until authorized credentials; no invented assets and no Maximo writes. 225 Python tests pass. See [report](packets/2026-09-13-maximo-api.md).

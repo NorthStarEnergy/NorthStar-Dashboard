@@ -1,5 +1,6 @@
-"""Company device library: area → site → generating-station components.
+"""Company device library: area → site → station menus → components.
 
+Each generating station opens with Info, Operating Conditions, and Data.
 This is a reference repository. It does not command equipment, change SCADA
 state, or acknowledge alarms. Operator notes are append-only.
 """
@@ -118,6 +119,38 @@ def _site(name: str, voltage: str = "", units: int = 1) -> dict:
     }
 
 
+STATION_MENUS = (
+    ("info", "Info", "Station information and generating-station equipment folders."),
+    (
+        "operating-conditions",
+        "Operating Conditions",
+        "Live operating conditions will appear here after an authorized station feed is connected. "
+        "This record does not invent readings or command equipment.",
+    ),
+    (
+        "data",
+        "Data",
+        "Station data sources. Maximo is read-only and stays Setup pending until authorized.",
+    ),
+)
+
+
+def _station_menu(site_id: str, site_name: str, area_id: str, area_name: str, key: str, name: str, description: str, children: list[dict]) -> dict:
+    return {
+        "id": f"menu:{site_id}:{key}",
+        "kind": "menu",
+        "menuKey": key,
+        "name": name,
+        "siteId": site_id,
+        "site": site_name,
+        "areaId": area_id,
+        "area": area_name,
+        "description": description,
+        "childIds": [child["id"] for child in children],
+        **({"state": "Setup pending"} if key == "operating-conditions" else {}),
+    }
+
+
 def _catalog() -> dict:
     areas = [
         {
@@ -202,7 +235,7 @@ def _catalog() -> dict:
                     "id": device["id"], "name": device["name"], "kind": "device",
                     "className": device["className"],
                 })
-            site_node = {"id": site_id, "name": site_name, "kind": "site", "children": []}
+            equipment_nodes = []
             for folder_name, children in folders.items():
                 folder_id = f"folder:{site_id}:{_slug(folder_name)}"
                 items[folder_id] = {
@@ -211,8 +244,16 @@ def _catalog() -> dict:
                     "description": f"{site_name} · {folder_name}",
                     "childIds": [child["id"] for child in children],
                 }
-                site_node["children"].append({
+                equipment_nodes.append({
                     "id": folder_id, "name": folder_name, "kind": "folder", "children": children,
+                })
+            site_node = {"id": site_id, "name": site_name, "kind": "site", "children": []}
+            for key, name, description in STATION_MENUS:
+                children = equipment_nodes if key == "info" else []
+                menu = _station_menu(site_id, site_name, area["id"], area["name"], key, name, description, children)
+                items[menu["id"]] = menu
+                site_node["children"].append({
+                    "id": menu["id"], "name": menu["name"], "kind": "menu", "menuKey": key, "children": children,
                 })
             area_node["children"].append(site_node)
         tree["children"].append(area_node)
@@ -233,7 +274,7 @@ def _matches(item: dict, query: str) -> bool:
     if not query:
         return True
     blob = " ".join(str(item.get(key, "")) for key in (
-        "name", "className", "folder", "site", "area", "description", "voltage", "rating"
+        "name", "className", "folder", "site", "area", "description", "voltage", "rating", "menuKey"
     )).lower()
     return query in blob
 
@@ -285,7 +326,7 @@ def item(item_id: str) -> dict:
     data = dict(record)
     data["notes"] = _notes(record["id"])
     data["note"] = "Reference record only. Notes do not acknowledge or clear alarms."
-    if record["kind"] == "folder":
+    if record["kind"] in {"folder", "menu"}:
         data["contents"] = [catalog()["items"][child_id] for child_id in record.get("childIds", [])]
     if record["kind"] in {"site", "area", "company"}:
         data["contents"] = [
@@ -293,7 +334,7 @@ def item(item_id: str) -> dict:
             for child in _node(record["id"]).get("children", [])
         ]
     station_id = record["id"] if record["kind"] == "site" else record.get("siteId")
-    if station_id:
+    if station_id and (record["kind"] == "site" or record.get("menuKey") == "data"):
         from northstar_maximo import reference as maximo_reference
         try:
             data["maximo"] = maximo_reference(station_id)

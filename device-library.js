@@ -1,7 +1,7 @@
 /**
  * Company device library (Tools).
  *
- * Area → site → generating-station folders → device records.
+ * Area → site → Info / Operating Conditions / Data → station folders → devices.
  * Left pane is a Windows-style folder tree; folder glyphs are nested sunflowers.
  * Reference data only. Notes are append-only and never acknowledge alarms.
  */
@@ -30,7 +30,7 @@
       <div class="dl-head">
         <div>
           <h3>Device Library</h3>
-          <p>Company repository by area and site. Each generating station holds its powerhouse, switchyard, protection, waterways, and station-service equipment.</p>
+          <p>Company repository by area and site. Each generating station opens with Info, Operating Conditions, and Data.</p>
         </div>
         <div class="dl-counts" id="dlCounts"></div>
       </div>
@@ -148,13 +148,15 @@
 
     function fields(record) {
       const rows = [
-        ['Kind', record.kind],
+        ['Kind', record.kind === 'menu' ? 'Station menu' : record.kind],
+        ['Menu', record.menuKey],
         ['Class', record.className],
         ['Folder', record.folder],
         ['Site', record.site],
         ['Area', record.area],
         ['Voltage', record.voltage],
         ['Rating', record.rating],
+        ['State', record.state],
       ].filter(([, value]) => value);
       if (!rows.length) return '';
       return `<div class="dl-meta">${rows.map(([label, value]) =>
@@ -176,8 +178,12 @@
         <p>${esc(record.description || record.note || '')}</p>
         ${fields(record)}
         ${contents ? `<div class="dl-contents">${contents}</div>` : ''}
+        ${record.menuKey === 'operating-conditions' ? `<div class="dl-conditions">
+          <h5>Operating conditions</h5>
+          <p class="dl-status">${esc(record.state || 'Setup pending')} · Live operating conditions are not shown until an authorized station feed is connected. This record does not invent readings or command equipment.</p>
+        </div>` : ''}
         <p class="dl-status">${esc(record.note || '')}</p>
-        ${(record.kind === 'site' || record.siteId) ? '<div class="dl-maximo" id="dlMaximo"><p class="dl-status">Loading Maximo…</p></div>' : ''}
+        ${record.menuKey === 'data' ? '<div class="dl-maximo" id="dlMaximo"><p class="dl-status">Loading Maximo…</p></div>' : ''}
         <form class="dl-notes" id="dlNoteForm">
           <h5>Append-only notes</h5>
           <p class="dl-status">A note is recorded against this library item. It does not acknowledge, clear, or change an alarm.</p>
@@ -202,8 +208,7 @@
         const record = await json(`/api/library/item?id=${encodeURIComponent(itemId)}`);
         if (token !== loadToken) return;
         renderDetail(record);
-        const stationId = record.kind === 'site' ? record.id : record.siteId;
-        if (stationId) loadMaximo(stationId, token);
+        if (record.menuKey === 'data' && record.siteId) loadMaximo(record.siteId, token);
       } catch (error) {
         if (token !== loadToken) return;
         nodes.detail.innerHTML = `<div class="dl-error">${esc(error.status === 404

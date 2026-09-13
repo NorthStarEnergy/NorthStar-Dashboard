@@ -30,8 +30,8 @@ def test_tools_module_is_wired_and_not_published_on_checkin():
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
     assert 'id="deviceLibrary"' in html
     assert 'id="openDeviceLibrary"' in html
-    assert "device-library.js?v=20260913-2" in html
-    assert "device-library.css?v=20260913-2" in html
+    assert "device-library.js?v=20260913-3" in html
+    assert "device-library.css?v=20260913-3" in html
     assert backend.OPERATOR_ROUTES["/api/maximo"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/maximo/station"] == ("GET",)
     assert "/device-library.js" not in backend.CHECKIN_PUBLIC_ROUTES
@@ -65,7 +65,11 @@ def test_catalog_is_area_then_site_then_station_folders(database):
         "McDougal", "Bird GS", "Cogent", "Aiyers 1", "Aiyers 2",
     ]
     iroquois = next(child for child in east["children"] if child["id"] == "site:iroquois-falls")
-    folders = {child["name"] for child in iroquois["children"]}
+    menus = [child["name"] for child in iroquois["children"]]
+    assert menus == ["Info", "Operating Conditions", "Data"]
+    assert [child["kind"] for child in iroquois["children"]] == ["menu", "menu", "menu"]
+    info = next(child for child in iroquois["children"] if child["id"] == "menu:site:iroquois-falls:info")
+    folders = {child["name"] for child in info["children"]}
     assert folders == {
         "Powerhouse",
         "Switchyard",
@@ -73,10 +77,35 @@ def test_catalog_is_area_then_site_then_station_folders(database):
         "Waterways",
         "Station Service",
     }
-    powerhouse = next(child for child in iroquois["children"] if child["name"] == "Powerhouse")
+    powerhouse = next(child for child in info["children"] if child["name"] == "Powerhouse")
     names = {child["name"] for child in powerhouse["children"]}
     assert {"Unit 1 Turbine", "Unit 1 Generator", "Unit 1 Governor", "Unit 1 Excitation"} <= names
     assert all(child["kind"] == "device" for child in powerhouse["children"])
+    conditions = next(child for child in iroquois["children"] if child["name"] == "Operating Conditions")
+    data = next(child for child in iroquois["children"] if child["name"] == "Data")
+    assert conditions["children"] == []
+    assert data["children"] == []
+
+
+def test_every_station_opens_with_info_operating_conditions_and_data(database):
+    snapshot = library.tree()
+    stations = []
+    for area in snapshot["tree"]["children"]:
+        stations.extend(area["children"])
+    assert len(stations) == 18
+    for station in stations:
+        assert [child["name"] for child in station["children"]] == [
+            "Info", "Operating Conditions", "Data",
+        ]
+        info = station["children"][0]
+        assert {child["name"] for child in info["children"]} == {
+            "Powerhouse", "Switchyard", "Protection & Control", "Waterways", "Station Service",
+        }
+        conditions = library.item(station["children"][1]["id"])
+        assert conditions["state"] == "Setup pending"
+        assert conditions.get("readings") in (None, [])
+        data = library.item(station["children"][2]["id"])
+        assert data["maximo"]["href"] == f"/api/maximo/station?id={station['id']}"
 
 
 def test_search_keeps_matching_devices_and_their_folders(database):
@@ -97,10 +126,23 @@ def test_item_lookup_and_empty_id(database):
     assert record["kind"] == "device"
     assert record["site"] == "Iroquois Falls"
     assert record["area"] == "East"
-    assert record["maximo"]["href"] == "/api/maximo/station?id=site:iroquois-falls"
-    assert record["maximo"]["configured"] is False
+    assert "maximo" not in record
     assert record["notes"] == []
     assert "acknowledge" in record["note"]
+    station = library.item("site:iroquois-falls")
+    assert [item["name"] for item in station["contents"]] == ["Info", "Operating Conditions", "Data"]
+    assert station["maximo"]["href"] == "/api/maximo/station?id=site:iroquois-falls"
+    data = library.item("menu:site:iroquois-falls:data")
+    assert data["menuKey"] == "data"
+    assert data["maximo"]["href"] == "/api/maximo/station?id=site:iroquois-falls"
+    assert data["maximo"]["configured"] is False
+    conditions = library.item("menu:site:iroquois-falls:operating-conditions")
+    assert conditions["menuKey"] == "operating-conditions"
+    assert conditions["state"] == "Setup pending"
+    assert "maximo" not in conditions
+    assert conditions.get("readings") in (None, [])
+    dumped = json.dumps(conditions)
+    assert "MW" not in dumped and "headwater" not in dumped.lower()
     folder = library.item("folder:site:iroquois-falls:powerhouse")
     assert {item["name"] for item in folder["contents"]} >= {"Unit 1 Generator"}
     with pytest.raises(ValueError):
