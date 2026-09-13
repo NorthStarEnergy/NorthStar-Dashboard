@@ -47,14 +47,18 @@ def _device(site_id: str, folder: str, name: str, klass: str, **fields) -> dict:
     return record
 
 
-def _station_devices(site_id: str, site: str, voltage: str, units: int = 1) -> list[dict]:
+def _station_devices(site_id: str, site: str, voltage: str = "", units: int = 1) -> list[dict]:
+    voltage = str(voltage or "").strip()
+    known_voltage = {"voltage": voltage} if voltage else {}
+    breaker_name = f"{voltage} Breaker" if voltage else "High-side Breaker"
+    bus_name = f"{voltage} Bus" if voltage else "Station Bus"
     devices = []
     for index in range(1, units + 1):
         devices.extend([
             _device(site_id, "Powerhouse", f"Unit {index} Turbine", "Turbine",
-                    rating="Hydro turbine", voltage=voltage, description=f"{site} hydraulic turbine, unit {index}."),
+                    rating="Hydro turbine", description=f"{site} hydraulic turbine, unit {index}.", **known_voltage),
             _device(site_id, "Powerhouse", f"Unit {index} Generator", "Generator",
-                    rating="Synchronous generator", voltage=voltage, description=f"{site} generator, unit {index}."),
+                    rating="Synchronous generator", description=f"{site} generator, unit {index}.", **known_voltage),
             _device(site_id, "Powerhouse", f"Unit {index} Governor", "Governor",
                     rating="Speed / load governor", description=f"Unit {index} governor and actuator."),
             _device(site_id, "Powerhouse", f"Unit {index} Excitation", "Excitation",
@@ -62,15 +66,15 @@ def _station_devices(site_id: str, site: str, voltage: str, units: int = 1) -> l
         ])
     devices.extend([
         _device(site_id, "Switchyard", "GSU Transformer", "Transformer",
-                voltage=voltage, rating="Generator step-up", description=f"{site} GSU transformer."),
-        _device(site_id, "Switchyard", f"{voltage} Breaker", "Breaker",
-                voltage=voltage, rating="SF6 / vacuum breaker", description=f"High-side breaker at {site}."),
+                rating="Generator step-up", description=f"{site} GSU transformer.", **known_voltage),
+        _device(site_id, "Switchyard", breaker_name, "Breaker",
+                rating="SF6 / vacuum breaker", description=f"High-side breaker at {site}.", **known_voltage),
         _device(site_id, "Switchyard", "Line Disconnect", "Disconnect",
-                voltage=voltage, description="Line disconnect switch."),
-        _device(site_id, "Switchyard", f"{voltage} Bus", "Bus",
-                voltage=voltage, description="Station high-side bus."),
+                description="Line disconnect switch.", **known_voltage),
+        _device(site_id, "Switchyard", bus_name, "Bus",
+                description="Station high-side bus.", **known_voltage),
         _device(site_id, "Switchyard", "Surge Arresters", "Arrester",
-                voltage=voltage, description="High-side surge arresters."),
+                description="High-side surge arresters.", **known_voltage),
         _device(site_id, "Protection & Control", "Generator Protection", "Relay",
                 description="Generator differential, loss-of-field, and backup protection."),
         _device(site_id, "Protection & Control", "Current Transformers", "CT",
@@ -105,58 +109,54 @@ def _station_devices(site_id: str, site: str, voltage: str, units: int = 1) -> l
     return devices
 
 
-def _yard_devices(site_id: str, site: str, voltage: str) -> list[dict]:
-    return [
-        _device(site_id, "Switchyard", f"{voltage} Bus", "Bus", voltage=voltage, description=f"{site} high-side bus."),
-        _device(site_id, "Switchyard", f"{voltage} Breaker", "Breaker", voltage=voltage, description="Transmission breaker."),
-        _device(site_id, "Switchyard", "Line Disconnect", "Disconnect", voltage=voltage, description="Line disconnect."),
-        _device(site_id, "Protection & Control", "Line Protection", "Relay", description="Line current differential / distance."),
-        _device(site_id, "Protection & Control", "SCADA RTU", "RTU", description="Yard telemetry interface. Library record only."),
-        _device(site_id, "Station Service", "Station Service Transformer", "Transformer", description="Yard station service."),
-        _device(site_id, "Station Service", "125 V DC Battery", "Battery", rating="125 V DC", description="Yard DC supply."),
-    ]
+def _site(name: str, voltage: str = "", units: int = 1) -> dict:
+    return {
+        "id": f"site:{_slug(name)}",
+        "name": name,
+        "voltage": voltage,
+        "units": units,
+    }
 
 
 def _catalog() -> dict:
     areas = [
         {
-            "id": "area:northeast",
-            "name": "Northeast Ontario",
+            "id": "area:west",
+            "name": "West",
             "kind": "area",
             "sites": [
-                {"id": "site:iroquois-falls-gs", "name": "Iroquois Falls GS", "voltage": "230 kV", "units": 1},
-                {"id": "site:island-falls-gs", "name": "Island Falls GS", "voltage": "115 kV", "units": 1},
-                {"id": "site:timmins-gs", "name": "Timmins GS", "voltage": "115 kV", "units": 1},
-                {"id": "site:carmichael-gs", "name": "Carmichael GS", "voltage": "115 kV", "units": 1},
-                {"id": "site:smooth-rock-falls", "name": "Smooth Rock Falls", "voltage": "115 kV", "units": 1},
-                {"id": "site:alder-creek-gs", "name": "Alder Creek GS", "voltage": "115 kV", "units": 1},
+                _site("Fort Frances", "115 kV"),
+                _site("Calm Lake"),
+                _site("Sturgeon Falls", "115 kV"),
+                _site("Kenora", "115 kV"),
+                _site("Norman"),
             ],
         },
         {
-            "id": "area:northwest",
-            "name": "Northwest Ontario",
+            "id": "area:east",
+            "name": "East",
             "kind": "area",
             "sites": [
-                {"id": "site:fort-frances-gs", "name": "Fort Frances GS", "voltage": "115 kV", "units": 1},
-                {"id": "site:kenora-gs", "name": "Kenora GS", "voltage": "115 kV", "units": 1},
-                {"id": "site:silver-falls-gs", "name": "Silver Falls GS", "voltage": "115 kV", "units": 1},
-                {"id": "site:pine-river-gs", "name": "Pine River GS", "voltage": "115 kV", "units": 1},
+                _site("Twin Falls"),
+                _site("Iroquois Falls", "230 kV"),
+                _site("Island Falls", "115 kV"),
+                _site("Old Woman Falls"),
+                _site("White Otter Rapids"),
+                _site("Camp Three Rapids"),
+                _site("Big Beaver Falls"),
+                _site("Okikendawt GS"),
             ],
         },
         {
-            "id": "area:central",
-            "name": "Nipissing / Central",
+            "id": "area:quebec",
+            "name": "Quebec",
             "kind": "area",
             "sites": [
-                {"id": "site:sturgeon-falls-gs", "name": "Sturgeon Falls GS", "voltage": "115 kV", "units": 1},
-            ],
-        },
-        {
-            "id": "area:transmission",
-            "name": "Transmission",
-            "kind": "area",
-            "sites": [
-                {"id": "site:iroquois-falls-230kv", "name": "Iroquois Falls 230 kV", "voltage": "230 kV", "yard": True},
+                _site("McDougal"),
+                _site("Bird GS"),
+                _site("Cogent"),
+                _site("Aiyers 1"),
+                _site("Aiyers 2"),
             ],
         },
     ]
@@ -181,15 +181,16 @@ def _catalog() -> dict:
         }
         area_node = {"id": area["id"], "name": area["name"], "kind": "area", "children": []}
         for site in area["sites"]:
-            site_id, site_name, voltage = site["id"], site["name"], site["voltage"]
+            site_id, site_name, voltage = site["id"], site["name"], site.get("voltage", "")
             items[site_id] = {
                 "id": site_id, "kind": "site", "name": site_name, "areaId": area["id"],
-                "area": area["name"], "voltage": voltage,
-                "description": f"{site_name} · {voltage}",
+                "area": area["name"],
+                "description": f"{site_name} generating station",
             }
-            devices = _yard_devices(site_id, site_name, voltage) if site.get("yard") else _station_devices(
-                site_id, site_name, voltage, site.get("units", 1)
-            )
+            if voltage:
+                items[site_id]["voltage"] = voltage
+                items[site_id]["description"] = f"{site_name} · {voltage}"
+            devices = _station_devices(site_id, site_name, voltage, site.get("units", 1))
             folders: dict[str, list] = {}
             for device in devices:
                 device["siteId"] = site_id

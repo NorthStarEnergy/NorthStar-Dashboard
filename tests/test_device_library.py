@@ -44,18 +44,25 @@ def test_catalog_is_area_then_site_then_station_folders(database):
     snapshot = library.tree()
     assert snapshot["company"] == "NorthStar Energy"
     assert "command" in snapshot["note"].lower()
-    assert snapshot["counts"]["areas"] == 4
-    assert snapshot["counts"]["sites"] >= 12
+    assert snapshot["counts"]["areas"] == 3
+    assert snapshot["counts"]["sites"] == 18
     assert snapshot["counts"]["devices"] > 100
-    areas = {child["name"] for child in snapshot["tree"]["children"]}
-    assert areas == {
-        "Northeast Ontario",
-        "Northwest Ontario",
-        "Nipissing / Central",
-        "Transmission",
-    }
-    northeast = next(child for child in snapshot["tree"]["children"] if child["id"] == "area:northeast")
-    iroquois = next(child for child in northeast["children"] if child["id"] == "site:iroquois-falls-gs")
+    areas = [child["name"] for child in snapshot["tree"]["children"]]
+    assert areas == ["West", "East", "Quebec"]
+    west = next(child for child in snapshot["tree"]["children"] if child["id"] == "area:west")
+    east = next(child for child in snapshot["tree"]["children"] if child["id"] == "area:east")
+    quebec = next(child for child in snapshot["tree"]["children"] if child["id"] == "area:quebec")
+    assert [child["name"] for child in west["children"]] == [
+        "Fort Frances", "Calm Lake", "Sturgeon Falls", "Kenora", "Norman",
+    ]
+    assert [child["name"] for child in east["children"]] == [
+        "Twin Falls", "Iroquois Falls", "Island Falls", "Old Woman Falls",
+        "White Otter Rapids", "Camp Three Rapids", "Big Beaver Falls", "Okikendawt GS",
+    ]
+    assert [child["name"] for child in quebec["children"]] == [
+        "McDougal", "Bird GS", "Cogent", "Aiyers 1", "Aiyers 2",
+    ]
+    iroquois = next(child for child in east["children"] if child["id"] == "site:iroquois-falls")
     folders = {child["name"] for child in iroquois["children"]}
     assert folders == {
         "Powerhouse",
@@ -71,25 +78,26 @@ def test_catalog_is_area_then_site_then_station_folders(database):
 
 
 def test_search_keeps_matching_devices_and_their_folders(database):
-    snapshot = library.tree("penstock")
+    snapshot = library.tree("okikendawt")
     def names(node):
         yield node["name"]
         for child in node.get("children") or []:
             yield from names(child)
     found = set(names(snapshot["tree"]))
-    assert "Iroquois Falls GS" in found
+    assert "Okikendawt GS" in found
     assert "Penstock" in found
-    assert "Kenora GS" in found
-    assert "Iroquois Falls 230 kV" not in found
+    assert "Fort Frances" not in found
+    assert "Bird GS" not in found
 
 
 def test_item_lookup_and_empty_id(database):
-    record = library.item("device:site:iroquois-falls-gs:powerhouse:unit-1-generator")
+    record = library.item("device:site:iroquois-falls:powerhouse:unit-1-generator")
     assert record["kind"] == "device"
-    assert record["site"] == "Iroquois Falls GS"
+    assert record["site"] == "Iroquois Falls"
+    assert record["area"] == "East"
     assert record["notes"] == []
     assert "acknowledge" in record["note"]
-    folder = library.item("folder:site:iroquois-falls-gs:powerhouse")
+    folder = library.item("folder:site:iroquois-falls:powerhouse")
     assert {item["name"] for item in folder["contents"]} >= {"Unit 1 Generator"}
     with pytest.raises(ValueError):
         library.item("")
@@ -112,13 +120,13 @@ def test_notes_are_append_only_idempotent_and_do_not_change_alarm_state(database
             payload={"newState": "open"},
         )
     first = library.add_note(
-        "device:site:iroquois-falls-gs:powerhouse:unit-1-generator",
+        "device:site:iroquois-falls:powerhouse:unit-1-generator",
         "Nameplate checked",
         "operator console",
         "retry-1",
     )
     second = library.add_note(
-        "device:site:iroquois-falls-gs:powerhouse:unit-1-generator",
+        "device:site:iroquois-falls:powerhouse:unit-1-generator",
         "Nameplate checked",
         "operator console",
         "retry-1",
@@ -126,12 +134,12 @@ def test_notes_are_append_only_idempotent_and_do_not_change_alarm_state(database
     assert first["id"] == second["id"] and second["duplicate"]
     with pytest.raises(ValueError):
         library.add_note(
-            "device:site:iroquois-falls-gs:powerhouse:unit-1-generator",
+            "device:site:iroquois-falls:powerhouse:unit-1-generator",
             "Different note",
             "operator console",
             "retry-1",
         )
-    record = library.item("device:site:iroquois-falls-gs:powerhouse:unit-1-generator")
+    record = library.item("device:site:iroquois-falls:powerhouse:unit-1-generator")
     assert [note["text"] for note in record["notes"]] == ["Nameplate checked"]
     assert record["notes"][0]["actorId"] == "operator console"
     detail = register.detail("alarm-open", {})
