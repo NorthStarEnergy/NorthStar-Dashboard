@@ -30,8 +30,11 @@ def test_tools_module_is_wired_and_not_published_on_checkin():
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
     assert 'id="deviceLibrary"' in html
     assert 'id="openDeviceLibrary"' in html
-    assert "device-library.js?v=20260913-4" in html
-    assert "device-library.css?v=20260913-4" in html
+    assert "device-library.js?v=20260913-5" in html
+    assert "device-library.css?v=20260913-5" in html
+    assert "events-register.js?v=20260913-5" in html
+    assert 'href="event-detail.html?id=' in html
+    assert "EVENT REPORT" in html
     assert backend.OPERATOR_ROUTES["/api/maximo"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/maximo/station"] == ("GET",)
     assert "/device-library.js" not in backend.CHECKIN_PUBLIC_ROUTES
@@ -127,6 +130,10 @@ def test_every_station_follows_the_twin_falls_whiteboard(database):
         ]
         for leaf in (*data["children"], *reports["children"], operations["children"][1]):
             record = library.item(leaf["id"])
+            if record.get("menuKey") == "outages":
+                assert record.get("state") != "Setup pending"
+                assert record["events"] == []
+                continue
             assert record["state"] == "Setup pending"
             assert record.get("readings") in (None, [])
 
@@ -216,6 +223,11 @@ def test_notes_are_append_only_idempotent_and_do_not_change_alarm_state(database
     record = library.item("device:site:iroquois-falls:powerhouse:unit-1-generator")
     assert [note["text"] for note in record["notes"]] == ["Nameplate checked"]
     assert record["notes"][0]["actorId"] == "operator console"
+    assert record["notes"][0]["href"] == events.report_href(first["id"])
+    assert first["href"] == record["notes"][0]["href"]
+    note_report = register.detail(first["id"], {})
+    assert note_report["event"]["href"] == first["href"]
+    assert note_report["event"]["category"] == "library"
     detail = register.detail("alarm-open", {})
     assert detail["event"]["status"] == "open"
     assert detail["history"]["total"] == 1
@@ -256,6 +268,55 @@ def test_station_notes_may_expire_or_persist_and_are_not_deleted(database):
     dated = next(note for note in record["notes"] if note["text"] == "Headpond watch for the day")
     assert dated["persistOn"] == "2026-09-13"
     assert dated["expired"] is False
+    assert overnight["href"].startswith("event-detail.html?id=")
+
+
+def test_station_menus_list_recorded_event_reports_only(database):
+    opened = store.create_outage({
+        "title": "Unit 1 outage",
+        "asset": "U1",
+        "site": "Twin Falls",
+        "severity": "Degraded",
+        "type": "Unplanned",
+        "details": "Unit offline",
+    }, actor="operator console")
+    store.create_outage({
+        "title": "Other station",
+        "asset": "U2",
+        "site": "Iroquois Falls",
+        "severity": "Monitor",
+    }, actor="operator console")
+    with store._session() as connection:
+        events.append_event(
+            connection,
+            event_id="site-alarm",
+            event_type="workforce.help_requested",
+            occurred_at="2026-09-13T11:00:00Z",
+            actor_id="worker",
+            aggregate_type="checkin",
+            aggregate_id="checkin-tf",
+            source="workforce",
+            summary="Help requested",
+            severity="critical",
+            payload={"site": "Twin Falls", "newState": "requested"},
+        )
+    outages = library.item("menu:site:twin-falls:outages")
+    assert outages.get("state") != "Setup pending"
+    assert [row["eventId"] for row in outages["events"]] == [opened["eventId"]]
+    assert outages["events"][0]["href"] == opened["href"]
+    assert outages["events"][0]["href"].startswith("event-detail.html?id=")
+    other = library.item("menu:site:iroquois-falls:outages")
+    assert opened["eventId"] not in {row["eventId"] for row in other["events"]}
+    conditions = library.item("menu:site:twin-falls:operating-conditions")
+    assert conditions["state"] == "Setup pending"
+    assert [row["eventId"] for row in conditions["events"]] == ["site-alarm"]
+    production = library.item("menu:site:twin-falls:daily-production")
+    assert production["events"] == []
+    assert production.get("readings") in (None, [])
+    station = library.item("site:twin-falls")
+    ids = {row["eventId"] for row in station["events"]}
+    assert opened["eventId"] in ids
+    assert "site-alarm" in ids
 
 
 @pytest.fixture
@@ -318,4 +379,6 @@ def test_library_tree_and_notes_use_the_server_actor(service):
     detail = service("/api/library/item?id=company:northstar", authorized=True)[1]
     assert detail["notes"][0]["actorId"] == "operator@example.test"
     assert detail["notes"][0]["text"] == "Reviewed the company tree"
+    assert detail["notes"][0]["href"].startswith("event-detail.html?id=")
+    assert result["href"] == detail["notes"][0]["href"]
     assert "forged" not in json.dumps(detail)

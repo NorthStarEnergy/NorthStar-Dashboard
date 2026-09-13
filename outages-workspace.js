@@ -56,8 +56,14 @@
     const switching = outage.status === 'Open' && outage.id
       ? `<button class="node-expand" data-create-switching="${escapeHtml(outage.id)}">CREATE PLAN</button>`
       : '';
+    const href = String(outage.href || '').startsWith('event-detail.html?id=')
+      ? outage.href
+      : (outage.eventId ? `event-detail.html?id=${encodeURIComponent(outage.eventId)}` : '');
+    const report = href
+      ? `<a class="node-expand" href="${escapeHtml(href)}">EVENT REPORT</a>`
+      : '';
     return `<article class="event-item outage-item outage-severity-${severity} outage-type-${type.toLowerCase()}">
-      <header><span>${reportTime(outage.openedAt)} · ${escapeHtml(outage.site || '')}</span><span class="outage-badges"><b class="outage-badge ${severity}">${escapeHtml(outage.severity || 'Monitor')}</b><b class="outage-badge ${type.toLowerCase()}">${type.toUpperCase()}</b>${switching}${close}</span></header>
+      <header><span>${reportTime(outage.openedAt)} · ${escapeHtml(outage.site || '')}</span><span class="outage-badges"><b class="outage-badge ${severity}">${escapeHtml(outage.severity || 'Monitor')}</b><b class="outage-badge ${type.toLowerCase()}">${type.toUpperCase()}</b>${report}${switching}${close}</span></header>
       <strong>${escapeHtml(asset)}</strong><p>${escapeHtml(title + (outage.details || ''))}</p>
     </article>`;
   }

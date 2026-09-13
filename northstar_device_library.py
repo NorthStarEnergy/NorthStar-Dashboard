@@ -295,7 +295,9 @@ def _catalog() -> dict:
             reports = add("reports", "Reports", f"{site_name} reports. No invented production or forecast values.", [
                 add("daily-production", "Daily Production", "Daily production reports will appear here after an authorized feed is connected. " + PENDING_NOTE, pending=True),
                 add("flows", "Flows", "Flow reports will appear here after an authorized feed is connected. " + PENDING_NOTE, pending=True),
-                add("outages", "Outages", "Outage reports will appear here after an authorized feed is connected. " + PENDING_NOTE, pending=True),
+                add("outages", "Outages",
+                    "Recorded outage events for this station. Open a report for the recorded details. "
+                    "The list stays empty until an outage is written. This is not a command surface."),
                 add("forecasting", "Forecasting", "Forecast reports will appear here after an authorized feed is connected. " + PENDING_NOTE, pending=True),
             ])
             site_node = {
@@ -402,6 +404,8 @@ def _notes(item_id: str) -> list[dict]:
         persist_on = row["persist_on"] or ""
         notes.append({
             "id": row["id"],
+            "eventId": row["id"],
+            "href": events.report_href(row["id"]),
             "text": row["body"],
             "createdAt": row["created_at"],
             "actorId": row["created_by"],
@@ -410,6 +414,53 @@ def _notes(item_id: str) -> list[dict]:
             "expired": _note_expired(expires_at),
         })
     return notes
+
+
+def _ledger_events(*, site: str = "", item_id: str = "", sources: tuple[str, ...] = (),
+                   types: tuple[str, ...] = (), category: str = "", limit: int = 20) -> list[dict]:
+    """Recorded ledger rows only. Exact site / item match; nothing is invented."""
+    import northstar_event_register as register
+    clauses: list[str] = []
+    values: list[str] = []
+    if site:
+        clauses.append(f"({register.SITE}) = ?")
+        values.append(site)
+    if item_id:
+        clauses.append("aggregate_id = ?")
+        values.append(item_id)
+    if sources:
+        clauses.append(f"source IN ({','.join('?' for _ in sources)})")
+        values.extend(sources)
+    if types:
+        clauses.append("(" + " OR ".join("event_type LIKE ?" for _ in types) + ")")
+        values.extend(prefix if prefix.endswith("%") else f"{prefix}%" for prefix in types)
+    if category:
+        clauses.append(f"({register.CATEGORY}) = ?")
+        values.append(category)
+    if not clauses:
+        return []
+    with store._session() as connection:
+        rows = connection.execute(
+            f"SELECT *, ({register.CATEGORY}) AS category, ({register.STATE}) AS event_status, "
+            f"({register.SITE}) AS event_site FROM audit_events WHERE {' AND '.join(clauses)} "
+            f"ORDER BY ({register.SORT}) DESC, seq DESC LIMIT ?",
+            [*values, max(1, min(int(limit), 50))],
+        ).fetchall()
+    return [register._record(row) for row in rows]
+
+
+def _related_events(record: dict) -> list[dict]:
+    menu = record.get("menuKey")
+    site = record.get("site") or (record.get("name") if record.get("kind") == "site" else "")
+    if record.get("kind") == "site" and site:
+        return _ledger_events(site=site)
+    if menu == "outages" and site:
+        return _ledger_events(site=site, sources=("outage", "outages"), types=("outage.",))
+    if menu == "operating-conditions" and site:
+        return _ledger_events(site=site, category="alarm")
+    if menu in {"notes", "field-notes"}:
+        return _ledger_events(item_id=record["id"], sources=("library",))
+    return []
 
 
 def item(item_id: str) -> dict:
@@ -421,6 +472,7 @@ def item(item_id: str) -> dict:
         raise LookupError("Library item not found")
     data = dict(record)
     data["notes"] = _notes(record["id"])
+    data["events"] = _related_events(record)
     data["note"] = "Reference record only. Notes do not acknowledge or clear alarms."
     if record["kind"] in {"folder", "menu"}:
         data["contents"] = [catalog()["items"][child_id] for child_id in record.get("childIds", [])]
@@ -477,7 +529,7 @@ def add_note(item_id: str, text: str, actor: str, request_id: str, expires_at: s
         if prior:
             if prior["body"] != text or (prior["expires_at"] or "") != expires_at or (prior["persist_on"] or "") != persist_on:
                 raise ValueError("This note request ID was already used")
-            return {"id": note_id, "duplicate": True}
+            return {"id": note_id, "eventId": note_id, "href": events.report_href(note_id), "duplicate": True}
         connection.execute(
             "INSERT INTO device_library_notes "
             "(id,item_id,body,created_at,created_by,expires_at,persist_on) VALUES (?,?,?,?,?,?,?)",
@@ -498,9 +550,9 @@ def add_note(item_id: str, text: str, actor: str, request_id: str, expires_at: s
                 "recordKind": "note",
                 "site": record.get("site") or record.get("name"),
                 "equipment": record.get("name"),
-                "category": "other",
+                "category": "library",
                 "expiresAt": expires_at or None,
                 "persistOn": persist_on or None,
             },
         )
-    return {"id": note_id, "duplicate": False}
+    return {"id": note_id, "eventId": note_id, "href": events.report_href(note_id), "duplicate": False}

@@ -1,3 +1,7 @@
+# Event log navigation — 2026-09-13
+
+Every recorded event, report, alarm and library note has a bookmarkable event report. Station Outages and Operating Conditions list only recorded rows. 230 Python tests pass. See [report](packets/2026-09-13-event-log-navigation.md).
+
 # Station whiteboard menus — 2026-09-13
 
 Each generating station follows the Twin Falls board: Operations, Equipment, Data, Notes, and Reports. Maximo sits under Equipment. Pending leaves invent nothing. Station notes may expire or persist on a date. 227 Python tests pass. See [report](packets/2026-09-13-station-whiteboard.md).

@@ -158,6 +158,28 @@
   font: 600 10px/1.35 monospace;
 }
 
+a.cip-log-row,
+#eventsStream a.event-item {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+a.cip-log-row:hover,
+#eventsStream a.event-item:hover {
+  background: #102029;
+}
+
+.alert-banner a.alert-nav {
+  background: var(--red);
+  border: 0;
+  color: #fff;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font: 700 9px monospace;
+  text-decoration: none;
+}
+
 .cip-log-row:hover {
   background: #0d171f;
 }

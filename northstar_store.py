@@ -2786,7 +2786,7 @@ def _append_outage_event(
         actor_id=stored_actor,
         aggregate_type="outage",
         aggregate_id=outage_id,
-        source="outages",
+        source="outage",
         severity="warning" if new_status == "Open" else "info",
         summary=f"{stored_site}: {stored_event}",
         payload={
@@ -2840,11 +2840,22 @@ def create_outage(payload: dict[str, Any], actor: str = "operator") -> dict[str,
             at=timestamp,
         )
         row = connection.execute("SELECT * FROM outages WHERE id=?", (record_id,)).fetchone()
-    return _outage_record(row)
+        return _outage_record(row, connection)
 
 
-def _outage_record(row: sqlite3.Row) -> dict[str, Any]:
-    return {
+def _event_report_fields(connection: sqlite3.Connection, aggregate_type: str, aggregate_id: str) -> dict[str, str]:
+    row = connection.execute(
+        "SELECT event_id FROM audit_events WHERE aggregate_type=? AND aggregate_id=? "
+        "ORDER BY occurred_at DESC, seq DESC LIMIT 1",
+        (aggregate_type, aggregate_id),
+    ).fetchone()
+    if row is None:
+        return {}
+    return {"eventId": row["event_id"], "href": events.report_href(row["event_id"])}
+
+
+def _outage_record(row: sqlite3.Row, connection: sqlite3.Connection | None = None) -> dict[str, Any]:
+    record = {
         "id": row["id"],
         "title": row["title"],
         "asset": row["asset"],
@@ -2858,18 +2869,24 @@ def _outage_record(row: sqlite3.Row) -> dict[str, Any]:
         "closedAt": row["closed_at"],
         "closedBy": row["closed_by"],
     }
+    if connection is not None:
+        record.update(_event_report_fields(connection, "outage", row["id"]))
+    else:
+        with _LOCK, _session() as owned:
+            record.update(_event_report_fields(owned, "outage", row["id"]))
+    return record
 
 
 def list_outages() -> list[dict[str, Any]]:
     with _LOCK, _session() as connection:
         rows = connection.execute("SELECT * FROM outages ORDER BY opened_at DESC, id DESC").fetchall()
-    return [_outage_record(row) for row in rows]
+        return [_outage_record(row, connection) for row in rows]
 
 
 def get_outage(outage_id: str) -> dict[str, Any] | None:
     with _LOCK, _session() as connection:
         row = connection.execute("SELECT * FROM outages WHERE id=?", (outage_id,)).fetchone()
-    return _outage_record(row) if row else None
+        return _outage_record(row, connection) if row else None
 
 
 def close_outage(
@@ -2899,7 +2916,7 @@ def close_outage(
                 at=timestamp,
             )
             row = connection.execute("SELECT * FROM outages WHERE id=?", (outage_id,)).fetchone()
-    return _outage_record(row)
+        return _outage_record(row, connection)
 
 
 def outage_history(outage_id: str | None = None, limit: int = 250) -> list[dict[str, Any]]:
@@ -2977,8 +2994,8 @@ def set_alert_setting(payload: dict[str, Any]) -> dict[str, Any]:
     return record
 
 
-def _alert_record(row: sqlite3.Row) -> dict[str, Any]:
-    return {
+def _alert_record(row: sqlite3.Row, connection: sqlite3.Connection | None = None) -> dict[str, Any]:
+    record = {
         "id": row["id"],
         "node": row["node"],
         "kind": row["kind"],
@@ -2997,6 +3014,12 @@ def _alert_record(row: sqlite3.Row) -> dict[str, Any]:
         "resolvedPrice": row["resolved_price"],
         "actions": json.loads(row["actions"]),
     }
+    if connection is not None:
+        record.update(_event_report_fields(connection, "price_alert", row["id"]))
+    else:
+        with _LOCK, _session() as owned:
+            record.update(_event_report_fields(owned, "price_alert", row["id"]))
+    return record
 
 
 def _append_alert_event(
@@ -3139,7 +3162,7 @@ def evaluate_price_alerts(
                 at=timestamp,
             )
             closed = connection.execute("SELECT * FROM alerts WHERE id=?", (row["id"],)).fetchone()
-            resolved.append(_alert_record(closed))
+            resolved.append(_alert_record(closed, connection))
 
         for node, price in prices.items():
             if price is None:
@@ -3186,7 +3209,7 @@ def evaluate_price_alerts(
                 )
                 still_open.add((node, kind))
                 row = connection.execute("SELECT * FROM alerts WHERE id=?", (alert_id,)).fetchone()
-                raised.append(_alert_record(row))
+                raised.append(_alert_record(row, connection))
 
     return {"raised": raised, "resolved": resolved}
 
@@ -3204,7 +3227,7 @@ def acknowledge_alert(alert_id: str, actor: str = "operator") -> dict[str, Any] 
         if row is None:
             return None
         if row["state"] != ALERT_ACTIVE:
-            return _alert_record(row)
+            return _alert_record(row, connection)
         connection.execute(
             "UPDATE alerts SET state=?, acknowledged_at=?, acknowledged_by=? WHERE id=?",
             (ALERT_ACKNOWLEDGED, timestamp, actor[:80], alert_id),
@@ -3222,7 +3245,7 @@ def acknowledge_alert(alert_id: str, actor: str = "operator") -> dict[str, Any] 
             at=timestamp,
         )
         row = connection.execute("SELECT * FROM alerts WHERE id=?", (alert_id,)).fetchone()
-    return _alert_record(row)
+        return _alert_record(row, connection)
 
 
 def list_alerts(include_resolved: bool = False, limit: int = 250) -> list[dict[str, Any]]:
@@ -3239,7 +3262,7 @@ def list_alerts(include_resolved: bool = False, limit: int = 250) -> list[dict[s
                 " ORDER BY opened_at DESC, id DESC LIMIT ?",
                 (*ALERT_OPEN_STATES, limit),
             ).fetchall()
-    return [_alert_record(row) for row in rows]
+        return [_alert_record(row, connection) for row in rows]
 
 
 def alert_history(alert_id: str | None = None, limit: int = 250) -> list[dict[str, Any]]:

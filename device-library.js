@@ -169,6 +169,10 @@
       const contents = (record.contents || []).map(child =>
         `<button type="button" data-open="${esc(child.id)}">${esc(child.name)}<small> ${esc(child.kind || child.className || '')}</small></button>`
       ).join('');
+      const reportHref = value => {
+        const href = String(value || '');
+        return href.startsWith('event-detail.html?id=') ? href : '';
+      };
       const notes = (record.notes || []).map(note => {
         const schedule = note.expired
           ? `Expired ${esc(when(note.expiresAt))}`
@@ -177,7 +181,15 @@
             : note.persistOn
               ? `Persists on ${esc(note.persistOn)}`
               : '';
-        return `<li class="${note.expired ? 'expired' : ''}"><small>${esc(when(note.createdAt))} · ${esc(note.actorId)}${schedule ? ` · ${schedule}` : ''}</small>${esc(note.text)}</li>`;
+        const href = reportHref(note.href) || (note.eventId || note.id
+          ? `event-detail.html?id=${encodeURIComponent(note.eventId || note.id)}` : '');
+        return `<li class="${note.expired ? 'expired' : ''}"><small>${esc(when(note.createdAt))} · ${esc(note.actorId)}${schedule ? ` · ${schedule}` : ''}</small>${esc(note.text)}${href ? `<a class="dl-event-link" href="${esc(href)}">Open event report</a>` : ''}</li>`;
+      }).join('');
+      const eventRows = (record.events || []).map(event => {
+        const href = reportHref(event.href) || (event.eventId
+          ? `event-detail.html?id=${encodeURIComponent(event.eventId)}` : '');
+        if (!href) return '';
+        return `<li><a class="dl-event" href="${esc(href)}">${esc(event.summary || event.eventType)}<small>${esc(when(event.occurredAt))} · ${esc(event.category || event.source || '')} · ${esc(event.severity || '')}</small></a></li>`;
       }).join('');
       const scheduled = record.menuKey === 'notes';
       nodes.detail.innerHTML = `
@@ -192,6 +204,11 @@
         </div>` : ''}
         <p class="dl-status">${esc(record.note || '')}</p>
         ${record.menuKey === 'maximo-database' ? '<div class="dl-maximo" id="dlMaximo"><p class="dl-status">Loading Maximo…</p></div>' : ''}
+        <div class="dl-events">
+          <h5>Event reports</h5>
+          <p class="dl-status">Recorded events, reports and alarms open a dedicated log. This list stays empty until a write exists. It does not invent readings or acknowledge alarms.</p>
+          <ul class="dl-event-list">${eventRows || '<li class="dl-status">No recorded events for this item yet.</li>'}</ul>
+        </div>
         <form class="dl-notes" id="dlNoteForm">
           <h5>Append-only notes</h5>
           <p class="dl-status">A note is recorded against this library item. It does not acknowledge, clear, or change an alarm.${scheduled ? ' Expired notes stay on the record.' : ''}</p>
@@ -358,12 +375,17 @@
         expiresAt = parsed.toISOString();
       }
       try {
-        await json('/api/library/notes', {
+        const result = await json('/api/library/notes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ itemId: selectedId, text, requestId: requestId(), expiresAt, persistOn }),
         });
-        if (status) status.textContent = 'Note recorded.';
+        if (status) {
+          const href = String(result.href || '').startsWith('event-detail.html?id=') ? result.href : '';
+          status.innerHTML = href
+            ? `Note recorded. <a class="dl-event-link" href="${esc(href)}">Open event report</a>`
+            : 'Note recorded.';
+        }
         await select(selectedId, false);
       } catch (error) {
         if (status) status.textContent = error.message;

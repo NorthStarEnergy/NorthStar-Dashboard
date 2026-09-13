@@ -4,7 +4,7 @@ Read this before changing anything. It is short on purpose.
 
 ## Where to work
 
-Events uses `events-register.js`, `events-register.css` and `northstar_event_register.py` over the shared audit ledger. Preserve server-side filtering, snapshot pagination, object/thread identity and append-only notes; note entry must not acknowledge alarms. Outlook/Teams remain disconnected until authorized integration setup. See `docs/packets/2026-09-11-events-register.md`, including the required service restart.
+Events uses `events-register.js`, `events-register.css` and `northstar_event_register.py` over the shared audit ledger. Every recorded event, report and alarm has a navigable event report (`event-detail.html?id=`). Preserve server-side filtering, snapshot pagination, object/thread identity and append-only notes; note entry must not acknowledge alarms. Outlook/Teams remain disconnected until authorized integration setup. See `docs/packets/2026-09-11-events-register.md` and `docs/packets/2026-09-13-event-log-navigation.md`, including the required service restart.
 
 **This directory is canonical:**
 
@@ -207,7 +207,7 @@ validation, and audit behaviour.
 - `#weatherStrip` pins card width with `flex:0 0 88px!important; width:88px!important`. Resizing
   works because inline `!important` outranks an author stylesheet's `!important` — which is why
   `setSize` uses `style.setProperty(..., 'important')`. Do not "simplify" it to plain assignments.
-- `device-library.js` and `device-library.css` power the Library module on the Tools tab: a company device repository (area → site → Operations / Equipment / Data / Notes / Reports) with a Windows-style sunflower folder tree. Operations holds Operating Conditions, Operating Instructions, and Field Notes. Equipment holds Maximo Database plus station folders. Data is Water, Pond, Operating Data, and Historical. Reports is Daily Production, Flows, Outages, and Forecasting. Pending leaves do not invent readings. Station Notes may expire at a time or persist on a date; expired notes stay on the record and never acknowledge alarms. The read-only Maximo API (`northstar_maximo.py`, `/api/maximo/station`) stays Setup pending until authorized runtime credentials are present. Operator-gated `/api/library` routes store append-only notes.
+- `device-library.js` and `device-library.css` power the Library module on the Tools tab: a company device repository (area → site → Operations / Equipment / Data / Notes / Reports) with a Windows-style sunflower folder tree. Operations holds Operating Conditions, Operating Instructions, and Field Notes. Equipment holds Maximo Database plus station folders. Data is Water, Pond, Operating Data, and Historical. Reports is Daily Production, Flows, Outages, and Forecasting. Pending leaves do not invent readings. Station Notes may expire at a time or persist on a date; expired notes stay on the record and never acknowledge alarms. Every recorded event, report, alarm and library note writes an append-only ledger row with a bookmarkable `event-detail.html?id=` report. Station Outages and Operating Conditions list only those recorded rows. The read-only Maximo API (`northstar_maximo.py`, `/api/maximo/station`) stays Setup pending until authorized runtime credentials are present. Operator-gated `/api/library` routes store append-only notes.
 - `northstar_voice.py` + `voice-workspace.js/.css` power the Voice tab: audio-file intake, transcription,
   and operational/non-operational triage. Three rules are load-bearing and covered by
   `tests/test_voice_workflows.py`:

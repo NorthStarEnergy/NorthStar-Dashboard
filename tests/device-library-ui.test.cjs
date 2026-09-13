@@ -7,8 +7,8 @@ const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'northstar-clean.html'), 'utf8');
 assert.ok(html.includes('id="deviceLibrary"'));
 assert.ok(html.includes('id="openDeviceLibrary"'));
-assert.ok(html.includes('device-library.js?v=20260913-4'));
-assert.ok(html.includes('device-library.css?v=20260913-4'));
+assert.ok(html.includes('device-library.js?v=20260913-5'));
+assert.ok(html.includes('device-library.css?v=20260913-5'));
 const libraryJs = fs.readFileSync(path.join(root, 'device-library.js'), 'utf8');
 assert.ok(libraryJs.includes('/api/maximo/station'));
 assert.ok(libraryJs.includes('Operations, Equipment, Data, Notes, and Reports'));
@@ -132,7 +132,22 @@ const answer = (request, value, status = 200) => request.resolve({
     name: 'NorthStar Energy',
     description: 'Company device repository.',
     note: 'Reference record only. Notes do not acknowledge or clear alarms.',
-    notes: [],
+    notes: [{
+      id: 'libnote_1',
+      eventId: 'libnote_1',
+      href: 'event-detail.html?id=libnote_1',
+      text: 'Nameplate checked',
+      createdAt: '2026-09-13T12:00:00Z',
+      actorId: 'operator',
+    }],
+    events: [{
+      eventId: 'outage-1',
+      href: 'event-detail.html?id=outage-1',
+      summary: 'Twin Falls: opened',
+      occurredAt: '2026-09-13T12:00:00Z',
+      category: 'outage',
+      severity: 'warning',
+    }],
     contents: [{ id: 'area:northeast', name: 'Northeast Ontario', kind: 'area' }],
   });
   await flush();
@@ -149,6 +164,10 @@ const answer = (request, value, status = 200) => request.resolve({
   const detail = host.querySelector('#dlDetail').innerHTML;
   assert.ok(detail.includes('ADD NOTE'));
   assert.ok(detail.includes('do not acknowledge'));
+  assert.ok(detail.includes('Event reports'));
+  assert.ok(detail.includes('href="event-detail.html?id=libnote_1"'));
+  assert.ok(detail.includes('href="event-detail.html?id=outage-1"'));
+  assert.ok(detail.includes('Open event report'));
 
   console.log('Device library UI: Tools module, sunflower tree, and escaped names passed.');
 })().catch(error => {
