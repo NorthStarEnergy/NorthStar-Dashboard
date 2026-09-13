@@ -16,4 +16,4 @@ No Maximo tenant is connected in this release. The API is the contract and the o
 
 ## Validation
 
-Python coverage includes setup-pending empty collections, no invented records, status not probing Maximo, mocked OSLC reads, HTTP URL refusal, secret redaction, and public-host 403. Library item responses carry the station href.
+Full Python suite: 225 passed. Coverage includes setup-pending empty collections, no invented records, status not probing Maximo, mocked OSLC reads, HTTP URL refusal, secret redaction, and public-host 403. Library item responses carry the station href.

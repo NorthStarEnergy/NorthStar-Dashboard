@@ -1,6 +1,6 @@
 # Maximo station API — 2026-09-13
 
-Read-only, operator-gated Maximo API under each generating station. Setup pending until authorized credentials; no invented assets and no Maximo writes. See [report](packets/2026-09-13-maximo-api.md).
+Read-only, operator-gated Maximo API under each generating station. Setup pending until authorized credentials; no invented assets and no Maximo writes. 225 Python tests pass. See [report](packets/2026-09-13-maximo-api.md).
 
 # Device library — 2026-09-13
 
