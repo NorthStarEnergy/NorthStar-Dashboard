@@ -1,0 +1,54 @@
+#deviceLibrary{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+#deviceLibrary .dl-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;padding:14px 16px;border-bottom:1px solid var(--line)}
+#deviceLibrary .dl-head h3{margin:0;font:700 16px/1.3 Arial,sans-serif}
+#deviceLibrary .dl-head p{margin:4px 0 0;color:var(--muted);font:12px/1.4 Arial,sans-serif;max-width:62ch}
+#deviceLibrary .dl-counts{color:var(--muted);font:11px/1.4 monospace;text-align:right}
+#deviceLibrary .dl-layout{display:grid;grid-template-columns:minmax(260px,320px) minmax(0,1fr);min-height:520px}
+#deviceLibrary .dl-tree-pane{border-right:1px solid var(--line);background:#0b141b;display:flex;flex-direction:column;min-width:0}
+#deviceLibrary .dl-tree-tools{display:flex;gap:6px;padding:8px;border-bottom:1px solid var(--line)}
+#deviceLibrary .dl-tree-tools input{flex:1;min-width:0;background:#091218;border:1px solid var(--line);color:var(--text);border-radius:4px;padding:7px 8px;font:12px/1.3 Arial,sans-serif}
+#deviceLibrary .dl-tree-tools button{background:#132530;border:1px solid var(--line);color:var(--text);border-radius:4px;padding:6px 8px;font:700 10px/1 monospace;cursor:pointer}
+#deviceLibrary .dl-tree-tools button:hover{border-color:var(--blue)}
+#deviceLibrary .dl-tree{flex:1;overflow:auto;padding:6px 0 12px;font:12px/1.35 "Segoe UI",Arial,sans-serif}
+#deviceLibrary .dl-tree>ul{margin:0;padding:0 4px;list-style:none}
+#deviceLibrary .dl-caution{margin:0;padding:8px 16px;border-bottom:1px solid var(--line);background:#16140a;color:var(--gold);font:12px/1.4 Arial,sans-serif}
+#deviceLibrary .dl-contents small{display:block;color:var(--muted);font:10px monospace;margin-top:2px}
+#deviceLibrary .dl-kids .dl-sunflower{transform:scale(.92)}
+#deviceLibrary .dl-kids .dl-kids .dl-sunflower{transform:scale(.84)}
+#deviceLibrary .dl-node{display:flex;align-items:center;gap:6px;width:100%;padding:3px 8px;border:0;background:transparent;color:var(--text);text-align:left;cursor:pointer;border-radius:0}
+#deviceLibrary .dl-node:hover{background:#163040}
+#deviceLibrary .dl-node.active{background:#1d4f6b;color:#fff}
+#deviceLibrary .dl-node:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+#deviceLibrary .dl-twist{width:14px;flex:0 0 14px;color:#9ab;font-size:10px;text-align:center}
+#deviceLibrary .dl-sunflower{width:14px;height:14px;flex:0 0 14px;border-radius:50%;
+  background:radial-gradient(circle at 50% 50%,#6b3f12 28%,#f0c419 29% 40%,transparent 41%),
+             repeating-conic-gradient(from 10deg,#e39b08 0 16deg,#f6d45a 16deg 32deg);
+  box-shadow:0 0 0 1px #7a5a10}
+#deviceLibrary .dl-file{width:11px;height:13px;flex:0 0 11px;border:1px solid #7fa6b8;background:#d7e6ee;border-radius:1px 3px 1px 1px;position:relative}
+#deviceLibrary .dl-file::after{content:"";position:absolute;top:0;right:0;border:3px solid #9bbcc8;border-left-color:transparent;border-bottom-color:transparent}
+#deviceLibrary .dl-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#deviceLibrary .dl-kids{margin:0;padding:0 0 0 14px;list-style:none;border-left:1px dotted #355567;margin-left:14px}
+#deviceLibrary .dl-detail{padding:16px;min-width:0;overflow:auto}
+#deviceLibrary .dl-crumb{color:var(--muted);font:11px/1.4 monospace;margin:0 0 8px}
+#deviceLibrary .dl-detail h4{margin:0 0 6px;font:700 20px/1.3 Arial,sans-serif}
+#deviceLibrary .dl-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:12px 0}
+#deviceLibrary .dl-meta div{padding:8px;background:var(--panel2);border:1px solid var(--line);border-radius:5px}
+#deviceLibrary .dl-meta span{display:block;color:var(--muted);font:10px monospace;margin-bottom:3px}
+#deviceLibrary .dl-meta b{font:700 13px/1.3 Arial,sans-serif}
+#deviceLibrary .dl-contents{display:grid;gap:6px;margin:12px 0}
+#deviceLibrary .dl-contents button{text-align:left;padding:8px 10px;background:#101c25;border:1px solid var(--line);color:var(--text);border-radius:4px;cursor:pointer;font:12px Arial,sans-serif}
+#deviceLibrary .dl-contents button:hover{border-color:var(--blue)}
+#deviceLibrary .dl-notes{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+#deviceLibrary .dl-notes h5{margin:0 0 8px;font:700 13px Arial,sans-serif}
+#deviceLibrary .dl-notes textarea{width:100%;box-sizing:border-box;min-height:72px;background:#091218;border:1px solid var(--line);color:var(--text);border-radius:5px;padding:8px;font:13px/1.4 Arial,sans-serif}
+#deviceLibrary .dl-notes button{margin-top:8px;padding:8px 12px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:5px;cursor:pointer;font:600 13px Arial,sans-serif}
+#deviceLibrary .dl-notes button:hover{border-color:var(--blue)}
+#deviceLibrary .dl-note-list{list-style:none;padding:0;margin:12px 0 0}
+#deviceLibrary .dl-note-list li{padding:8px;margin:0 0 6px;background:var(--panel2);border-left:2px solid var(--line)}
+#deviceLibrary .dl-note-list small{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
+#deviceLibrary .dl-status{color:var(--muted);font:12px/1.4 Arial,sans-serif;min-height:1.2em}
+#deviceLibrary .dl-empty,#deviceLibrary .dl-error{padding:16px;color:var(--muted)}
+@media(max-width:800px){
+  #deviceLibrary .dl-layout{grid-template-columns:1fr}
+  #deviceLibrary .dl-tree-pane{border-right:0;border-bottom:1px solid var(--line);max-height:280px}
+}

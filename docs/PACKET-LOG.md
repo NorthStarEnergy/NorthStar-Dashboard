@@ -1,3 +1,7 @@
+# Device library — 2026-09-13
+
+Tools Library module: company device repository by area and site, Windows-style sunflower folder tree, operator-gated append-only notes. Reference records only. See [report](packets/2026-09-13-device-library.md).
+
 # Event reporting — 2026-09-11
 
 Dedicated event pages, recurrence metrics, explicit linked history, persistent filters and source coverage gaps. 211 Python tests pass; two Node UI checks pass. Backend restart remains blocked by Windows process ownership. See [report](packets/2026-09-11-event-reporting.md).

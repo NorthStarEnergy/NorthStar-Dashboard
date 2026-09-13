@@ -534,6 +534,9 @@ def init_db() -> None:
         from northstar_voice import init_schema as init_voice_schema
 
         init_voice_schema(connection)
+        from northstar_device_library import init_schema as init_library_schema
+
+        init_library_schema(connection)
         _migrate_unified_events(connection)
         _seed_readiness_registry(connection)
         connection.execute(
