@@ -1,3 +1,9 @@
+# Dashboard review and regression automation — 2026-09-14
+
+Cross-workspace source review identifies deployment and workflow gaps. Added
+Windows CI and optimized-Python release-check regression.
+See [review](packets/2026-09-14-dashboard-review.md).
+
 # Deployment verification — 2026-09-14
 
 Isolated committed-source smoke checks replace startup against operational data;

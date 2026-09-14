@@ -18,6 +18,11 @@ ROUTES = ('/api/outages', '/api/uwpc', '/api/sites', '/api/library',
           '/api/dispatch/apiroq', '/api/readiness', '/api/assets', '/api/schematics')
 
 
+def require_status(actual, expected, label):
+    if actual not in expected:
+        raise RuntimeError(f'{label}: expected {expected}, got HTTP {actual}')
+
+
 def main():
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     archive = subprocess.check_output(['git', 'archive', '--format=zip', revision], cwd=ROOT)
@@ -70,17 +75,17 @@ def main():
                     time.sleep(.2)
                 checks = 0
                 for route in ROUTES:
-                    assert request(route)[0] == 403, f'Anonymous operator access: {route}'
-                    assert request(route, 'checkin.example.test', 'forged')[0] == 403, route
+                    require_status(request(route)[0], (403,), f'Anonymous operator access: {route}')
+                    require_status(request(route, 'checkin.example.test', 'forged')[0], (403,), f'Public host: {route}')
                     status, body = request(route, assertion='local-smoke-only')
-                    assert status == 200, (route, status)
+                    require_status(status, (200,), route)
                     json.loads(body)
                     checks += 3
                 for route in ('/.env.local', '/data/smoke.db', '/ieso_backend.py'):
-                    assert request(route, assertion='local-smoke-only')[0] in (403, 404), route
+                    require_status(request(route, assertion='local-smoke-only')[0], (403, 404), route)
                     checks += 1
-                assert request('/northstar-clean.html', assertion='local-smoke-only')[0] == 200
-                assert request('/northstar-clean.html', 'checkin.example.test')[0] == 404
+                require_status(request('/northstar-clean.html', assertion='local-smoke-only')[0], (200,), 'Operator HTML')
+                require_status(request('/northstar-clean.html', 'checkin.example.test')[0], (404,), 'Public HTML')
                 checks += 2
                 print(f'PASS: {checks} isolated HTTP checks; source {revision}')
                 print('Synthetic Access header exercises origin routing only; it does not validate edge JWT authentication.')
