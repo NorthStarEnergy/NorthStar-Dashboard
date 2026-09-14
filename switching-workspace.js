@@ -19,9 +19,12 @@
     topologySnapshotId: '',
     topologyRevision: '',
     revision: '',
-    ruleSet: '',
-    authorityProcedureId: '',
-    authorityProcedureRevision: '',
+    ruleSet: 'UWPC 2024',
+    authorityProcedureId: 'uwpc-2024',
+    authorityProcedureRevision: '2024',
+    workProtectionId: '',
+    workProtectionName: '',
+    workProtectionSection: '',
     qualificationEvidenceRef: '',
     sourceManifestDigest: '',
     scope: '',
@@ -135,6 +138,9 @@
       ruleSet: state.ruleSet,
       authorityProcedureId: state.authorityProcedureId,
       authorityProcedureRevision: state.authorityProcedureRevision,
+      workProtectionId: state.workProtectionId,
+      workProtectionName: state.workProtectionName,
+      workProtectionSection: state.workProtectionSection,
       qualificationEvidenceRef: state.qualificationEvidenceRef,
       sourceManifestDigest: state.sourceManifestDigest,
       scope: state.scope,
@@ -161,7 +167,7 @@
     state.serverUpdatedAt = record.updatedAt || state.serverUpdatedAt;
     state.savedAt = state.serverUpdatedAt || state.savedAt;
     state.storage = 'SERVER';
-    ['packageName', 'site', 'asset', 'outageId', 'schematicId', 'symbolProfileApprovalRef', 'canonicalAssetId', 'topologySnapshotId', 'topologyRevision', 'revision', 'ruleSet', 'authorityProcedureId', 'authorityProcedureRevision', 'qualificationEvidenceRef', 'sourceManifestDigest', 'scope', 'reviewerName', 'reviewerRole', 'reviewComments'].forEach(key => {
+    ['packageName', 'site', 'asset', 'outageId', 'schematicId', 'symbolProfileApprovalRef', 'canonicalAssetId', 'topologySnapshotId', 'topologyRevision', 'revision', 'ruleSet', 'authorityProcedureId', 'authorityProcedureRevision', 'workProtectionId', 'workProtectionName', 'workProtectionSection', 'qualificationEvidenceRef', 'sourceManifestDigest', 'scope', 'reviewerName', 'reviewerRole', 'reviewComments'].forEach(key => {
       if (typeof record[key] === 'string') state[key] = record[key];
     });
     state.schematicRevision = Number(record.schematicRevision) || 0;
@@ -231,8 +237,16 @@
     state.topologyRevision = $('wpTopologyRevision').value.trim();
     state.revision = $('wpDiagramRevision').value.trim();
     state.ruleSet = $('wpRuleSet').value.trim();
+    state.workProtectionId = $('wpWorkProtection')?.value.trim() || '';
+    const selectedInstrument = $('wpWorkProtection')?.selectedOptions?.[0];
+    state.workProtectionName = selectedInstrument && state.workProtectionId ? selectedInstrument.textContent.split(' · ')[0] : '';
+    state.workProtectionSection = selectedInstrument && selectedInstrument.textContent.includes(' · ') ? selectedInstrument.textContent.split(' · ').pop() : '';
     state.authorityProcedureId = $('wpAuthorityProcedureId').value.trim();
     state.authorityProcedureRevision = $('wpAuthorityProcedureRevision').value.trim();
+    if (state.ruleSet === 'UWPC 2024') {
+      if (!state.authorityProcedureId) state.authorityProcedureId = 'uwpc-2024';
+      if (!state.authorityProcedureRevision) state.authorityProcedureRevision = '2024';
+    }
     state.qualificationEvidenceRef = $('wpQualificationEvidenceRef').value.trim();
     state.scope = $('wpWorkScope').value.trim();
     state.reviewerName = $('wpReviewerName').value.trim();
@@ -471,7 +485,14 @@
     $('wpTopologySnapshotId').value = state.topologySnapshotId;
     $('wpTopologyRevision').value = state.topologyRevision;
     $('wpDiagramRevision').value = state.revision;
-    $('wpRuleSet').value = state.ruleSet;
+    const ruleSet = $('wpRuleSet');
+    if (ruleSet) {
+      if (state.ruleSet && ![...ruleSet.options].some(option => option.value === state.ruleSet)) {
+        ruleSet.add(new Option(state.ruleSet, state.ruleSet));
+      }
+      ruleSet.value = state.ruleSet || 'UWPC 2024';
+    }
+    if ($('wpWorkProtection')) $('wpWorkProtection').value = state.workProtectionId;
     $('wpAuthorityProcedureId').value = state.authorityProcedureId;
     $('wpAuthorityProcedureRevision').value = state.authorityProcedureRevision;
     $('wpQualificationEvidenceRef').value = state.qualificationEvidenceRef;
@@ -486,7 +507,8 @@
     $('wpControlStatus').textContent = state.status;
     $('wpReviewPill').textContent = state.status === 'REVIEW RECORDED · NOT RELEASE' ? 'RECORDED' : state.status === 'READY FOR QUALIFIED REVIEW' ? 'READY' : 'NOT READY';
     $('wpReviewPill').className = `switching-state-pill ${state.status === 'REVIEW RECORDED · NOT RELEASE' ? 'reviewed' : state.status === 'READY FOR QUALIFIED REVIEW' ? 'ready' : ''}`;
-    $('wpFormStatus').textContent = state.packageName ? `${state.diagrams.length} uploaded diagram(s) · ${state.schematicId ? `server schematic rev ${state.schematicRevision} · ` : ''}${state.ruleSources.length} governing source(s) · source-derived fields remain subject to qualified review.` : 'Create a package after attaching the current source diagrams. The fields below are intentionally blank until a qualified reviewer verifies the source.';
+    const instrumentNote = state.workProtectionName ? ` · ${state.workProtectionName} (${state.workProtectionSection || 'UWPC'})` : '';
+    $('wpFormStatus').textContent = state.packageName ? `${state.diagrams.length} uploaded diagram(s) · ${state.schematicId ? `server schematic rev ${state.schematicRevision} · ` : ''}${state.ruleSources.length} governing source(s)${instrumentNote} · source-derived fields remain subject to qualified review.` : 'Create a package after attaching the current source diagrams. Select the UWPC 2024 instrument. The fields below stay blank until a qualified reviewer verifies the source.';
     const immutable = state.status === 'REVIEW RECORDED · NOT RELEASE';
     document.querySelectorAll("[data-module-id='switching-intake'] input,[data-module-id='switching-intake'] textarea,[data-module-id='switching-intake'] select,[data-module-id='switching-intake'] button,[data-module-id='switching-form'] input,[data-module-id='switching-form'] textarea,[data-module-id='switching-form'] button,[data-module-id='switching-approval'] input,[data-module-id='switching-approval'] textarea,[data-module-id='switching-approval'] button").forEach(control => { control.disabled = immutable; });
     $('wpRecordReview').disabled = state.status !== 'READY FOR QUALIFIED REVIEW';
@@ -563,14 +585,15 @@
     if (!state.topologySnapshotId) missing.push('topology snapshot ID');
     if (!state.topologyRevision) missing.push('topology revision');
     if (!state.revision) missing.push('diagram revision');
-    if (!state.ruleSet) missing.push('UWPC/EUSR rule set');
+    if (!state.ruleSet) missing.push('UWPC 2024 rule set');
     if (!state.authorityProcedureId) missing.push('authority procedure ID');
     if (!state.authorityProcedureRevision) missing.push('authority procedure revision');
+    if (state.ruleSet === 'UWPC 2024' && !state.workProtectionId) missing.push('UWPC work-protection instrument');
     if (!state.qualificationEvidenceRef) missing.push('qualification evidence reference');
     if (!state.sourceManifestDigest) missing.push('source manifest digest');
     if (!state.scope) missing.push('scope');
     if (!selectedFiles.some(file => file.attachmentId) && !state.schematicId) missing.push('server-stored source diagram or server schematic');
-    if (!selectedRuleFiles.some(file => file.attachmentId)) missing.push('server-stored governing rule/procedure source');
+    if (!selectedRuleFiles.some(file => file.attachmentId) && !(state.ruleSet === 'UWPC 2024' && state.authorityProcedureId === 'uwpc-2024' && window.NorthStarUwpc?.bookAvailable)) missing.push('server-stored governing rule/procedure source or installed UWPC 2024 book');
     if (incomplete('isolation')) missing.push('complete isolation review rows');
     if (incomplete('sequence')) missing.push('complete sequence/checkback rows');
     if (incomplete('verification')) missing.push('complete verification rows');
@@ -659,6 +682,7 @@
     selectedFiles.forEach(file => file.url && URL.revokeObjectURL(file.url));
     Object.keys(state).forEach(key => { if (Array.isArray(state[key])) state[key] = []; else if (typeof state[key] === 'object' && state[key] !== null) state[key] = {}; else state[key] = ''; });
     state.schema = 1; state.version = 0; state.schematicRevision = 0; state.status = 'DRAFT'; state.storage = 'LOCAL'; state.serverUpdatedAt = '';
+    state.ruleSet = 'UWPC 2024'; state.authorityProcedureId = 'uwpc-2024'; state.authorityProcedureRevision = '2024';
     try { localStorage.removeItem(KEY); } catch { /* optional */ }
     selectedFiles = []; selectedRuleFiles = []; renderFields(); setNote('New local draft ready.'); $('wpIntakeStatus').textContent = '';
   }
@@ -675,9 +699,30 @@
     }
   }
 
+  async function loadUwpc() {
+    try {
+      const record = await serverRequest('/api/uwpc');
+      window.NorthStarUwpc = record;
+      const select = $('wpWorkProtection');
+      if (select && Array.isArray(record.instruments)) {
+        const current = state.workProtectionId || select.value;
+        select.innerHTML = '<option value="">Select Work Permit / tag</option>' + record.instruments.map(row => (
+          `<option value="${String(row.id).replace(/"/g, '')}">${String(row.name).replace(/[<>&]/g, '')} · ${String(row.article).replace(/[<>&]/g, '')}</option>`
+        )).join('');
+        if (current) select.value = current;
+      }
+    } catch {
+      window.NorthStarUwpc = { bookAvailable: false };
+    }
+  }
+
   function bind() {
     buildEngineeringHub();
-    read(); renderFields(); void loadReferenceData().then(() => { renderFields(); void hydrateServer(); }); void loadDraftLibrary();
+    read();
+    if (!state.ruleSet) { state.ruleSet = 'UWPC 2024'; state.authorityProcedureId = state.authorityProcedureId || 'uwpc-2024'; state.authorityProcedureRevision = state.authorityProcedureRevision || '2024'; }
+    renderFields();
+    void loadUwpc().then(() => renderFields());
+    void loadReferenceData().then(() => { renderFields(); void hydrateServer(); }); void loadDraftLibrary();
     $('wpAddDiagram').onclick = () => $('wpDiagramFiles').click();
     $('wpDiagramFiles').onchange = event => {
       const rejected = [];
@@ -713,6 +758,7 @@
     [['wpAddIsolation', 'isolation'], ['wpAddSequence', 'sequence'], ['wpAddVerification', 'verification'], ['wpAddPermission', 'permission'], ['wpAddRestoration', 'restoration']].forEach(([id, kind]) => $(id).onclick = () => { state[kind].push({ first: '', second: '' }); renderRows(kind); write(); });
     document.querySelectorAll('[data-approval-check]').forEach(check => check.addEventListener('change', () => { state.checks[check.dataset.approvalCheck] = check.checked; write(); }));
     document.querySelectorAll('#switching input:not([type="file"]),#switching textarea').forEach(input => input.addEventListener('input', () => { collectFields(); write(); }));
+    document.querySelectorAll('#switching select').forEach(input => input.addEventListener('change', () => { collectFields(); write(); renderFields(); }));
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);

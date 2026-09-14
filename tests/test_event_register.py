@@ -178,6 +178,7 @@ def test_outage_events_are_register_outages_with_report_hrefs(database):
     assert result["items"][0]["category"]=="outage"
     assert result["items"][0]["href"]==outage["href"]
     assert outage["href"].startswith("event-detail.html?id=")
+    assert outage["siteId"]=="site:kenora"
 
 
 def test_ai_attempt_records_linked_question_and_outcome(service,monkeypatch):

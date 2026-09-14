@@ -37,6 +37,10 @@ def test_tools_module_is_wired_and_not_published_on_checkin():
     assert "EVENT REPORT" in html
     assert backend.OPERATOR_ROUTES["/api/maximo"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/maximo/station"] == ("GET",)
+    assert backend.OPERATOR_ROUTES["/api/sites"] == ("GET",)
+    assert "northstar-sites.js?v=20260914-1" in html
+    assert "outages-workspace.js?v=6" in html
+    assert "/northstar-sites.js" not in backend.CHECKIN_PUBLIC_ROUTES
     assert "/device-library.js" not in backend.CHECKIN_PUBLIC_ROUTES
     assert "/device-library.css" not in backend.CHECKIN_PUBLIC_ROUTES
     assert all("library" not in prefix for prefix in backend.CHECKIN_PUBLIC_PREFIXES)
@@ -317,6 +321,23 @@ def test_station_menus_list_recorded_event_reports_only(database):
     ids = {row["eventId"] for row in station["events"]}
     assert opened["eventId"] in ids
     assert "site-alarm" in ids
+
+
+def test_alias_outage_appears_on_the_canonical_station_log(database):
+    opened = store.create_outage({
+        "title": "GS label outage",
+        "asset": "U1",
+        "site": "Iroquois Falls GS",
+        "severity": "Degraded",
+    }, actor="operator console")
+    assert opened["site"] == "Iroquois Falls"
+    assert opened["siteId"] == "site:iroquois-falls"
+    outages = library.item("menu:site:iroquois-falls:outages")
+    assert [row["eventId"] for row in outages["events"]] == [opened["eventId"]]
+    twin = library.item("menu:site:twin-falls:outages")
+    assert opened["eventId"] not in {row["eventId"] for row in twin["events"]}
+    station = library.item("site:iroquois-falls")
+    assert opened["eventId"] in {row["eventId"] for row in station["events"]}
 
 
 @pytest.fixture

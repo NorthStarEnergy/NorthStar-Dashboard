@@ -19,7 +19,10 @@ class EngineeringWorkspaceTests(unittest.TestCase):
         outages = (ROOT / "outages-workspace.js").read_text(encoding="utf-8")
         self.assertIn("engineering-hub", switching)
         self.assertIn("Engineering Drawings & Work Protection", switching)
+        self.assertIn("/api/uwpc", switching)
+        self.assertIn("UWPC 2024", switching)
         self.assertIn("data-open-engineering", outages)
+        self.assertIn('id="uwpcInstrumentList"', (ROOT / "northstar-clean.html").read_text(encoding="utf-8"))
 
     def test_outages_can_prefill_a_server_backed_switching_package(self):
         html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")

@@ -13,6 +13,7 @@ import re
 from datetime import datetime, timezone
 
 import northstar_events as events
+import northstar_sites as sites
 import northstar_store as store
 
 SCHEMA = """
@@ -169,47 +170,18 @@ def _add_menu(
 
 
 def _catalog() -> dict:
-    areas = [
-        {
-            "id": "area:west",
-            "name": "West",
+    area_map: dict[str, dict] = {}
+    for station in sites.stations():
+        area_map.setdefault(station["areaId"], {
+            "id": station["areaId"],
+            "name": station["area"],
             "kind": "area",
-            "sites": [
-                _site("Fort Frances", "115 kV"),
-                _site("Calm Lake"),
-                _site("Sturgeon Falls", "115 kV"),
-                _site("Kenora", "115 kV"),
-                _site("Norman"),
-            ],
-        },
-        {
-            "id": "area:east",
-            "name": "East",
-            "kind": "area",
-            "sites": [
-                _site("Twin Falls"),
-                _site("Iroquois Falls", "230 kV"),
-                _site("Island Falls", "115 kV"),
-                _site("Old Woman Falls"),
-                _site("White Otter Rapids"),
-                _site("Camp Three Rapids"),
-                _site("Big Beaver Falls"),
-                _site("Okikendawt GS"),
-            ],
-        },
-        {
-            "id": "area:quebec",
-            "name": "Quebec",
-            "kind": "area",
-            "sites": [
-                _site("McDougal"),
-                _site("Bird GS"),
-                _site("Cogent"),
-                _site("Aiyers 1"),
-                _site("Aiyers 2"),
-            ],
-        },
-    ]
+            "sites": [],
+        })
+        area_map[station["areaId"]]["sites"].append(_site(
+            station["name"], station.get("voltage") or "",
+        ))
+    areas = [area_map[f"area:{key}"] for key in sites.AREA_ORDER]
     items = {
         "company:northstar": {
             "id": "company:northstar",
@@ -416,15 +388,24 @@ def _notes(item_id: str) -> list[dict]:
     return notes
 
 
-def _ledger_events(*, site: str = "", item_id: str = "", sources: tuple[str, ...] = (),
-                   types: tuple[str, ...] = (), category: str = "", limit: int = 20) -> list[dict]:
-    """Recorded ledger rows only. Exact site / item match; nothing is invented."""
+def _ledger_events(*, site: str = "", site_id: str = "", item_id: str = "",
+                   sources: tuple[str, ...] = (), types: tuple[str, ...] = (),
+                   category: str = "", limit: int = 20) -> list[dict]:
+    """Recorded ledger rows only. Match siteId or canonical name / aliases."""
     import northstar_event_register as register
     clauses: list[str] = []
     values: list[str] = []
-    if site:
-        clauses.append(f"({register.SITE}) = ?")
-        values.append(site)
+    bound = sites.bind(site, site_id)
+    names = sites.match_names(bound["siteId"] or site)
+    site_parts: list[str] = []
+    if bound["siteId"]:
+        site_parts.append(f"({register.SITE_ID}) = ?")
+        values.append(bound["siteId"])
+    if names:
+        site_parts.append(f"({register.SITE}) IN ({','.join('?' for _ in names)})")
+        values.extend(names)
+    if site_parts:
+        clauses.append("(" + " OR ".join(site_parts) + ")")
     if item_id:
         clauses.append("aggregate_id = ?")
         values.append(item_id)
@@ -452,12 +433,13 @@ def _ledger_events(*, site: str = "", item_id: str = "", sources: tuple[str, ...
 def _related_events(record: dict) -> list[dict]:
     menu = record.get("menuKey")
     site = record.get("site") or (record.get("name") if record.get("kind") == "site" else "")
-    if record.get("kind") == "site" and site:
-        return _ledger_events(site=site)
-    if menu == "outages" and site:
-        return _ledger_events(site=site, sources=("outage", "outages"), types=("outage.",))
-    if menu == "operating-conditions" and site:
-        return _ledger_events(site=site, category="alarm")
+    site_id = record.get("siteId") or (record["id"] if record.get("kind") == "site" else "")
+    if record.get("kind") == "site" and (site or site_id):
+        return _ledger_events(site=site, site_id=site_id)
+    if menu == "outages" and (site or site_id):
+        return _ledger_events(site=site, site_id=site_id, sources=("outage", "outages"), types=("outage.",))
+    if menu == "operating-conditions" and (site or site_id):
+        return _ledger_events(site=site, site_id=site_id, category="alarm")
     if menu in {"notes", "field-notes"}:
         return _ledger_events(item_id=record["id"], sources=("library",))
     return []
@@ -521,6 +503,10 @@ def add_note(item_id: str, text: str, actor: str, request_id: str, expires_at: s
     note_id = "libnote_" + hashlib.sha256(json.dumps([item_id, actor, request_id]).encode()).hexdigest()
     timestamp = datetime.now(timezone.utc).isoformat()
     record = catalog()["items"][item_id]
+    bound = sites.bind(
+        record.get("site") or record.get("name"),
+        record.get("siteId") or (record["id"] if record.get("kind") == "site" else ""),
+    )
     with store._LOCK, store._session() as connection:
         prior = connection.execute(
             "SELECT body, expires_at, persist_on FROM device_library_notes WHERE id=?",
@@ -548,7 +534,8 @@ def add_note(item_id: str, text: str, actor: str, request_id: str, expires_at: s
             payload={
                 "details": text,
                 "recordKind": "note",
-                "site": record.get("site") or record.get("name"),
+                "site": bound["site"],
+                "siteId": bound["siteId"] or None,
                 "equipment": record.get("name"),
                 "category": "library",
                 "expiresAt": expires_at or None,

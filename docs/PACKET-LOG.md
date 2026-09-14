@@ -1,3 +1,11 @@
+# UWPC 2024 governing source — 2026-09-14
+
+Switching and outage work-protection drafts cite the 2024 Utility Work Protection Code. The origin lists section and instrument names only and does not reproduce the Code. 241 Python tests pass. See [report](packets/2026-09-14-uwpc-2024.md).
+
+# Canonical station identity — 2026-09-14
+
+The 18 library station names and `site:{slug}` ids are the single identity for outage and crew writes. Historical aliases match station event logs. 241 Python tests pass. See [report](packets/2026-09-14-canonical-sites.md).
+
 # Event log navigation — 2026-09-13
 
 Every recorded event, report, alarm and library note has a bookmarkable event report. Station Outages and Operating Conditions list only recorded rows. 230 Python tests pass. See [report](packets/2026-09-13-event-log-navigation.md).

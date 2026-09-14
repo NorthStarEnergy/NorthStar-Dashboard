@@ -39,6 +39,7 @@ SORT = "COALESCE(julianday(occurred_at),julianday(recorded_at),0)"
 PAYLOAD = "CASE WHEN json_valid(payload) THEN payload ELSE '{}' END"
 STATE = f"COALESCE(json_extract({PAYLOAD},'$.newState'),json_extract({PAYLOAD},'$.newStatus'),json_extract({PAYLOAD},'$.status'),'')"
 SITE = f"COALESCE(json_extract({PAYLOAD},'$.site'),json_extract({PAYLOAD},'$.siteCode'),'')"
+SITE_ID = f"COALESCE(json_extract({PAYLOAD},'$.siteId'),'')"
 
 
 def _list(params, name):
@@ -194,7 +195,7 @@ def add_note(event_id, text, actor, request_id):
             parent_payload=json.loads(parent['payload'])
         except (ValueError,TypeError):
             parent_payload={}
-        context={key:parent_payload[key] for key in ('site','siteCode','equipment','node','threadId','sourceLabel') if isinstance(parent_payload,dict) and key in parent_payload}
+        context={key:parent_payload[key] for key in ('site','siteId','siteCode','equipment','node','threadId','sourceLabel') if isinstance(parent_payload,dict) and key in parent_payload}
         # Inherit category identity but not lifecycle state: a note never acknowledges an alarm.
         events.append_event(connection,event_id=identity,event_type=parent["event_type"].split('.')[0]+'.note.added',
             occurred_at=datetime.now(timezone.utc).isoformat(),actor_id=actor,

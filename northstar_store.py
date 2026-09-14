@@ -21,6 +21,8 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import northstar_events as events
+import northstar_sites as sites
+import northstar_uwpc as uwpc
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("NORTHSTAR_DB", ROOT / "data" / "northstar.db"))
@@ -869,6 +871,7 @@ def _row_to_record(row: sqlite3.Row, reference: datetime | None = None) -> dict[
         "id": row["id"],
         "name": row["name"],
         "site": row["site"],
+        "siteId": sites.bind(row["site"])["siteId"],
         "kind": row["kind"],
         "company": row["company"],
         "status": row["status"],
@@ -931,6 +934,18 @@ def _append_event(
     severity = "critical" if "help requested" in event.lower() else (
         "warning" if "overdue" in event.lower() else "info"
     )
+    bound = sites.bind(site)
+    payload = {
+        "site": site,
+        "worker": worker,
+        "priorStatus": prior_status,
+        "newStatus": new_status,
+        "priorHelpState": prior_help_state,
+        "newHelpState": new_help_state,
+        "details": stored_details,
+    }
+    if bound["siteId"]:
+        payload["siteId"] = bound["siteId"]
     events.append_event(
         connection,
         event_type=events.event_type("workforce", event),
@@ -941,24 +956,18 @@ def _append_event(
         source="workforce",
         severity=severity,
         summary=f"{worker}: {event}",
-        payload={
-            "site": site,
-            "worker": worker,
-            "priorStatus": prior_status,
-            "newStatus": new_status,
-            "priorHelpState": prior_help_state,
-            "newHelpState": new_help_state,
-            "details": stored_details,
-        },
+        payload=payload,
     )
 
 
 def create_checkin(payload: dict[str, Any], actor: str = "check-in") -> dict[str, Any]:
     """Insert a check-in. Raises ValueError when name or site is missing."""
     name = str(payload.get("name", "")).strip()[:80]
-    site = str(payload.get("site", "")).strip()[:60]
-    if not name or not site:
+    raw_site = str(payload.get("site", "")).strip()[:60]
+    if not name or not raw_site:
         raise ValueError("name and site are required")
+    bound = sites.bind(raw_site, payload.get("siteId") or payload.get("site_id") or "")
+    site = (bound["site"] or raw_site)[:60]
 
     alone = bool(payload.get("alone"))
     timestamp = now_iso()
@@ -1619,6 +1628,9 @@ def _normalise_switching_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "ruleSet": _switching_clip(payload.get("ruleSet"), 160),
         "authorityProcedureId": _switching_clip(payload.get("authorityProcedureId"), 160),
         "authorityProcedureRevision": _switching_clip(payload.get("authorityProcedureRevision"), 160),
+        "workProtectionId": _switching_clip(payload.get("workProtectionId"), 40).lower(),
+        "workProtectionName": _switching_clip(payload.get("workProtectionName"), 160),
+        "workProtectionSection": _switching_clip(payload.get("workProtectionSection"), 40),
         "qualificationEvidenceRef": _switching_clip(payload.get("qualificationEvidenceRef"), 240),
         "sourceManifestDigest": source_manifest_digest,
         "scope": _switching_clip(payload.get("scope"), 4000),
@@ -1634,6 +1646,12 @@ def _normalise_switching_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "reviewComments": _switching_clip(payload.get("reviewComments"), 4000),
         "checks": {key: bool(checks.get(key)) for key in SWITCHING_REVIEW_CHECKS},
     }
+    instrument = uwpc.instrument(result["workProtectionId"])
+    if result["workProtectionId"] and not instrument:
+        raise ValueError("Unknown UWPC work-protection instrument")
+    if instrument:
+        result["workProtectionName"] = instrument["name"]
+        result["workProtectionSection"] = instrument["article"]
     encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
     if len(encoded.encode("utf-8")) > 50 * 1024:
         raise ValueError("switching draft metadata exceeds 50 KB")
@@ -1664,8 +1682,12 @@ def _switching_validation_errors(payload: dict[str, Any]) -> list[str]:
         errors.append("server-stored circuit diagram source")
     if payload.get("schematicId") and not payload.get("symbolProfileApprovalRef"):
         errors.append("utility symbol-profile approval reference")
-    if not durable_sources:
+    if not durable_sources and not (
+        uwpc.uses_governing_code(payload) and uwpc.book_available()
+    ):
         errors.append("server-stored governing rule/procedure source")
+    if uwpc.uses_governing_code(payload) and not uwpc.instrument(payload.get("workProtectionId")):
+        errors.append("UWPC work-protection instrument")
     if not payload.get("sourceManifestDigest"):
         errors.append("source manifest digest")
     for key, label in (
@@ -2791,6 +2813,7 @@ def _append_outage_event(
         summary=f"{stored_site}: {stored_event}",
         payload={
             "site": stored_site,
+            "siteId": sites.bind(stored_site)["siteId"] or None,
             "priorStatus": prior_status,
             "newStatus": new_status,
             "details": stored_details,
@@ -2809,6 +2832,9 @@ def create_outage(payload: dict[str, Any], actor: str = "operator") -> dict[str,
     asset = str(payload.get("asset", "")).strip()[:160]
     timestamp = now_iso()
     actor = actor.strip()[:80] or "operator"
+    raw_site = str(payload.get("site") or "System / transmission").strip()[:80]
+    bound = sites.bind(raw_site, payload.get("siteId") or payload.get("site_id") or "")
+    stored_site = (bound["site"] or raw_site)[:80]
     with _LOCK, _session() as connection:
         record_id = _unique_id(connection, "outages", "outage")
         connection.execute(
@@ -2819,7 +2845,7 @@ def create_outage(payload: dict[str, Any], actor: str = "operator") -> dict[str,
                 record_id,
                 title,
                 asset,
-                str(payload.get("site", "System / transmission")).strip()[:80],
+                stored_site,
                 str(payload.get("severity", "Monitor")).strip()[:30],
                 outage_type,
                 str(payload.get("details", "")).strip()[:4000],
@@ -2833,7 +2859,7 @@ def create_outage(payload: dict[str, Any], actor: str = "operator") -> dict[str,
             outage_id=record_id,
             actor=actor,
             event="opened",
-            site=str(payload.get("site", "System / transmission")).strip()[:80],
+            site=stored_site,
             prior_status=None,
             new_status="Open",
             details=str(payload.get("details", "")).strip(),
@@ -2860,6 +2886,7 @@ def _outage_record(row: sqlite3.Row, connection: sqlite3.Connection | None = Non
         "title": row["title"],
         "asset": row["asset"],
         "site": row["site"],
+        "siteId": sites.bind(row["site"])["siteId"],
         "severity": row["severity"],
         "type": row["outage_type"],
         "details": row["details"],

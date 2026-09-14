@@ -9,12 +9,15 @@ assert.ok(html.includes('id="deviceLibrary"'));
 assert.ok(html.includes('id="openDeviceLibrary"'));
 assert.ok(html.includes('device-library.js?v=20260913-5'));
 assert.ok(html.includes('device-library.css?v=20260913-5'));
+assert.ok(html.includes('northstar-sites.js?v=20260914-1'));
+assert.ok(html.includes('outages-workspace.js?v=6'));
 const libraryJs = fs.readFileSync(path.join(root, 'device-library.js'), 'utf8');
 assert.ok(libraryJs.includes('/api/maximo/station'));
 assert.ok(libraryJs.includes('Operations, Equipment, Data, Notes, and Reports'));
 assert.ok(libraryJs.includes("menuKey === 'maximo-database'"));
 assert.ok(html.includes('id="tools"'));
 new vm.Script(fs.readFileSync(path.join(root, 'device-library.js'), 'utf8'), { filename: 'device-library.js' });
+new vm.Script(fs.readFileSync(path.join(root, 'northstar-sites.js'), 'utf8'), { filename: 'northstar-sites.js' });
 fs.readFileSync(path.join(root, 'device-library.css'), 'utf8');
 
 function element() {

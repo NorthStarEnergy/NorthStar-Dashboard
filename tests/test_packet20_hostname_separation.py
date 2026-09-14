@@ -176,6 +176,7 @@ class HostnameSeparationTest(unittest.TestCase):
                 "/mobile-dashboard.js",
                 "/device-library.js",
                 "/device-library.css",
+                "/northstar-sites.js",
             ):
                 with self.subTest(mode=mode, path=path):
                     self.assertEqual(self.status("GET", path), 404)
@@ -270,6 +271,9 @@ class HostnameSeparationTest(unittest.TestCase):
             ("POST", "/api/library/notes"),
             ("GET", "/api/maximo"),
             ("GET", "/api/maximo/station"),
+            ("GET", "/api/sites"),
+            ("GET", "/api/uwpc"),
+            ("GET", "/api/uwpc/book"),
         )
         for method, path in operator_routes:
             payload = MISSING if method == "GET" else {"entry": "x", "site": "Kenora"}

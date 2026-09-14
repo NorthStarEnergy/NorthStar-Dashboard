@@ -35,6 +35,8 @@ import northstar_ai as ai
 import northstar_dispatch as dispatch
 import northstar_device_library as device_library
 import northstar_maximo as maximo
+import northstar_sites as sites
+import northstar_uwpc as uwpc
 
 ROOT = Path(__file__).resolve().parent
 
@@ -172,6 +174,9 @@ OPERATOR_ROUTES = {
     "/api/library/notes": ("POST",),
     "/api/maximo": ("GET",),
     "/api/maximo/station": ("GET",),
+    "/api/sites": ("GET",),
+    "/api/uwpc": ("GET",),
+    "/api/uwpc/book": ("GET",),
     "/api/ai": ("POST",),
     "/api/ai/query": ("POST",),
     "/api/ai/status": ("GET",),
@@ -1491,6 +1496,24 @@ class Handler(SimpleHTTPRequestHandler):
             include = query.get("include", ["all"])[0] != "operational"
             record = voice.get_recording(recording_id, include_filtered=include)
             self._send_json(record or {"error": "recording not found"}, 200 if record else 404)
+            return
+        if route == "/api/sites":
+            self._send_json(sites.payload())
+            return
+        if route == "/api/uwpc":
+            self._send_json(uwpc.payload())
+            return
+        if route == "/api/uwpc/book":
+            path = uwpc.book_path()
+            if not uwpc.book_available():
+                self._send_json({"error": "UWPC 2024 book is not installed on this host"}, 404)
+                return
+            self._send_binary(
+                path.read_bytes(),
+                "application/pdf",
+                "uwpc-2024.pdf",
+                uwpc.book_digest(),
+            )
             return
         if route == "/api/library":
             query = parse_qs(urlparse(self.path).query)
