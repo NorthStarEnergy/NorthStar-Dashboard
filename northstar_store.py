@@ -2597,11 +2597,54 @@ def remove_switching_attachment(
     return get_switching_draft(draft_id)
 
 
-ONE_LINE_SYMBOL_TYPES = {
-    "source", "bus", "line", "junction", "terminal", "ground", "disconnect",
-    "breaker", "fuse", "transformer", "generator", "motor", "capacitor", "reactor",
-    "battery", "surge-arrester", "load", "ct", "vt", "relay", "lockout",
+def _load_one_line_catalogue() -> dict[str, Any]:
+    path = ROOT / "one-line-symbol-catalogue.json"
+    catalogue = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(catalogue, dict) or not isinstance(catalogue.get("symbols"), list):
+        raise RuntimeError("one-line symbol catalogue is invalid")
+    return catalogue
+
+
+ONE_LINE_CATALOGUE = _load_one_line_catalogue()
+ONE_LINE_SYMBOL_PROFILE = str(ONE_LINE_CATALOGUE["profile"])
+ONE_LINE_CATALOGUE_VERSION = str(ONE_LINE_CATALOGUE["catalogueVersion"])
+ONE_LINE_GRAPHICAL_STANDARD = str(ONE_LINE_CATALOGUE["graphicalStandard"])
+ONE_LINE_DESIGNATION_STANDARD = str(ONE_LINE_CATALOGUE["designationStandard"])
+ONE_LINE_SYMBOL_ALIASES = {
+    str(key): str(value)
+    for key, value in (ONE_LINE_CATALOGUE.get("aliases") or {}).items()
 }
+ONE_LINE_SYMBOL_TYPES = {
+    str(item["id"])
+    for item in ONE_LINE_CATALOGUE["symbols"]
+    if isinstance(item, dict) and item.get("id")
+}
+ONE_LINE_SWITCHING_TYPES = {
+    str(item["id"])
+    for item in ONE_LINE_CATALOGUE["symbols"]
+    if isinstance(item, dict) and item.get("switching")
+}
+ONE_LINE_WINDING_TYPES = {
+    str(item["id"])
+    for item in ONE_LINE_CATALOGUE["symbols"]
+    if isinstance(item, dict) and item.get("winding")
+}
+ONE_LINE_WINDING_CONFIGS = {
+    str(item[0])
+    for item in ONE_LINE_CATALOGUE.get("windingConfigs") or [["", ""]]
+    if isinstance(item, list) and item
+}
+ONE_LINE_OPERATING_STATES = {"open", "closed"}
+
+
+def _one_line_symbol_type(value: Any) -> str:
+    raw = str(value or "").strip()
+    return ONE_LINE_SYMBOL_ALIASES.get(raw, raw)
+
+
+def _one_line_terminal_id(value: Any) -> str:
+    raw = "".join(char for char in _switching_clip(value, 16) if char.isalnum() or char in "-_")
+    return raw[:12]
 
 
 def _normalise_one_line_record(value: Any) -> dict[str, Any]:
@@ -2614,21 +2657,33 @@ def _normalise_one_line_record(value: Any) -> dict[str, Any]:
     symbols: list[dict[str, Any]] = []
     used: set[str] = set()
     for index, item in enumerate(raw_symbols[:500], 1):
-        if not isinstance(item, dict) or item.get("type") not in ONE_LINE_SYMBOL_TYPES:
+        if not isinstance(item, dict):
+            continue
+        symbol_type = _one_line_symbol_type(item.get("type"))
+        if symbol_type not in ONE_LINE_SYMBOL_TYPES:
             continue
         raw_id = _switching_clip(item.get("id"), 80)
         symbol_id = "".join(c for c in raw_id if c.isalnum() or c in "-_.") or f"S-{index:03d}"
         if symbol_id in used:
             symbol_id = f"S-{index:03d}"
         used.add(symbol_id)
+        operating_state = ""
+        if symbol_type in ONE_LINE_SWITCHING_TYPES:
+            operating_state = "open" if str(item.get("operatingState") or "") == "open" else "closed"
+        winding_config = ""
+        if symbol_type in ONE_LINE_WINDING_TYPES:
+            candidate = str(item.get("windingConfig") or "").strip().lower()
+            winding_config = candidate if candidate in ONE_LINE_WINDING_CONFIGS else ""
         symbols.append({
             "id": symbol_id,
-            "type": item["type"],
+            "type": symbol_type,
             "x": _bounded_int(item.get("x"), 0, 1000, 100),
             "y": _bounded_int(item.get("y"), 0, 560, 100),
             "rotation": _bounded_int(item.get("rotation"), 0, 270, 0) // 90 * 90,
             "label": _switching_clip(item.get("label"), 160),
             "deviceFunction": _switching_clip(item.get("deviceFunction"), 80),
+            "operatingState": operating_state,
+            "windingConfig": winding_config,
         })
     edges: list[dict[str, str]] = []
     pairs: set[tuple[str, str]] = set()
@@ -2641,13 +2696,20 @@ def _normalise_one_line_record(value: Any) -> dict[str, Any]:
         if start not in used or end not in used or start == end or pair in pairs:
             continue
         pairs.add(pair)
-        edges.append({"id": f"E-{index:03d}", "from": start, "to": end})
+        edges.append({
+            "id": f"E-{index:03d}",
+            "from": start,
+            "to": end,
+            "fromTerminal": _one_line_terminal_id(item.get("fromTerminal")),
+            "toTerminal": _one_line_terminal_id(item.get("toTerminal")),
+        })
     record = {
-        "version": 2,
+        "version": 3,
         "state": "draft",
-        "symbolLibraryProfile": "NorthStar IEEE compatibility profile v2",
-        "graphicalStandard": "IEEE/ANSI 315-1975 convention (inactive-reserved)",
-        "designationStandard": "IEEE C37.2-2022",
+        "symbolLibraryProfile": ONE_LINE_SYMBOL_PROFILE,
+        "catalogueVersion": ONE_LINE_CATALOGUE_VERSION,
+        "graphicalStandard": ONE_LINE_GRAPHICAL_STANDARD,
+        "designationStandard": ONE_LINE_DESIGNATION_STANDARD,
         "symbols": symbols,
         "edges": edges,
         "provenanceLabel": "SERVER DRAFT · NOT OPERATIONAL RELEASE",

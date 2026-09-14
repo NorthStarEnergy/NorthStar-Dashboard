@@ -1,6 +1,6 @@
 # Switching / Engineering / UWPC Remaining Work
 
-## Completed through Packet 26
+## Completed through Packet 27
 
 - Diagram and governing-procedure bytes are stored with the operator-gated SQLite draft and covered by SHA-256 metadata and the source-manifest digest.
 - One-line schematics are append-only server revisions that can link to outages and switching packages.
@@ -8,6 +8,7 @@
 - A controlled ZIP export contains the exact stored sources, package, audit, evidence, and hash manifest; export itself is audited.
 - Reviewed records remain immutable. Starting a server revision copies sources under new IDs and clears revision, qualification, reviewer, and checklist evidence.
 - The workflow remains `DRAFT` → `READY FOR QUALIFIED REVIEW` → `REVIEW RECORDED - NOT RELEASE`.
+- One-line symbols use catalogue `northstar-ieee-compat-2026.3`: client and server share the same profile id, conductors snap to terminals, switching devices record a drafting OPEN/CLOSED position, workplace line switches/breakers/circuit switchers/fuses use the shop glyph set, Figure A-1 circuit notation is in the palette, and the utility-critical set includes recloser, sectionalizer, load-break, grounding switch, ATS, three-winding transformer, autotransformer, and PT. This remains a compatibility profile, not a certified utility legend.
 
 ## Remaining work, prioritized
 

@@ -20,18 +20,23 @@
   const typeInfo = type => library.get(type);
   const cleanText = (value, limit = 80) => String(value ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, limit);
   const safeNumber = (value, fallback, min, max) => clamp(Number.isFinite(Number(value)) ? Number(value) : fallback, min, max);
+  const windingValues = new Set((library.windingConfigs || []).map(item => item[0]));
   function setStatus(message, ok = false) { status.innerHTML = `<span>${esc(message)}</span><strong id="oneLineCount">${state.symbols.length} SYMBOLS · ${state.edges.length} CONNECTIONS · ${ok ? 'SAVED' : 'DRAFT'}</strong>`; }
   function markDirty(message = 'Unsaved local changes') { state.dirty = true; setStatus(message); }
   function nextId(type) {
-    const prefix = typeInfo(type).prefix;
+    const info = typeInfo(type);
+    if (!info) return `S-01`;
+    const prefix = info.prefix;
     const used = new Set(state.symbols.map(item => item.id));
     let number = 1;
     while (used.has(`${prefix}-${String(number).padStart(2, '0')}`)) number += 1;
     return `${prefix}-${String(number).padStart(2, '0')}`;
   }
   function normaliseSymbol(item, index) {
-    const info = library.definitions.find(definition => definition.id === item?.type) || library.get('source');
+    const info = library.get(item?.type);
+    if (!info) return null;
     const rotation = [0, 90, 180, 270].includes(Number(item?.rotation)) ? Number(item.rotation) : 0;
+    const windingConfig = info.winding && windingValues.has(String(item?.windingConfig || '')) ? String(item.windingConfig) : '';
     return {
       id: cleanText(item?.id, 32) || `${info.prefix}-${String(index + 1).padStart(2, '0')}`,
       type: info.id,
@@ -40,15 +45,25 @@
       rotation,
       label: cleanText(item?.label),
       deviceFunction: cleanText(item?.deviceFunction ?? info.functionNumber ?? '', 16),
+      operatingState: info.switching ? (item?.operatingState === 'open' ? 'open' : 'closed') : '',
+      windingConfig,
     };
   }
   function normaliseEdges(items) {
     const ids = new Set(state.symbols.map(item => item.id));
-    return (Array.isArray(items) ? items : []).filter(item => ids.has(item?.from) && ids.has(item?.to) && item.from !== item.to).map((item, index) => ({
-      id: cleanText(item.id, 32) || `E-${String(index + 1).padStart(2, '0')}`,
-      from: item.from,
-      to: item.to,
-    }));
+    return (Array.isArray(items) ? items : []).filter(item => ids.has(item?.from) && ids.has(item?.to) && item.from !== item.to).map((item, index) => {
+      const from = symbolById(item.from);
+      const to = symbolById(item.to);
+      const fromSnap = library.snapPoint(from, to.x, to.y, item.fromTerminal);
+      const toSnap = library.snapPoint(to, from.x, from.y, item.toTerminal);
+      return {
+        id: cleanText(item.id, 32) || `E-${String(index + 1).padStart(2, '0')}`,
+        from: item.from,
+        to: item.to,
+        fromTerminal: fromSnap.id,
+        toTerminal: toSnap.id,
+      };
+    });
   }
   function canvasPoint(event) {
     const rect = svg.getBoundingClientRect();
@@ -60,17 +75,30 @@
     for (let y = 0; y <= 560; y += 40) output += `<line class="grid" x1="0" y1="${y}" x2="1000" y2="${y}"/>`;
     return output;
   }
+  function snapMarkup(symbol) {
+    if (state.tool !== 'connect' && state.selected !== symbol.id) return '';
+    return library.terminals(symbol).map(term => {
+      if (term.kind === 'segment') {
+        return `<line class="snap-port snap-span" data-symbol-id="${esc(symbol.id)}" data-terminal-id="${esc(term.id)}" x1="${term.x1}" y1="${term.y1}" x2="${term.x2}" y2="${term.y2}"/>`;
+      }
+      return `<circle class="snap-port" data-symbol-id="${esc(symbol.id)}" data-terminal-id="${esc(term.id)}" cx="${term.x}" cy="${term.y}" r="6"/>`;
+    }).join('');
+  }
   function symbolMarkup(symbol) {
     const info = typeInfo(symbol.type);
+    if (!info) return '';
     const designation = symbol.deviceFunction && !['relay', 'lockout'].includes(symbol.type) ? `<text class="device-function" x="${symbol.x}" y="${symbol.y - 36}">${esc(symbol.deviceFunction)}</text>` : '';
-    const label = esc(symbol.label || symbol.id);
-    return `<g class="node ${state.selected === symbol.id ? 'selected' : ''}" data-symbol-id="${esc(symbol.id)}"><title>${esc(info.name)} · ${esc(info.standard)}</title><g transform="rotate(${symbol.rotation} ${symbol.x} ${symbol.y})">${library.draw(symbol)}</g>${designation}<text class="scada-tag" x="${symbol.x}" y="${symbol.y + 42}">${label}</text><rect class="scada-value" x="${symbol.x - 22}" y="${symbol.y + 47}" width="44" height="12" rx="0"/><text class="scada-value-text" x="${symbol.x}" y="${symbol.y + 56}">0</text><text class="node-type" x="${symbol.x}" y="${symbol.y + 70}">${esc(info.name.toUpperCase())}</text></g>`;
+    const position = info.switching ? `<text class="operating-state" x="${symbol.x}" y="${symbol.y - (symbol.deviceFunction && !['relay', 'lockout'].includes(symbol.type) ? 48 : 36)}">${symbol.operatingState === 'open' ? 'OPEN' : 'CLSD'}</text>` : '';
+    const winding = info.winding && symbol.windingConfig ? `<text class="winding-config" x="${symbol.x}" y="${symbol.y - 36}">${esc(symbol.windingConfig.toUpperCase())}</text>` : '';
+    return `<g class="node ${state.selected === symbol.id ? 'selected' : ''} ${info.switching && symbol.operatingState === 'open' ? 'is-open' : ''}" data-symbol-id="${esc(symbol.id)}"><title>${esc(info.name)} · ${esc(info.standard)}</title><g transform="rotate(${symbol.rotation} ${symbol.x} ${symbol.y})">${library.draw(symbol)}</g>${position}${designation}${winding}<text x="${symbol.x}" y="${symbol.y + 42}">${esc(symbol.label || symbol.id)}</text><text class="node-type" x="${symbol.x}" y="${symbol.y + 55}">${esc(info.name.toUpperCase())}</text>${snapMarkup(symbol)}</g>`;
   }
   function render() {
     const wires = state.edges.map(edge => {
       const from = symbolById(edge.from), to = symbolById(edge.to);
       if (!from || !to) return '';
-      return `<line class="wire ${state.selected === edge.id ? 'selected' : ''}" data-edge-id="${esc(edge.id)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"/>`;
+      const start = library.snapPoint(from, to.x, to.y, edge.fromTerminal);
+      const end = library.snapPoint(to, from.x, from.y, edge.toTerminal);
+      return `<line class="wire ${state.selected === edge.id ? 'selected' : ''}" data-edge-id="${esc(edge.id)}" x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}"/>`;
     }).join('');
     svg.innerHTML = `${grid()}<g class="wires">${wires}</g><g class="symbols">${state.symbols.map(symbolMarkup).join('')}</g>`;
     empty.hidden = state.symbols.length > 0;
@@ -86,11 +114,14 @@
   function renderInspector() {
     const symbol = symbolById(state.selected);
     const inspector = $('#oneLineInspectorBody');
-    if (!symbol) { inspector.innerHTML = '<p class="hint">Select a symbol to edit its label, IEEE device designation, rotation, or position. Use CONNECT to draw a conductor between two symbols.</p>'; return; }
+    if (!symbol) { inspector.innerHTML = '<p class="hint">Select a symbol to edit its label, IEEE device designation, drawn position, winding, rotation, or terminals. Use CONNECT to snap a conductor between two terminals.</p>'; return; }
     const info = typeInfo(symbol.type);
+    if (!info) { inspector.innerHTML = '<p class="hint">Unknown symbol type was not migrated into the current catalogue.</p>'; return; }
     let markup;
     try {
-      markup = `<label>SYMBOL ID<input value="${esc(symbol.id)}" disabled></label><label>SYMBOL TYPE<input value="${esc(info.name)}" disabled></label><label>LABEL<input id="oneLineLabel" value="${esc(symbol.label)}" placeholder="Equipment or circuit label"></label><label>IEEE DEVICE FUNCTION<input id="oneLineFunction" list="oneLineFunctionList" value="${esc(symbol.deviceFunction)}" placeholder="Optional C37.2 designation"><datalist id="oneLineFunctionList">${functionOptions(symbol.deviceFunction)}</datalist></label><p class="symbol-standard-ref">${esc(info.standard)}</p><label>ROTATION<select id="oneLineRotation"><option value="0" ${symbol.rotation === 0 ? 'selected' : ''}>0°</option><option value="90" ${symbol.rotation === 90 ? 'selected' : ''}>90°</option><option value="180" ${symbol.rotation === 180 ? 'selected' : ''}>180°</option><option value="270" ${symbol.rotation === 270 ? 'selected' : ''}>270°</option></select></label><div class="one-line-actions"><button type="button" id="oneLineDelete">DELETE SYMBOL</button><button type="button" id="oneLineRotate">ROTATE 90°</button></div>`;
+      const switching = info.switching ? `<label>DRAWN POSITION<select id="oneLineState"><option value="closed" ${symbol.operatingState === 'closed' ? 'selected' : ''}>Closed · in-service sketch</option><option value="open" ${symbol.operatingState === 'open' ? 'selected' : ''}>Open · isolated sketch</option></select></label><p class="symbol-standard-ref">Drawn OPEN/CLOSED is a drafting position for the switching package. It is not live equipment state.</p>` : '';
+      const winding = info.winding ? `<label>WINDING CONFIGURATION<select id="oneLineWinding">${(library.windingConfigs || []).map(([value, name]) => `<option value="${esc(value)}" ${symbol.windingConfig === value ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></label>` : '';
+      markup = `<label>SYMBOL ID<input value="${esc(symbol.id)}" disabled></label><label>SYMBOL TYPE<input value="${esc(info.name)}" disabled></label><label>LABEL<input id="oneLineLabel" value="${esc(symbol.label)}" placeholder="Equipment or circuit label"></label><label>IEEE DEVICE FUNCTION<input id="oneLineFunction" list="oneLineFunctionList" value="${esc(symbol.deviceFunction)}" placeholder="Optional C37.2 designation"><datalist id="oneLineFunctionList">${functionOptions(symbol.deviceFunction)}</datalist></label>${switching}${winding}<p class="symbol-standard-ref">${esc(info.standard)} · catalogue ${esc(library.catalogueVersion)}</p><label>ROTATION<select id="oneLineRotation"><option value="0" ${symbol.rotation === 0 ? 'selected' : ''}>0°</option><option value="90" ${symbol.rotation === 90 ? 'selected' : ''}>90°</option><option value="180" ${symbol.rotation === 180 ? 'selected' : ''}>180°</option><option value="270" ${symbol.rotation === 270 ? 'selected' : ''}>270°</option></select></label><div class="one-line-actions"><button type="button" id="oneLineDelete">DELETE SYMBOL</button><button type="button" id="oneLineRotate">ROTATE 90°</button></div>`;
     } catch (error) {
       inspector.innerHTML = `<p class="hint">Inspector unavailable: ${esc(error.message)}</p>`;
       return;
@@ -99,19 +130,29 @@
     $('#oneLineLabel').onchange = event => { symbol.label = cleanText(event.target.value); markDirty('Label updated'); render(); };
     $('#oneLineFunction').onchange = event => { symbol.deviceFunction = cleanText(event.target.value, 16); markDirty('Device designation updated'); render(); };
     $('#oneLineRotation').onchange = event => { symbol.rotation = Number(event.target.value); markDirty(); render(); };
+    const stateField = $('#oneLineState');
+    if (stateField) stateField.onchange = event => { symbol.operatingState = event.target.value === 'open' ? 'open' : 'closed'; markDirty('Drawn position updated'); render(); };
+    const windingField = $('#oneLineWinding');
+    if (windingField) windingField.onchange = event => { symbol.windingConfig = windingValues.has(event.target.value) ? event.target.value : ''; markDirty('Winding configuration updated'); render(); };
     $('#oneLineDelete').onclick = () => { state.symbols = state.symbols.filter(item => item.id !== symbol.id); state.edges = state.edges.filter(edge => edge.from !== symbol.id && edge.to !== symbol.id); state.selected = null; markDirty('Symbol deleted'); render(); };
     $('#oneLineRotate').onclick = () => { symbol.rotation = (symbol.rotation + 90) % 360; markDirty(); render(); };
   }
+  function paletteHaystack(item) {
+    const aliasKeys = Object.entries(library.aliases || {}).filter(([, id]) => id === item.id).map(([key]) => key);
+    return `${item.name} ${item.id} ${item.functionNumber || ''} ${item.category} ${item.standard || ''} ${aliasKeys.join(' ')}`.toLowerCase();
+  }
   function renderPalette(filter = '') {
     const query = filter.trim().toLowerCase();
-    const visible = library.definitions.filter(item => !item.hidden && (!query || `${item.name} ${item.id} ${item.functionNumber || ''}`.toLowerCase().includes(query)));
+    const visible = library.definitions.filter(item => !item.hidden && (!query || paletteHaystack(item).includes(query)));
     const groups = [...new Set(visible.map(item => item.category))];
-    $('#oneLineSymbolLibrary').innerHTML = groups.map(category => `<section class="symbol-group"><h4>${esc(category)}</h4>${visible.filter(item => item.category === category).map(item => `<button class="symbol-tool" type="button" data-symbol-type="${esc(item.id)}" title="${esc(item.standard)}"><span class="symbol-glyph">${esc(item.glyph)}</span><span>${esc(item.name)}${item.functionNumber ? `<small>IEEE ${esc(item.functionNumber)}</small>` : ''}</span></button>`).join('')}</section>`).join('') || '<p class="hint">No matching symbols.</p>';
+    $('#oneLineSymbolLibrary').innerHTML = groups.map(category => `<section class="symbol-group"><h4>${esc(category)}</h4>${visible.filter(item => item.category === category).map(item => `<button class="symbol-tool" type="button" data-symbol-type="${esc(item.id)}" title="${esc(item.standard)}"><span class="symbol-glyph">${esc(item.glyph)}</span><span>${esc(item.name)}${item.functionNumber ? `<small>IEEE ${esc(item.functionNumber)}</small>` : ''}${item.switching ? '<small>OPEN/CLOSED</small>' : ''}${item.winding ? '<small>WINDING</small>' : ''}</span></button>`).join('')}</section>`).join('') || '<p class="hint">No matching symbols.</p>';
     bindToolButtons($('#oneLineSymbolLibrary'));
   }
   function addSymbol(type, point = { x: 170 + (state.symbols.length % 5) * 150, y: 120 + Math.floor(state.symbols.length / 5) * 110 }) {
     const info = typeInfo(type);
-    const symbol = normaliseSymbol({ id: nextId(type), type, x: point.x, y: point.y, rotation: 0, label: '', deviceFunction: info.functionNumber || '' }, state.symbols.length);
+    if (!info || info.hidden) { setStatus(`Unknown symbol type: ${type || 'blank'}`); return; }
+    const symbol = normaliseSymbol({ id: nextId(type), type, x: point.x, y: point.y, rotation: 0, label: '', deviceFunction: info.functionNumber || '', operatingState: info.switching ? 'closed' : '', windingConfig: '' }, state.symbols.length);
+    if (!symbol) return;
     state.symbols.push(symbol);
     state.selected = symbol.id;
     state.tool = 'select';
@@ -125,7 +166,8 @@
       state.tool = type;
       connectStart = null;
       root.querySelectorAll('.symbol-tool').forEach(item => item.classList.toggle('active', item === button));
-      setStatus(type === 'select' ? 'Select mode' : 'Connect mode · choose two symbols');
+      setStatus(type === 'select' ? 'Select mode' : 'Connect mode · click terminals, or two symbols');
+      render();
       return;
     }
     addSymbol(type);
@@ -133,22 +175,85 @@
   function bindToolButtons(scope = root) { scope.querySelectorAll('.symbol-tool').forEach(button => { button.onclick = () => chooseTool(button); }); }
   function startDemo() {
     const raw = [
-      { id:'SRC-01', type:'source', x:90, y:280, label:'UTILITY' },
-      { id:'BUS-01', type:'bus', x:250, y:280, label:'BUS A' },
-      { id:'DSC-01', type:'disconnect', x:410, y:280, label:'89-1' },
-      { id:'CBR-01', type:'breaker', x:570, y:280, label:'52-1' },
-      { id:'XFMR-01', type:'transformer', x:730, y:280, label:'T1' },
-      { id:'LOD-01', type:'load', x:900, y:280, label:'FEEDER 1' },
+      { id:'SRC-01', type:'source', x:80, y:220, label:'UTILITY' },
+      { id:'BUS-01', type:'bus', x:230, y:220, label:'BUS A' },
+      { id:'DSC-01', type:'disconnect', x:390, y:220, label:'89-1', operatingState:'open' },
+      { id:'CBR-01', type:'breaker', x:540, y:220, label:'52-1', operatingState:'closed' },
+      { id:'XF3-01', type:'transformer-3winding', x:720, y:220, label:'T1', windingConfig:'dy' },
+      { id:'LOD-01', type:'load', x:900, y:220, label:'FEEDER 1' },
+      { id:'FUS-01', type:'fuse', x:230, y:380, label:'F1', operatingState:'open' },
+      { id:'RCL-01', type:'recloser', x:390, y:380, label:'RCL-1', operatingState:'closed' },
+      { id:'LBS-01', type:'load-break', x:540, y:380, label:'LBS-1', operatingState:'closed' },
+      { id:'CS-01', type:'circuit-switcher', x:720, y:380, label:'CS-1', operatingState:'closed' },
+      { id:'LOD-02', type:'load', x:880, y:380, label:'TAP 2' },
     ];
-    state.symbols = raw.map(normaliseSymbol);
-    state.edges = state.symbols.slice(1).map((symbol, index) => ({ id:`E-${String(index + 1).padStart(2, '0')}`, from:state.symbols[index].id, to:symbol.id }));
+    state.symbols = raw.map(normaliseSymbol).filter(Boolean);
+    state.edges = [
+      { from:'SRC-01', to:'BUS-01' },
+      { from:'BUS-01', to:'DSC-01' },
+      { from:'DSC-01', to:'CBR-01' },
+      { from:'CBR-01', to:'XF3-01' },
+      { from:'XF3-01', to:'LOD-01' },
+      { from:'BUS-01', to:'FUS-01' },
+      { from:'BUS-01', to:'RCL-01' },
+      { from:'RCL-01', to:'LBS-01' },
+      { from:'LBS-01', to:'CS-01' },
+      { from:'CS-01', to:'LOD-02' },
+    ];
+    state.edges = normaliseEdges(state.edges);
     state.selected = null;
     state.revision = 0;
-    markDirty('IEEE compatibility example loaded');
+    markDirty('Workplace catalogue 2026.3 feeder example loaded');
+    render();
+  }
+  function startCircuitDemo() {
+    const raw = [
+      { id:'PWR-01', type:'power', x:80, y:140, label:'POWER' },
+      { id:'SW-01', type:'switch', x:240, y:140, label:'SW', operatingState:'open' },
+      { id:'RES-01', type:'resistor', x:400, y:140, label:'R1' },
+      { id:'LED-01', type:'led', x:560, y:140, label:'LED' },
+      { id:'GND-01', type:'ground', x:720, y:140, label:'GND' },
+      { id:'CEL-01', type:'capacitior', x:80, y:300, label:'C1' },
+      { id:'IND-01', type:'inductor', x:240, y:300, label:'L1' },
+      { id:'DIO-01', type:'diode', x:400, y:300, label:'D1' },
+      { id:'LMP-01', type:'lamp', x:560, y:300, label:'LAMP' },
+      { id:'MTR-01', type:'motor', x:720, y:300, label:'M1' },
+      { id:'LDR-01', type:'ldr', x:240, y:460, label:'LDR' },
+      { id:'POT-01', type:'potentiometer', x:400, y:460, label:'POT' },
+      { id:'Q-01', type:'transistor', x:560, y:460, label:'Q1' },
+    ];
+    state.symbols = raw.map(normaliseSymbol).filter(Boolean);
+    state.edges = [
+      { from:'PWR-01', to:'SW-01' },
+      { from:'SW-01', to:'RES-01' },
+      { from:'RES-01', to:'LED-01' },
+      { from:'LED-01', to:'GND-01' },
+      { from:'CEL-01', to:'IND-01' },
+      { from:'IND-01', to:'DIO-01' },
+      { from:'DIO-01', to:'LMP-01' },
+      { from:'LMP-01', to:'MTR-01' },
+      { from:'LDR-01', to:'POT-01' },
+      { from:'POT-01', to:'Q-01' },
+    ];
+    state.edges = normaliseEdges(state.edges);
+    state.selected = null;
+    state.revision = 0;
+    markDirty('Figure A-1 circuit example loaded');
     render();
   }
   function recordPayload(nextRevision = state.revision) {
-    return { version:2, revision:nextRevision, state:'draft', symbolLibraryProfile:library.profile, graphicalStandard:library.graphicalStandard, designationStandard:library.designationStandard, symbols:state.symbols, edges:state.edges, provenanceLabel:'LOCAL DRAFT · NOT OPERATIONAL RELEASE' };
+    return {
+      version:3,
+      revision:nextRevision,
+      state:'draft',
+      symbolLibraryProfile:library.profile,
+      catalogueVersion:library.catalogueVersion,
+      graphicalStandard:library.graphicalStandard,
+      designationStandard:library.designationStandard,
+      symbols:state.symbols,
+      edges:state.edges,
+      provenanceLabel:'LOCAL DRAFT · NOT OPERATIONAL RELEASE',
+    };
   }
   function save() {
     const payload = { ...recordPayload(state.revision + 1), savedAt:new Date().toISOString() };
@@ -159,11 +264,11 @@
   }
   function applyPayload(payload, imported = false) {
     if (!payload || !Array.isArray(payload.symbols) || !Array.isArray(payload.edges)) throw new Error('Invalid one-line record');
-    state.symbols = payload.symbols.map(normaliseSymbol);
+    state.symbols = payload.symbols.map(normaliseSymbol).filter(Boolean);
     state.edges = normaliseEdges(payload.edges);
     state.revision = Number(payload.revision) || 0;
     state.selected = null;
-    if (imported) markDirty('Imported record migrated to current symbol profile');
+    if (imported) markDirty(`Imported record migrated to ${library.profile}`);
     else setStatus(`Revision ${state.revision} loaded · ${library.profile}`, true);
     render();
   }
@@ -255,9 +360,9 @@
   }
   function standaloneSvg() {
     const clone = svg.cloneNode(true);
-    clone.querySelectorAll('.grid').forEach(node => node.remove());
+    clone.querySelectorAll('.grid,.snap-port').forEach(node => node.remove());
     clone.querySelectorAll('.selected').forEach(node => node.classList.remove('selected'));
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" width="1000" height="560"><rect width="1000" height="560" fill="#091219"/><style>.wire{stroke:#75b7cf;stroke-width:3;fill:none}.node-shape{fill:#10222b;stroke:#86b9c9;stroke-width:2}.node-shape.symbol-heavy{fill:none;stroke-width:7}.node text{fill:#eaf3f5;font:12px monospace;text-anchor:middle}.node-type{fill:#82a7b4!important;font-size:9px!important}.symbol-letter{font-weight:700;dominant-baseline:middle}.device-function{fill:#f2b84b!important;font-size:10px;font-weight:700}.terminal-dot{fill:#f2b84b;stroke:#101a20;stroke-width:2}</style>${clone.innerHTML}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" width="1000" height="560"><rect width="1000" height="560" fill="#091219"/><style>.wire{stroke:#75b7cf;stroke-width:3;fill:none}.node-shape{fill:#10222b;stroke:#86b9c9;stroke-width:2}.node-shape.symbol-heavy{fill:none;stroke-width:7}.node-shape.device-open{stroke-dasharray:5 4;fill:#091219}.node text{fill:#eaf3f5;font:12px monospace;text-anchor:middle}.node-type{fill:#82a7b4!important;font-size:9px!important}.symbol-letter{font-weight:700;dominant-baseline:middle}.device-function,.operating-state,.winding-config{fill:#f2b84b!important;font-size:10px;font-weight:700}.terminal-dot{fill:#f2b84b;stroke:#101a20;stroke-width:2}</style>${clone.innerHTML}</svg>`;
   }
   function exportSvg() {
     downloadBlob(new Blob([standaloneSvg()], { type:'image/svg+xml' }), `northstar-one-line-rev-${serverDocument?.revision || state.revision || 0}.svg`);
@@ -290,22 +395,45 @@
     link.download = `northstar-one-line-rev-${state.revision || 0}.json`;
     link.click();
     URL.revokeObjectURL(link.href);
-    setStatus('Version 2 IEEE-profile JSON downloaded', true);
+    setStatus(`Version 3 catalogue ${library.catalogueVersion} JSON downloaded`, true);
   }
   function importFile(file) {
     const reader = new FileReader();
     reader.onload = () => { try { applyPayload(JSON.parse(reader.result), true); } catch { setStatus('Import rejected: invalid one-line record'); } };
     reader.readAsText(file);
   }
+  function connectSymbols(fromRef, toSymbol, toTerminal) {
+    if (!fromRef || fromRef.id === toSymbol.id) return;
+    if (state.edges.some(item => (item.from === fromRef.id && item.to === toSymbol.id) || (item.from === toSymbol.id && item.to === fromRef.id))) return;
+    const from = symbolById(fromRef.id);
+    if (!from) return;
+    const fromSnap = library.snapPoint(from, toSymbol.x, toSymbol.y, fromRef.terminal);
+    const toSnap = library.snapPoint(toSymbol, from.x, from.y, toTerminal);
+    state.edges.push({
+      id:`E-${String(state.edges.length + 1).padStart(2, '0')}`,
+      from:from.id,
+      to:toSymbol.id,
+      fromTerminal:fromSnap.id,
+      toTerminal:toSnap.id,
+    });
+  }
   svg.addEventListener('pointerdown', event => {
+    const port = event.target.closest('.snap-port');
     const node = event.target.closest('.node');
     const edge = event.target.closest('.wire');
-    if (edge) { state.selected = edge.dataset.edgeId; render(); return; }
-    if (!node) { state.selected = null; render(); return; }
-    const symbol = symbolById(node.dataset.symbolId);
+    if (edge && !port) { state.selected = edge.dataset.edgeId; connectStart = null; render(); return; }
+    if (!node && !port) { state.selected = null; connectStart = null; render(); return; }
+    const symbol = symbolById((port || node).dataset.symbolId);
+    if (!symbol) return;
+    const terminalId = port?.dataset.terminalId || '';
     if (state.tool === 'connect') {
-      if (!connectStart) { connectStart = symbol.id; setStatus(`Connect from ${symbol.id} · choose destination`); return; }
-      if (connectStart !== symbol.id && !state.edges.some(item => (item.from === connectStart && item.to === symbol.id) || (item.from === symbol.id && item.to === connectStart))) state.edges.push({ id:`E-${String(state.edges.length + 1).padStart(2, '0')}`, from:connectStart, to:symbol.id });
+      if (!connectStart) {
+        connectStart = { id: symbol.id, terminal: terminalId };
+        setStatus(`Connect from ${symbol.id}${terminalId ? ' · ' + terminalId : ''} · choose destination`);
+        render();
+        return;
+      }
+      connectSymbols(connectStart, symbol, terminalId);
       connectStart = null;
       markDirty('Connection updated');
       render();
@@ -314,7 +442,7 @@
     state.selected = symbol.id;
     const point = canvasPoint(event);
     drag = { id:symbol.id, dx:symbol.x - point.x, dy:symbol.y - point.y };
-    svg.setPointerCapture(event.pointerId);
+    try { svg.setPointerCapture(event.pointerId); } catch { /* synthetic or non-pointer events */ }
     render();
   });
   svg.addEventListener('pointermove', event => {
@@ -332,6 +460,7 @@
   renderPalette();
   $('#oneLineSymbolSearch').oninput = event => renderPalette(event.target.value);
   $('#oneLineDemo').onclick = startDemo;
+  $('#oneLineCircuitExample').onclick = startCircuitDemo;
   $('#oneLineSave').onclick = save;
   $('#oneLineSaveServer').onclick = async () => { try { await saveServer(); } catch (error) { setStatus(`Server save failed: ${error.message}`); } };
   $('#oneLineLoadServer').onclick = loadSelectedServer;
