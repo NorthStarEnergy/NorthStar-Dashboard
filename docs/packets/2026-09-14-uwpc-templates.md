@@ -20,4 +20,4 @@ No new feeds. The licensed 2024 book stays out of git.
 
 ## Activation required
 
-Restart the backend for the template payload. Static assets are `switching-workspace.js?v=20260914-4`, `switching-workspace.css?v=20260914-6`, and `outages-workspace.js?v=8`.
+Restart the backend for the template payload. Static assets are `switching-workspace.js?v=20260914-5`, `switching-workspace.css?v=20260914-6`, and `outages-workspace.js?v=8`.

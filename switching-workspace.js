@@ -788,7 +788,7 @@
     const relatedButtons = (selected.related || []).map(id => {
       const other = uwpcTemplates().find(row => row.id === id);
       if (!other) return '';
-      return `<button type="button" class="secondary-btn" data-apply-template="${String(other.id).replace(/"/g, '')}">OPEN ${String(other.form).replace(/[<>&]/g, '')}</button>`;
+      return `<button type="button" class="secondary-btn" data-apply-template="${String(other.id).replace(/"/g, '')}">OPEN ${String(other.form).replace(/[<>&]/g, '')} · ${String(other.article).replace(/[<>&]/g, '')}</button>`;
     }).join('');
     const fields = selected.fields || [];
     const reviewPreview = ['isolation', 'sequence', 'verification', 'permission', 'restoration'].map(kind => {

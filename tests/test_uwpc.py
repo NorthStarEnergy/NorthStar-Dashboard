@@ -180,7 +180,7 @@ def test_dashboard_uses_uwpc_2024_and_keeps_it_off_the_checkin_host():
     outages = (ROOT / "outages-workspace.js").read_text(encoding="utf-8")
     assert "UWPC 2024" in html
     assert 'id="wpWorkProtection"' in html
-    assert "switching-workspace.js?v=20260914-4" in html
+    assert "switching-workspace.js?v=20260914-5" in html
     assert "northstar-sites.js?v=20260914-2" in html
     assert "outages-workspace.js?v=8" in html
     assert 'id="wpTemplateGallery"' in html
