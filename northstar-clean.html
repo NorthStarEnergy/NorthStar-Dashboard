@@ -23,8 +23,8 @@
   <link rel="stylesheet" href="readiness-workspace.css?v=2">
   <link rel="stylesheet" href="logbook-editor.css?v=20260826-1">
   <script src="switching-workspace.js?v=20260914-5" defer></script>
-  <script src="one-line-symbol-library.js?v=20260826-2" defer></script>
-  <script src="one-line-editor-ui.js?v=20260826-3" defer></script>
+  <script src="one-line-symbol-library.js?v=20260903-4" defer></script>
+  <script src="one-line-editor-ui.js?v=20260903-4" defer></script>
   <script src="northstar-sites.js?v=20260914-2"></script>
   <script src="outages-workspace.js?v=8" defer></script>
   <script src="outages-workspace.overlay-from-git.js?v=20260914-1" defer></script>
@@ -524,6 +524,7 @@
         <section class="panel one-line-editor" id="oneLineEditor" data-module-id="one-line-editor">
           <div class="one-line-head"><div><label>PACKET 05 · GRAPHICAL ONE-LINE EDITOR</label><h2>Build a circuit diagram with symbols</h2><p>Draft, arrange, connect, label, and export a topology-aware one-line record.</p></div><span class="one-line-badge">DRAFTING ONLY · NOT RELEASE</span></div>
           <div class="one-line-server-bar">
+<button type="button" id="oneLineCircuitExample">LOAD CIRCUIT EXAMPLE</button>
             <label>DRAWING NAME<input id="oneLineName" placeholder="e.g. FDR-01 one-line"></label>
             <label>LINKED OUTAGE<select id="oneLineOutage"><option value="">No linked outage</option></select></label>
             <label>UTILITY SYMBOL PROFILE APPROVAL REF<input id="oneLineApprovalRef" placeholder="Controlled catalogue / revision"></label>
@@ -537,7 +538,7 @@
                 <button class="symbol-tool active" type="button" data-symbol-type="select"><span class="symbol-glyph">↖</span>SELECT / MOVE</button>
                 <button class="symbol-tool" type="button" data-symbol-type="connect"><span class="symbol-glyph">⌁</span>CONNECT</button>
                 <label class="symbol-search-label">FILTER<input id="oneLineSymbolSearch" type="search" placeholder="Breaker, relay, CT…"></label>
-                <div id="oneLineSymbolLibrary"></div>
+                <div id="oneLineSymbolLibrary"><span class="symbol-catalogue-version">Catalogue 2026.3 · Figure A-1 · Workplace line switch</span></div>
               </div>
               <div class="one-line-actions"><button type="button" id="oneLineDemo">LOAD EXAMPLE</button><button type="button" id="oneLineClear">CLEAR</button><button type="button" id="oneLineImport">IMPORT JSON</button><input id="oneLineImportFile" type="file" accept="application/json,.json" hidden><button type="button" id="oneLineExport">EXPORT JSON</button><button type="button" id="oneLineExportSvg">EXPORT SVG</button><button type="button" id="oneLineExportPng">EXPORT PNG</button><button type="button" id="oneLinePrint">PRINT / PDF</button><button type="button" id="oneLineSave">SAVE LOCAL REVISION</button><button class="primary-btn" type="button" id="oneLineSaveServer">SAVE SERVER REVISION</button><button class="primary-btn" type="button" id="oneLineAttachPackage">ATTACH TO CURRENT PACKAGE</button></div>
             </aside>
