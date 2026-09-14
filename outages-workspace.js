@@ -194,6 +194,12 @@
     if (sections && Array.isArray(code?.sections)) {
       sections.innerHTML = code.sections.map(row => `<div><b>SECTION ${escapeHtml(row.number)}</b><span>${escapeHtml(row.title)}</span></div>`).join('');
     }
+    const templateList = document.querySelector('#uwpcTemplateList');
+    if (templateList && Array.isArray(code?.templates)) {
+      templateList.innerHTML = code.templates.map(row => (
+        `<div><b>${escapeHtml(row.form)} · ${escapeHtml(row.article)}</b><span>${escapeHtml(row.title)}. ${escapeHtml(row.purpose)}</span></div>`
+      )).join('');
+    }
   }
 
   function escapeHtml(value) {

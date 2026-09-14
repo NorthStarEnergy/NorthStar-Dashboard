@@ -9,7 +9,7 @@
        operator data as soon as it parses. -->
   <script src="operator-session.js"></script>
   <link rel="stylesheet" href="lamination-dashboard.css">
-  <link rel="stylesheet" href="switching-workspace.css?v=20260826-4">
+  <link rel="stylesheet" href="switching-workspace.css?v=20260914-6">
   <link rel="stylesheet" href="one-line-editor.css?v=20260826-3">
   <link rel="stylesheet" href="one-line-scada.css?v=20260906-1">
   <link rel="stylesheet" href="generating-stations.css?v=20260911-1">
@@ -21,11 +21,11 @@
   <link rel="stylesheet" href="field-operations-workspace.css?v=1">
   <link rel="stylesheet" href="readiness-workspace.css?v=2">
   <link rel="stylesheet" href="logbook-editor.css?v=20260826-1">
-  <script src="switching-workspace.js?v=20260914-2" defer></script>
+  <script src="switching-workspace.js?v=20260914-4" defer></script>
   <script src="one-line-symbol-library.js?v=20260826-2" defer></script>
   <script src="one-line-editor-ui.js?v=20260826-3" defer></script>
   <script src="northstar-sites.js?v=20260914-2"></script>
-  <script src="outages-workspace.js?v=7" defer></script>
+  <script src="outages-workspace.js?v=8" defer></script>
   <script src="field-operations-workspace.js?v=2" defer></script>
   <title>Northstar Control Room · Clean Live</title>
   <style>
@@ -549,6 +549,13 @@
           <div class="switching-library-filters"><input id="wpLibrarySearch" type="search" placeholder="Search package, site, asset, or record ID"><select id="wpLibraryStatus"><option value="">All states</option><option>DRAFT</option><option>READY FOR QUALIFIED REVIEW</option><option>REVIEW RECORDED · NOT RELEASE</option></select></div>
           <div class="switching-library-list" id="wpLibraryList"><div class="switching-empty">Loading server drafts…</div></div>
         </section>
+        <section class="panel switching-module switching-templates" data-module-id="switching-templates">
+          <div class="switching-module-head"><div><label>NORTHSTAR TEMPLATES</label><h3>Work-protection draft sheets</h3></div><span class="switching-module-state" id="wpTemplateState">NO SHEET SELECTED</span></div>
+          <p class="muted-note">These are NorthStar sheets for each UWPC form and permit type. They cite the 2024 Code. They do not copy Hydro One artwork and they do not issue a permit.</p>
+          <div class="uwpc-template-filters"><label>KIND<select id="wpTemplateKind"><option value="">All sheets</option><option value="work-permit">Work permits</option><option value="supporting-guarantee">Supporting guarantees</option><option value="application">Applications</option><option value="order-to-operate">Orders to operate</option><option value="test">Test records</option><option value="de-energizing">De-energizing</option><option value="isolation-tag">Isolation tags</option><option value="equipment-protection">Equipment protection</option></select></label></div>
+          <div id="wpTemplateGallery" class="uwpc-template-gallery"></div>
+          <div id="wpTemplateSheet" class="uwpc-template-sheet"><div class="switching-empty">Select a NorthStar template to open its draft sheet.</div></div>
+        </section>
         <div class="switching-grid" id="switchingGrid">
           <section class="panel switching-module switching-intake" data-module-id="switching-intake">
             <div class="switching-module-head"><div><label>SOURCE PACKAGE</label><h3>Diagram intake</h3></div><span class="switching-module-state" id="wpIntakeState">LOCAL ONLY</span></div>
@@ -565,6 +572,7 @@
               <label>DIAGRAM REVISION<input id="wpDiagramRevision" placeholder="Revision / issue date"></label>
               <label>RULE SET / EDITION<select id="wpRuleSet"><option value="UWPC 2024">UWPC 2024</option><option value="">Other documented set</option></select></label>
               <label>UWPC INSTRUMENT<select id="wpWorkProtection"><option value="">Select Work Permit / tag</option><option value="pc10a">PC10A Self-Administered Work Permit · 3.000</option><option value="pc17b">PC17B Self-Administered Work Permit · 4.000</option><option value="pc2">PC2 Issued Work Permit · 5.000</option><option value="pc10c-sg">PC10C Supporting Guarantee · 6.030</option><option value="pc17b-sg">PC17B Supporting Guarantee · 6.050</option><option value="pc2-sg">PC2 Supporting Guarantee · 6.070</option><option value="pc4">PC4 De-Energizing Device Tag · 7.030</option><option value="hold-off">Hold-off · HO1.00</option><option value="caution">Caution Tag · EP1.00</option><option value="terminal-point">Terminal Point Tag · TP1.00</option></select></label>
+              <label>NORTHSTAR TEMPLATE<select id="wpTemplate"><option value="">Select a NorthStar sheet</option></select></label>
               <label>AUTHORITY PROCEDURE ID<input id="wpAuthorityProcedureId" value="uwpc-2024" placeholder="uwpc-2024"></label>
               <label>AUTHORITY PROCEDURE REVISION<input id="wpAuthorityProcedureRevision" value="2024" placeholder="2024"></label>
               <label>QUALIFICATION EVIDENCE REF<input id="wpQualificationEvidenceRef" placeholder="External verification reference"></label>
@@ -574,7 +582,7 @@
             <div class="switching-file-list" id="wpFileList"><div class="switching-empty">No source diagrams attached.</div></div>
             <div class="switching-upload-row"><input id="wpSourceFiles" type="file" accept=".pdf,.txt,.doc,.docx" multiple hidden><button class="secondary-btn" id="wpAddSource" type="button">ADD RULE / PROCEDURE SOURCES</button><span class="muted-note">Licensed UWPC 2024 book or other approved source · stored with the server draft</span></div>
             <div class="switching-file-list" id="wpRuleFileList"><div class="switching-empty">No governing sources attached.</div></div>
-            <div class="switching-actions"><button class="primary-btn" id="wpCreateDraft" type="button">CREATE DRAFT PACKAGE</button><button class="secondary-btn" id="wpSaveDraft" type="button">SAVE DRAFT</button><span class="switching-status" id="wpIntakeStatus" role="status"></span></div>
+            <div class="switching-actions"><button class="primary-btn" id="wpCreateDraft" type="button">CREATE DRAFT PACKAGE</button><button class="secondary-btn" id="wpSaveDraft" type="button">SAVE DRAFT</button><button class="secondary-btn" id="wpApplyTemplate" type="button">APPLY TEMPLATE</button><span class="switching-status" id="wpIntakeStatus" role="status"></span></div>
           </section>
 
           <section class="panel switching-module switching-form-module" data-module-id="switching-form">
@@ -637,7 +645,7 @@
         </div>
         <div class="outage-pane" role="tabpanel" data-outage-pane="switching-plans" hidden></div>
         <div class="outage-pane" role="tabpanel" data-outage-pane="uwpc" hidden>
-          <div class="source-truth"><div class="panel"><label>GOVERNING SOURCE</label><h2>UWPC 2024</h2><p class="muted-note">The 2024 Utility Work Protection Code is the citation for switching and outage work-protection drafts. This pane lists the published structure only. It does not reproduce the Code or issue a permit.</p><div id="uwpcSourceSummary" class="uwpc-source-summary"></div><div id="uwpcInstrumentList" class="uwpc-check-list"></div><div class="switching-actions"><a class="secondary-btn" id="uwpcOpenBook" href="/api/uwpc/book" hidden>OPEN INSTALLED 2024 BOOK</a><button class="secondary-btn" type="button" data-open-outage-tab="switching-plans">OPEN SWITCHING PLANS</button></div></div><div class="panel"><label>CODE STRUCTURE</label><h2>Sections</h2><div id="uwpcSectionList" class="uwpc-check-list"></div></div></div>
+          <div class="source-truth"><div class="panel"><label>GOVERNING SOURCE</label><h2>UWPC 2024</h2><p class="muted-note">The 2024 Utility Work Protection Code is the citation for switching and outage work-protection drafts. This pane lists the published structure only. It does not reproduce the Code or issue a permit.</p><div id="uwpcSourceSummary" class="uwpc-source-summary"></div><div id="uwpcInstrumentList" class="uwpc-check-list"></div><div class="switching-actions"><a class="secondary-btn" id="uwpcOpenBook" href="/api/uwpc/book" hidden>OPEN INSTALLED 2024 BOOK</a><button class="secondary-btn" type="button" data-open-outage-tab="switching-plans">OPEN SWITCHING PLANS</button></div></div><div class="panel"><label>NORTHSTAR TEMPLATES</label><h2>Forms &amp; permits</h2><p class="muted-note">Control-room sheets for each form and permit type. Open Engineering to fill a sheet. These are not Hydro One forms.</p><div id="uwpcTemplateList" class="uwpc-check-list"></div></div><div class="panel"><label>CODE STRUCTURE</label><h2>Sections</h2><div id="uwpcSectionList" class="uwpc-check-list"></div></div></div>
         </div>
         <div class="outage-pane" role="tabpanel" data-outage-pane="reports" hidden>
           <div class="source-truth"><div class="panel"><label>OUTAGE REPORT BUILDER</label><h2>Reports</h2><p class="muted-note">Generate a concise report from the current outage register and operator log.</p><div class="report-actions"><button class="primary-btn" type="button" data-outage-report="summary">OUTAGE SUMMARY</button><button class="primary-btn" type="button" data-outage-report="history">OUTAGE HISTORY</button><button class="primary-btn" type="button" data-outage-report="shift">SHIFT IMPACT</button></div><pre class="report-output" id="outageReportOutput">Select a report type to generate a draft.</pre></div><div class="panel"><label>REPORT SCOPE</label><h2>Source records</h2><div id="outageReportScope" class="uwpc-check-list"><div><b>OPEN OUTAGES</b><span>Current running events, severity, and planned status.</span></div><div><b>OPERATIONS LOG</b><span>Recent operator actions and recorded follow-up.</span></div></div></div></div>

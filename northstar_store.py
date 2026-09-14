@@ -1632,6 +1632,10 @@ def _normalise_switching_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "workProtectionId": _switching_clip(payload.get("workProtectionId"), 40).lower(),
         "workProtectionName": _switching_clip(payload.get("workProtectionName"), 160),
         "workProtectionSection": _switching_clip(payload.get("workProtectionSection"), 40),
+        "workProtectionTemplateId": _switching_clip(
+            payload.get("workProtectionTemplateId") or payload.get("templateId"), 40
+        ).lower(),
+        "templateFields": {},
         "qualificationEvidenceRef": _switching_clip(payload.get("qualificationEvidenceRef"), 240),
         "sourceManifestDigest": source_manifest_digest,
         "scope": _switching_clip(payload.get("scope"), 4000),
@@ -1656,6 +1660,25 @@ def _normalise_switching_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if instrument:
         result["workProtectionName"] = instrument["name"]
         result["workProtectionSection"] = instrument["article"]
+    template = uwpc.template(result["workProtectionTemplateId"])
+    if result["workProtectionTemplateId"] and not template:
+        raise ValueError("Unknown UWPC work-protection template")
+    if template:
+        raw_fields = payload.get("templateFields")
+        allowed = {field["id"] for field in template.get("fields", [])}
+        stored: dict[str, str] = {}
+        if isinstance(raw_fields, dict):
+            for key in allowed:
+                value = _switching_clip(raw_fields.get(key), 400)
+                if value:
+                    stored[key] = value
+        result["templateFields"] = stored
+        if template.get("standalone") and template.get("instrumentId") and not result["workProtectionId"]:
+            result["workProtectionId"] = template["instrumentId"]
+            instrument = uwpc.instrument(result["workProtectionId"])
+            if instrument:
+                result["workProtectionName"] = instrument["name"]
+                result["workProtectionSection"] = instrument["article"]
     encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
     if len(encoded.encode("utf-8")) > 50 * 1024:
         raise ValueError("switching draft metadata exceeds 50 KB")

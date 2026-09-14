@@ -15,6 +15,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+import northstar_uwpc_templates as templates
+
 ROOT = Path(__file__).resolve().parent
 RULE_SET = "UWPC 2024"
 PROCEDURE_ID = "uwpc-2024"
@@ -93,6 +95,10 @@ def book_digest() -> str:
     return digest.hexdigest()
 
 
+def template(template_id: str) -> dict[str, Any] | None:
+    return templates.template(template_id)
+
+
 def instrument(instrument_id: str) -> dict[str, str] | None:
     key = str(instrument_id or "").strip().lower()
     for row in INSTRUMENTS:
@@ -125,4 +131,6 @@ def payload() -> dict[str, Any]:
         "instruments": [dict(row) for row in INSTRUMENTS],
         "roles": list(ROLES),
         "forms": list(FORMS),
+        "templates": templates.templates(),
+        "templateNotice": templates.NOTICE,
     }

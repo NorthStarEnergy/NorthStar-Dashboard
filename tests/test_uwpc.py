@@ -36,6 +36,59 @@ def test_citation_index_has_the_2024_structure_and_not_rule_bodies():
     dumped = json.dumps(snapshot)
     assert "must expresses a mandatory requirement" not in dumped
     assert "Applicant provides the Controlling" not in dumped
+    assert [row["id"] for row in snapshot["templates"]] == [
+        "pc10a", "pc17b", "pc2", "pc10c-sg", "pc17b-sg", "pc2-sg",
+        "pc4", "hold-off", "caution", "terminal-point",
+        "pc1", "pc3", "pc14", "pc15", "pc17a",
+    ]
+    assert all(row["notice"].startswith("NorthStar draft sheet") for row in snapshot["templates"])
+    assert uwpc.template("pc2")["standalone"] is True
+    assert uwpc.template("pc1")["standalone"] is False
+    assert uwpc.template("pc10a")["reviewRows"]["isolation"][0]["second"] == ""
+    assert {row["form"] for row in snapshot["templates"]} == set(snapshot["forms"])
+    standalone = [row["id"] for row in snapshot["templates"] if row["standalone"]]
+    assert standalone == [row["id"] for row in snapshot["instruments"]]
+    for row in snapshot["templates"]:
+        assert all(item["second"] == "" for group in row["reviewRows"].values() for item in group)
+        if row["standalone"]:
+            assert row["instrumentId"] == row["id"]
+        else:
+            assert row["instrumentId"] == ""
+            assert row["id"] in {"pc1", "pc3", "pc14", "pc15", "pc17a"}
+
+
+def test_unknown_template_is_rejected_and_known_template_is_stored(database):
+    with pytest.raises(ValueError, match="template"):
+        store.create_switching_draft({"packageName": "x", "workProtectionTemplateId": "pc99"}, actor="operator")
+    draft = store.create_switching_draft({
+        "packageName": "PC10A sheet",
+        "site": "Kenora",
+        "asset": "B12",
+        "ruleSet": "UWPC 2024",
+        "authorityProcedureId": "uwpc-2024",
+        "authorityProcedureRevision": "2024",
+        "workProtectionTemplateId": "pc10a",
+        "templateFields": {"deviceId": "B12", "ignored": "drop"},
+        "scope": "Drafting only",
+    }, actor="operator")
+    assert draft["workProtectionTemplateId"] == "pc10a"
+    assert draft["workProtectionId"] == "pc10a"
+    assert draft["templateFields"] == {"deviceId": "B12"}
+    assert "ignored" not in draft["templateFields"]
+    companion = store.create_switching_draft({
+        "packageName": "PC1 sheet",
+        "site": "Kenora",
+        "asset": "B12",
+        "ruleSet": "UWPC 2024",
+        "authorityProcedureId": "uwpc-2024",
+        "authorityProcedureRevision": "2024",
+        "workProtectionTemplateId": "pc1",
+        "templateFields": {"requestType": "Issued permit"},
+        "scope": "Drafting only",
+    }, actor="operator")
+    assert companion["workProtectionTemplateId"] == "pc1"
+    assert companion["workProtectionId"] == ""
+    assert companion["templateFields"] == {"requestType": "Issued permit"}
 
 
 def test_unknown_instrument_is_rejected_and_known_instrument_is_stored(database):
@@ -127,9 +180,11 @@ def test_dashboard_uses_uwpc_2024_and_keeps_it_off_the_checkin_host():
     outages = (ROOT / "outages-workspace.js").read_text(encoding="utf-8")
     assert "UWPC 2024" in html
     assert 'id="wpWorkProtection"' in html
-    assert "switching-workspace.js?v=20260914-2" in html
+    assert "switching-workspace.js?v=20260914-4" in html
     assert "northstar-sites.js?v=20260914-2" in html
-    assert "outages-workspace.js?v=7" in html
+    assert "outages-workspace.js?v=8" in html
+    assert 'id="wpTemplateGallery"' in html
+    assert 'id="uwpcTemplateList"' in html
     assert '<select id="wpSite">' in html
     assert 'id="uwpcInstrumentList"' in html
     assert "/api/uwpc" in switching
@@ -182,6 +237,7 @@ def test_uwpc_routes_are_operator_only(service, tmp_path, monkeypatch):
     assert code == 200
     assert payload["ruleSet"] == "UWPC 2024"
     assert payload["bookAvailable"] is False
+    assert len(payload["templates"]) == 15
     book = tmp_path / "uwpc-2024.pdf"
     book.write_bytes(b"%PDF-1.4 fixture")
     monkeypatch.setenv("NORTHSTAR_UWPC_PATH", str(book))

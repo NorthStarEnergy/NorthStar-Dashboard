@@ -39,7 +39,7 @@ def test_tools_module_is_wired_and_not_published_on_checkin():
     assert backend.OPERATOR_ROUTES["/api/maximo/station"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/sites"] == ("GET",)
     assert "northstar-sites.js?v=20260914-2" in html
-    assert "outages-workspace.js?v=7" in html
+    assert "outages-workspace.js?v=8" in html
     assert "/northstar-sites.js" not in backend.CHECKIN_PUBLIC_ROUTES
     assert "/device-library.js" not in backend.CHECKIN_PUBLIC_ROUTES
     assert "/device-library.css" not in backend.CHECKIN_PUBLIC_ROUTES

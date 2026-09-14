@@ -26,6 +26,8 @@
     workProtectionId: '',
     workProtectionName: '',
     workProtectionSection: '',
+    workProtectionTemplateId: '',
+    templateFields: {},
     qualificationEvidenceRef: '',
     sourceManifestDigest: '',
     scope: '',
@@ -67,6 +69,7 @@
     hub.setAttribute('aria-label', 'Engineering workspace tools');
     hub.innerHTML = `
       <button type="button" data-engineering-target="#oneLineEditor"><span>DRAWING</span><strong>One-line editor</strong><small>Symbols, connections, labels, import and export</small><em>OPEN EDITOR →</em></button>
+      <button type="button" data-engineering-target="[data-module-id='switching-templates']"><span>TEMPLATES</span><strong>Work-protection sheets</strong><small id="engineeringTemplateStatus">15 NorthStar sheets</small><em>OPEN TEMPLATES →</em></button>
       <button type="button" data-engineering-target="[data-module-id='switching-intake']"><span>SOURCE CONTROL</span><strong>Diagram intake</strong><small id="engineeringSourceStatus">No source package loaded</small><em>OPEN INTAKE →</em></button>
       <button type="button" data-engineering-target="[data-module-id='switching-form']"><span>WORK PACKAGE</span><strong>Draft package</strong><small id="engineeringDraftStatus">Draft not started</small><em>OPEN PACKAGE →</em></button>
       <button type="button" data-engineering-target="[data-module-id='switching-approval']"><span>REVIEW</span><strong>Qualified-person gate</strong><small id="engineeringReviewStatus">Not ready for review</small><em>OPEN REVIEW →</em></button>`;
@@ -143,6 +146,8 @@
       workProtectionId: state.workProtectionId,
       workProtectionName: state.workProtectionName,
       workProtectionSection: state.workProtectionSection,
+      workProtectionTemplateId: state.workProtectionTemplateId,
+      templateFields: state.templateFields,
       qualificationEvidenceRef: state.qualificationEvidenceRef,
       sourceManifestDigest: state.sourceManifestDigest,
       scope: state.scope,
@@ -169,13 +174,14 @@
     state.serverUpdatedAt = record.updatedAt || state.serverUpdatedAt;
     state.savedAt = state.serverUpdatedAt || state.savedAt;
     state.storage = 'SERVER';
-    ['packageName', 'site', 'siteId', 'asset', 'outageId', 'schematicId', 'symbolProfileApprovalRef', 'canonicalAssetId', 'topologySnapshotId', 'topologyRevision', 'revision', 'ruleSet', 'authorityProcedureId', 'authorityProcedureRevision', 'workProtectionId', 'workProtectionName', 'workProtectionSection', 'qualificationEvidenceRef', 'sourceManifestDigest', 'scope', 'reviewerName', 'reviewerRole', 'reviewComments'].forEach(key => {
+    ['packageName', 'site', 'siteId', 'asset', 'outageId', 'schematicId', 'symbolProfileApprovalRef', 'canonicalAssetId', 'topologySnapshotId', 'topologyRevision', 'revision', 'ruleSet', 'authorityProcedureId', 'authorityProcedureRevision', 'workProtectionId', 'workProtectionName', 'workProtectionSection', 'workProtectionTemplateId', 'qualificationEvidenceRef', 'sourceManifestDigest', 'scope', 'reviewerName', 'reviewerRole', 'reviewComments'].forEach(key => {
       if (typeof record[key] === 'string') state[key] = record[key];
     });
     state.schematicRevision = Number(record.schematicRevision) || 0;
     ['diagrams', 'ruleSources', 'isolation', 'sequence', 'verification', 'permission', 'restoration'].forEach(key => {
       if (Array.isArray(record[key])) state[key] = record[key];
     });
+    if (record.templateFields && typeof record.templateFields === 'object') state.templateFields = record.templateFields;
     if (record.checks && typeof record.checks === 'object') state.checks = record.checks;
     if (Array.isArray(record.audit)) {
       state.audit = record.audit.map(entry => ({
@@ -247,6 +253,12 @@
     const selectedInstrument = $('wpWorkProtection')?.selectedOptions?.[0];
     state.workProtectionName = selectedInstrument && state.workProtectionId ? selectedInstrument.textContent.split(' · ')[0] : '';
     state.workProtectionSection = selectedInstrument && selectedInstrument.textContent.includes(' · ') ? selectedInstrument.textContent.split(' · ').pop() : '';
+    state.workProtectionTemplateId = $('wpTemplate')?.value.trim() || state.workProtectionTemplateId || '';
+    const fields = {};
+    document.querySelectorAll('[data-template-field]').forEach(input => {
+      fields[input.dataset.templateField] = input.value.trim();
+    });
+    if (Object.keys(fields).length) state.templateFields = fields;
     state.authorityProcedureId = $('wpAuthorityProcedureId').value.trim();
     state.authorityProcedureRevision = $('wpAuthorityProcedureRevision').value.trim();
     if (state.ruleSet === 'UWPC 2024') {
@@ -509,6 +521,9 @@
       ruleSet.value = state.ruleSet || 'UWPC 2024';
     }
     if ($('wpWorkProtection')) $('wpWorkProtection').value = state.workProtectionId;
+    renderTemplateOptions();
+    if ($('wpTemplate')) $('wpTemplate').value = state.workProtectionTemplateId;
+    renderTemplates();
     $('wpAuthorityProcedureId').value = state.authorityProcedureId;
     $('wpAuthorityProcedureRevision').value = state.authorityProcedureRevision;
     $('wpQualificationEvidenceRef').value = state.qualificationEvidenceRef;
@@ -715,6 +730,137 @@
     }
   }
 
+  function uwpcTemplates() {
+    const records = window.NorthStarUwpc?.templates;
+    return Array.isArray(records) ? records : [];
+  }
+
+  function currentTemplate() {
+    return uwpcTemplates().find(row => row.id === state.workProtectionTemplateId) || null;
+  }
+
+  function hasFilledReviewRows() {
+    return ['isolation', 'sequence', 'verification', 'permission', 'restoration'].some(kind => (
+      (state[kind] || []).some(row => String(row.second || '').trim())
+    ));
+  }
+
+  function renderTemplateOptions() {
+    const select = $('wpTemplate');
+    if (!select) return;
+    const current = state.workProtectionTemplateId || select.value;
+    const kind = $('wpTemplateKind')?.value || '';
+    const rows = uwpcTemplates().filter(row => !kind || row.kind === kind);
+    select.innerHTML = '<option value="">Select a NorthStar sheet</option>' + rows.map(row => (
+      `<option value="${String(row.id).replace(/"/g, '')}">${String(row.form).replace(/[<>&]/g, '')} · ${String(row.title).replace(/[<>&]/g, '')}</option>`
+    )).join('');
+    if (current && [...select.options].some(option => option.value === current)) select.value = current;
+  }
+
+  function renderTemplates() {
+    const gallery = $('wpTemplateGallery');
+    const sheet = $('wpTemplateSheet');
+    const status = $('wpTemplateState');
+    const kind = $('wpTemplateKind')?.value || '';
+    const rows = uwpcTemplates().filter(row => !kind || row.kind === kind);
+    if (gallery) {
+      gallery.innerHTML = rows.map(row => (
+        `<button type="button" class="uwpc-template-card${row.id === state.workProtectionTemplateId ? ' active' : ''}" data-apply-template="${String(row.id).replace(/"/g, '')}">
+          <span>${String(row.form).replace(/[<>&]/g, '')} · ${String(row.article).replace(/[<>&]/g, '')}</span>
+          <strong>${String(row.title).replace(/[<>&]/g, '')}</strong>
+          <small>${row.standalone ? 'STANDALONE SHEET' : 'COMPANION SHEET'} · ${String(row.kind).replace(/-/g, ' ')}</small>
+          <small>${String(row.purpose).replace(/[<>&]/g, '')}</small>
+        </button>`
+      )).join('') || '<div class="switching-empty">No NorthStar templates in this filter.</div>';
+      gallery.querySelectorAll('[data-apply-template]').forEach(button => {
+        button.addEventListener('click', () => applyTemplate(button.dataset.applyTemplate));
+      });
+    }
+    const selected = currentTemplate();
+    if (status) status.textContent = selected ? `${selected.form} · ${selected.article}` : 'NO SHEET SELECTED';
+    const hub = document.querySelector('#engineeringTemplateStatus');
+    if (hub) hub.textContent = selected ? `${selected.form} selected` : `${uwpcTemplates().length || 15} NorthStar sheets`;
+    if (!sheet) return;
+    if (!selected) {
+      sheet.innerHTML = '<div class="switching-empty">Select a NorthStar template to open its draft sheet.</div>';
+      return;
+    }
+    const relatedButtons = (selected.related || []).map(id => {
+      const other = uwpcTemplates().find(row => row.id === id);
+      if (!other) return '';
+      return `<button type="button" class="secondary-btn" data-apply-template="${String(other.id).replace(/"/g, '')}">OPEN ${String(other.form).replace(/[<>&]/g, '')}</button>`;
+    }).join('');
+    const fields = selected.fields || [];
+    const reviewPreview = ['isolation', 'sequence', 'verification', 'permission', 'restoration'].map(kind => {
+      const rows = selected.reviewRows?.[kind] || [];
+      if (!rows.length) return '';
+      return `<div class="uwpc-sheet-review"><strong>${kind.toUpperCase()} PROMPTS</strong><ol>${rows.map(row => `<li>${String(row.first || '').replace(/[<>&]/g, '')}</li>`).join('')}</ol></div>`;
+    }).join('');
+    sheet.innerHTML = `
+      <header class="uwpc-sheet-head">
+        <div><label>${selected.standalone ? 'STANDALONE NORTHSTAR SHEET' : 'COMPANION NORTHSTAR SHEET'}</label><h3>${String(selected.title).replace(/[<>&]/g, '')}</h3></div>
+        <b>${String(selected.form).replace(/[<>&]/g, '')}</b>
+      </header>
+      <p class="uwpc-sheet-notice">${String(selected.notice || '').replace(/[<>&]/g, '')}</p>
+      <p class="muted-note">Cites UWPC 2024 section ${String(selected.section).replace(/[<>&]/g, '')} · ${String(selected.article).replace(/[<>&]/g, '')}. Roles: ${selected.roles.map(role => String(role).replace(/[<>&]/g, '')).join(', ')}.</p>
+      ${relatedButtons ? `<div class="uwpc-sheet-related"><span>Related NorthStar sheets</span>${relatedButtons}</div>` : ''}
+      <div class="uwpc-sheet-fields">${fields.map(field => (
+        `<label>${String(field.label).replace(/[<>&]/g, '')}${field.hint ? `<small>${String(field.hint).replace(/[<>&]/g, '')}</small>` : ''}<input data-template-field="${String(field.id).replace(/"/g, '')}" value="${String(state.templateFields[field.id] || '').replace(/"/g, '&quot;')}" placeholder="${String(field.hint || 'Enter from the approved source').replace(/"/g, '&quot;')}"></label>`
+      )).join('')}</div>
+      <div class="uwpc-sheet-reviews">${reviewPreview}</div>
+      <div class="switching-actions"><button class="secondary-btn" type="button" id="wpSeedTemplateRows">SEED REVIEW PROMPTS</button><button class="secondary-btn" type="button" id="wpPrintTemplate">PRINT THIS SHEET</button></div>`;
+    sheet.querySelectorAll('[data-template-field]').forEach(input => input.addEventListener('input', () => {
+      state.templateFields[input.dataset.templateField] = input.value;
+      write();
+    }));
+    sheet.querySelectorAll('[data-apply-template]').forEach(button => {
+      button.addEventListener('click', () => applyTemplate(button.dataset.applyTemplate));
+    });
+    $('wpSeedTemplateRows')?.addEventListener('click', () => applyTemplate(selected.id, { seedRows: true, force: true }));
+    $('wpPrintTemplate')?.addEventListener('click', printPacket);
+  }
+
+  function applyTemplate(templateId, options = {}) {
+    if (!templateId) {
+      setNote('Select a NorthStar template first.', 'warn');
+      return false;
+    }
+    const selected = uwpcTemplates().find(row => row.id === templateId);
+    if (!selected) return false;
+    if (state.status === 'REVIEW RECORDED · NOT RELEASE') {
+      setNote('Reviewed packages are immutable; start a new revision before changing templates.', 'warn');
+      return false;
+    }
+    const filled = hasFilledReviewRows();
+    if (options.seedRows && filled && !options.force && !confirm('Replace draft review prompts with this NorthStar template? Filled answers in the second column will be cleared.')) {
+      return false;
+    }
+    state.workProtectionTemplateId = selected.id;
+    if (selected.standalone && selected.instrumentId) {
+      state.workProtectionId = selected.instrumentId;
+      const instrument = (window.NorthStarUwpc?.instruments || []).find(row => row.id === selected.instrumentId);
+      state.workProtectionName = instrument?.name || selected.form;
+      state.workProtectionSection = selected.article;
+    }
+    if (!state.packageName) state.packageName = `${selected.form} ${state.asset || state.site || 'work-protection'} draft`;
+    if (options.seedRows || !filled) {
+      const rows = selected.reviewRows || {};
+      ['isolation', 'sequence', 'verification', 'permission', 'restoration'].forEach(kind => {
+        if (Array.isArray(rows[kind]) && rows[kind].length) state[kind] = rows[kind].map(row => ({ first: row.first || '', second: '' }));
+      });
+    }
+    const allowed = new Set((selected.fields || []).map(field => field.id));
+    state.templateFields = Object.fromEntries(Object.entries(state.templateFields || {}).filter(([key]) => allowed.has(key)));
+    if (state.site && !state.templateFields.station) state.templateFields.station = state.site;
+    if (state.asset && !state.templateFields.asset) state.templateFields.asset = state.asset;
+    addAudit(`NorthStar ${selected.form} template applied. Drafting only.`);
+    write();
+    renderFields();
+    setNote(`${selected.form} NorthStar sheet is open. Fill it from the approved source. This is not a permit.`);
+    $('wpIntakeStatus').textContent = `${selected.form} TEMPLATE APPLIED · DRAFTING ONLY.`;
+    return true;
+  }
+
   async function loadUwpc() {
     try {
       const record = await serverRequest('/api/uwpc');
@@ -727,8 +873,10 @@
         )).join('');
         if (current) select.value = current;
       }
+      renderTemplateOptions();
+      renderTemplates();
     } catch {
-      window.NorthStarUwpc = { bookAvailable: false };
+      window.NorthStarUwpc = { bookAvailable: false, templates: [] };
     }
   }
 
@@ -757,7 +905,16 @@
       });
       renderRuleFiles(); $('wpIntakeStatus').textContent = rejected.length ? rejected.join(' · ') : `${selectedRuleFiles.length} governing source(s) selected locally.`; event.target.value = '';
     };
-    $('wpCreateDraft').onclick = createDraft; $('wpSaveDraft').onclick = () => saveDraft(); $('wpReadyReview').onclick = readyForReview; $('wpRecordReview').onclick = recordReview; $('wpDownloadBundle').onclick = downloadControlledBundle; $('wpCloneRevision').onclick = cloneServerRevision; $('wpPrintPacket').onclick = printPacket; $('wpExportDraft').onclick = exportLocalRecord; $('wpNewDraft').onclick = newDraft;
+    $('wpCreateDraft').onclick = createDraft; $('wpSaveDraft').onclick = () => saveDraft(); $('wpApplyTemplate').onclick = () => applyTemplate($('wpTemplate').value || state.workProtectionTemplateId, { seedRows: true }); $('wpReadyReview').onclick = readyForReview; $('wpRecordReview').onclick = recordReview; $('wpDownloadBundle').onclick = downloadControlledBundle; $('wpCloneRevision').onclick = cloneServerRevision; $('wpPrintPacket').onclick = printPacket; $('wpExportDraft').onclick = exportLocalRecord; $('wpNewDraft').onclick = newDraft;
+    $('wpTemplateKind')?.addEventListener('change', () => { renderTemplateOptions(); renderTemplates(); });
+    $('wpTemplate')?.addEventListener('change', () => {
+      if ($('wpTemplate').value) applyTemplate($('wpTemplate').value, { seedRows: !hasFilledReviewRows() });
+    });
+    $('wpWorkProtection')?.addEventListener('change', () => {
+      const instrumentId = $('wpWorkProtection').value;
+      const match = uwpcTemplates().find(row => row.standalone && row.instrumentId === instrumentId);
+      if (match && !state.workProtectionTemplateId) applyTemplate(match.id, { seedRows: !hasFilledReviewRows() });
+    });
     $('wpRefreshLibrary').onclick = loadDraftLibrary;
     $('wpLibraryStatus').onchange = loadDraftLibrary;
     let libraryTimer = null;
