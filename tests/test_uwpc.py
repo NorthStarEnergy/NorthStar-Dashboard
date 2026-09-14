@@ -54,6 +54,35 @@ def test_unknown_instrument_is_rejected_and_known_instrument_is_stored(database)
     assert draft["workProtectionId"] == "pc2"
     assert draft["workProtectionName"] == "PC2 Issued Work Permit"
     assert draft["workProtectionSection"] == "5.000"
+    assert draft["site"] == "Twin Falls"
+    assert draft["siteId"] == "site:twin-falls"
+
+
+def test_switching_draft_binds_station_alias_and_keeps_unknown_sites(database):
+    draft = store.create_switching_draft({
+        "packageName": "Alias review",
+        "site": "Iroquois Falls GS",
+        "asset": "U1",
+        "ruleSet": "UWPC 2024",
+        "authorityProcedureId": "uwpc-2024",
+        "authorityProcedureRevision": "2024",
+        "workProtectionId": "pc10a",
+        "scope": "Drafting only",
+    }, actor="operator")
+    assert draft["site"] == "Iroquois Falls"
+    assert draft["siteId"] == "site:iroquois-falls"
+    extra = store.create_switching_draft({
+        "packageName": "Extra site",
+        "site": "Timmins GS",
+        "asset": "U2",
+        "ruleSet": "UWPC 2024",
+        "authorityProcedureId": "uwpc-2024",
+        "authorityProcedureRevision": "2024",
+        "workProtectionId": "caution",
+        "scope": "Drafting only",
+    }, actor="operator")
+    assert extra["site"] == "Timmins GS"
+    assert extra["siteId"] == ""
 
 
 def test_ready_gate_uses_the_installed_2024_book_and_requires_an_instrument(database, tmp_path, monkeypatch):
@@ -95,10 +124,17 @@ def test_dashboard_uses_uwpc_2024_and_keeps_it_off_the_checkin_host():
     import ieso_backend as backend
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
     switching = (ROOT / "switching-workspace.js").read_text(encoding="utf-8")
+    outages = (ROOT / "outages-workspace.js").read_text(encoding="utf-8")
     assert "UWPC 2024" in html
     assert 'id="wpWorkProtection"' in html
-    assert "switching-workspace.js?v=20260914-1" in html
+    assert "switching-workspace.js?v=20260914-2" in html
+    assert "northstar-sites.js?v=20260914-2" in html
+    assert "outages-workspace.js?v=7" in html
+    assert '<select id="wpSite">' in html
+    assert 'id="uwpcInstrumentList"' in html
     assert "/api/uwpc" in switching
+    assert "void renderUwpcSource()" in outages
+    assert "closest('[data-outage-tab]')" in outages
     assert backend.OPERATOR_ROUTES["/api/uwpc"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/uwpc/book"] == ("GET",)
     assert "/api/uwpc" not in backend.CHECKIN_PUBLIC_ROUTES
@@ -154,3 +190,6 @@ def test_uwpc_routes_are_operator_only(service, tmp_path, monkeypatch):
     status, body = service("/api/uwpc/book", authorized=True)
     assert status == 200
     assert body.startswith(b"%PDF-1.4")
+    source = (ROOT / "ieso_backend.py").read_text(encoding="utf-8")
+    assert "inline=True" in source
+    assert 'disposition = "inline" if inline else "attachment"' in source

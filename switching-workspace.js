@@ -10,6 +10,7 @@
     serverUpdatedAt: '',
     packageName: '',
     site: '',
+    siteId: '',
     asset: '',
     outageId: '',
     schematicId: '',
@@ -126,6 +127,7 @@
     return {
       packageName: state.packageName,
       site: state.site,
+      siteId: state.siteId,
       asset: state.asset,
       outageId: state.outageId,
       schematicId: state.schematicId,
@@ -167,7 +169,7 @@
     state.serverUpdatedAt = record.updatedAt || state.serverUpdatedAt;
     state.savedAt = state.serverUpdatedAt || state.savedAt;
     state.storage = 'SERVER';
-    ['packageName', 'site', 'asset', 'outageId', 'schematicId', 'symbolProfileApprovalRef', 'canonicalAssetId', 'topologySnapshotId', 'topologyRevision', 'revision', 'ruleSet', 'authorityProcedureId', 'authorityProcedureRevision', 'workProtectionId', 'workProtectionName', 'workProtectionSection', 'qualificationEvidenceRef', 'sourceManifestDigest', 'scope', 'reviewerName', 'reviewerRole', 'reviewComments'].forEach(key => {
+    ['packageName', 'site', 'siteId', 'asset', 'outageId', 'schematicId', 'symbolProfileApprovalRef', 'canonicalAssetId', 'topologySnapshotId', 'topologyRevision', 'revision', 'ruleSet', 'authorityProcedureId', 'authorityProcedureRevision', 'workProtectionId', 'workProtectionName', 'workProtectionSection', 'qualificationEvidenceRef', 'sourceManifestDigest', 'scope', 'reviewerName', 'reviewerRole', 'reviewComments'].forEach(key => {
       if (typeof record[key] === 'string') state[key] = record[key];
     });
     state.schematicRevision = Number(record.schematicRevision) || 0;
@@ -226,7 +228,11 @@
 
   function collectFields() {
     state.packageName = $('wpPackageName').value.trim();
-    state.site = $('wpSite').value.trim();
+    const picked = window.NorthStarSites
+      ? NorthStarSites.selected($('wpSite'))
+      : { site: $('wpSite').value.trim(), siteId: $('wpSite').selectedOptions[0]?.dataset.siteId || '' };
+    state.site = picked.site;
+    state.siteId = picked.siteId || (window.NorthStarSites && NorthStarSites.resolve(picked.site)?.id) || '';
     state.asset = $('wpAsset').value.trim();
     state.outageId = $('wpOutageId').value;
     state.schematicId = $('wpSchematicId').value;
@@ -360,6 +366,7 @@
     if (!outage) return false;
     state.outageId = outage.id;
     state.site = outage.site || state.site;
+    state.siteId = outage.siteId || (window.NorthStarSites && NorthStarSites.resolve(state.site)?.id) || state.siteId || '';
     state.asset = outage.asset || outage.title || state.asset;
     if (!state.packageName) state.packageName = `${state.asset || 'Asset'} outage switching review`;
     if (!state.scope) state.scope = `Prepare a controlled switching review package for outage ${outage.id}: ${outage.title || state.asset}.`;
@@ -475,7 +482,16 @@
 
   function renderFields() {
     $('wpPackageName').value = state.packageName;
-    $('wpSite').value = state.site;
+    const siteSelect = $('wpSite');
+    if (siteSelect) {
+      if (state.site && ![...siteSelect.options].some(option => option.value === state.site)) {
+        siteSelect.add(new Option(state.site, state.site));
+      }
+      siteSelect.value = state.site;
+      if (state.siteId && siteSelect.selectedOptions[0] && !siteSelect.selectedOptions[0].dataset.siteId) {
+        siteSelect.selectedOptions[0].dataset.siteId = state.siteId;
+      }
+    }
     $('wpAsset').value = state.asset;
     renderSourceSelectors();
     $('wpOutageId').value = state.outageId;

@@ -32,10 +32,16 @@
     if (name === 'uwpc') renderUwpcSource();
   };
 
+  const tablist = document.querySelector('.outage-tabs');
+  tablist?.addEventListener('click', event => {
+    const tab = event.target.closest('[data-outage-tab]');
+    if (tab && tablist.contains(tab)) show(tab.dataset.outageTab);
+  });
   tabs.forEach(tab => tab.addEventListener('click', () => show(tab.dataset.outageTab)));
   document.querySelectorAll('[data-open-outage-tab]').forEach(button => {
     button.addEventListener('click', () => show(button.dataset.openOutageTab));
   });
+  void renderUwpcSource();
 
   switchingPane.querySelector('[data-open-engineering]')?.addEventListener('click', () => {
     document.querySelector('[data-tab="switching"]')?.click();

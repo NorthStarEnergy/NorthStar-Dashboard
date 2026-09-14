@@ -1616,6 +1616,7 @@ def _normalise_switching_payload(payload: dict[str, Any]) -> dict[str, Any]:
     result = {
         "packageName": _switching_clip(payload.get("packageName"), 160),
         "site": _switching_clip(payload.get("site"), 120),
+        "siteId": _switching_clip(payload.get("siteId") or payload.get("site_id"), 80),
         "asset": _switching_clip(payload.get("asset"), 160),
         "outageId": _switching_clip(payload.get("outageId"), 120),
         "schematicId": _switching_clip(payload.get("schematicId"), 120),
@@ -1646,6 +1647,9 @@ def _normalise_switching_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "reviewComments": _switching_clip(payload.get("reviewComments"), 4000),
         "checks": {key: bool(checks.get(key)) for key in SWITCHING_REVIEW_CHECKS},
     }
+    bound = sites.bind(result["site"], result["siteId"])
+    result["site"] = bound["site"]
+    result["siteId"] = bound["siteId"]
     instrument = uwpc.instrument(result["workProtectionId"])
     if result["workProtectionId"] and not instrument:
         raise ValueError("Unknown UWPC work-protection instrument")
@@ -1798,6 +1802,9 @@ def _switching_record(
             "reviewedBy": row["reviewed_by"],
         }
     )
+    bound = sites.bind(record.get("site"), record.get("siteId"))
+    record["site"] = bound["site"] or record.get("site", "")
+    record["siteId"] = bound["siteId"]
     if audit is not None:
         record["audit"] = audit
     return record

@@ -1,6 +1,6 @@
 # UWPC 2024 governing source — 2026-09-14
 
-Switching and outage work-protection drafts cite the 2024 Utility Work Protection Code. The origin lists section and instrument names only and does not reproduce the Code. 241 Python tests pass. See [report](packets/2026-09-14-uwpc-2024.md).
+Switching and outage work-protection drafts cite the 2024 Utility Work Protection Code. Switching site uses the 18-station catalog. The origin lists section and instrument names only and does not reproduce the Code. 242 Python tests pass. See [report](packets/2026-09-14-uwpc-2024.md).
 
 # Canonical station identity — 2026-09-14
 

@@ -17,15 +17,15 @@
   <link rel="stylesheet" href="events-workspace.css">
   <link rel="stylesheet" href="ai-assistant-workspace.css">
   <link rel="stylesheet" href="dispatch-client.css?v=20260901-1">
-  <link rel="stylesheet" href="outages-workspace.css">
+  <link rel="stylesheet" href="outages-workspace.css?v=20260914-1">
   <link rel="stylesheet" href="field-operations-workspace.css?v=1">
   <link rel="stylesheet" href="readiness-workspace.css?v=2">
   <link rel="stylesheet" href="logbook-editor.css?v=20260826-1">
-  <script src="switching-workspace.js?v=20260914-1" defer></script>
+  <script src="switching-workspace.js?v=20260914-2" defer></script>
   <script src="one-line-symbol-library.js?v=20260826-2" defer></script>
   <script src="one-line-editor-ui.js?v=20260826-3" defer></script>
-  <script src="northstar-sites.js?v=20260914-1"></script>
-  <script src="outages-workspace.js?v=6" defer></script>
+  <script src="northstar-sites.js?v=20260914-2"></script>
+  <script src="outages-workspace.js?v=7" defer></script>
   <script src="field-operations-workspace.js?v=2" defer></script>
   <title>Northstar Control Room · Clean Live</title>
   <style>
@@ -554,7 +554,7 @@
             <div class="switching-module-head"><div><label>SOURCE PACKAGE</label><h3>Diagram intake</h3></div><span class="switching-module-state" id="wpIntakeState">LOCAL ONLY</span></div>
             <div class="switching-form-grid">
               <label>WORK PACKAGE<input id="wpPackageName" placeholder="e.g. Feeder isolation review"></label>
-              <label>STATION / SITE<input id="wpSite" placeholder="Station or work area"></label>
+              <label>STATION / SITE<select id="wpSite"><option value="">Select station / site</option><option>Fort Frances</option><option>Calm Lake</option><option>Sturgeon Falls</option><option>Kenora</option><option>Norman</option><option>Twin Falls</option><option>Iroquois Falls</option><option>Island Falls</option><option>Old Woman Falls</option><option>White Otter Rapids</option><option>Camp Three Rapids</option><option>Big Beaver Falls</option><option>Okikendawt GS</option><option>McDougal</option><option>Bird GS</option><option>Cogent</option><option>Aiyers 1</option><option>Aiyers 2</option><option>System / transmission</option></select></label>
               <label>CIRCUIT / ASSET<input id="wpAsset" placeholder="Circuit, feeder, device, or line"></label>
               <label>LINKED OUTAGE<select id="wpOutageId"><option value="">No linked outage</option></select></label>
               <label>SERVER SCHEMATIC<select id="wpSchematicId"><option value="">No server schematic</option></select></label>

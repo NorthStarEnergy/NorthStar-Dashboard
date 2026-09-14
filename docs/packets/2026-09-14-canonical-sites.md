@@ -21,4 +21,4 @@ Full Python suite: 241 passed. Coverage includes alias resolution, unknown-site 
 
 ## Activation required
 
-Python site, outage, check-in, and `/api/sites` changes need a backend restart. Static assets are `northstar-sites.js?v=20260914-1` and `outages-workspace.js?v=5`. Do not add either to the worker allowlist. Preserve `DemoLogin`, `NoBrowser`, `ServiceMode`, and the published check-in origin.
+Python site, outage, check-in, and `/api/sites` changes need a backend restart. Static assets are `northstar-sites.js?v=20260914-2` and `outages-workspace.js?v=7`. Do not add either to the worker allowlist. Preserve `DemoLogin`, `NoBrowser`, `ServiceMode`, and the published check-in origin.

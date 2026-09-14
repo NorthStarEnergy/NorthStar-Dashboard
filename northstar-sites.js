@@ -86,12 +86,23 @@
     }[character]));
   }
 
-  function fillSelect(select, rows) {
+  function fillSelect(select, rows, extra) {
     if (!select || !rows) return;
     const current = select.value;
-    select.innerHTML = rows.map(row => (
+    const blank = extra && extra.blank
+      ? `<option value="">${esc(extra.blank)}</option>`
+      : ([...select.options].some(option => !option.value)
+        ? `<option value="">${esc(select.options[0].textContent || "Select station / site")}</option>`
+        : "");
+    select.innerHTML = blank + rows.map(row => (
       `<option value="${esc(row.name)}" data-site-id="${esc(row.id)}">${esc(row.name)}</option>`
     )).join("");
+    if (current && ![...select.options].some(option => option.value === current)) {
+      const option = document.createElement("option");
+      option.value = current;
+      option.textContent = current;
+      select.append(option);
+    }
     if ([...select.options].some(option => option.value === current)) select.value = current;
   }
 
@@ -99,6 +110,7 @@
     if (typeof document === "undefined") return;
     fillSelect(document.querySelector("#outageSite"), catalog.options);
     fillSelect(document.querySelector("#crewSite"), catalog.crewOptions);
+    fillSelect(document.querySelector("#wpSite"), catalog.options, { blank: "Select station / site" });
   }
 
   function selected(select) {

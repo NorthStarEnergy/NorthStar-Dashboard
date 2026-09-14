@@ -22,7 +22,10 @@ class EngineeringWorkspaceTests(unittest.TestCase):
         self.assertIn("/api/uwpc", switching)
         self.assertIn("UWPC 2024", switching)
         self.assertIn("data-open-engineering", outages)
-        self.assertIn('id="uwpcInstrumentList"', (ROOT / "northstar-clean.html").read_text(encoding="utf-8"))
+        html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
+        self.assertIn('id="uwpcInstrumentList"', html)
+        self.assertIn('<select id="wpSite">', html)
+        self.assertIn("outages-workspace.js?v=7", html)
 
     def test_outages_can_prefill_a_server_backed_switching_package(self):
         html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")

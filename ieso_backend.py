@@ -1513,6 +1513,7 @@ class Handler(SimpleHTTPRequestHandler):
                 "application/pdf",
                 "uwpc-2024.pdf",
                 uwpc.book_digest(),
+                inline=True,
             )
             return
         if route == "/api/library":
@@ -2551,12 +2552,13 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def _send_binary(
-        self, body: bytes, content_type: str, filename: str, digest: str = ""
+        self, body: bytes, content_type: str, filename: str, digest: str = "", inline: bool = False
     ) -> None:
         self.send_response(200)
         self.send_header("Content-Type", content_type or "application/octet-stream")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Content-Disposition", f"attachment; filename*=UTF-8''{quote(filename)}")
+        disposition = "inline" if inline else "attachment"
+        self.send_header("Content-Disposition", f"{disposition}; filename*=UTF-8''{quote(filename)}")
         self.send_header("X-Content-Type-Options", "nosniff")
         if digest:
             self.send_header("X-Content-SHA256", digest)
