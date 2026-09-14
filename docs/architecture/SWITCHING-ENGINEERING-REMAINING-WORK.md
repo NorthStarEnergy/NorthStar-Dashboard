@@ -16,7 +16,7 @@
 3. **Set controlled retention:** approve source/review retention and legal-hold policy, then bind bundle records to the controlled repository or shared Packet 13 service if required.
 4. **Integrate training:** replace the Training placeholder with isolated sessions, learner outcome evidence, and explicit training-only labeling.
 5. **Operational resilience:** configure encrypted off-host backups, complete a restore drill, and replace shadow notifications with a delivery/acknowledgement connector.
-6. **Authority decisions:** obtain the authoritative UWPC/EUSR procedure revision, qualified-person credential policy, source retention requirements, and competency acceptance criteria.
+6. **Authority decisions:** the governing Code citation is now the 2024 Utility Work Protection Code (`northstar_uwpc.py`). NorthStar-owned draft sheets exist for each form and permit type; they are not Hydro One forms and not a release. Qualified-person credential policy, source retention, and competency acceptance criteria remain owner decisions.
 
 ## Current gate
 

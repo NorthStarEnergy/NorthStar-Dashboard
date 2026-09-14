@@ -32,10 +32,16 @@
     if (name === 'uwpc') renderUwpcSource();
   };
 
+  const tablist = document.querySelector('.outage-tabs');
+  tablist?.addEventListener('click', event => {
+    const tab = event.target.closest('[data-outage-tab]');
+    if (tab && tablist.contains(tab)) show(tab.dataset.outageTab);
+  });
   tabs.forEach(tab => tab.addEventListener('click', () => show(tab.dataset.outageTab)));
   document.querySelectorAll('[data-open-outage-tab]').forEach(button => {
     button.addEventListener('click', () => show(button.dataset.openOutageTab));
   });
+  void renderUwpcSource();
 
   switchingPane.querySelector('[data-open-engineering]')?.addEventListener('click', () => {
     document.querySelector('[data-tab="switching"]')?.click();
@@ -56,8 +62,14 @@
     const switching = outage.status === 'Open' && outage.id
       ? `<button class="node-expand" data-create-switching="${escapeHtml(outage.id)}">CREATE PLAN</button>`
       : '';
+    const href = String(outage.href || '').startsWith('event-detail.html?id=')
+      ? outage.href
+      : (outage.eventId ? `event-detail.html?id=${encodeURIComponent(outage.eventId)}` : '');
+    const report = href
+      ? `<a class="node-expand" href="${escapeHtml(href)}">EVENT REPORT</a>`
+      : '';
     return `<article class="event-item outage-item outage-severity-${severity} outage-type-${type.toLowerCase()}">
-      <header><span>${reportTime(outage.openedAt)} · ${escapeHtml(outage.site || '')}</span><span class="outage-badges"><b class="outage-badge ${severity}">${escapeHtml(outage.severity || 'Monitor')}</b><b class="outage-badge ${type.toLowerCase()}">${type.toUpperCase()}</b>${switching}${close}</span></header>
+      <header><span>${reportTime(outage.openedAt)} · ${escapeHtml(outage.site || '')}</span><span class="outage-badges"><b class="outage-badge ${severity}">${escapeHtml(outage.severity || 'Monitor')}</b><b class="outage-badge ${type.toLowerCase()}">${type.toUpperCase()}</b>${report}${switching}${close}</span></header>
       <strong>${escapeHtml(asset)}</strong><p>${escapeHtml(title + (outage.details || ''))}</p>
     </article>`;
   }
@@ -101,6 +113,9 @@
           title: document.querySelector('#outageTitle').value,
           asset: document.querySelector('#outageAsset').value,
           site: document.querySelector('#outageSite').value,
+          siteId: window.NorthStarSites
+            ? NorthStarSites.selected(document.querySelector('#outageSite')).siteId
+            : (document.querySelector('#outageSite').selectedOptions[0]?.dataset.siteId || ''),
           severity: document.querySelector('#outageSeverity').value,
           type: document.querySelector('#outageType').value,
           details: document.querySelector('#outageDetails').value
@@ -142,18 +157,49 @@
     }
   }
 
-  function renderUwpcSource() {
+  async function renderUwpcSource() {
     const node = document.querySelector('#uwpcSourceSummary');
     if (!node) return;
     const draft = readDraft();
     const sources = Array.isArray(draft?.ruleSources) ? draft.ruleSources : [];
+    let code = window.NorthStarUwpc;
+    if (!code) {
+      try {
+        const response = await fetch('/api/uwpc?ts=' + Date.now());
+        code = response.ok ? await response.json() : null;
+        if (code) window.NorthStarUwpc = code;
+      } catch {
+        code = null;
+      }
+    }
     const fields = [
-      ['PACKAGE', draft?.packageName || 'Not configured'],
-      ['RULE SET', draft?.ruleSet || 'Not configured'],
-      ['SOURCE FILES', sources.length ? sources.map(source => source.name).join(', ') : 'None attached'],
+      ['GOVERNING CODE', code ? `${code.title} ${code.edition}` : 'UWPC 2024'],
+      ['PROCEDURE ID', draft?.authorityProcedureId || code?.procedureId || 'uwpc-2024'],
+      ['PACKAGE', draft?.packageName || 'No switching package open'],
+      ['INSTRUMENT', draft?.workProtectionName || 'Not selected'],
+      ['SOURCE FILES', sources.length ? sources.map(source => source.name).join(', ') : (code?.bookAvailable ? 'Installed 2024 book on this host' : 'Attach the licensed 2024 book')],
       ['REVIEW STATE', draft?.status || 'DRAFT']
     ];
     node.innerHTML = fields.map(([label, value]) => `<div><b>${label}</b><span>${escapeHtml(value)}</span></div>`).join('');
+    const book = document.querySelector('#uwpcOpenBook');
+    if (book) {
+      book.hidden = !code?.bookAvailable;
+      book.href = code?.bookHref || '/api/uwpc/book';
+    }
+    const instruments = document.querySelector('#uwpcInstrumentList');
+    if (instruments && Array.isArray(code?.instruments)) {
+      instruments.innerHTML = code.instruments.map(row => `<div><b>${escapeHtml(row.name)}</b><span>Section ${escapeHtml(row.section)} · ${escapeHtml(row.article)}</span></div>`).join('');
+    }
+    const sections = document.querySelector('#uwpcSectionList');
+    if (sections && Array.isArray(code?.sections)) {
+      sections.innerHTML = code.sections.map(row => `<div><b>SECTION ${escapeHtml(row.number)}</b><span>${escapeHtml(row.title)}</span></div>`).join('');
+    }
+    const templateList = document.querySelector('#uwpcTemplateList');
+    if (templateList && Array.isArray(code?.templates)) {
+      templateList.innerHTML = code.templates.map(row => (
+        `<div><b>${escapeHtml(row.form)} · ${escapeHtml(row.article)}</b><span>${escapeHtml(row.title)}. ${escapeHtml(row.purpose)}</span></div>`
+      )).join('');
+    }
   }
 
   function escapeHtml(value) {

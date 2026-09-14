@@ -36,6 +36,11 @@ def current_correlation_id() -> str:
     return _CORRELATION_ID.get() or new_id("corr")
 
 
+def report_href(event_id: str) -> str:
+    """Bookmarkable event report. Every recorded event has one."""
+    return f"event-detail.html?id={event_id}"
+
+
 def event_type(domain: str, event: Any) -> str:
     slug = re.sub(r"[^a-z0-9]+", ".", str(event or "event").strip().lower()).strip(".")
     return f"{domain}.{slug or 'event'}"
@@ -92,6 +97,7 @@ def record(row: Any) -> dict[str, Any]:
         payload = {"unparsed": str(row["payload"] or "")}
     return {
         "eventId": row["event_id"],
+        "href": report_href(row["event_id"]),
         "eventType": row["event_type"],
         "schemaVersion": row["schema_version"],
         "occurredAt": row["occurred_at"],
@@ -159,6 +165,8 @@ def classify_display(record: dict[str, Any]) -> dict[str, str]:
         channel, log_class, filter_group = "engineering", "ENGINEERING", "engineering"
     elif event_type.startswith("outage.") or aggregate == "outage":
         channel, log_class, filter_group = "outage", "OPERATIONAL", "dispatch"
+    elif event_type.startswith("library.") or source == "library":
+        channel, log_class, filter_group = "library", "OPERATIONAL", "operator"
     elif event_type.startswith("market.") or aggregate == "price_alert" or "ieso update" in entry_type:
         if aggregate == "price_alert" or _contains_any(text, "alert", "alarm", "limit reached"):
             channel, log_class, filter_group = "alarm", "MARKET", "alarms"
@@ -232,6 +240,7 @@ def classify_display(record: dict[str, Any]) -> dict[str, str]:
         "field": "FIELD OPS",
         "ai": "AI ASSIST",
         "system": "SYSTEM",
+        "library": "LIBRARY",
         "trip": "UNIT TRIP",
         "generator-start": "UNIT START",
         "generator-stop": "UNIT STOP",

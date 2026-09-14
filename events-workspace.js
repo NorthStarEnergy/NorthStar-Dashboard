@@ -24,6 +24,7 @@
     operator: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>',
     scada: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 4h16v2H4V4zm0 7h10v2H4v-2zm0 7h16v2H4v-2zm12-8 4 3-4 3V10z"/></svg>',
     field: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5z"/></svg>',
+    library: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 3h7v18H4V3zm9 0h7v18h-7V3zM6 6h3v2H6V6zm9 0h3v2h-3V6z"/></svg>',
     ai: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 3a1 1 0 0 0-1 1v1H5a2 2 0 0 0-2 2v3h18V7a2 2 0 0 0-2-2h-3V4a1 1 0 0 0-1-1H9zm12 9H3v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7zM8 14h2v2H8v-2zm4 0h2v2h-2v-2z"/></svg>',
     system: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.4 7.4 0 0 0 .1-2 7.4 7.4 0 0 0-.1-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 2h-6l-.7 2.6a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4L4.6 9a7.4 7.4 0 0 0-.1 2 7.4 7.4 0 0 0 .1 2l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 1.7 1L9 22h6l.7-2.6a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6zM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5z"/></svg>',
     trip: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>',
@@ -70,7 +71,10 @@
     const channel = display.channel || 'operator';
     const severity = display.severityLabel || 'INFO';
   const correlation = event.correlationId ? event.correlationId.slice(-8) : '—';
-    return `<article class="cip-log-row cip-channel-${esc(channel)} cip-sev-${esc(severity.toLowerCase())}" data-event-id="${esc(event.eventId)}">
+    const href = String(event.href || '').startsWith('event-detail.html?id=')
+      ? event.href
+      : (event.eventId ? `event-detail.html?id=${encodeURIComponent(event.eventId)}` : '');
+    return `<a class="cip-log-row cip-channel-${esc(channel)} cip-sev-${esc(severity.toLowerCase())}" data-event-id="${esc(event.eventId)}" href="${esc(href)}">
       <div class="cip-log-time">${esc(clock(event.occurredAt))}</div>
       <div class="cip-log-icon">${iconMarkup(channel, display.channelLabel || channel.toUpperCase())}</div>
       <div class="cip-log-channel">${esc(display.channelLabel || channel.toUpperCase())}</div>
@@ -82,7 +86,7 @@
         <span class="cip-log-class">${esc(display.logClass || 'OPERATIONAL')}</span>
       </div>
       <div class="cip-log-ref" title="${esc(event.correlationId || '')}">${esc(correlation)}</div>
-    </article>`;
+    </a>`;
   }
 
   function renderEvents() {

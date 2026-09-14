@@ -408,6 +408,8 @@ class APITest(unittest.TestCase):
         self.assertEqual(outage["openedBy"], "operator A")
         self.assertEqual(outage["asset"], "GEN-01")
         self.assertEqual(outage["type"], "Planned")
+        self.assertEqual(outage["site"], "Kenora")
+        self.assertEqual(outage["siteId"], "site:kenora")
         status, closed, _ = self.request(
             "POST",
             f"/api/outages/{outage['id']}/close",

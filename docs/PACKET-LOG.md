@@ -1,3 +1,35 @@
+# NorthStar UWPC form templates — 2026-09-14
+
+Engineering has a NorthStar-owned draft sheet for each UWPC form and permit type. The sheets cite the 2024 Code and do not copy Hydro One forms or issue a permit. 243 Python tests pass. See [report](packets/2026-09-14-uwpc-templates.md).
+
+# UWPC 2024 governing source — 2026-09-14
+
+Switching and outage work-protection drafts cite the 2024 Utility Work Protection Code. Switching site uses the 18-station catalog. The origin lists section and instrument names only and does not reproduce the Code. 242 Python tests pass. See [report](packets/2026-09-14-uwpc-2024.md).
+
+# Canonical station identity — 2026-09-14
+
+The 18 library station names and `site:{slug}` ids are the single identity for outage and crew writes. Historical aliases match station event logs. 241 Python tests pass. See [report](packets/2026-09-14-canonical-sites.md).
+
+# Event log navigation — 2026-09-13
+
+Every recorded event, report, alarm and library note has a bookmarkable event report. Station Outages and Operating Conditions list only recorded rows. 230 Python tests pass. See [report](packets/2026-09-13-event-log-navigation.md).
+
+# Station whiteboard menus — 2026-09-13
+
+Each generating station follows the Twin Falls board: Operations, Equipment, Data, Notes, and Reports. Maximo sits under Equipment. Pending leaves invent nothing. Station notes may expire or persist on a date. 227 Python tests pass. See [report](packets/2026-09-13-station-whiteboard.md).
+
+# Station menus — 2026-09-13
+
+Each generating station opens with Info, Operating Conditions, and Data. Equipment folders live under Info. Operating Conditions stays Setup pending. Data holds the read-only Maximo pane. 226 Python tests pass. See [report](packets/2026-09-13-station-menus.md).
+
+# Maximo station API — 2026-09-13
+
+Read-only, operator-gated Maximo API under each generating station. Setup pending until authorized credentials; no invented assets and no Maximo writes. 225 Python tests pass. See [report](packets/2026-09-13-maximo-api.md).
+
+# Device library — 2026-09-13
+
+Tools Library module: company device repository by West, East and Quebec, Windows-style sunflower folder tree, operator-gated append-only notes. Reference records only. See [report](packets/2026-09-13-device-library.md).
+
 # Event reporting — 2026-09-11
 
 Dedicated event pages, recurrence metrics, explicit linked history, persistent filters and source coverage gaps. 211 Python tests pass; two Node UI checks pass. Backend restart remains blocked by Windows process ownership. See [report](packets/2026-09-11-event-reporting.md).

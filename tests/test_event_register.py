@@ -159,13 +159,26 @@ def test_new_routes_remain_operator_only_even_with_forged_public_header(service)
 
 def test_register_and_notes_roundtrip_with_server_actor(service):
     add(1)
-    assert service('/api/events/register',authorized=True)[1]['total']==1
+    listed=service('/api/events/register',authorized=True)[1]
+    assert listed['total']==1
+    assert listed['items'][0]['href']=='event-detail.html?id=fixture-1'
     code,result=service('/api/events/notes',authorized=True,payload={'eventId':'fixture-1','text':'Read back','actor':'forged','requestId':'note-1'})
     assert code==201
+    assert result['href'].startswith('event-detail.html?id=')
     detail=service('/api/events/detail?id=fixture-1',authorized=True)[1]
     assert detail['history']['items'][0]['actorId']=='operator@example.test'
     assert service('/api/events/register?cursor=broken',authorized=True)[0]==400
     assert service('/api/events/detail?id=missing',authorized=True)[0]==404
+
+
+def test_outage_events_are_register_outages_with_report_hrefs(database):
+    outage=store.create_outage({"title":"Unit offline","site":"Kenora","asset":"U1"},actor="operator")
+    result=register.register({"type":["outage"],"site":["Kenora"]})
+    assert result["total"]==1
+    assert result["items"][0]["category"]=="outage"
+    assert result["items"][0]["href"]==outage["href"]
+    assert outage["href"].startswith("event-detail.html?id=")
+    assert outage["siteId"]=="site:kenora"
 
 
 def test_ai_attempt_records_linked_question_and_outcome(service,monkeypatch):

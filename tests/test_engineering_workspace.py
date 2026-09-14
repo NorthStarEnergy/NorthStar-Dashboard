@@ -19,7 +19,17 @@ class EngineeringWorkspaceTests(unittest.TestCase):
         outages = (ROOT / "outages-workspace.js").read_text(encoding="utf-8")
         self.assertIn("engineering-hub", switching)
         self.assertIn("Engineering Drawings & Work Protection", switching)
+        self.assertIn("/api/uwpc", switching)
+        self.assertIn("UWPC 2024", switching)
         self.assertIn("data-open-engineering", outages)
+        html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
+        self.assertIn('id="uwpcInstrumentList"', html)
+        self.assertIn('<select id="wpSite">', html)
+        self.assertIn("outages-workspace.js?v=8", html)
+        self.assertIn('id="wpTemplateGallery"', html)
+        self.assertIn("Work-protection sheets", switching)
+        self.assertIn("SEED REVIEW PROMPTS", switching)
+        self.assertIn("uwpc-sheet-reviews", switching)
 
     def test_outages_can_prefill_a_server_backed_switching_package(self):
         html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")

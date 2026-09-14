@@ -33,6 +33,10 @@ import northstar_events as events
 import northstar_event_register as event_register
 import northstar_ai as ai
 import northstar_dispatch as dispatch
+import northstar_device_library as device_library
+import northstar_maximo as maximo
+import northstar_sites as sites
+import northstar_uwpc as uwpc
 
 ROOT = Path(__file__).resolve().parent
 
@@ -165,6 +169,14 @@ OPERATOR_ROUTES = {
     "/api/voice": ("GET",),
     "/api/voice/recordings": ("GET",),
     "/api/voice/scan": ("POST",),
+    "/api/library": ("GET",),
+    "/api/library/item": ("GET",),
+    "/api/library/notes": ("POST",),
+    "/api/maximo": ("GET",),
+    "/api/maximo/station": ("GET",),
+    "/api/sites": ("GET",),
+    "/api/uwpc": ("GET",),
+    "/api/uwpc/book": ("GET",),
     "/api/ai": ("POST",),
     "/api/ai/query": ("POST",),
     "/api/ai/status": ("GET",),
@@ -1485,6 +1497,56 @@ class Handler(SimpleHTTPRequestHandler):
             record = voice.get_recording(recording_id, include_filtered=include)
             self._send_json(record or {"error": "recording not found"}, 200 if record else 404)
             return
+        if route == "/api/sites":
+            self._send_json(sites.payload())
+            return
+        if route == "/api/uwpc":
+            self._send_json(uwpc.payload())
+            return
+        if route == "/api/uwpc/book":
+            path = uwpc.book_path()
+            if not uwpc.book_available():
+                self._send_json({"error": "UWPC 2024 book is not installed on this host"}, 404)
+                return
+            self._send_binary(
+                path.read_bytes(),
+                "application/pdf",
+                "uwpc-2024.pdf",
+                uwpc.book_digest(),
+                inline=True,
+            )
+            return
+        if route == "/api/library":
+            query = parse_qs(urlparse(self.path).query)
+            self._send_json(device_library.tree(query.get("q", [""])[0]))
+            return
+        if route == "/api/library/item":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                result = device_library.item(query.get("id", [""])[0])
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+                return
+            except LookupError as exc:
+                self._send_json({"error": str(exc)}, 404)
+                return
+            self._send_json(result)
+            return
+        if route == "/api/maximo":
+            self._send_json(maximo.status())
+            return
+        if route == "/api/maximo/station":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                result = maximo.station(query.get("id", [""])[0])
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+                return
+            except LookupError as exc:
+                self._send_json({"error": str(exc)}, 404)
+                return
+            self._send_json(result)
+            return
         if self.path.split("?", 1)[0] == "/api/logbook":
             query = parse_qs(urlparse(self.path).query)
             try:
@@ -1787,6 +1849,23 @@ class Handler(SimpleHTTPRequestHandler):
             payload = self._json_body(40 * 1024)
             try:
                 result = event_register.add_note(payload.get("eventId"), payload.get("text"), self._operator_actor(), payload.get("requestId"))
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            except LookupError as exc:
+                raise APIError(404, str(exc)) from exc
+            self._send_json(result, 200 if result["duplicate"] else 201)
+            return
+        if route == "/api/library/notes":
+            payload = self._json_body(40 * 1024)
+            try:
+                result = device_library.add_note(
+                    payload.get("itemId"),
+                    payload.get("text"),
+                    self._operator_actor(),
+                    payload.get("requestId"),
+                    payload.get("expiresAt"),
+                    payload.get("persistOn"),
+                )
             except ValueError as exc:
                 raise APIError(400, str(exc)) from exc
             except LookupError as exc:
@@ -2473,12 +2552,13 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def _send_binary(
-        self, body: bytes, content_type: str, filename: str, digest: str = ""
+        self, body: bytes, content_type: str, filename: str, digest: str = "", inline: bool = False
     ) -> None:
         self.send_response(200)
         self.send_header("Content-Type", content_type or "application/octet-stream")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Content-Disposition", f"attachment; filename*=UTF-8''{quote(filename)}")
+        disposition = "inline" if inline else "attachment"
+        self.send_header("Content-Disposition", f"{disposition}; filename*=UTF-8''{quote(filename)}")
         self.send_header("X-Content-Type-Options", "nosniff")
         if digest:
             self.send_header("X-Content-SHA256", digest)

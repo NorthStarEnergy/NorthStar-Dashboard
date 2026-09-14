@@ -264,7 +264,8 @@ check-in host.
 | Cloudflare Tunnel | Inbound transport | outbound-only connector | tunnel token | — |
 
 **There is no OT write path.** SCADA is file-drop, one-directional, into a validating importer.
-No Microsoft 365 / Teams, Maximo / EAM, identity provider, or document-system integration exists —
+No Microsoft 365 / Teams, identity provider, or document-system integration exists.
+Maximo is an operator-gated, read-only station API (`/api/maximo`) that stays Setup pending until authorized runtime credentials are present; it does not invent assets or write work orders.
 `handoff/NO-PRIVILEGE-TEAMS-PILOT-HANDOFF.md` describes a Teams pilot that was never built.
 
 ---

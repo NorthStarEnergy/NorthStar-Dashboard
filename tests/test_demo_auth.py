@@ -205,6 +205,10 @@ class DemoAuthTest(unittest.TestCase):
             "/api/schematics",
             "/api/voice",
             "/api/voice/recordings",
+            "/api/library",
+            "/api/library/item",
+            "/api/maximo",
+            "/api/maximo/station",
         )
         for path in operator_reads:
             with self.subTest(path=path):
@@ -222,6 +226,7 @@ class DemoAuthTest(unittest.TestCase):
             ("POST", f"/api/checkins/{record['id']}/help/resolve", {"actor": "x"}),
             ("POST", f"/api/checkins/{record['id']}/provisional", {"accept": True}),
             ("POST", "/api/voice/scan", {}),
+            ("POST", "/api/library/notes", {"itemId": "company:northstar", "text": "x", "requestId": "x"}),
         )
         for method, path, payload in operator_writes:
             with self.subTest(path=path):
@@ -522,6 +527,8 @@ class DemoAuthTest(unittest.TestCase):
         # The operator route classification is the existing one, not a copy.
         self.assertIn("/api/checkins", self.backend.OPERATOR_ROUTES)
         self.assertIn("/api/voice", self.backend.OPERATOR_ROUTES)
+        self.assertIn("/api/library", self.backend.OPERATOR_ROUTES)
+        self.assertIn("/api/maximo", self.backend.OPERATOR_ROUTES)
         self.assertTrue(self.backend.OPERATOR_ROUTE_PATTERNS)
 
         # With the gate off, none of this engages — the local development path

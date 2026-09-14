@@ -36,7 +36,7 @@
     function chips(){ $('erChips').innerHTML=[...filters].map(([k,v],i)=>`<button type="button" data-chip="${i}" title="Remove this filter">${esc(k)}: ${esc(k==='from'||k==='to'?date(v):v)} ×</button>`).join(''); }
     function render(){
       const focus=document.activeElement?.dataset.eventId;
-      $('erRows').innerHTML=rows.map(e=>`<tr class="er-severity-${['critical','warning'].includes(e.severity)?e.severity:'info'}"><td>${esc(date(e.occurredAt))}</td><td><span class="er-severity">${esc(e.severity)}</span></td><td><a class="er-open" href="event-detail.html?id=${encodeURIComponent(e.eventId)}" data-event-id="${esc(e.eventId)}">${esc(e.summary||e.eventType)}</a><small>${esc(e.category)} · ${esc(e.eventType)}</small></td><td>${esc(e.source)}<small>${esc(e.actorId)}</small></td><td>${esc(e.site||'—')}</td><td>${esc(e.status||'—')}</td></tr>`).join('');
+      $('erRows').innerHTML=rows.map(e=>{const href=String(e.href||'').startsWith('event-detail.html?id=')?e.href:`event-detail.html?id=${encodeURIComponent(e.eventId)}`;return `<tr class="er-severity-${['critical','warning'].includes(e.severity)?e.severity:'info'}"><td>${esc(date(e.occurredAt))}</td><td><span class="er-severity">${esc(e.severity)}</span></td><td><a class="er-open" href="${esc(href)}" data-event-id="${esc(e.eventId)}">${esc(e.summary||e.eventType)}</a><small>${esc(e.category)} · ${esc(e.eventType)}</small></td><td>${esc(e.source)}<small>${esc(e.actorId)}</small></td><td>${esc(e.site||'—')}</td><td>${esc(e.status||'—')}</td></tr>`}).join('');
       if(focus)[...$('erRows').querySelectorAll('[data-event-id]')].find(b=>b.dataset.eventId===focus)?.focus();
       $('erCount').textContent=`${rows.length.toLocaleString()} shown · ${total.toLocaleString()} matching events`;
       $('erMore').hidden=!cursor;$('erMore').disabled=loading;$('erEmpty').hidden=rows.length>0;
@@ -65,7 +65,7 @@
     }catch(error){$('erSources').textContent='Source information unavailable: '+error.message;}}
     window.NorthStarEvents={open(id){if(id)window.location.assign('event-detail.html?id='+encodeURIComponent(id));}};
     const stream=document.querySelector('#eventsStream');
-    if(stream){stream.addEventListener('click',e=>{const row=e.target.closest('[data-event-id]');if(row)window.NorthStarEvents.open(row.dataset.eventId);});stream.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)&&e.target.matches('[data-event-id]')){e.preventDefault();window.NorthStarEvents.open(e.target.dataset.eventId);}});}
+    if(stream){stream.addEventListener('click',e=>{if(e.target.closest('a[href]'))return;const row=e.target.closest('[data-event-id]');if(row)window.NorthStarEvents.open(row.dataset.eventId);});stream.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)&&e.target.matches('[data-event-id]')){e.preventDefault();window.NorthStarEvents.open(e.target.dataset.eventId);}});}
     sourceInfo().then(()=>{for(const input of form.elements){if(!input.name)continue;const values=filters.getAll(input.name);if(input.type==='checkbox')input.checked=values.includes(input.value);else if(values.length){let value=values[0];if(input.type==='datetime-local'){const d=new Date(value);if(!Number.isNaN(d.valueOf()))value=new Date(d.valueOf()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}input.value=value;}}chips();});load();
     if(window.location?.hash==='#logbook')document.querySelector('[data-tab="logbook"]')?.click();
     setInterval(async()=>{if(document.hidden||!host.classList.contains('active')||loading)return;

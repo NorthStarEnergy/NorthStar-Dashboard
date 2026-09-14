@@ -21,6 +21,8 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import northstar_events as events
+import northstar_sites as sites
+import northstar_uwpc as uwpc
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("NORTHSTAR_DB", ROOT / "data" / "northstar.db"))
@@ -534,6 +536,9 @@ def init_db() -> None:
         from northstar_voice import init_schema as init_voice_schema
 
         init_voice_schema(connection)
+        from northstar_device_library import init_schema as init_library_schema
+
+        init_library_schema(connection)
         _migrate_unified_events(connection)
         _seed_readiness_registry(connection)
         connection.execute(
@@ -866,6 +871,7 @@ def _row_to_record(row: sqlite3.Row, reference: datetime | None = None) -> dict[
         "id": row["id"],
         "name": row["name"],
         "site": row["site"],
+        "siteId": sites.bind(row["site"])["siteId"],
         "kind": row["kind"],
         "company": row["company"],
         "status": row["status"],
@@ -928,6 +934,18 @@ def _append_event(
     severity = "critical" if "help requested" in event.lower() else (
         "warning" if "overdue" in event.lower() else "info"
     )
+    bound = sites.bind(site)
+    payload = {
+        "site": site,
+        "worker": worker,
+        "priorStatus": prior_status,
+        "newStatus": new_status,
+        "priorHelpState": prior_help_state,
+        "newHelpState": new_help_state,
+        "details": stored_details,
+    }
+    if bound["siteId"]:
+        payload["siteId"] = bound["siteId"]
     events.append_event(
         connection,
         event_type=events.event_type("workforce", event),
@@ -938,24 +956,18 @@ def _append_event(
         source="workforce",
         severity=severity,
         summary=f"{worker}: {event}",
-        payload={
-            "site": site,
-            "worker": worker,
-            "priorStatus": prior_status,
-            "newStatus": new_status,
-            "priorHelpState": prior_help_state,
-            "newHelpState": new_help_state,
-            "details": stored_details,
-        },
+        payload=payload,
     )
 
 
 def create_checkin(payload: dict[str, Any], actor: str = "check-in") -> dict[str, Any]:
     """Insert a check-in. Raises ValueError when name or site is missing."""
     name = str(payload.get("name", "")).strip()[:80]
-    site = str(payload.get("site", "")).strip()[:60]
-    if not name or not site:
+    raw_site = str(payload.get("site", "")).strip()[:60]
+    if not name or not raw_site:
         raise ValueError("name and site are required")
+    bound = sites.bind(raw_site, payload.get("siteId") or payload.get("site_id") or "")
+    site = (bound["site"] or raw_site)[:60]
 
     alone = bool(payload.get("alone"))
     timestamp = now_iso()
@@ -1604,6 +1616,7 @@ def _normalise_switching_payload(payload: dict[str, Any]) -> dict[str, Any]:
     result = {
         "packageName": _switching_clip(payload.get("packageName"), 160),
         "site": _switching_clip(payload.get("site"), 120),
+        "siteId": _switching_clip(payload.get("siteId") or payload.get("site_id"), 80),
         "asset": _switching_clip(payload.get("asset"), 160),
         "outageId": _switching_clip(payload.get("outageId"), 120),
         "schematicId": _switching_clip(payload.get("schematicId"), 120),
@@ -1616,6 +1629,13 @@ def _normalise_switching_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "ruleSet": _switching_clip(payload.get("ruleSet"), 160),
         "authorityProcedureId": _switching_clip(payload.get("authorityProcedureId"), 160),
         "authorityProcedureRevision": _switching_clip(payload.get("authorityProcedureRevision"), 160),
+        "workProtectionId": _switching_clip(payload.get("workProtectionId"), 40).lower(),
+        "workProtectionName": _switching_clip(payload.get("workProtectionName"), 160),
+        "workProtectionSection": _switching_clip(payload.get("workProtectionSection"), 40),
+        "workProtectionTemplateId": _switching_clip(
+            payload.get("workProtectionTemplateId") or payload.get("templateId"), 40
+        ).lower(),
+        "templateFields": {},
         "qualificationEvidenceRef": _switching_clip(payload.get("qualificationEvidenceRef"), 240),
         "sourceManifestDigest": source_manifest_digest,
         "scope": _switching_clip(payload.get("scope"), 4000),
@@ -1631,6 +1651,34 @@ def _normalise_switching_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "reviewComments": _switching_clip(payload.get("reviewComments"), 4000),
         "checks": {key: bool(checks.get(key)) for key in SWITCHING_REVIEW_CHECKS},
     }
+    bound = sites.bind(result["site"], result["siteId"])
+    result["site"] = bound["site"]
+    result["siteId"] = bound["siteId"]
+    instrument = uwpc.instrument(result["workProtectionId"])
+    if result["workProtectionId"] and not instrument:
+        raise ValueError("Unknown UWPC work-protection instrument")
+    if instrument:
+        result["workProtectionName"] = instrument["name"]
+        result["workProtectionSection"] = instrument["article"]
+    template = uwpc.template(result["workProtectionTemplateId"])
+    if result["workProtectionTemplateId"] and not template:
+        raise ValueError("Unknown UWPC work-protection template")
+    if template:
+        raw_fields = payload.get("templateFields")
+        allowed = {field["id"] for field in template.get("fields", [])}
+        stored: dict[str, str] = {}
+        if isinstance(raw_fields, dict):
+            for key in allowed:
+                value = _switching_clip(raw_fields.get(key), 400)
+                if value:
+                    stored[key] = value
+        result["templateFields"] = stored
+        if template.get("standalone") and template.get("instrumentId") and not result["workProtectionId"]:
+            result["workProtectionId"] = template["instrumentId"]
+            instrument = uwpc.instrument(result["workProtectionId"])
+            if instrument:
+                result["workProtectionName"] = instrument["name"]
+                result["workProtectionSection"] = instrument["article"]
     encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
     if len(encoded.encode("utf-8")) > 50 * 1024:
         raise ValueError("switching draft metadata exceeds 50 KB")
@@ -1661,8 +1709,12 @@ def _switching_validation_errors(payload: dict[str, Any]) -> list[str]:
         errors.append("server-stored circuit diagram source")
     if payload.get("schematicId") and not payload.get("symbolProfileApprovalRef"):
         errors.append("utility symbol-profile approval reference")
-    if not durable_sources:
+    if not durable_sources and not (
+        uwpc.uses_governing_code(payload) and uwpc.book_available()
+    ):
         errors.append("server-stored governing rule/procedure source")
+    if uwpc.uses_governing_code(payload) and not uwpc.instrument(payload.get("workProtectionId")):
+        errors.append("UWPC work-protection instrument")
     if not payload.get("sourceManifestDigest"):
         errors.append("source manifest digest")
     for key, label in (
@@ -1773,6 +1825,9 @@ def _switching_record(
             "reviewedBy": row["reviewed_by"],
         }
     )
+    bound = sites.bind(record.get("site"), record.get("siteId"))
+    record["site"] = bound["site"] or record.get("site", "")
+    record["siteId"] = bound["siteId"]
     if audit is not None:
         record["audit"] = audit
     return record
@@ -2783,11 +2838,12 @@ def _append_outage_event(
         actor_id=stored_actor,
         aggregate_type="outage",
         aggregate_id=outage_id,
-        source="outages",
+        source="outage",
         severity="warning" if new_status == "Open" else "info",
         summary=f"{stored_site}: {stored_event}",
         payload={
             "site": stored_site,
+            "siteId": sites.bind(stored_site)["siteId"] or None,
             "priorStatus": prior_status,
             "newStatus": new_status,
             "details": stored_details,
@@ -2806,6 +2862,9 @@ def create_outage(payload: dict[str, Any], actor: str = "operator") -> dict[str,
     asset = str(payload.get("asset", "")).strip()[:160]
     timestamp = now_iso()
     actor = actor.strip()[:80] or "operator"
+    raw_site = str(payload.get("site") or "System / transmission").strip()[:80]
+    bound = sites.bind(raw_site, payload.get("siteId") or payload.get("site_id") or "")
+    stored_site = (bound["site"] or raw_site)[:80]
     with _LOCK, _session() as connection:
         record_id = _unique_id(connection, "outages", "outage")
         connection.execute(
@@ -2816,7 +2875,7 @@ def create_outage(payload: dict[str, Any], actor: str = "operator") -> dict[str,
                 record_id,
                 title,
                 asset,
-                str(payload.get("site", "System / transmission")).strip()[:80],
+                stored_site,
                 str(payload.get("severity", "Monitor")).strip()[:30],
                 outage_type,
                 str(payload.get("details", "")).strip()[:4000],
@@ -2830,22 +2889,34 @@ def create_outage(payload: dict[str, Any], actor: str = "operator") -> dict[str,
             outage_id=record_id,
             actor=actor,
             event="opened",
-            site=str(payload.get("site", "System / transmission")).strip()[:80],
+            site=stored_site,
             prior_status=None,
             new_status="Open",
             details=str(payload.get("details", "")).strip(),
             at=timestamp,
         )
         row = connection.execute("SELECT * FROM outages WHERE id=?", (record_id,)).fetchone()
-    return _outage_record(row)
+        return _outage_record(row, connection)
 
 
-def _outage_record(row: sqlite3.Row) -> dict[str, Any]:
-    return {
+def _event_report_fields(connection: sqlite3.Connection, aggregate_type: str, aggregate_id: str) -> dict[str, str]:
+    row = connection.execute(
+        "SELECT event_id FROM audit_events WHERE aggregate_type=? AND aggregate_id=? "
+        "ORDER BY occurred_at DESC, seq DESC LIMIT 1",
+        (aggregate_type, aggregate_id),
+    ).fetchone()
+    if row is None:
+        return {}
+    return {"eventId": row["event_id"], "href": events.report_href(row["event_id"])}
+
+
+def _outage_record(row: sqlite3.Row, connection: sqlite3.Connection | None = None) -> dict[str, Any]:
+    record = {
         "id": row["id"],
         "title": row["title"],
         "asset": row["asset"],
         "site": row["site"],
+        "siteId": sites.bind(row["site"])["siteId"],
         "severity": row["severity"],
         "type": row["outage_type"],
         "details": row["details"],
@@ -2855,18 +2926,24 @@ def _outage_record(row: sqlite3.Row) -> dict[str, Any]:
         "closedAt": row["closed_at"],
         "closedBy": row["closed_by"],
     }
+    if connection is not None:
+        record.update(_event_report_fields(connection, "outage", row["id"]))
+    else:
+        with _LOCK, _session() as owned:
+            record.update(_event_report_fields(owned, "outage", row["id"]))
+    return record
 
 
 def list_outages() -> list[dict[str, Any]]:
     with _LOCK, _session() as connection:
         rows = connection.execute("SELECT * FROM outages ORDER BY opened_at DESC, id DESC").fetchall()
-    return [_outage_record(row) for row in rows]
+        return [_outage_record(row, connection) for row in rows]
 
 
 def get_outage(outage_id: str) -> dict[str, Any] | None:
     with _LOCK, _session() as connection:
         row = connection.execute("SELECT * FROM outages WHERE id=?", (outage_id,)).fetchone()
-    return _outage_record(row) if row else None
+        return _outage_record(row, connection) if row else None
 
 
 def close_outage(
@@ -2896,7 +2973,7 @@ def close_outage(
                 at=timestamp,
             )
             row = connection.execute("SELECT * FROM outages WHERE id=?", (outage_id,)).fetchone()
-    return _outage_record(row)
+        return _outage_record(row, connection)
 
 
 def outage_history(outage_id: str | None = None, limit: int = 250) -> list[dict[str, Any]]:
@@ -2974,8 +3051,8 @@ def set_alert_setting(payload: dict[str, Any]) -> dict[str, Any]:
     return record
 
 
-def _alert_record(row: sqlite3.Row) -> dict[str, Any]:
-    return {
+def _alert_record(row: sqlite3.Row, connection: sqlite3.Connection | None = None) -> dict[str, Any]:
+    record = {
         "id": row["id"],
         "node": row["node"],
         "kind": row["kind"],
@@ -2994,6 +3071,12 @@ def _alert_record(row: sqlite3.Row) -> dict[str, Any]:
         "resolvedPrice": row["resolved_price"],
         "actions": json.loads(row["actions"]),
     }
+    if connection is not None:
+        record.update(_event_report_fields(connection, "price_alert", row["id"]))
+    else:
+        with _LOCK, _session() as owned:
+            record.update(_event_report_fields(owned, "price_alert", row["id"]))
+    return record
 
 
 def _append_alert_event(
@@ -3136,7 +3219,7 @@ def evaluate_price_alerts(
                 at=timestamp,
             )
             closed = connection.execute("SELECT * FROM alerts WHERE id=?", (row["id"],)).fetchone()
-            resolved.append(_alert_record(closed))
+            resolved.append(_alert_record(closed, connection))
 
         for node, price in prices.items():
             if price is None:
@@ -3183,7 +3266,7 @@ def evaluate_price_alerts(
                 )
                 still_open.add((node, kind))
                 row = connection.execute("SELECT * FROM alerts WHERE id=?", (alert_id,)).fetchone()
-                raised.append(_alert_record(row))
+                raised.append(_alert_record(row, connection))
 
     return {"raised": raised, "resolved": resolved}
 
@@ -3201,7 +3284,7 @@ def acknowledge_alert(alert_id: str, actor: str = "operator") -> dict[str, Any] 
         if row is None:
             return None
         if row["state"] != ALERT_ACTIVE:
-            return _alert_record(row)
+            return _alert_record(row, connection)
         connection.execute(
             "UPDATE alerts SET state=?, acknowledged_at=?, acknowledged_by=? WHERE id=?",
             (ALERT_ACKNOWLEDGED, timestamp, actor[:80], alert_id),
@@ -3219,7 +3302,7 @@ def acknowledge_alert(alert_id: str, actor: str = "operator") -> dict[str, Any] 
             at=timestamp,
         )
         row = connection.execute("SELECT * FROM alerts WHERE id=?", (alert_id,)).fetchone()
-    return _alert_record(row)
+        return _alert_record(row, connection)
 
 
 def list_alerts(include_resolved: bool = False, limit: int = 250) -> list[dict[str, Any]]:
@@ -3236,7 +3319,7 @@ def list_alerts(include_resolved: bool = False, limit: int = 250) -> list[dict[s
                 " ORDER BY opened_at DESC, id DESC LIMIT ?",
                 (*ALERT_OPEN_STATES, limit),
             ).fetchall()
-    return [_alert_record(row) for row in rows]
+        return [_alert_record(row, connection) for row in rows]
 
 
 def alert_history(alert_id: str | None = None, limit: int = 250) -> list[dict[str, Any]]:

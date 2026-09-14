@@ -91,3 +91,23 @@ class EventPresentationTest(unittest.TestCase):
         row = self.store.list_audit_events(limit=1)[0]
         self.assertEqual(row["display"]["channel"], "engineering")
         self.assertEqual(row["display"]["filterGroup"], "engineering")
+        self.assertTrue(row["href"].startswith("event-detail.html?id="))
+
+    def test_library_note_is_classified_as_library_and_has_a_report_href(self) -> None:
+        with self.store._LOCK, self.store._session() as connection:
+            self.events.append_event(
+                connection,
+                event_id="libnote_demo",
+                event_type="library.note.added",
+                occurred_at="2026-09-13T10:00:00-04:00",
+                actor_id="operator",
+                aggregate_type="device",
+                aggregate_id="menu:site:twin-falls:notes",
+                source="library",
+                summary="Library note",
+                payload={"details": "Do not acknowledge this alarm from a note", "category": "library"},
+            )
+        row = self.store.list_audit_events(limit=1)[0]
+        self.assertEqual(row["href"], "event-detail.html?id=libnote_demo")
+        self.assertEqual(row["display"]["channel"], "library")
+        self.assertEqual(row["display"]["channelLabel"], "LIBRARY")
