@@ -23,12 +23,10 @@ $routes = @(
 
 $process = $null
 if ($StartBackend) {
-    $env:NORTHSTAR_PORT = [string]$Port
-    $env:NORTHSTAR_BIND_HOST = '127.0.0.1'
-    $env:NORTHSTAR_OPERATOR_GATE = 'off'
-    $env:NORTHSTAR_CHECKIN_ORIGIN = ''
-    $process = Start-Process python -ArgumentList 'ieso_backend.py' -WorkingDirectory $PSScriptRoot\.. -PassThru -WindowStyle Hidden
-    Start-Sleep -Seconds 2
+    # The isolated verifier selects a free port and owns only disposable storage.
+    python "$PSScriptRoot\verify-release.py"
+    if ($LASTEXITCODE -ne 0) { throw 'Isolated release verification failed.' }
+    return
 }
 
 try {

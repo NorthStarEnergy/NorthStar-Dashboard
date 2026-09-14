@@ -1,3 +1,9 @@
+# Deployment verification — 2026-09-14
+
+Isolated committed-source smoke checks replace startup against operational data;
+private environment files are ignored. Backup structural restore passed.
+See [report](packets/2026-09-14-deployment-verification.md).
+
 # NorthStar UWPC form templates — 2026-09-14
 
 Engineering has a NorthStar-owned draft sheet for each UWPC form and permit type. The sheets cite the 2024 Code and do not copy Hydro One forms or issue a permit. 243 Python tests pass. See [report](packets/2026-09-14-uwpc-templates.md).

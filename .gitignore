@@ -1,6 +1,9 @@
 # Operational data — the check-in database and its backups are records,
 # not source. Never commit or ship them.
 data/
+.env
+.env.*
+!.env.example
 __pycache__/
 *.py[cod]
 
