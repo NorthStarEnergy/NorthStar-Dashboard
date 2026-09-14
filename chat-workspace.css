@@ -1,0 +1,243 @@
+:root {
+  --chat-line: #2c4254;
+  --chat-panel: #111a24;
+  --chat-panel-2: #0d161d;
+  --chat-muted: #81909b;
+  --chat-gold: #f2b84b;
+  --chat-ok: #65d5a2;
+  --chat-teams: #6264a7;
+}
+
+#overviewChat {
+  grid-column: span 5;
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  background: linear-gradient(145deg, #14212a, #101820);
+  border: 1px solid var(--chat-line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.chat-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 320px;
+}
+
+.chat-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--chat-line);
+}
+
+.chat-head label {
+  display: block;
+  color: var(--chat-muted);
+  font: 800 9px monospace;
+  letter-spacing: .7px;
+}
+
+.chat-head h2 {
+  margin: 4px 0 0;
+  font-size: 16px;
+  color: #edf3f5;
+}
+
+.chat-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-bridge-status {
+  color: var(--chat-muted);
+  font: 800 9px monospace;
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+
+.chat-bridge-status.live {
+  color: var(--chat-ok);
+}
+
+.chat-bridge-status.shadow {
+  color: var(--chat-gold);
+}
+
+.chat-rooms {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--chat-line);
+  overflow-x: auto;
+  background: var(--chat-panel-2);
+}
+
+.chat-rooms button {
+  flex: 0 0 auto;
+  border: 1px solid #39505b;
+  background: #17252e;
+  color: var(--chat-muted);
+  border-radius: 4px;
+  padding: 7px 10px;
+  font: 800 9px monospace;
+  letter-spacing: .4px;
+  cursor: pointer;
+}
+
+.chat-rooms button.active,
+.chat-rooms button:hover {
+  border-color: var(--chat-gold);
+  color: #fff;
+}
+
+.chat-messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-height: 180px;
+  max-height: 340px;
+  background: radial-gradient(circle at 80% 0, #1b2c37, #0b1117 55%);
+}
+
+.chat-empty {
+  color: var(--chat-muted);
+  font: 10px monospace;
+  letter-spacing: .4px;
+  padding: 18px 4px;
+}
+
+.chat-message {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--chat-line);
+  border-radius: 7px;
+  background: var(--chat-panel);
+}
+
+.chat-message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: var(--chat-muted);
+  font: 9px monospace;
+  letter-spacing: .4px;
+}
+
+.chat-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #39505b;
+  font: 800 8px monospace;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+.chat-source.northstar {
+  color: var(--chat-gold);
+  border-color: #6a5424;
+  background: #2a2314;
+}
+
+.chat-source.teams {
+  color: #c5c7f0;
+  border-color: #4d4f86;
+  background: #1d1e33;
+}
+
+.chat-source.system {
+  color: var(--chat-ok);
+  border-color: #2f5a46;
+  background: #13231c;
+}
+
+.chat-author {
+  color: #dce5e7;
+  font-weight: 700;
+}
+
+.chat-body {
+  color: #edf3f5;
+  font: 12px/1.45 Arial, sans-serif;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-compose {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--chat-line);
+  background: var(--chat-panel-2);
+}
+
+.chat-compose textarea {
+  width: 100%;
+  min-height: 54px;
+  resize: vertical;
+  box-sizing: border-box;
+  background: #0b151b;
+  border: 1px solid #38505e;
+  border-radius: 6px;
+  color: #fff;
+  padding: 10px;
+  font: 12px/1.4 Arial, sans-serif;
+}
+
+.chat-compose-actions {
+  display: grid;
+  gap: 6px;
+  align-content: end;
+}
+
+.chat-compose-actions button,
+.chat-head-actions button {
+  border: 1px solid #39505b;
+  background: #17252e;
+  color: #dce5e7;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font: 800 9px monospace;
+  letter-spacing: .4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chat-compose-actions button.primary {
+  background: #3b3320;
+  border-color: var(--chat-gold);
+  color: #fff;
+}
+
+.chat-compose-actions label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--chat-muted);
+  font: 9px monospace;
+  letter-spacing: .3px;
+}
+
+.chat-compose-actions input[type="checkbox"] {
+  accent-color: var(--chat-teams);
+}
+
+@media (max-width: 1050px) {
+  #overviewChat {
+    grid-column: 1 / -1;
+  }
+}

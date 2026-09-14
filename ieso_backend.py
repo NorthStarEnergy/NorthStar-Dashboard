@@ -32,6 +32,7 @@ import northstar_auth as auth
 import northstar_events as events
 import northstar_event_register as event_register
 import northstar_ai as ai
+import northstar_chat as chat
 import northstar_dispatch as dispatch
 import northstar_device_library as device_library
 import northstar_maximo as maximo
@@ -180,6 +181,10 @@ OPERATOR_ROUTES = {
     "/api/ai": ("POST",),
     "/api/ai/query": ("POST",),
     "/api/ai/status": ("GET",),
+    "/api/chat/rooms": ("GET",),
+    "/api/chat/messages": ("GET", "POST"),
+    "/api/chat/status": ("GET",),
+    "/api/chat/teams/pull": ("POST",),
     "/api/dispatch/apiroq": ("GET",),
 }
 
@@ -1576,6 +1581,28 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.split("?", 1)[0] == "/api/ai/status":
             self._send_json(ai.status())
             return
+        if self.path.split("?", 1)[0] == "/api/chat/status":
+            self._send_json(chat.status())
+            return
+        if self.path.split("?", 1)[0] == "/api/chat/rooms":
+            self._send_json({"rooms": chat.list_rooms()})
+            return
+        if self.path.split("?", 1)[0] == "/api/chat/messages":
+            query = parse_qs(urlparse(self.path).query)
+            room_id = (query.get("room", ["general"])[0] or "general").strip().lower()
+            since = (query.get("since", [""])[0] or "").strip() or None
+            try:
+                limit = int(query.get("limit", ["100"])[0])
+            except ValueError:
+                limit = 100
+            try:
+                self._send_json({
+                    "roomId": room_id,
+                    "messages": chat.list_messages(room_id, limit=limit, since=since),
+                })
+            except chat.ChatError as exc:
+                self._send_json({"error": str(exc)}, 400)
+            return
         if self.path.split("?", 1)[0] == "/api/dispatch/apiroq":
             self._send_json(dispatch.snapshot())
             return
@@ -1928,6 +1955,23 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if route in {"/api/ai", "/api/ai/query"}:
             self._ai_query()
+            return
+        if route == "/api/chat/messages":
+            payload = self._json_body()
+            try:
+                record = chat.post_message(
+                    str(payload.get("room") or payload.get("roomId") or "general").strip().lower(),
+                    payload.get("body") or payload.get("text") or "",
+                    author=self._audit_actor(payload.get("actor")),
+                    post_to_teams=bool(payload.get("postToTeams")),
+                )
+            except chat.ChatError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record, 201)
+            return
+        if route == "/api/chat/teams/pull":
+            result = chat.pull_teams_messages(actor=self._audit_actor(None))
+            self._send_json(result)
             return
         if route == "/api/field-reports":
             try:

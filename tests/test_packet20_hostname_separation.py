@@ -274,6 +274,11 @@ class HostnameSeparationTest(unittest.TestCase):
             ("GET", "/api/sites"),
             ("GET", "/api/uwpc"),
             ("GET", "/api/uwpc/book"),
+            ("GET", "/api/chat/rooms"),
+            ("GET", "/api/chat/messages"),
+            ("POST", "/api/chat/messages"),
+            ("GET", "/api/chat/status"),
+            ("POST", "/api/chat/teams/pull"),
         )
         for method, path in operator_routes:
             payload = MISSING if method == "GET" else {"entry": "x", "site": "Kenora"}

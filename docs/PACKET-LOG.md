@@ -77,6 +77,15 @@ Full completion reports for recent packets are in `docs/packets/`.
 
 ---
 
+## Packet 28 — overview live chat with Teams bridge (2026-09-03)
+
+Tag `packet-28-overview-live-chat` · report `docs/packets/packet-28-overview-live-chat.md`
+
+Added an operator-gated Overview chat box with rooms General, Operations, Field,
+Contractors, and Management. Messages are source-tagged (`northstar` / `teams` /
+`system`). Teams pull/post is opt-in via `NORTHSTAR_TEAMS_MODE` and never invents
+inbound traffic. Suite: 198 passed.
+
 ## Packet 26 — controlled engineering bundles and server revisions (2026-08-26)
 
 Tag `packet-26-controlled-engineering-bundles` · report

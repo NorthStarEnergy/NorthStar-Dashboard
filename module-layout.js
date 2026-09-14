@@ -13,6 +13,7 @@
 (() => {
   const ZONES = [
     { id: 'overview', canvas: true },
+    { id: 'staff', container: '#staffGroups', item: '.staff-group', step: [20, 20], min: [180, 90] },
     { id: 'market',  container: '#nodeCards',       item: '.node-card',    step: [20, 20], min: [200, 120] },
     // Weather-tab station tiles can be resized independently.
     { id: 'weather', container: '#weatherGridFull', item: '.weather-card', step: [10, 10], min: [320, 60], resize: true, sizesInEditOnly: true },

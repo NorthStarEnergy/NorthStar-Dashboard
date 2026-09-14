@@ -539,6 +539,9 @@ def init_db() -> None:
         from northstar_device_library import init_schema as init_library_schema
 
         init_library_schema(connection)
+        from northstar_chat import init_schema as init_chat_schema
+
+        init_chat_schema(connection)
         _migrate_unified_events(connection)
         _seed_readiness_registry(connection)
         connection.execute(
