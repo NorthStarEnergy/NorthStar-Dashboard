@@ -23,7 +23,7 @@
       button.dataset.chromeReady='true';
       const [label,path]=items[button.dataset.tab] || [button.textContent.trim(),items.modules[1]];
       [...button.childNodes].filter(node=>node.nodeType===3).forEach(node=>node.remove());
-      const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');icon.classList.add('nav-icon');
+      const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('width','17');icon.setAttribute('height','17');icon.setAttribute('fill','none');icon.setAttribute('stroke','currentColor');icon.setAttribute('aria-hidden','true');icon.classList.add('nav-icon');
       const line=document.createElementNS('http://www.w3.org/2000/svg','path');line.setAttribute('d',path);icon.append(line);
       const text=document.createElement('span');text.className='nav-label';text.textContent=label;
       button.prepend(icon);button.append(text);button.title=label;button.setAttribute('aria-label',label);
@@ -33,5 +33,6 @@
     if(toolbar&&add){toolbar.prepend(add);add.textContent='+ Add module';}
     if(toolbar)new ResizeObserver(()=>document.body.style.setProperty('--ns-dock-height',Math.ceil(toolbar.getBoundingClientRect().height)+'px')).observe(toolbar);
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,0));else setTimeout(init,0);
+  const start=()=>{if(window.northstarStylesReady)window.northstarStylesReady.then(()=>setTimeout(init,0));else setTimeout(init,0);};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();

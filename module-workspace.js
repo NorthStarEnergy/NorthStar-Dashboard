@@ -263,9 +263,14 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     const m=registry.get(id);if(!m)return;
     section=m.section;const s=sectionState(section);s.tabs ||= [];
     if(!s.tabs.includes(id))s.tabs.push(id);s.active=id;
-    activateSource(m);paint();save();window.scrollTo(0,0);
+    activateSource(m);paint();save();rememberSection(section);window.scrollTo(0,0);
+  }
+  function rememberSection(id) {
+    const url = new URL(location.href);url.hash = id;
+    if(url.href !== location.href)history.replaceState(history.state,'',url.href);
   }
   function enter(id) {
+    rememberSection(id);
     section=id==='switching'?'outages':id;
     if (['overview','modules'].includes(section)) {clearMask();document.body.classList.remove('ns-in-section','ns-floating');shell.hidden=true;return;}
     discover();const s=sectionState(section), items=[...registry.values()].filter(m=>m.section===section);
@@ -381,7 +386,16 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     const schedule=()=>{if(!frame)frame=requestAnimationFrame(()=>{frame=0;observer.disconnect();discover();paint();observer.observe(main,{subtree:true,childList:true});});};
     const observer=new MutationObserver(schedule);observer.observe(main,{subtree:true,childList:true});
     window.NorthstarModules={open:openModule,edit:openEditor,refresh:schedule,registry,state};
+    const restoreSection=()=>{
+      const id=location.hash.slice(1);
+      const button=$$('#sideNav [data-tab]').find(b=>b.dataset.tab===id);
+      if(button)button.click();
+      else enter($('#sideNav [data-tab].active')?.dataset.tab || 'overview');
+    };
+    window.addEventListener('hashchange',restoreSection);
+    restoreSection();
   }
   // After legacy DOMContentLoaded bootstraps have completed.
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,0));else setTimeout(init,0);
+  const start=()=>{if(window.northstarStylesReady)window.northstarStylesReady.then(()=>setTimeout(init,0));else setTimeout(init,0);};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();

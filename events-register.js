@@ -67,7 +67,7 @@
     const stream=document.querySelector('#eventsStream');
     if(stream){stream.addEventListener('click',e=>{if(e.target.closest('a[href]'))return;const row=e.target.closest('[data-event-id]');if(row)window.NorthStarEvents.open(row.dataset.eventId);});stream.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)&&e.target.matches('[data-event-id]')){e.preventDefault();window.NorthStarEvents.open(e.target.dataset.eventId);}});}
     sourceInfo().then(()=>{for(const input of form.elements){if(!input.name)continue;const values=filters.getAll(input.name);if(input.type==='checkbox')input.checked=values.includes(input.value);else if(values.length){let value=values[0];if(input.type==='datetime-local'){const d=new Date(value);if(!Number.isNaN(d.valueOf()))value=new Date(d.valueOf()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}input.value=value;}}chips();});load();
-    if(window.location?.hash==='#logbook')document.querySelector('[data-tab="logbook"]')?.click();
+    // The module workspace restores the section after its navigation is ready.
     setInterval(async()=>{if(document.hidden||!host.classList.contains('active')||loading)return;
       try{const p=new URLSearchParams(filters);p.set('limit','1');const result=await json(url('/api/events/register',p));if(result.snapshot>snapshot)$('erNew').hidden=false;}
       catch{if(lastSuccess)$('erFreshness').textContent='Refresh check failed · last loaded '+date(lastSuccess);}

@@ -160,7 +160,7 @@
     })));
     const enabled = () => document.querySelector('#overview')?.classList.contains('active');
     function persist() {
-      if(restoring)return;
+      if(restoring || document.documentElement.dataset.nsStyles === 'loading' || document.documentElement.dataset.nsStyles === 'failed')return;
       if (profile) profiles[profile] = {positions, width:lastWidth, automatic};
       try { localStorage.setItem(profileKey, JSON.stringify(profiles)); } catch {}
       try { localStorage.setItem(storageKey, JSON.stringify(positions)); } catch {}
@@ -294,7 +294,7 @@
     tools.querySelector('[data-ov-fit]')?.addEventListener('click',()=>{Object.values(positions).forEach(p=>{p.w=Math.min(p.w,lastWidth);p.x=Math.max(16,Math.min(p.x,lastWidth+16-p.w));});automatic=false;sync();});
     function sync() {
       frame = 0;
-      if (gesture) return;
+      if (gesture || ['loading','failed'].includes(document.documentElement.dataset.nsStyles)) return;
       const on = enabled();
       document.body.classList.toggle('overview-canvas', on);
       if (!on) {
@@ -608,6 +608,7 @@
     seedSavedLayout();
     const active = ZONES.filter(zone => zone.canvas || !window.NORTHSTAR_MODULE_WORKSPACE).map(zone => zone.canvas ? setupCanvas() : setupZone(zone)).filter(Boolean);
     if (!active.length) return;
+    window.addEventListener('northstar:styles-ready',()=>active.forEach(z=>z.sync()));
     seedSavedLayout();
     document.querySelectorAll('.layout-save').forEach(button => button.addEventListener('click', () => {
       active.forEach(({ zone, container, save }) => {
@@ -631,6 +632,7 @@
       button.addEventListener('click', () => setTimeout(() => active.forEach(z => z.sync()), 0)));
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  const start = () => window.northstarStylesReady ? window.northstarStylesReady.then(init) : init();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();

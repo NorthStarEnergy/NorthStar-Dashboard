@@ -2,6 +2,7 @@
 .ns-section-shell[hidden],.ns-module-hidden{display:none!important}
 html body #weatherStrip>.weather-card[hidden],html body #marketTopTiles>[hidden],html body #overviewModules [data-ns-compact][hidden]{display:none!important}
 body.ns-in-section main{padding-left:252px!important;padding-top:104px!important;min-height:calc(100vh - 40px)!important}
+body.ns-in-section main>.page-header{display:none!important}
 .ns-section-shell{position:absolute;inset:0 0 auto 0;pointer-events:none}
 .ns-module-tree{position:absolute;left:0;top:0;width:230px;height:calc(100vh - 38px);overflow:auto;background:var(--panel,#101e29);border-right:1px solid var(--line,#2b414d);padding:16px 10px;box-sizing:border-box;pointer-events:auto}
 .ns-module-tree h2{font:600 14px system-ui;text-transform:capitalize;padding:4px 8px 14px;letter-spacing:.06em}

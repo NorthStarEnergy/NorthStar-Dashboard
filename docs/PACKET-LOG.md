@@ -1,3 +1,7 @@
+# Event return and stylesheet recovery — 2026-09-15
+
+Restores the correct section after an event report, retries failed styles before layout initialization, and preserves saved geometry when assets remain unavailable. Browser regression coverage includes both return paths and injected stylesheet failures. See [report](packets/2026-09-15-event-return-fix.md).
+
 # Dashboard visual polish — 2026-09-15
 
 Rendered local-UI review led to readable navigation, tighter Overview modules, clear empty states, a shared editing dock, small corner grips and keyboard content editing. See [report](packets/2026-09-15-dashboard-polish.md).

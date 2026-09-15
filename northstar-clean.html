@@ -8,6 +8,72 @@
        Must stay first and must not be deferred — the boot code below fetches
        operator data as soon as it parses. -->
   <script src="operator-session.js"></script>
+  <style id="dashboard-style-loading">html:not([data-ns-styles="ready"]) .app,html:not([data-ns-styles="ready"]) .layout-toolbar{visibility:hidden!important}#nsStyleStatus{position:fixed;inset:25% auto auto 50%;transform:translateX(-50%);width:min(420px,80vw);padding:24px;background:#12202a;color:#e8f1f6;border:1px solid #446274;border-radius:10px;font:15px/1.5 Arial,sans-serif;z-index:99999}#nsStyleStatus[hidden]{display:none!important}#nsStyleStatus button{padding:8px 14px;border:1px solid #73bbdd;border-radius:5px;background:#244252;color:white;cursor:pointer}</style>
+  <script id="dashboard-style-guard">
+/* Embedded in the dashboard head: recovery must not depend on another asset request. */
+(() => {
+  const root = document.documentElement;
+  root.dataset.nsStyles = 'loading';
+  let release, running = false, status;
+  window.northstarStylesReady = new Promise(resolve => { release = resolve; });
+  const valid = link => {
+    try { return !!link.sheet && link.sheet.cssRules.length > 0; }
+    catch { return false; }
+  };
+  function retry(link, remaining) {
+    return new Promise(resolve => {
+      const replacement = link.cloneNode();
+      const url = new URL(link.href);
+      url.searchParams.set('nsStyleRetry', Date.now());
+      replacement.href = url.href;
+      const finish = () => { clearTimeout(timer); replacement.onload = replacement.onerror = null; resolve(); };
+      const timer = setTimeout(finish, Math.min(8000, remaining));
+      replacement.onload = replacement.onerror = finish;
+      link.replaceWith(replacement); // Keep the original cascade order.
+    });
+  }
+  async function check() {
+    if (running) return;
+    running = true;
+    root.dataset.nsStyles = 'loading';
+    if (!status) {
+      status = document.createElement('div'); status.id = 'nsStyleStatus';
+      status.setAttribute('role', 'status');
+      status.innerHTML = '<strong>Loading dashboard…</strong><p></p><button type="button">Retry loading</button>';
+      status.querySelector('button').onclick = check;
+      document.body.append(status);
+    }
+    status.hidden = false;
+    status.querySelector('strong').textContent = 'Loading dashboard…';
+    status.querySelector('p').textContent = 'Restoring the dashboard display.';
+    status.querySelector('button').hidden = true;
+    // Retry failed styles sequentially instead of sending another burst of requests.
+    const deadline = Date.now() + 16000;
+    for (let attempt = 0; attempt < 2 && Date.now() < deadline; attempt++) {
+      const missing = [...document.querySelectorAll('link[rel="stylesheet"]')].filter(link => !valid(link));
+      if (!missing.length) break;
+      for (const link of missing) {
+        if (Date.now() >= deadline) break;
+        await retry(link, deadline - Date.now());
+      }
+    }
+    const ready = [...document.querySelectorAll('link[rel="stylesheet"]')].every(valid);
+    root.dataset.nsStyles = ready ? 'ready' : 'failed';
+    status.hidden = ready;
+    if (ready) {
+      release();
+      window.dispatchEvent(new Event('northstar:styles-ready'));
+    } else {
+      status.querySelector('strong').textContent = 'Dashboard display could not load';
+      status.querySelector('p').textContent = 'Check your connection, then retry. Your saved layout has not been reset.';
+      status.querySelector('button').hidden = false;
+    }
+    running = false;
+  }
+  document.addEventListener('DOMContentLoaded', check);
+  window.addEventListener('pageshow', event => { if (event.persisted) check(); });
+})();
+</script>
   <script src="overview-modules.js?v=20260915-3"></script>
   <link rel="stylesheet" href="lamination-dashboard.css">
   <link rel="stylesheet" href="switching-workspace.css?v=20260914-6">
@@ -463,7 +529,7 @@
   .site-crew-history article{display:grid;grid-template-columns:110px 1fr;gap:8px;padding:8px;border-top:1px solid #263842}.site-crew-history time{color:var(--muted);font:8px monospace}.site-crew-history strong,.site-crew-history span,.site-crew-history small{display:block}.site-crew-history strong{font:700 10px monospace}.site-crew-history span{color:var(--blue);font:9px monospace}.site-crew-history small{margin-top:2px;color:var(--muted);font:8px/1.4 monospace}
   .site-crew-notes{margin-top:12px}.site-crew-notes article{padding:8px;border-top:1px solid #263842}.site-crew-notes strong{font:700 10px monospace}.site-crew-notes p{margin:3px 0 0;color:#cbd6db;font:10px/1.45 monospace}
   @media(max-width:900px){.site-crew-columns{grid-template-columns:1fr}.site-crew-summary{grid-template-columns:repeat(2,1fr)}.site-crew-list article{grid-template-columns:1fr 90px}.site-crew-list article>div:nth-child(3){display:none}}
-</style><link rel="stylesheet" href="voice-workspace.css"><script src="dashboard-layout-default.js?v=20260911-flow-1"></script><script src="overview-layout-migration.js?v=20260911-flow-1"></script><script>window.NORTHSTAR_MODULE_WORKSPACE=true;</script><script src="module-layout.js?v=20260915-polish-3" defer></script><script src="voice-workspace.js" defer></script><link rel="stylesheet" href="events-register.css?v=20260913-5"><script src="events-register.js?v=20260915-2" defer></script><link rel="stylesheet" href="device-library.css?v=20260913-5"><script src="device-library.js?v=20260913-5" defer></script><link rel="stylesheet" href="chat-workspace.css?v=20260903-1"><script src="chat-workspace.js?v=20260915-2" defer></script><script src="ai-assistant-workspace.js?v=20260901-1" defer></script></head>
+</style><link rel="stylesheet" href="voice-workspace.css"><script src="dashboard-layout-default.js?v=20260911-flow-1"></script><script src="overview-layout-migration.js?v=20260911-flow-1"></script><script>window.NORTHSTAR_MODULE_WORKSPACE=true;</script><script src="module-layout.js?v=20260915-return-1" defer></script><script src="voice-workspace.js" defer></script><link rel="stylesheet" href="events-register.css?v=20260913-5"><script src="events-register.js?v=20260915-return-1" defer></script><link rel="stylesheet" href="device-library.css?v=20260913-5"><script src="device-library.js?v=20260913-5" defer></script><link rel="stylesheet" href="chat-workspace.css?v=20260903-1"><script src="chat-workspace.js?v=20260915-2" defer></script><script src="ai-assistant-workspace.js?v=20260901-1" defer></script></head>
 <style id="field-staff-cleanup-v1">
 #overviewStaff{box-sizing:border-box;min-width:0!important;overflow:hidden!important;padding:16px!important;background:linear-gradient(145deg,#0e1a22,#0b151c)!important;border-color:#2b4653!important}
 #overviewStaff .staff-panel-head{align-items:flex-start!important;margin-bottom:12px!important}
@@ -843,7 +909,7 @@ document.querySelector('#quickLogForm').onsubmit=async e=>{e.preventDefault();co
   (()=>{const decorate=()=>{const host=document.querySelector('#staffGroups');if(!host)return;const groups=[...host.querySelectorAll(':scope > .staff-group')];groups.forEach(group=>{const rows=[...group.querySelectorAll('.staff-row')],missed=rows.some(row=>row.classList.contains('help-request')||row.querySelector('.status-due')),solo=!missed&&rows.length===1,state=missed?'missed':solo?'solo':'crew',heading=group.querySelector('h3');if(heading){const label=heading.textContent.replace(/^[⚠🆘]\s*/,''),icon=document.createElement('span');icon.className='station-status-icon '+state;icon.setAttribute('aria-label',state);heading.replaceChildren(icon,document.createTextNode(label))}if(!group.querySelector('.station-quick-add')){const add=document.createElement('button');add.type='button';add.className='station-quick-add';add.dataset.quickAddSite=group.dataset.site;add.title='Quick add worker';add.setAttribute('aria-label','Quick add worker at '+group.dataset.site);add.textContent='+';group.append(add)}group.dataset.priority=missed?'0':solo?'1':'2'});groups.sort((a,b)=>a.dataset.priority.localeCompare(b.dataset.priority)).forEach(group=>host.append(group))};const prior=renderStaff;renderStaff=rows=>{prior(rows);decorate()};decorate()})();
  </script><script>
   (()=>{const canonical=site=>(window.NorthStarSites&&NorthStarSites.displayName(site))||site,fmt=value=>value?new Date(value).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';async function openSiteCrew(site){site=canonical(site);document.querySelector('[data-tab="crew"]')?.click();const workspace=document.querySelector('#siteCrewWorkspace'),title=document.querySelector('#siteCrewTitle');workspace.hidden=false;title.textContent=site;document.querySelector('#siteCrewPeople').innerHTML='<div class="muted-note">LOADING CURRENT CREW…</div>';document.querySelector('#siteCrewHistory').innerHTML='<div class="muted-note">LOADING HISTORY…</div>';try{const [recordsResponse,historyResponse]=await Promise.all([fetch('/api/checkins?include=all&ts='+Date.now()),fetch('/api/checkins/history?limit=1000&ts='+Date.now())]);if(!recordsResponse.ok||!historyResponse.ok)throw 0;const records=(await recordsResponse.json()).filter(row=>canonical(row.site)===site),history=(await historyResponse.json()).filter(row=>canonical(row.site)===site),active=records.filter(row=>row.status!=='checked-out'),contractors=active.filter(row=>row.kind==='Contractor').length;document.querySelector('#siteCrewSummary').innerHTML=`<div><span>ON SITE</span><b>${active.length}</b></div><div><span>CONTRACTORS</span><b>${contractors}</b></div><div><span>MISSED</span><b class="${active.some(row=>row.overdue)?'status-due':''}">${active.filter(row=>row.overdue).length}</b></div><div><span>VISITS ON FILE</span><b>${records.length}</b></div>`;document.querySelector('#siteCrewPeople').innerHTML=active.map(row=>`<article><div><strong>${esc(row.name)}</strong><span>${esc(row.kind==='Contractor'?(row.company||'Contractor'):'Northstar Energy')}</span></div><div><small>CHECKED IN</small><b>${fmt(row.checkedIn)}</b></div><div><small>LAST SEEN</small><b class="${row.overdue?'status-due':'status-ok'}">${fmt(row.lastHeard)}</b></div><em>${esc(row.status.toUpperCase())}</em></article>`).join('')||'<div class="muted-note">NO ACTIVE CREW AT THIS SITE</div>';document.querySelector('#siteCrewHistory').innerHTML=history.map(event=>`<article><time>${fmt(event.at)}</time><div><strong>${esc(event.worker)}</strong><span>${esc(event.event)}</span><small>${esc(event.details||[event.priorStatus,event.newStatus].filter(Boolean).join(' → '))}</small></div></article>`).join('')||'<div class="muted-note">NO CHECK-IN HISTORY FOR THIS SITE</div>';const notes=records.filter(row=>row.notes?.trim());document.querySelector('#siteCrewNotes').innerHTML=notes.map(row=>`<article><strong>${esc(row.name)}</strong><p>${esc(row.notes)}</p></article>`).join('')||'<div class="muted-note">NO RECORDED NOTES</div>';workspace.scrollIntoView({behavior:'smooth',block:'start'})}catch{document.querySelector('#siteCrewPeople').innerHTML='<div class="status-due">SITE RECORD UNAVAILABLE</div>';document.querySelector('#siteCrewHistory').innerHTML='<div class="status-due">HISTORY UNAVAILABLE</div>'}}document.querySelector('#staffGroups')?.addEventListener('click',event=>{const add=event.target.closest('[data-quick-add-site]'),group=event.target.closest('.staff-group');if(add){event.stopPropagation();const site=canonical(add.dataset.quickAddSite);document.querySelector('[data-tab="crew"]')?.click();const select=document.querySelector('#crewSite');if(![...select.options].some(option=>option.value===site))select.add(new Option(site,site));select.value=site;document.querySelector('#crewName')?.focus();return}if(group&&!event.target.closest('.staff-row button,.staff-time,.module-resize-handle'))openSiteCrew(group.dataset.site)});document.querySelector('#siteCrewClose')?.addEventListener('click',()=>document.querySelector('#siteCrewWorkspace').hidden=true);window.openSiteCrew=openSiteCrew})();
-</script><script>document.addEventListener('DOMContentLoaded',()=>{const heading=document.querySelector('#logbook .logbook-card h2');if(heading)heading.textContent='EVENTS';document.querySelectorAll('#logbook [data-format="clear"],#logbook .primary-btn').forEach(button=>{if(button.textContent.includes('LOGBOOK'))button.textContent=button.textContent.replace('LOGBOOK','EVENTS')})});</script></body></html>
+</script><script>document.addEventListener('DOMContentLoaded',()=>{const heading=document.querySelector('#logbook .logbook-card h2');if(heading)heading.textContent='EVENTS';document.querySelectorAll('#logbook [data-format="clear"],#logbook .primary-btn').forEach(button=>{if(button.textContent.includes('LOGBOOK'))button.textContent=button.textContent.replace('LOGBOOK','EVENTS')})});</script>
 <style id="build-version-style">.build-version{position:fixed;left:14px;bottom:12px;z-index:9999;color:var(--muted,#9fb0b8);font:700 11px monospace;letter-spacing:1px;background:#111a24e6;border:1px solid var(--line,#456371);border-radius:5px;padding:6px 8px;box-shadow:0 3px 12px #0006}@media(max-width:700px){.build-version{left:10px;bottom:78px;font-size:10px;padding:5px 7px}}</style><div class="build-version" aria-label="Application version">v0.13</div>
 <style id="sidebar-footer-controls">.link-state{display:grid;gap:6px}.build-label{display:block;color:var(--muted);font:700 10px monospace;letter-spacing:1px;border:1px solid var(--line);border-radius:5px;padding:8px 7px;text-align:center}.operator-signout{width:100%;margin:0!important;padding:8px 7px;background:transparent;border:1px solid var(--line);border-radius:5px;color:var(--muted);font:700 10px monospace;letter-spacing:1px;cursor:pointer}.operator-signout:hover{background:#1d2c35;color:#fff;border-color:var(--blue)}.build-version{display:none!important}</style><script>document.addEventListener('DOMContentLoaded',function(){var s=document.querySelector('.link-state');if(s){s.innerHTML='<span class="build-label">BUILD v0.13</span>'}});</script>
 
@@ -908,8 +974,10 @@ document.querySelector('#quickLogForm').onsubmit=async e=>{e.preventDefault();co
 </style>
 <script>document.addEventListener("DOMContentLoaded",function(){var b=document.querySelector(".build-label");if(b)b.textContent="v0.40"});</script>
 
-<link rel="stylesheet" href="module-workspace.css?v=20260915-1"><script src="module-workspace.js?v=20260915-3" defer></script>
+<link rel="stylesheet" href="module-workspace.css?v=20260915-return-1"><script src="module-workspace.js?v=20260915-return-1" defer></script>
 
 <link rel="stylesheet" href="overview-modules.css?v=20260915-2">
 
-<link rel="stylesheet" href="dashboard-polish.css?v=20260915-3"><script src="dashboard-chrome.js?v=20260915-3" defer></script>
+<link rel="stylesheet" href="dashboard-polish.css?v=20260915-3"><script src="dashboard-chrome.js?v=20260915-return-1" defer></script>
+</body>
+</html>
