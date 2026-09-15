@@ -34,12 +34,6 @@ body:not(.overview-canvas) .layout-toolbar>.overview-add-module{display:none!imp
 body.overview-canvas.layout-edit .layout-toolbar{max-width:none!important}
 body.overview-canvas #overviewArrangementTools{flex-basis:100%;padding:2px 3px 8px;border-bottom:1px solid var(--line);max-width:none!important}
 body .layout-toolbar>*{order:2}body .layout-toolbar>#overviewArrangementTools{order:1}
-body.overview-canvas #overviewStatusStrip{top:12px;height:56px;gap:16px}
-#overviewStatusStrip strong{font-size:24px;font-weight:600;letter-spacing:-.6px}
-#overviewSourceStatus{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:20px;padding:5px 10px;font:11px/1.3 Arial,sans-serif}
-#overviewSourceStatus::before{content:'';width:5px;height:5px;border-radius:50%;background:#80a2b4}
-#overviewSourceStatus[data-state=attention]{color:#e0bb76;border-color:#624f32;background:#29261e}
-#overviewSourceStatus[data-state=attention]::before{background:#deb16a}
 body.overview-canvas main [data-canvas-module].ov-managed{gap:10px!important;border-radius:10px!important;box-shadow:none!important;background:var(--panel)!important}
 body.overview-canvas main .ov-managed .ns-module-caption{font:600 14px/1.35 Arial,sans-serif!important;min-height:20px;padding-right:28px!important;letter-spacing:.1px!important}
 body.overview-canvas main .ov-managed>.ov-summary{gap:8px}
@@ -115,14 +109,12 @@ body.overview-canvas main [data-ov-indicator=true]>.ns-open-module{top:3px!impor
  body #sideNav .nav-label{display:none}.nav-icon{width:19px;height:19px;flex-basis:19px}
 }
 @media(max-width:600px){
- body.overview-canvas #overviewStatusStrip{align-items:flex-start;justify-content:center;flex-direction:column;gap:3px;padding-right:98px}
- #overviewStatusStrip strong{font-size:20px}#overviewSourceStatus{font-size:9px;padding:3px 6px}
  body .layout-toolbar button{font-size:11px!important;padding:7px 9px!important}
  .ov-metric>strong,body.overview-canvas main [data-ov-size=compact] .ov-metric>strong{font-size:22px}
  .ov-events>a{grid-template-columns:56px minmax(0,1fr)}.ov-events b{display:none}
  .ov-empty small{font-size:10px}
 }
-body #sideNav button,body .ns-module-tree h2,body .ns-module-tree button,body .ns-module-tabs [role=tab],body #overviewStatusStrip strong,body .page-header h1,body .section h1,body .section h2{font-family:var(--ns-section-font)!important;font-weight:700!important}
+body #sideNav button,body .ns-module-tree h2,body .ns-module-tree button,body .ns-module-tabs [role=tab],body .page-header h1,body .section h1,body .section h2{font-family:var(--ns-section-font)!important;font-weight:700!important}
 body #sideNav button,body .ns-module-tree h2,body .ns-module-tree button,body .ns-module-tabs [role=tab]{text-transform:uppercase!important}
 html body.overview-canvas main #eventsCard,html body.overview-canvas main .section:not(#overview){display:none!important}
 html body.overview-canvas main #overviewModules>#overviewStaff,html body.overview-canvas main #staffGroups{display:none!important}

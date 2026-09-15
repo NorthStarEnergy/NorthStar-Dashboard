@@ -136,14 +136,17 @@
     const container = document.querySelector('main');
     if (!container) return null;
     const storageKey = 'northstarCanvasLayoutV1';
+    const WEATHER_HEADER_LAYOUT_VERSION = 1;
+    const WEATHER_CARD = { width: 88, height: 165, left: 16, top: 12, gap: 16, scale: .75 };
     const groups = [
-      ['weather', '#weatherStrip > .weather-card', [170, 136], [132, 124]],
+      ['weather', '#weatherStrip > .weather-card', [WEATHER_CARD.width, WEATHER_CARD.height], [1, 1]],
       ['dispatch', '#dispatchClient', [360, 96], [200, 88]],
       ['market', '#marketTopTiles > .node-card, #marketTopTiles > .ontario-market', [340, 230], [200, 88]],
       ['overview', '#overviewModules > [data-overview-module]:not(#overviewStaff):not(#eventsCard)', [480, 300], [240, 150]],
     ];
     const originals = new WeakMap(), bound = new WeakSet();
-    let positions = {}, frame = 0, gesture = false, topLayer = 30, restoring = false;
+    let positions = {}, frame = 0, gesture = false, topLayer = 30, restoring = false, activeSignature = '';
+    let statusReady = !window.NORTHSTAR_PERSISTENT_STATUS || document.body.classList.contains('ns-has-status');
     const profileKey = 'northstarOverviewProfilesV2';
     let profiles = {}, profile = '', lastWidth = 0, automatic = true, snapping = false, editSnapshot = null, weatherSizeApplied = false;
     try { profiles = JSON.parse(localStorage.getItem(profileKey) || '{}'); } catch {}
@@ -160,14 +163,23 @@
     const enabled = () => document.querySelector('#overview')?.classList.contains('active');
     function persist() {
       if(restoring || document.documentElement.dataset.nsStyles === 'loading' || document.documentElement.dataset.nsStyles === 'failed')return;
-      if (profile) profiles[profile] = {positions, width:lastWidth, automatic, indicatorRow:1, weatherOriginal:1,weatherAtikokanSize:weatherSizeApplied};
+      if (profile) profiles[profile] = {positions, width:lastWidth, automatic, indicatorRow:1, weatherOriginal:1,weatherAtikokanSize:weatherSizeApplied,weatherHeaderRow:WEATHER_HEADER_LAYOUT_VERSION};
       try { localStorage.setItem(profileKey, JSON.stringify(profiles)); } catch {}
       try { localStorage.setItem(storageKey, JSON.stringify(positions)); } catch {}
       writeZone('overview', {position: positions});
     }
     function bounds() {
       const visible = entries().filter(({el}) => !el.closest('[hidden]'));
-      const boxes = visible.map(({key}) => positions[key]).filter(Boolean);
+      const boxes = visible.map(({key}) => {
+        const p = positions[key];
+        return p && key.startsWith('canvas:weather:') ? {
+          ...p,
+          x: p.x * WEATHER_CARD.scale,
+          y: p.y * WEATHER_CARD.scale,
+          w: p.w * WEATHER_CARD.scale,
+          h: p.h * WEATHER_CARD.scale,
+        } : p;
+      }).filter(Boolean);
       container.style.setProperty('min-height', Math.max(600, ...boxes.map(p => p.y + p.h + 80)) + 'px', 'important');
       container.style.setProperty('min-width', Math.max(0, ...boxes.map(p => p.x + p.w + 24)) + 'px', 'important');
     }
@@ -182,6 +194,33 @@
       [['position','absolute'],['left',p.x+'px'],['top',p.y+'px'],['width',p.w+'px'],['height',p.h+'px'],
        ['min-width','0'],['min-height','0'],['max-width','none'],['max-height','none'],['margin','0'],['transform','none']]
         .forEach(([k,v]) => el.style.setProperty(k,v,'important'));
+    }
+    function placeWeatherHeader(next, weather, width) {
+      const {width: cardWidth, height: cardHeight, left, top, gap, scale} = WEATHER_CARD;
+      const columns = Math.max(1, Math.min(weather.length, Math.floor((width - left * 2 + gap * scale) / ((cardWidth + gap) * scale))));
+      weather.forEach((entry, index) => {
+        const column = index % columns, row = Math.floor(index / columns);
+        next[entry.key] = {
+          x: left + column * (cardWidth + gap),
+          y: top + row * (cardHeight + gap),
+          w: cardWidth,
+          h: cardHeight,
+        };
+      });
+      const rows = Math.ceil(weather.length / columns);
+      return scale * (top + rows * cardHeight + Math.max(0, rows - 1) * gap);
+    }
+    function moveWeatherToHeader(all, width) {
+      const next = Object.fromEntries(Object.entries(positions).map(([key,p]) => [key,{...p}]));
+      const weather = all.filter(entry => entry.key.startsWith('canvas:weather:'));
+      const bottom = placeWeatherHeader(next, weather, width);
+      const other = Object.entries(next).filter(([key]) => !key.startsWith('canvas:weather:'));
+      const earliest = Math.min(...other.map(([,p]) => p.y));
+      if (Number.isFinite(earliest) && earliest < bottom + WEATHER_CARD.gap) {
+        const shift = bottom + WEATHER_CARD.gap - earliest;
+        other.forEach(([,p]) => { p.y += shift; });
+      }
+      return next;
     }
     function bind(entry) {
       const el = entry.el;
@@ -203,7 +242,7 @@
           if (resize) {
             const west = corner.includes('w'), north = corner.includes('n');
             const w = Math.max(entry.min[0], Math.min(west ? p.x + p.w : Infinity, p.w + (west ? -dx : dx)));
-            const h = Math.max(entry.min[1], Math.min(north ? p.y + p.h - 80 : Infinity, p.h + (north ? -dy : dy)));
+            const h = Math.max(entry.min[1], Math.min(north ? p.y + p.h : Infinity, p.h + (north ? -dy : dy)));
             if (west) p.x += p.w - w;
             if (north) p.y += p.h - h;
             p.w = w; p.h = h;
@@ -212,12 +251,12 @@
           if(snapping){
             if(resize){
               const right=p.x+p.w,bottom=p.y+p.h;
-              p.w=Math.max(entry.min[0],Math.min(corner.includes('w')?right:Infinity,Math.round(p.w/16)*16));p.h=Math.max(entry.min[1],Math.min(corner.includes('n')?bottom-80:Infinity,Math.round(p.h/16)*16));
+              p.w=Math.max(entry.min[0],Math.min(corner.includes('w')?right:Infinity,Math.round(p.w/16)*16));p.h=Math.max(entry.min[1],Math.min(corner.includes('n')?bottom:Infinity,Math.round(p.h/16)*16));
               if(corner.includes('w'))p.x=Math.max(0,right-p.w);
-              if(corner.includes('n'))p.y=Math.max(80,bottom-p.h);
-            }else{p.x=Math.max(16,Math.round(p.x/16)*16);p.y=Math.max(80,Math.round(p.y/16)*16);}
+              if(corner.includes('n'))p.y=Math.max(0,bottom-p.h);
+            }else{p.x=Math.max(0,Math.round(p.x/16)*16);p.y=Math.max(0,Math.round(p.y/16)*16);}
           }
-          p.y=Math.max(80,p.y);
+          p.y=Math.max(0,p.y);
           paint(entry); bounds();
         };
         handle.addEventListener('keydown', event => {
@@ -259,7 +298,10 @@
       }
     }
     function arrange(all,width) {
-      const next={},used=new Set(),gap=16;let y=88;
+      const next={},used=new Set(),gap=16;
+      const weather=all.filter(e=>e.key.startsWith('canvas:weather:'));
+      let y=placeWeatherHeader(next,weather,width)+gap;
+      weather.forEach(entry=>used.add(entry.key));
       const row=(list,height,weights=[],minimum=260)=>{
         list=list.filter(Boolean);if(!list.length)return;
         const columns=Math.max(1,Math.min(list.length,Math.floor((width+gap)/(minimum+gap))));
@@ -270,9 +312,6 @@
       };
       const find=id=>all.find(e=>e.el.id===id || e.el.dataset.moduleId===id);
       row([find('overviewEventsSummary'),find('dispatchClient'),find('overviewFieldTracker'),find('IESO') || all.find(e=>e.el.classList?.contains('ontario-market')),find('APIROQ')],96,[],200);
-      const weather=all.filter(e=>e.key.startsWith('canvas:weather:'));
-      const count=width>=1168?8:width>=600?4:width>=300?2:1;
-      for(let i=0;i<weather.length;i+=count)row(weather.slice(i,i+count),180,[],132);
       row([find('overviewStaffSummary'),find('overviewGeneratingStations'),find('overviewChatSummary')],160);
       const rest=all.filter(e=>!used.has(e.key));
       for(let i=0;i<rest.length;i+=width<900?2:3)row(rest.slice(i,i+(width<900?2:3)),260);
@@ -295,6 +334,7 @@
     tools.querySelector('[data-ov-fit]')?.addEventListener('click',()=>{Object.values(positions).forEach(p=>{p.w=Math.min(p.w,lastWidth);p.x=Math.max(16,Math.min(p.x,lastWidth+16-p.w));});automatic=false;sync();});
     function sync() {
       frame = 0;
+      if(!statusReady)return;
       if (gesture || ['loading','failed'].includes(document.documentElement.dataset.nsStyles)) return;
       const on = enabled();
       document.body.classList.toggle('overview-canvas', on);
@@ -309,7 +349,7 @@
       const width = Math.max(260,container.clientWidth-48);
       const nextProfile=width>=1500?'wide':width>=1050?'desktop':width>=620?'laptop':'narrow';
       if(nextProfile!==profile){
-        if(profile)profiles[profile]={positions,width:lastWidth,automatic,indicatorRow:1,weatherOriginal:1,weatherAtikokanSize:weatherSizeApplied};
+        if(profile)profiles[profile]={positions,width:lastWidth,automatic,indicatorRow:1,weatherOriginal:1,weatherAtikokanSize:weatherSizeApplied,weatherHeaderRow:WEATHER_HEADER_LAYOUT_VERSION};
         profile=nextProfile;const saved=profiles[profile];
         weatherSizeApplied=saved?.weatherAtikokanSize===true;
         lastWidth=Number(saved?.width) || 0;
@@ -322,17 +362,27 @@
           profiles.beforeIndicatorRow[profile]=JSON.parse(JSON.stringify(saved));
           positions={};automatic=true;
         }
+        if(saved && saved.weatherHeaderRow!==WEATHER_HEADER_LAYOUT_VERSION){
+          profiles.beforeWeatherHeaderRow ||= {};
+          profiles.beforeWeatherHeaderRow[profile] ||= JSON.parse(JSON.stringify(saved));
+          if(automatic || !Object.keys(positions).length){positions={};automatic=true;}
+          else positions=moveWeatherToHeader(all,width);
+        }
       }
-      const reflow=automatic && (!Object.keys(positions).length || width!==lastWidth);
+      const visible=all.filter(({el})=>!el.closest('[hidden]'));
+      const signature=visible.map(entry=>entry.key).sort().join('|');
+      const reflow=automatic && (!Object.keys(positions).length || width!==lastWidth || signature!==activeSignature);
+      activeSignature=signature;
       lastWidth=width;
-      if(reflow)positions=arrange(all.filter(({el})=>!el.closest('[hidden]')),width);
+      if(reflow)positions=arrange(visible,width);
       const label=tools.querySelector('.ov-profile-label');if(label)label.textContent=profile+' layout';
       const previous=tools.querySelector('[data-ov-previous]');if(previous)previous.disabled=!profiles.previous;
-      const activeKeys = new Set(all.filter(({el})=>!el.closest('[hidden]')).map(e=>e.key));
+      const activeKeys = new Set(visible.map(e=>e.key));
       const occupied = Object.entries(positions).filter(([key])=>activeKeys.has(key)).map(([,p])=>p);
       all.forEach(entry => {
         if (!originals.has(entry.el)) originals.set(entry.el,entry.el.getAttribute('style') || '');
-        if (!positions[entry.key]) {
+        const missing = !positions[entry.key];
+        if (missing) {
           const w = Math.min(entry.size[0],width), h = entry.size[1];
           let candidate;
           // Pack NEW cards once. Saved/manual placements are never pushed into a group.
@@ -342,7 +392,7 @@
           }
           positions[entry.key]=candidate;occupied.push(candidate);
         }
-        if((!weatherSizeApplied || reflow) && entry.key.startsWith('canvas:weather:')){positions[entry.key].w=88;positions[entry.key].h=165;}
+        if((missing || !weatherSizeApplied || reflow) && entry.key.startsWith('canvas:weather:')){positions[entry.key].w=WEATHER_CARD.width;positions[entry.key].h=WEATHER_CARD.height;}
         paint(entry);bind(entry);
       });
       if(!weatherSizeApplied && all.some(entry=>entry.key.startsWith('canvas:weather:'))){weatherSizeApplied=true;}
@@ -351,7 +401,11 @@
     function schedule() { if (!frame) frame = requestAnimationFrame(sync); }
     new MutationObserver(schedule).observe(container,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
     window.addEventListener('resize',schedule);
-    sync();
+    // The persistent status bar removes duplicate top modules. Wait for it so a
+    // returning section never saves a transient pre-status arrangement.
+    const startAfterStatus=()=>{statusReady=true;sync();};
+    if(statusReady)startAfterStatus();
+    else window.addEventListener('northstar:status-ready',startAfterStatus,{once:true});
     return {zone:{id:'overview',canvas:true},container,sync,save:persist};
   }
 

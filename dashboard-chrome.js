@@ -72,6 +72,7 @@
   function init(){
     const nav=document.getElementById('sideNav');if(!nav)return;
     statusBar();
+    window.dispatchEvent(new Event('northstar:status-ready'));
     const enhance=()=>nav.querySelectorAll('button[data-tab]').forEach(button=>{
       if(button.dataset.chromeReady)return;
       button.dataset.chromeReady='true';

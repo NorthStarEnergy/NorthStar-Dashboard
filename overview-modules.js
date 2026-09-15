@@ -141,8 +141,6 @@
     const edit=el.querySelector(':scope > .ns-edit-module');if(edit){if(edit.textContent!=='✎')edit.textContent='✎';edit.setAttribute('aria-label','Edit '+(p.title || m.title));edit.title='Edit module';}
   }
   function refreshStatus(){
-    const node=document.getElementById('overviewSourceStatus');
-    if(node){const keys=['staff','dispatch','market','weather','events','scada','chat'],missing=keys.filter(k=>issue(k));const value=missing.length?missing.length+(missing.length===1?' source needs attention':' sources need attention'):'Sources received';if(node.textContent!==value)node.textContent=value;node.dataset.state=missing.length?'attention':'received';node.title=missing.map(k=>({staff:'Field staff',dispatch:'APIROQ dispatch',market:'Markets',weather:'Weather',events:'Events',scada:'Generating stations',chat:'Chat'}[k])+': '+issue(k)).join('\n');node.setAttribute('aria-label',value+(missing.length?'. '+node.title:''));}
     const detail=document.getElementById('dispatchDetail');
     if(detail){const d=feeds.dispatch?.data || {},markup=`<h2>APIROQ dispatch</h2><div class="ov-metrics">${metric('Output',fmt(d.outputMw,' MW',1))}${metric('Dispatch',fmt(d.dispatchMw,' MW',1))}${metric('Difference',fmt(d.deltaMw,' MW',1))}</div><p>${escape(freshness('dispatch'))}</p><p>${escape(d.source || 'Awaiting telemetry')}${d.simulated?' · SIMULATED':''}</p><p>OR standby: ${escape(fmt(d.reserveStandby?.tenS,' MW'))} 10S / ${escape(fmt(d.reserveStandby?.tenN,' MW'))} 10N / ${escape(fmt(d.reserveStandby?.thirtyR,' MW'))} 30R</p>`;if(detail.dataset.snapshot!==markup){detail.innerHTML=markup;detail.dataset.snapshot=markup;}}
     window.renderAlarmBar?.();
@@ -153,7 +151,6 @@
       const card=document.createElement('article');card.id=id;card.className='panel';card.dataset.overviewModule='';card.dataset.moduleId=id;card.setAttribute('aria-label',title);root.append(card);
     }
     const detail=document.createElement('article');detail.id='dispatchDetail';detail.className='panel';document.getElementById('markets')?.append(detail);
-    const strip=document.createElement('div');strip.id='overviewStatusStrip';strip.innerHTML='<strong>Overview</strong><span id="overviewSourceStatus" role="status">Connecting to sources…</span>';document.querySelector('main')?.prepend(strip);
     refreshStatus();
     const refreshEvents=()=>{if(!document.hidden)fetch('/api/events/register?limit=5').catch(()=>{});};refreshEvents();setInterval(refreshEvents,30000);setInterval(()=>{refreshStatus();window.NorthstarModules?.refresh();},30000);
   }

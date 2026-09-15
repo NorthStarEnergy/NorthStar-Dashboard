@@ -1,3 +1,7 @@
+# Overview weather header — 2026-09-15
+
+Replaced the retired Overview header strip with 75% whole-card weather modules and protected saved layouts during status-bar startup. See [report](packets/2026-09-15-overview-weather-header.md).
+
 # Flow workspace consolidation — 2026-09-15
 
 Flows now opens as one complete Tools module rather than four identically named submodules. See [report](packets/2026-09-15-flow-workspace-consolidation.md).

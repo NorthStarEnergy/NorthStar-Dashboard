@@ -142,7 +142,7 @@ const root=path.resolve(__dirname,'..');
    const tile=page.locator('#weatherStrip > .weather-card').first();
    const geometry=await tile.boundingBox();
    await tile.locator('.canvas-resize-handle[data-corner="nw"]').focus();await page.keyboard.press('ArrowRight');
-   const resized=await tile.boundingBox();assert.equal(Math.round(geometry.width-resized.width),5);
+    const resized=await tile.boundingBox();assert.equal(Math.round(geometry.width-resized.width),4,'Overview weather cards retain the 75% whole-card scale while resizing');
    await page.click('.layout-save');
    const saved=await page.evaluate(()=>localStorage.getItem('northstarCanvasLayoutV1'));
    await page.reload();await page.waitForFunction(()=>!!window.NorthstarModules);

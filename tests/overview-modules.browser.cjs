@@ -32,7 +32,13 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   for(const width of [1920,1440,1371,1100,760,390]){
    await page.setViewportSize({width,height:1000});await page.waitForTimeout(300);
    const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,cards:[...document.querySelectorAll('[data-canvas-module]')].filter(e=>e.getClientRects().length).map(e=>({id:e.id||e.dataset.moduleId,x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y,w:e.clientWidth,h:e.clientHeight,scrollW:e.scrollWidth,scrollH:e.scrollHeight}))}));
-   for(const card of await page.locator('#weatherStrip > .weather-card').all()){const rect=await card.boundingBox();assert.equal(rect.width,88);assert.equal(rect.height,165);}
+   const weatherBoxes=[];
+   for(const card of await page.locator('#weatherStrip > .weather-card').all()){
+    const rect=await card.boundingBox();weatherBoxes.push(rect);
+    assert.ok(Math.abs(rect.width-66)<.1,`Weather card width is scaled to 75% at ${width}px`);
+    assert.ok(Math.abs(rect.height-123.75)<.1,`Weather card height is scaled to 75% at ${width}px`);
+   }
+   assert.ok(Math.min(...weatherBoxes.map(rect=>rect.y))<220,`Weather row uses the reclaimed Overview header at ${width}px`);
    assert.equal(await page.locator('#weatherStrip > .weather-card > .weather-icon:visible').count(),8,'Every station retains its coloured weather graphic');
    assert.ok((await page.locator('#weatherStrip > .weather-card').first().textContent()).includes('Feels'));
    assert.equal(await page.locator('#weatherStrip > .weather-card > .periods').count(),8);
@@ -46,7 +52,8 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   assert.equal(await page.locator('#sideNav [data-tab="tools"]').evaluate(e=>getComputedStyle(e).textTransform),'uppercase');
   assert.equal(await page.locator('#eventsCard:visible').count(),0,'Legacy Events content must not leak behind the indicators');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.northstarOverviewProfilesV2).beforeIndicatorRow.desktop.positions['canvas:dispatch:dispatchClient'].y),430,'Previous saved arrangement is backed up');
-  assert.equal(await page.locator('#overviewSourceStatus').innerText(),'1 source needs attention');
+  assert.equal(await page.locator('#overviewStatusStrip').count(),0,'Retired Overview title/source strip is not rendered');
+  assert.equal(await page.locator('#alarmBar:visible').count(),0,'Retired alarm counter is not rendered');
   assert.ok((await page.locator('#dispatchClient .ov-summary').textContent()).includes('24.5 MW'));
   assert.equal(await page.locator('#overviewEventsSummary .ov-events a').count(),4);
   await page.locator('#nsStatusBar [data-status=events] .ns-status-dogear').click();
@@ -65,7 +72,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   assert.ok(!(await page.locator('#dispatchClient .ov-summary').textContent()).includes('0.0 MW'));
   assert.ok((await page.locator('#overviewEventsSummary').textContent()).includes('Stale'));
   assert.equal(await page.locator('#overviewEventsSummary .ov-events a').count(),4,'Retains last good events on failure');
-  assert.ok((await page.locator('#alarmIndicator').innerText()).includes('—'),'Failed staff source cannot imply no alarms');
+  assert.ok((await page.locator('#alarmIndicator').textContent()).includes('—'),'Failed staff source cannot imply no alarms');
   await page.click('.layout-edit-toggle');
   assert.equal(await page.locator('.layout-style-menu [data-ui-style]').count(),9,'Edit mode offers nine dashboard styles');
   await page.click('.layout-style-toggle');
@@ -103,11 +110,10 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   await page.waitForTimeout(100);
   assert.ok((await page.locator('#dispatchClient').textContent()).includes('Generator output'),'Custom compact labels survive a changing feed');
   assert.ok((await page.locator('#dispatchClient').textContent()).includes('Telemetry unavailable'),'HTTP success does not hide telemetry faults');
-  assert.ok((await page.locator('#overviewSourceStatus').getAttribute('title')).includes('dispatch'));
   await page.click('.layout-edit-toggle');
   await page.check('[data-ov-snap]');
   await tile.locator('[data-corner="move"]').focus();await page.keyboard.press('ArrowRight');
-  const snapped=await page.evaluate(()=>JSON.parse(localStorage.northstarCanvasLayoutV1)['canvas:dispatch:dispatchClient']);
+  const snapped=await page.evaluate(()=>JSON.parse(localStorage.northstarCanvasLayoutV1)['canvas:overview:overviewGeneratingStations']);
   assert.equal(snapped.x%16,0);
   await page.click('[data-ov-arrange]');
   await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),page.click('[data-ov-cancel]')]);await page.waitForSelector('#nsStatusBar');
