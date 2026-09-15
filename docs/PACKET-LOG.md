@@ -1,3 +1,9 @@
+# Module workspace — 2026-09-15
+
+Section trees and browser-style module tabs replace stacked application lists.
+Linked full/Overview editing, persistent custom modules, UWPC nesting, and four-corner resizing.
+See [report](packets/2026-09-15-module-workspace.md).
+
 # Dashboard review and regression automation — 2026-09-14
 
 Cross-workspace source review identifies deployment and workflow gaps. Added

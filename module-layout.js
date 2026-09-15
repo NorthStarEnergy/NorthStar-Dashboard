@@ -11,6 +11,46 @@
  * appearance. Reordering achieves the same guarantees on top of what is there.
  */
 (() => {
+  // Section windows and Overview share this file as their geometry owner.
+  window.NorthstarWindowLayout = {
+    resize(box, corner, dx, dy, min = [260, 180]) {
+      const next = {...box}, west = corner.includes('w'), north = corner.includes('n');
+      next.w = Math.max(min[0], Math.min(west ? box.x + box.w : Infinity, box.w + (west ? -dx : dx)));
+      next.h = Math.max(min[1], Math.min(north ? box.y + box.h : Infinity, box.h + (north ? -dy : dy)));
+      if (west) next.x += box.w - next.w;
+      if (north) next.y += box.h - next.h;
+      return next;
+    },
+    bind(el, handle, corner, get, set, enabled, commit) {
+      const change = (box, dx, dy) => corner === 'move'
+        ? {...box, x: Math.max(0, box.x + dx), y: Math.max(0, box.y + dy)}
+        : window.NorthstarWindowLayout.resize(box, corner, dx, dy);
+      handle.addEventListener('keydown', event => {
+        if (!enabled() || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+        event.preventDefault(); event.stopPropagation();
+        const step = event.shiftKey ? 20 : 5;
+        set(change(get(), event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0,
+          event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0));
+        commit();
+      });
+      handle.addEventListener('pointerdown', event => {
+        if (!enabled() || event.button !== 0) return;
+        event.preventDefault(); event.stopPropagation();
+        const original = {...get()}, x = event.clientX, y = event.clientY;
+        handle.setPointerCapture(event.pointerId);
+        const move = e => set(change(original, e.clientX - x, e.clientY - y));
+        const finish = e => {
+          if (e.type !== 'pointerup') set(original);
+          ['pointerup','pointercancel','lostpointercapture'].forEach(type => handle.removeEventListener(type, finish));
+          handle.removeEventListener('pointermove', move);
+          if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+          commit();
+        };
+        handle.addEventListener('pointermove', move);
+        ['pointerup','pointercancel','lostpointercapture'].forEach(type => handle.addEventListener(type, finish));
+      });
+    }
+  };
   const ZONES = [
     { id: 'overview', canvas: true },
     { id: 'staff', container: '#staffGroups', item: '.staff-group', step: [20, 20], min: [180, 90] },
@@ -137,17 +177,26 @@
       const el = entry.el;
       if (bound.has(el)) return;
       bound.add(el);
-      for (const resize of [false,true]) {
+      for (const corner of ['move','se','sw','ne','nw']) {
+        const resize = corner !== 'move';
         const handle = document.createElement('button');
         handle.type = 'button';
         handle.className = resize ? 'canvas-resize-handle' : 'canvas-move-handle';
+        handle.dataset.corner = corner;
         handle.textContent = resize ? '◢' : '⠿';
         handle.setAttribute('aria-label', (resize ? 'Resize ' : 'Move ') + entry.key.split(':').slice(1).join(' '));
         handle.title = resize ? 'Resize · Arrow keys resize' : 'Move anywhere · Arrow keys move';
         el.append(handle);
         const change = (dx,dy) => {
           const p = positions[entry.key];
-          if (resize) { p.w = Math.max(entry.min[0], p.w + dx); p.h = Math.max(entry.min[1], p.h + dy); }
+          if (resize) {
+            const west = corner.includes('w'), north = corner.includes('n');
+            const w = Math.max(entry.min[0], Math.min(west ? p.x + p.w : Infinity, p.w + (west ? -dx : dx)));
+            const h = Math.max(entry.min[1], Math.min(north ? p.y + p.h : Infinity, p.h + (north ? -dy : dy)));
+            if (west) p.x += p.w - w;
+            if (north) p.y += p.h - h;
+            p.w = w; p.h = h;
+          }
           else { p.x = Math.max(0,p.x + dx); p.y = Math.max(0,p.y + dy); }
           paint(entry); bounds();
         };
@@ -490,7 +539,7 @@
   function init() {
     injectStyle();
     seedSavedLayout();
-    const active = ZONES.map(zone => zone.canvas ? setupCanvas() : setupZone(zone)).filter(Boolean);
+    const active = ZONES.filter(zone => zone.canvas || !window.NORTHSTAR_MODULE_WORKSPACE).map(zone => zone.canvas ? setupCanvas() : setupZone(zone)).filter(Boolean);
     if (!active.length) return;
     seedSavedLayout();
     document.querySelectorAll('.layout-save').forEach(button => button.addEventListener('click', () => {

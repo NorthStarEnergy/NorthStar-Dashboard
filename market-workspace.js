@@ -106,6 +106,7 @@
 
   const openNodeWithoutIeso = openNode;
   openNode = function openNodeWithIeso(key) {
+    if (window.NorthstarModules?.registry.has("markets:"+key)) { window.NorthstarModules.open("markets:"+key); return; }
     ensureIesoMarket();
     openNodeWithoutIeso(key);
     ensureIesoMarket();
@@ -148,12 +149,13 @@
     return `<section class="market-detail-section"><h3>OPERATING RESERVE PRICES</h3><div class="reserve-grid">${values.map(([label, value]) => `<div><span>${label}</span><b>${money(value)}</b></div>`).join('')}</div></section>`;
   }
 
-  renderNodeDetail = function renderCompletedNodeDetail(key) {
+  renderNodeDetail = function renderCompletedNodeDetail(key, target) {
     const node = marketData?.nodes?.[key] || {};
     const operations = node.operations || {};
     const setting = alertSettings[key] || {};
     const isIeso = key === 'IESO';
-    const detail = document.querySelector('#marketDetail');
+    const detail = target || document.querySelector('#marketDetail');
+    const control = id => detail.querySelector('[data-market-control="'+id+'"]');
     detail.innerHTML = `
       <div class="market-head"><div><label>${isIeso ? 'IESO MARKET DETAIL' : 'IESO NODE DETAIL'}</label><h2>${safe(nodeLabels[key] || key)}</h2></div><button class="node-expand" id="backOverview">← OVERVIEW</button></div>
       <div class="market-detail-summary">
@@ -165,13 +167,17 @@
       ${reserveHtml(node)}
       <section class="market-detail-section"><h3>PRICE SERIES</h3><div class="market-series">${seriesRows(node)}</div></section>
       ${isIeso ? '<p class="market-detail-note">Provincial pricing is calculated from the currently reported IESO nodes. Demand values come from the IESO Ontario demand report.</p>' : `<div class="alert-settings"><div class="alert-settings-head"><h3>PRICING ALERTS</h3><label class="alert-enabled"><input id="alertEnabled" type="checkbox" ${setting.enabled !== false ? 'checked' : ''}> ALERT ENABLED</label></div><div class="alert-grid"><label>LOW THRESHOLD ($/MWh)<input id="alertLow" type="number" step="0.01" placeholder="e.g. 20.00" value="${safe(setting.low ?? '')}"></label><label>HIGH THRESHOLD ($/MWh)<input id="alertHigh" type="number" step="0.01" placeholder="e.g. 100.00" value="${safe(setting.high ?? '')}"></label></div><div class="alert-actions">${alertActionsHtml(setting.actions)}</div><button class="primary-btn" id="saveAlertSettings" type="button">SAVE ALERT SETTINGS</button><div class="saved-note" id="alertSaved">${setting.updatedAt ? `${setting.enabled === false ? 'DISABLED' : 'ACTIVE'} · SAVED ${opsTime(setting.updatedAt)}` : 'NOT CONFIGURED'}</div><div id="alertBanner"></div><p class="muted-note">Email and text actions activate only when their delivery connectors are available.</p></div>`}`;
-    document.querySelector('#backOverview').onclick = () => document.querySelector('[data-tab="overview"]')?.click();
-    const saveButton = document.querySelector('#saveAlertSettings');
+    detail.querySelectorAll('[id]').forEach(el => {
+      el.dataset.marketControl = el.id;
+      if (detail.id !== 'marketDetail') el.id = detail.id + '-' + el.id;
+    });
+    control('backOverview').onclick = () => document.querySelector('[data-tab="overview"]')?.click();
+    const saveButton = control('saveAlertSettings');
     if (saveButton) saveButton.onclick = async () => {
-      const actions = [...document.querySelectorAll('input[name="alertAction"]:checked')].map(input => input.value);
-      const enabled = document.querySelector('#alertEnabled').checked;
-      const body = { node: key, low: document.querySelector('#alertLow').value === '' ? null : Number(document.querySelector('#alertLow').value), high: document.querySelector('#alertHigh').value === '' ? null : Number(document.querySelector('#alertHigh').value), actions, enabled };
-      const saved = document.querySelector('#alertSaved');
+      const actions = [...detail.querySelectorAll('input[name="alertAction"]:checked')].map(input => input.value);
+      const enabled = control('alertEnabled').checked;
+      const body = { node: key, low: control('alertLow').value === '' ? null : Number(control('alertLow').value), high: control('alertHigh').value === '' ? null : Number(control('alertHigh').value), actions, enabled };
+      const saved = control('alertSaved');
       saveButton.disabled = true;
       saved.textContent = 'SAVING…';
       try {
@@ -186,6 +192,7 @@
         saveButton.disabled = false;
       }
     };
-    renderNodeBanner(key);
+    if (detail.id === "marketDetail") renderNodeBanner(key);
   };
+  window.NorthstarMarketModules = {render: (key,target) => renderNodeDetail(key,target), data: () => marketData};
 })();

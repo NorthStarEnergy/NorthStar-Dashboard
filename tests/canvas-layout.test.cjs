@@ -28,7 +28,7 @@ const context={document,window:{scrollX:0,scrollY:0,scrollBy(){},addEventListene
 vm.createContext(context);vm.runInContext(source.slice(start,end)+'\nthis.canvas=setupCanvas();',context);
 const get=key=>JSON.parse(memory.get('northstarCanvasLayoutV1'))[key];
 const fire=(handle,name,values={})=>handle.listeners.get(name)({preventDefault(){},stopPropagation(){},...values});
-for(const el of [weather,dispatch,market,events,staff])assert.equal(el.children.length,2);
+for(const el of [weather,dispatch,market,events,staff])assert.equal(el.children.length,5);
 const initial=get('canvas:market:APIROQ');
 for(let i=0;i<60;i++)fire(market.children[0],'keydown',{key:'ArrowRight',shiftKey:true});
 assert.equal(get('canvas:market:APIROQ').x,initial.x+1200,'market crosses its former group and viewport boundaries');
@@ -50,7 +50,18 @@ fire(dispatch.children[1],'pointerdown',{button:0,clientX:100,clientY:100,pointe
 fire(dispatch.children[1],'pointermove',{clientX:500,clientY:500});
 fire(dispatch.children[1],'pointercancel',{type:'pointercancel'});
 assert.deepEqual(get('canvas:dispatch:dispatchClient'),moved,'cancel restores geometry');
+for (const [index,corner] of [[2,'sw'],[3,'ne'],[4,'nw']]) {
+  const original=get('canvas:dispatch:dispatchClient');
+  fire(dispatch.children[index],'keydown',{key:'ArrowRight'});
+  fire(dispatch.children[index],'keydown',{key:'ArrowDown'});
+  const next=get('canvas:dispatch:dispatchClient');
+  assert.equal(next.w,original.w+(corner.includes('w')?-5:5));
+  assert.equal(next.h,original.h+(corner.includes('n')?-5:5));
+  if(corner.includes('w'))assert.equal(next.x+next.w,original.x+original.w,'west resize anchors opposite edge');
+  if(corner.includes('n'))assert.equal(next.y+next.h,original.y+original.h,'north resize anchors opposite edge');
+}
+const finalBox=get('canvas:dispatch:dispatchClient');
 active=false;context.canvas.sync();assert.equal(main.properties['min-height'],undefined,'other workspaces retain normal layout');
-active=true;context.canvas.sync();assert.equal(dispatch.properties.left,moved.x+'px');
+active=true;context.canvas.sync();assert.equal(dispatch.properties.left,finalBox.x+'px');
 assert.ok(persisted.position['canvas:staff:Station A']);
 console.log('Shared canvas: independent movement, resizing, Done, feed refresh, stable IDs, pointer cancel and tab restoration passed.');
