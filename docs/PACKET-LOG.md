@@ -1,3 +1,7 @@
+# Collapsible module menu — 2026-09-15
+
+Added a persistent per-section Show/Hide modules toggle. See [report](packets/2026-09-15-collapsible-module-menu.md).
+
 # Compact platform formatting — 2026-09-15
 
 Extended compact navigation and control styling across dashboard chrome, catalog and editor. See [report](packets/2026-09-15-platform-compact-format.md).

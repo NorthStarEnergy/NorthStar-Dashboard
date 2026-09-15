@@ -186,6 +186,11 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     const items = sectionItems(section);
     if (!enabled || !items.length) {painting=false;return;}
     const s = sectionState(section);
+    document.body.classList.toggle('ns-menu-collapsed',!!s.menuCollapsed);
+    tree.hidden=!!s.menuCollapsed;
+    const menuToggle=$('[data-ns-action="menu"]',toolbar);
+    menuToggle.textContent=s.menuCollapsed?'Show modules':'Hide modules';
+    menuToggle.setAttribute('aria-expanded',String(!s.menuCollapsed));
     s.tabs = (s.tabs || []).filter(id => belongs(registry.get(id),section));
     const landing = items.find(m => m.id === s.landing)?.id || items[0].id;
     if (!s.tabs.length) s.tabs.push(landing);
@@ -359,7 +364,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
   function init() {
     const main=$('main');if(!main)return;
     shell=document.createElement('div');shell.className='ns-section-shell';shell.hidden=true;
-    shell.innerHTML='<aside class="ns-module-tree" aria-label="Section modules"></aside><div class="ns-section-top"><div class="ns-module-tabs" role="tablist" aria-label="Open module pages"></div><div class="ns-module-toolbar"><button data-ns-action="float" type="button">Arrange module windows</button><button data-ns-action="landing" type="button">Set as landing module</button><button data-ns-action="edit" type="button">Edit module</button></div></div>';
+    shell.innerHTML='<aside id="nsSectionModuleMenu" class="ns-module-tree" aria-label="Section modules"></aside><div class="ns-section-top"><div class="ns-module-tabs" role="tablist" aria-label="Open module pages"></div><div class="ns-module-toolbar"><button data-ns-action="menu" type="button" aria-controls="nsSectionModuleMenu" aria-expanded="true">Hide modules</button><button data-ns-action="float" type="button">Arrange module windows</button><button data-ns-action="landing" type="button">Set as landing module</button><button data-ns-action="edit" type="button">Edit module</button></div></div>';
     main.prepend(shell);tree=$('.ns-module-tree',shell);tabs=$('.ns-module-tabs',shell);toolbar=$('.ns-module-toolbar',shell);
     createEditor();discover();renderCatalog();discover();
     // Keep legacy module IDs and source roots; merge only their navigation owners.
@@ -386,6 +391,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     };
     toolbar.onclick=event=>{
       const action=event.target.dataset.nsAction,s=sectionState(section);
+      if(action==='menu'){s.menuCollapsed=!s.menuCollapsed;paint();save();}
       if(action==='float'){s.floating=!s.floating;paint();save();}
       if(action==='landing'){s.landing=active;paint();save();}
       if(action==='edit')openEditor(active);

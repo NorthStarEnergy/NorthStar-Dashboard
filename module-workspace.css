@@ -61,3 +61,8 @@ body.ns-floating .ns-window-controls{display:contents}
 .ns-editor-grid,.ns-field-list{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}#nsModuleEditor .ns-check{display:flex;align-items:center}#nsModuleEditor details{margin:16px 0}#nsModuleEditor summary{cursor:pointer;font:14px system-ui}
 .ns-block-editor{display:grid;grid-template-columns:1fr 1fr 1fr auto auto;gap:6px;align-items:end;margin-bottom:10px}.ns-block-editor input,.ns-block-editor select{width:100%}.ns-editor-status{font:13px system-ui;color:#a1c5d9}
 @media(max-width:850px){body.ns-in-section main{padding-left:152px!important;padding-top:136px!important}.ns-module-tree{width:140px}.ns-section-top{left:152px}.ns-module-tree button{font-size:11px;padding:6px 4px}.ns-catalog-list article{flex-wrap:wrap}.ns-catalog-list article>div{flex-basis:100%}.ns-block-editor{grid-template-columns:1fr 1fr}.ns-editor-grid,.ns-field-list{grid-template-columns:1fr}}
+
+/* Keep the toggle outside the hidden rail so it is always reachable. */
+body.ns-in-section.ns-menu-collapsed main{padding-left:16px!important}
+body.ns-menu-collapsed .ns-section-top{left:16px}
+.ns-module-tree[hidden]{display:none!important}
