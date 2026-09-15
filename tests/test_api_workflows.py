@@ -203,7 +203,7 @@ class APITest(unittest.TestCase):
                      "/one-line-symbol-catalogue.json"):
             with self.subTest(path=path):
                 self.assertEqual(self.gated_request("GET", path), 404)
-        for path in ("/northstar-clean.html", "/module-layout.js", "/manifest.webmanifest"):
+        for path in ("/northstar-clean.html", "/module-layout.js", "/flows-workspace.js", "/manifest.webmanifest"):
             with self.subTest(path=path):
                 self.assertEqual(self.gated_request("GET", path), 200)
 

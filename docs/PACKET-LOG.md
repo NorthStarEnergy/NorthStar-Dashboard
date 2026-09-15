@@ -1,3 +1,7 @@
+# Flow workspace asset recovery — 2026-09-15
+
+Committed the Flow workspace stylesheet, script, backend source adapter, and static-asset regression check so `flows-workspace.js` is always part of the release. See [report](packets/2026-09-15-flow-workspace-asset-recovery.md).
+
 # Editable UI style cycler — 2026-09-15
 
 Added nine persisted Edit-mode dashboard palettes, preview swatches, accessible selected state, and Next Style cycling. See [report](packets/2026-09-15-editable-ui-style-cycler.md).

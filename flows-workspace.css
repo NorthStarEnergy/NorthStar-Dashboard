@@ -1,0 +1,254 @@
+#flowsWorkspace {
+  display: grid;
+  gap: 12px;
+  max-width: 1480px;
+}
+
+.flows-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.flows-hero h2,
+.flows-module-head h3 {
+  margin: 4px 0 7px;
+}
+
+.flows-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.flows-status-pill,
+.flows-source-status,
+.flows-gauge-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #35515e;
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: #afc4cc;
+  background: #111f28;
+  font: 700 8px/1 monospace;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.flows-status-pill::before,
+.flows-source-status::before,
+.flows-gauge-state::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8da4ad;
+}
+
+.flows-status-pill.ok,
+.flows-source-status.ok,
+.flows-gauge-state.ok {
+  border-color: #3d8064;
+  color: #8be0b5;
+  background: #10261e;
+}
+
+.flows-status-pill.ok::before,
+.flows-source-status.ok::before,
+.flows-gauge-state.ok::before {
+  background: #63d49a;
+}
+
+.flows-status-pill.stale,
+.flows-source-status.stale,
+.flows-source-status.partial,
+.flows-gauge-state.stale {
+  border-color: #92743a;
+  color: #f2c660;
+  background: #292214;
+}
+
+.flows-status-pill.stale::before,
+.flows-source-status.stale::before,
+.flows-source-status.partial::before,
+.flows-gauge-state.stale::before {
+  background: #f2b84b;
+}
+
+.flows-source-status.error,
+.flows-gauge-state.unavailable {
+  border-color: #8e4845;
+  color: #ff9c96;
+  background: #2a1718;
+}
+
+.flows-source-status.error::before,
+.flows-gauge-state.unavailable::before {
+  background: #ff7169;
+}
+
+.flows-source-status.not_configured,
+.flows-gauge-state.not_reported {
+  color: #a6b4ba;
+}
+
+.flows-module-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.flows-module-head p {
+  margin: 0;
+}
+
+.flows-gauge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+  gap: 9px;
+}
+
+.flows-gauge-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #2c4652;
+  border-radius: 6px;
+  background: #0b151c;
+}
+
+.flows-gauge-top,
+.flows-gauge-bottom,
+.flows-source-top,
+.flows-source-bottom {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.flows-gauge-top strong,
+.flows-source-top strong {
+  display: block;
+  color: #e7f2f4;
+  font: 700 11px/1.3 monospace;
+}
+
+.flows-gauge-top small,
+.flows-source-top small,
+.flows-source-bottom small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font: 8px/1.4 monospace;
+}
+
+.flows-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 13px 0 10px;
+}
+
+.flows-metric {
+  min-width: 0;
+  padding: 8px;
+  border-left: 2px solid #3d6474;
+  background: #0e1c24;
+}
+
+.flows-metric span {
+  display: block;
+  color: #98b0ba;
+  font: 700 8px/1.2 monospace;
+}
+
+.flows-metric b {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  color: #f4fbfc;
+  font: 700 17px/1.15 monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flows-gauge-bottom {
+  align-items: center;
+}
+
+.flows-gauge-bottom time {
+  color: #a5b9c1;
+  font: 8px/1.35 monospace;
+}
+
+.flows-source-list {
+  display: grid;
+  gap: 7px;
+}
+
+.flows-source-card {
+  padding: 10px 12px;
+  border: 1px solid #2b4350;
+  border-radius: 5px;
+  background: #0c171e;
+}
+
+.flows-source-bottom {
+  align-items: end;
+  margin-top: 7px;
+}
+
+.flows-source-message {
+  max-width: 760px;
+  color: #bdcbd0;
+  font: 9px/1.45 monospace;
+}
+
+.flows-source-link {
+  color: #8bd5f0;
+  font: 700 8px monospace;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.flows-source-link:hover,
+.flows-source-link:focus-visible {
+  color: #e0f7ff;
+  text-decoration: underline;
+}
+
+.flows-caution {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid #d6a744;
+  border-radius: 4px;
+  color: #e3d3a8;
+  background: #211d13;
+  font: 9px/1.5 monospace;
+}
+
+.flows-error {
+  color: #ffaaa4;
+}
+
+@media (max-width: 650px) {
+  .flows-hero,
+  .flows-module-head,
+  .flows-gauge-top,
+  .flows-source-top,
+  .flows-source-bottom {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .flows-hero-actions,
+  .flows-gauge-bottom {
+    justify-content: space-between;
+  }
+}

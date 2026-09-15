@@ -35,6 +35,7 @@ import northstar_ai as ai
 import northstar_chat as chat
 import northstar_dispatch as dispatch
 import northstar_device_library as device_library
+import northstar_flows as flows
 import northstar_maximo as maximo
 import northstar_sites as sites
 import northstar_uwpc as uwpc
@@ -58,6 +59,7 @@ IESO_ROOT = "https://reports-public.ieso.ca/public"
 REFRESH_SECONDS = 300
 OVERDUE_SCAN_SECONDS = 30
 SCADA_POLL_SECONDS = max(15, int(os.environ.get("NORTHSTAR_SCADA_POLL_SECONDS", "60")))
+FLOW_REFRESH_SECONDS = max(60, int(os.environ.get("NORTHSTAR_FLOW_REFRESH_SECONDS", "300")))
 DISPATCH_TICK_SECONDS = max(3, int(os.environ.get("NORTHSTAR_DISPATCH_TICK_SECONDS", "5")))
 VOICE_POLL_SECONDS = max(15, int(os.environ.get("NORTHSTAR_VOICE_POLL_SECONDS", "45")))
 MAX_JSON_BODY = 64 * 1024
@@ -154,6 +156,7 @@ OPERATOR_ROUTES = {
     "/api/scada": ("GET",),
     "/api/scada/readings": ("GET",),
     "/api/scada/import": ("POST",),
+    "/api/flows": ("GET",),
     "/api/retention": ("GET", "POST"),
     "/api/site-policies": ("GET", "POST"),
     "/api/switching/drafts": ("GET", "POST"),
@@ -671,6 +674,7 @@ class MarketStore:
 
 
 STORE = MarketStore()
+FLOWS = flows.FlowStore()
 
 
 class NorthstarHTTPServer(ThreadingHTTPServer):
@@ -990,6 +994,16 @@ def scada_loop() -> None:
         except Exception as exc:  # a feed fault must not stop the server
             print(f"SCADA polling failed: {exc}")
         time.sleep(SCADA_POLL_SECONDS)
+
+
+def flow_loop() -> None:
+    """Refresh read-only public hydrometric observations in the background."""
+    while True:
+        try:
+            FLOWS.refresh()
+        except Exception as exc:  # a public-source fault must not stop the server
+            print(f"Flow polling failed: {exc}")
+        time.sleep(FLOW_REFRESH_SECONDS)
 
 
 def dispatch_loop() -> None:
@@ -1452,6 +1466,9 @@ class Handler(SimpleHTTPRequestHandler):
             except ValueError:
                 limit = 100
             self._send_json(phase1.latest_scada_readings(limit, query.get("feed", [None])[0]))
+            return
+        if self.path.split("?", 1)[0] == "/api/flows":
+            self._send_json(FLOWS.get())
             return
         if self.path.split("?", 1)[0] == "/api/market-prices":
             body = json.dumps(STORE.get(), separators=(",", ":")).encode()
@@ -2664,6 +2681,7 @@ if __name__ == "__main__":
     threading.Thread(target=refresh_loop, daemon=True).start()
     threading.Thread(target=overdue_loop, daemon=True).start()
     threading.Thread(target=scada_loop, daemon=True).start()
+    threading.Thread(target=flow_loop, daemon=True).start()
     threading.Thread(target=dispatch_loop, daemon=True).start()
     threading.Thread(target=voice_loop, daemon=True).start()
     voice.inbox_path().mkdir(parents=True, exist_ok=True)
