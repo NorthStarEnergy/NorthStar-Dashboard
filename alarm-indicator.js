@@ -18,12 +18,14 @@
       const marketOpen=market.filter(function(item){return item&&item.state!=='cleared'});
       const staffOpen=staff.filter(function(item){return item&&item.needsHelp&&item.helpState!=='resolved'});
       const total=marketOpen.length+staffOpen.length;
+      const feeds=window.NorthstarOverview?.feeds;
+      const known=!feeds || ['alarms','staff'].every(k=>feeds[k]?.checked && !feeds[k].error && Date.now()-feeds[k].checked<120000);
       const unacknowledged=marketOpen.filter(function(item){return item.state==='active'}).length+
         staffOpen.filter(function(item){return item.helpState==='requested'}).length;
-      button.querySelector('.alarm-indicator-count').textContent='('+total+')';
+      button.querySelector('.alarm-indicator-count').textContent='('+ (total || (known ? 0 : '—')) +')';
       button.classList.toggle('has-alarms',total>0);
       button.classList.toggle('unacknowledged',unacknowledged>0);
-      button.setAttribute('aria-label','Alarms, '+total+' active, '+unacknowledged+' unacknowledged. Open Events.');
+      button.setAttribute('aria-label',(known?'':'Alarm sources unavailable. Last received: ')+'Alarms, '+total+' active, '+unacknowledged+' unacknowledged. Open Events.');
       button.title=unacknowledged?unacknowledged+' unacknowledged alarm'+(unacknowledged===1?'':'s'):'Open Events';
     };
     renderAlarmBar();

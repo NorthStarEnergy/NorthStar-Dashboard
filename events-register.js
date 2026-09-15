@@ -5,7 +5,7 @@
     if(!host || document.querySelector('#eventRegister'))return;
     const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const date=value=>{const d=new Date(value);return value&&!Number.isNaN(d.valueOf())?d.toLocaleString([], {year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',timeZoneName:'short'}):'Time not supplied';};
-    const original=host.querySelector('.logbook-layout');if(original)original.hidden=true;
+    const original=host.querySelector('.logbook-layout');if(original){original.hidden=true;const composer=original.querySelector('.logbook-card');if(composer){composer.dataset.moduleId='event-composer';composer.setAttribute('aria-label','Write log entry');}}
     const root=document.createElement('div');root.id='eventRegister';
     root.innerHTML=`<header class="er-heading"><div><h1>Events</h1><p>Operations history · ${esc(Intl.DateTimeFormat().resolvedOptions().timeZone)}</p></div><div class="er-actions"><button type="button" id="erWrite">Write log entry</button><button type="button" id="erRefresh">Refresh</button></div></header>
       <details class="er-sources"><summary>Input sources and recording status</summary><div id="erSources">Loading source information…</div></details>
@@ -58,7 +58,7 @@
     $('erClear').onclick=()=>{form.reset();filters=new URLSearchParams();chips();load();};
     $('erChips').onclick=e=>{const b=e.target.closest('[data-chip]');if(!b)return;const [key,value]=[...filters][Number(b.dataset.chip)];for(const input of form.elements){if(input.name!==key)continue;if(input.type==='checkbox'){if(input.value===value)input.checked=false;}else input.value='';}form.requestSubmit();};
     $('erRefresh').onclick=()=>load();$('erNew').onclick=()=>load();$('erMore').onclick=()=>load(true);
-    $('erWrite').onclick=()=>{if(original){original.hidden=!original.hidden;if(!original.hidden){original.scrollIntoView({behavior:'smooth'});document.querySelector('#logSubject')?.focus();}}};
+    $('erWrite').onclick=()=>{if(original){if(window.NorthstarModules){window.NorthstarModules.open('logbook:event-composer');document.querySelector('#logSubject')?.focus();return;}original.hidden=!original.hidden;if(!original.hidden){original.scrollIntoView({behavior:'smooth'});document.querySelector('#logSubject')?.focus();}}};
     async function sourceInfo(){try{const data=await json('/api/events/sources');$('erSources').innerHTML=data.sources.map(s=>`<div><strong>${esc(s.label)}</strong><span>${esc(s.state)}</span><small>${s.count.toLocaleString()} recorded${s.lastRecordedAt?' · last '+esc(date(s.lastRecordedAt)):''}</small></div>`).join('')+`<p>${esc(data.note)}</p>`;
       for(const [target,name,items] of [['erTypeOptions','type',data.types],['erSourceOptions','source',data.sources]])$(target).innerHTML=items.map(s=>`<label><input type="checkbox" name="${name}" value="${esc(s.id)}">${esc(s.label)}</label>`).join('');
       $('erStatusOptions').innerHTML='<option value="">All states</option>'+data.statuses.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');

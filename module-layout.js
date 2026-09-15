@@ -65,6 +65,7 @@
   const STORE = 'northstarModuleLayout';
   const SAVED_STORE = 'northstarModuleLayoutSaved';
   const SNAPSHOT_KEYS = [
+    ['northstarOverviewProfilesV2', 'northstarOverviewProfilesV2Saved'],
     ['northstarCanvasLayoutV1', 'northstarCanvasLayoutV1Saved'],
     [STORE, SAVED_STORE],
     ['northstarTabOrder', 'northstarTabOrderSaved'],
@@ -136,26 +137,32 @@
     if (!container) return null;
     const storageKey = 'northstarCanvasLayoutV1';
     const groups = [
-      ['weather', '#weatherStrip > .weather-card', [170, 150], [100, 100]],
-      ['dispatch', '#dispatchClient', [360, 140], [260, 110]],
+      ['weather', '#weatherStrip > .weather-card', [170, 190], [132, 160]],
+      ['dispatch', '#dispatchClient', [360, 210], [260, 180]],
       ['market', '#marketTopTiles > .node-card, #marketTopTiles > .ontario-market', [340, 230], [240, 150]],
-      ['events', '#eventsCard', [760, 380], [340, 220]],
-      ['staffHeading', '#overviewStaff > .staff-panel-head', [600, 80], [280, 70]],
       ['staff', '#staffGroups > .staff-group', [320, 180], [220, 100]],
-      ['staffEmpty', '#staffGroups > .staff-empty', [320, 100], [220, 80]],
       ['overview', '#overviewModules > [data-overview-module]:not(#overviewStaff):not(#eventsCard)', [480, 300], [240, 150]],
     ];
     const originals = new WeakMap(), bound = new WeakSet();
-    let positions = {}, frame = 0, gesture = false, topLayer = 30;
+    let positions = {}, frame = 0, gesture = false, topLayer = 30, restoring = false;
+    const profileKey = 'northstarOverviewProfilesV2';
+    let profiles = {}, profile = '', lastWidth = 0, automatic = true, snapping = false, editSnapshot = null;
+    try { profiles = JSON.parse(localStorage.getItem(profileKey) || '{}'); } catch {}
+    if (!profiles || typeof profiles !== 'object' || Array.isArray(profiles)) profiles = {};
     try { positions = JSON.parse(localStorage.getItem(storageKey) || 'null') || readZone('overview').position; } catch {}
     if (!positions || typeof positions !== 'object' || Array.isArray(positions)) positions = {};
     const valid = p => p && ['x','y','w','h'].every(k => Number.isFinite(p[k])) && p.x >= 0 && p.y >= 0 && p.w > 0 && p.h > 0;
     positions = Object.fromEntries(Object.entries(positions).filter(([key,p]) => key.startsWith('canvas:') && valid(p)));
+    // Keep the old canvas intact as a selectable arrangement, never delete it.
+    if (!profiles.previous && Object.keys(positions).length) profiles.previous = JSON.parse(JSON.stringify(positions));
     const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].map(el => ({
       el, size, min, key: 'canvas:' + group + ':' + (el.id || el.dataset.moduleId || el.dataset.site || group)
     })));
     const enabled = () => document.querySelector('#overview')?.classList.contains('active');
     function persist() {
+      if(restoring)return;
+      if (profile) profiles[profile] = {positions, width:lastWidth, automatic};
+      try { localStorage.setItem(profileKey, JSON.stringify(profiles)); } catch {}
       try { localStorage.setItem(storageKey, JSON.stringify(positions)); } catch {}
       writeZone('overview', {position: positions});
     }
@@ -169,6 +176,7 @@
       const p = positions[entry.key];
       const el = entry.el;
       el.dataset.canvasModule = entry.key;
+      el.dataset.ovSize = p.h < 195 || p.w < 220 ? 'compact' : p.h >= 270 && p.w >= 300 ? 'expanded' : 'standard';
       [['position','absolute'],['left',p.x+'px'],['top',p.y+'px'],['width',p.w+'px'],['height',p.h+'px'],
        ['min-width','0'],['min-height','0'],['max-width','none'],['max-height','none'],['margin','0'],['transform','none']]
         .forEach(([k,v]) => el.style.setProperty(k,v,'important'));
@@ -188,16 +196,26 @@
         handle.title = resize ? 'Resize · Arrow keys resize' : 'Move anywhere · Arrow keys move';
         el.append(handle);
         const change = (dx,dy) => {
+          automatic = false;
           const p = positions[entry.key];
           if (resize) {
             const west = corner.includes('w'), north = corner.includes('n');
             const w = Math.max(entry.min[0], Math.min(west ? p.x + p.w : Infinity, p.w + (west ? -dx : dx)));
-            const h = Math.max(entry.min[1], Math.min(north ? p.y + p.h : Infinity, p.h + (north ? -dy : dy)));
+            const h = Math.max(entry.min[1], Math.min(north ? p.y + p.h - 80 : Infinity, p.h + (north ? -dy : dy)));
             if (west) p.x += p.w - w;
             if (north) p.y += p.h - h;
             p.w = w; p.h = h;
           }
           else { p.x = Math.max(0,p.x + dx); p.y = Math.max(0,p.y + dy); }
+          if(snapping){
+            if(resize){
+              const right=p.x+p.w,bottom=p.y+p.h;
+              p.w=Math.max(entry.min[0],Math.min(corner.includes('w')?right:Infinity,Math.round(p.w/16)*16));p.h=Math.max(entry.min[1],Math.min(corner.includes('n')?bottom-80:Infinity,Math.round(p.h/16)*16));
+              if(corner.includes('w'))p.x=Math.max(0,right-p.w);
+              if(corner.includes('n'))p.y=Math.max(80,bottom-p.h);
+            }else{p.x=Math.max(16,Math.round(p.x/16)*16);p.y=Math.max(80,Math.round(p.y/16)*16);}
+          }
+          p.y=Math.max(80,p.y);
           paint(entry); bounds();
         };
         handle.addEventListener('keydown', event => {
@@ -211,7 +229,7 @@
         handle.addEventListener('pointerdown', event => {
           if (!editing() || !enabled() || event.button !== 0) return;
           event.preventDefault(); event.stopPropagation(); gesture = true;
-          const original = {...positions[entry.key]}, x = event.clientX + window.scrollX, y = event.clientY + window.scrollY;
+          const original = {...positions[entry.key]}, wasAutomatic=automatic, x = event.clientX + window.scrollX, y = event.clientY + window.scrollY;
           el.style.zIndex = String(++topLayer);
           handle.setPointerCapture(event.pointerId);
           const move = e => {
@@ -223,7 +241,7 @@
             if (e.clientX < 40) window.scrollBy(-16,0);
           };
           const finish = e => {
-            if (e.type === 'pointercancel' || e.type === 'lostpointercapture') {positions[entry.key] = original;paint(entry);bounds();}
+            if (e.type === 'pointercancel' || e.type === 'lostpointercapture') {positions[entry.key] = original;automatic=wasAutomatic;paint(entry);bounds();}
             handle.removeEventListener('pointermove', move);
             handle.removeEventListener('pointerup', finish);
             handle.removeEventListener('pointercancel', finish);
@@ -238,6 +256,42 @@
         });
       }
     }
+    function arrange(all,width) {
+      const next={},used=new Set(),gap=16;let y=88;
+      const row=(list,height,weights=[],minimum=260)=>{
+        list=list.filter(Boolean);if(!list.length)return;
+        const columns=Math.max(1,Math.min(list.length,Math.floor((width+gap)/(minimum+gap))));
+        for(let start=0;start<list.length;start+=columns){
+          const batch=list.slice(start,start+columns),total=batch.reduce((n,e,i)=>n+(weights[i]||1),0);let x=16;
+          batch.forEach((e,i)=>{const w=Math.floor((width-gap*(batch.length-1))*(weights[i]||1)/total);next[e.key]={x,y,w,h:height};used.add(e.key);x+=w+gap;});y+=height+gap;
+        }
+      };
+      const find=id=>all.find(e=>e.el.id===id || e.el.dataset.moduleId===id);
+      row([find('overviewStaffSummary'),find('dispatchClient'),find('IESO') || all.find(e=>e.el.classList?.contains('ontario-market'))],210);
+      row([find('overviewEventsSummary'),find('APIROQ')],300,[2,1]);
+      const weather=all.filter(e=>e.key.startsWith('canvas:weather:'));
+      const count=width>=1400?8:width>=600?4:width>=300?2:1;
+      for(let i=0;i<weather.length;i+=count)row(weather.slice(i,i+count),190,[],132);
+      row([find('overviewGeneratingStations'),find('overviewFieldTracker'),find('overviewChatSummary')],210);
+      const rest=all.filter(e=>!used.has(e.key));
+      for(let i=0;i<rest.length;i+=width<900?2:3)row(rest.slice(i,i+(width<900?2:3)),260);
+      return next;
+    }
+    const tools=document.createElement('div');tools.id='overviewArrangementTools';
+    tools.innerHTML='<span class="ov-profile-label"></span><label><input type="checkbox" data-ov-snap> Snap to 16 px</label><button type="button" data-ov-arrange>Arrange default</button><button type="button" data-ov-previous>Previous arrangement</button><button type="button" data-ov-fit>Bring into view</button><button type="button" data-ov-cancel>Cancel</button>';
+    document.querySelector('.layout-toolbar')?.prepend(tools);
+    document.querySelector('.layout-edit-toggle')?.addEventListener('click',()=>{
+      if(!editing())editSnapshot=['northstarModuleWorkspaceV1',profileKey,storageKey,STORE,'northstarTabOrder','northstarClosedOverviewModules'].map(key=>[key,localStorage.getItem(key)]);
+    },true);
+    tools.querySelector('[data-ov-cancel]')?.addEventListener('click',()=>{
+      if(!editSnapshot)return;
+      restoring=true;
+      editSnapshot.forEach(([key,value])=>value===null?localStorage.removeItem(key):localStorage.setItem(key,value));location.reload();
+    });
+    tools.querySelector('[data-ov-snap]')?.addEventListener('change',e=>snapping=e.target.checked);
+    tools.querySelector('[data-ov-arrange]')?.addEventListener('click',()=>{automatic=true;positions={};sync();});
+    tools.querySelector('[data-ov-previous]')?.addEventListener('click',()=>{if(profiles.previous){positions=JSON.parse(JSON.stringify(profiles.previous));Object.values(positions).forEach(p=>p.y=Math.max(88,p.y));automatic=false;sync();}});
+    tools.querySelector('[data-ov-fit]')?.addEventListener('click',()=>{Object.values(positions).forEach(p=>{p.w=Math.min(p.w,lastWidth);p.x=Math.max(16,Math.min(p.x,lastWidth+16-p.w));});automatic=false;sync();});
     function sync() {
       frame = 0;
       if (gesture) return;
@@ -249,7 +303,20 @@
         return;
       }
       const all = entries();
-      const width = Math.max(320,container.clientWidth-48);
+      // Measure the viewport, not the canvas's manual overflow extent.
+      container.style.removeProperty('min-width');
+      const width = Math.max(260,container.clientWidth-48);
+      const nextProfile=width>=1500?'wide':width>=1050?'desktop':width>=620?'laptop':'narrow';
+      if(nextProfile!==profile){
+        if(profile)profiles[profile]={positions,width:lastWidth,automatic};
+        profile=nextProfile;const saved=profiles[profile];
+        positions=Object.fromEntries(Object.entries(saved?.positions||{}).filter(([,p])=>valid(p)));
+        automatic=saved?.automatic!==false;
+      }
+      lastWidth=width;
+      if(automatic)positions=arrange(all.filter(({el})=>!el.closest('[hidden]')),width);
+      const label=tools.querySelector('.ov-profile-label');if(label)label.textContent=profile+' layout';
+      const previous=tools.querySelector('[data-ov-previous]');if(previous)previous.disabled=!profiles.previous;
       const activeKeys = new Set(all.filter(({el})=>!el.closest('[hidden]')).map(e=>e.key));
       const occupied = Object.entries(positions).filter(([key])=>activeKeys.has(key)).map(([,p])=>p);
       all.forEach(entry => {
@@ -258,7 +325,7 @@
           const w = Math.min(entry.size[0],width), h = entry.size[1];
           let candidate;
           // Pack NEW cards once. Saved/manual placements are never pushed into a group.
-          outer: for (let y=16;;y+=20) for(let x=16;x+w<=width+16;x+=20) {
+          outer: for (let y=88;;y+=20) for(let x=16;x+w<=width+16;x+=20) {
             const test={x,y,w,h};
             if(!occupied.some(p=>overlaps(test,{x:p.x-8,y:p.y-8,w:p.w+16,h:p.h+16}))) {candidate=test;break outer;}
           }

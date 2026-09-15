@@ -1,0 +1,42 @@
+/* Compact presentations share a frame; geometry remains in module-layout.js. */
+#overviewStatusStrip,#overviewArrangementTools{display:none}
+body.overview-canvas #overviewStatusStrip{display:flex;align-items:center;gap:24px;position:absolute;top:16px;left:16px;right:16px;height:48px;padding:0 140px 0 0;z-index:500;background:var(--bg,#09131b);border-bottom:1px solid var(--line);box-sizing:border-box}
+#overviewStatusStrip strong{font:600 22px/1.2 Arial,sans-serif;color:var(--text)}
+#overviewSourceStatus{font:12px/1.4 Arial,sans-serif;color:var(--muted)}
+body.overview-canvas #alarmBar{position:absolute!important;top:20px!important;right:32px!important;left:auto!important;width:auto!important;margin:0!important;z-index:501!important}
+body.overview-canvas main .header-actions,body.overview-canvas #overviewStaff>.staff-panel-head,body.overview-canvas #staffGroups>.staff-empty{display:none!important}
+body.overview-canvas main [data-canvas-module].ov-managed{display:flex!important;flex-direction:column!important;gap:12px!important;padding:16px!important;border:1px solid var(--line,#29404c)!important;border-radius:12px!important;background:var(--panel,#0f1c25)!important;overflow:auto!important;text-align:left!important;box-shadow:0 3px 12px #0002!important;font:14px/1.4 Arial,sans-serif!important;color:var(--text,#e3edf2)!important}
+body.overview-canvas main .ov-managed>.ns-module-content{flex:0 0 auto!important;padding:0!important;margin:0!important;min-width:0;border:0!important}
+body.overview-canvas main .ov-managed .ns-module-caption{font:600 14px/1.4 Arial,sans-serif!important;letter-spacing:0!important;text-transform:none!important;color:var(--text)!important;padding:0 30px 0 0!important;min-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.overview-canvas.layout-edit main .ov-managed .ns-module-caption{padding-right:88px!important}
+body.overview-canvas main .ov-managed .ns-module-notes{font:13px/1.4 Arial,sans-serif;margin:6px 0;color:var(--muted)}
+body.overview-canvas main .ov-managed .ns-content-blocks:empty{display:none}
+body.overview-canvas main .ov-managed>.ov-summary{display:flex;flex:1 1 auto;flex-direction:column;justify-content:space-between;min-height:0;gap:12px}
+body.overview-canvas main .ov-managed>.ov-summary[hidden]{display:none!important}
+.ov-summary-body{min-width:0}
+.ov-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ov-metrics.ov-three{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ov-metric{min-width:0;display:flex;flex-direction:column;gap:6px}
+.ov-metric>span{font:12px/1.4 Arial,sans-serif;color:var(--muted);white-space:nowrap}
+.ov-metric>strong{font:600 clamp(18px,2vw,26px)/1.15 Arial,sans-serif;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ov-secondary,.ov-expanded{font:12px/1.4 Arial,sans-serif;color:var(--muted);margin-top:12px;overflow-wrap:anywhere}
+.ov-freshness{font:11px/1.35 Arial,sans-serif;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;flex:0 0 auto}
+.ov-freshness.stale{color:var(--gold,#e4be70)}
+.ov-weather-value{font:600 30px/1 Arial,sans-serif;margin:0 0 6px}
+.ov-weather-condition{font:13px/1.4 Arial,sans-serif;color:var(--text)}
+.ov-empty,.ov-chat-message{margin:0;font:14px/1.6 Arial,sans-serif;color:var(--muted)}
+.ov-chat-message{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;color:var(--text)}
+.ov-events{display:grid;gap:0}
+.ov-events>a{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:start;gap:12px;border-bottom:1px solid var(--line);padding:8px 0;text-decoration:none;color:var(--text);font:13px/1.4 Arial,sans-serif;margin:0}
+.ov-events>a:first-child{padding-top:0}.ov-events>a:last-child{border:0}
+.ov-events time,.ov-events small,.ov-events b{font:11px/1.5 Arial,sans-serif;color:var(--muted)}
+.ov-events small{display:block}.ov-events>a>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.overview-canvas main [data-ov-size="compact"] .ov-secondary,body.overview-canvas main [data-ov-size]:not([data-ov-size="expanded"]) .ov-expanded{display:none!important}
+body.overview-canvas main .ov-managed>:is(.ns-open-module,.ns-edit-module){position:absolute!important;top:12px!important;right:12px!important;left:auto!important;bottom:auto!important;width:26px!important;height:26px!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;border-radius:5px!important;font:18px/26px Arial,sans-serif!important;color:var(--blue)!important;background:transparent!important;z-index:101!important}
+body.overview-canvas main .ov-managed>.ns-edit-module{right:44px!important;display:none!important}
+body.overview-canvas.layout-edit main .ov-managed>.ns-edit-module{display:block!important}
+body.overview-canvas.layout-edit main .ov-managed>.canvas-move-handle{right:76px!important;top:12px!important}
+body.overview-canvas.layout-edit #overviewArrangementTools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;max-width:630px;font:12px/1.4 Arial,sans-serif}
+#overviewArrangementTools button{font:12px/1.4 Arial,sans-serif;padding:6px 8px}#overviewArrangementTools label{display:flex;align-items:center;gap:4px}.ov-profile-label{text-transform:capitalize;color:var(--muted)}
+body.overview-canvas .layout-toolbar{max-width:calc(100vw - 48px);flex-wrap:wrap}
+@media(max-width:650px){#overviewSourceStatus{font-size:10px}body.overview-canvas #overviewStatusStrip{gap:12px;padding-right:95px}#overviewStatusStrip strong{font-size:18px}.ov-events>a{grid-template-columns:54px minmax(0,1fr)}.ov-events b{display:none}}

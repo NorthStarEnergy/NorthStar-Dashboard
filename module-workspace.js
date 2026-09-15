@@ -13,7 +13,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
   const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const label = el => ($('h2,h3,header strong', el)?.textContent || el.getAttribute('aria-label') || el.dataset.moduleId || el.id || 'Module').trim().replace(/[-_]/g,' ');
+  const label = el => ($('h1,h2,h3,header strong', el)?.textContent || el.getAttribute('aria-label') || el.dataset.moduleId || el.id || 'Module').trim().replace(/[-_]/g,' ');
   let section = 'overview', active = '', shell, tree, tabs, toolbar, editor, frame = 0, painting = false;
   let editorDrafts = {};
   function save() {
@@ -46,7 +46,8 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     });
     $$('#switching [data-module-id]').forEach(el => register('outages:'+el.dataset.moduleId, label(el), 'outages', el, 'outages:uwpc'));
     $$('.section').filter(el => !['overview','weather','markets','outages','switching','modules'].includes(el.id)).forEach(root => {
-      const explicit = (root.id==='tools'?$$('.tool-grid,.workbench-card,#deviceLibrary',root):$$('[data-module-id],.workbench-card',root)).filter(el=>el!==root && !el.dataset.nsCustom);
+      if(root.id==='logbook' && $('.logbook-layout',root))$('.logbook-layout',root).hidden=false;
+      const explicit = (root.id==='logbook'?$$('#eventRegister,.logbook-card,.logbook-report',root):root.id==='tools'?$$('.tool-grid,.workbench-card,#deviceLibrary,#overviewChat',root):$$('[data-module-id],.workbench-card',root)).filter(el=>el!==root && !el.dataset.nsCustom);
       const candidates = explicit.length?explicit:$$('.panel', root).filter(el => !el.dataset.nsCustom && (!el.parentElement.closest('.panel') || !root.contains(el.parentElement.closest('.panel'))));
       const currentIds = new Set();
       (candidates.length ? candidates : [root]).forEach((el, i) => {
@@ -57,11 +58,16 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       for(const [id,m] of registry)if(m.section===root.id && !pref(id).custom && !currentIds.has(id))registry.delete(id);
     });
     // Match existing overview cards to their full page. Their feed anchors stay intact.
-    const aliases = [['#eventsCard','logbook'],['#overviewStaff','crew'],['#overviewFieldTracker','mobile'],['#dispatchClient','lamination'],['#overviewGeneratingStations','scada']];
+    const aliases = [['#overviewStaffSummary','crew'],['#overviewFieldTracker','mobile'],['#overviewGeneratingStations','scada']];
     aliases.forEach(([selector, owner]) => {
       const m = [...registry.values()].find(m => m.section === owner), el = $(selector);
       if (m && el && !m.compact.includes(el)) { m.compact.push(el); el.dataset.nsCompact = m.id; }
     });
+    register('markets:dispatch','APIROQ dispatch','markets',$('#dispatchDetail'),'',$$('#dispatchClient'));
+    const events=[...registry.values()].find(m=>m.el.id==='eventRegister');
+    if(events){events.compact=$$('#overviewEventsSummary');events.compact.forEach(el=>el.dataset.nsCompact=events.id);}
+    const chat=[...registry.values()].find(m=>m.el.id==='overviewChat');
+    if(chat){chat.compact=$$('#overviewChatSummary');chat.compact.forEach(el=>el.dataset.nsCompact=chat.id);}
     const market = window.NorthstarMarketModules;
     const marketData = market?.data();
     Object.entries(marketData?.nodes || {}).forEach(([key,data]) => {
@@ -108,7 +114,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     el.classList.toggle('ns-custom-content-only', !!p.customOnly);
     let custom = $(':scope > .ns-module-content',el);
     if (!custom) { custom = document.createElement('div'); custom.className='ns-module-content'; el.prepend(custom); }
-    const content = `<div class="ns-module-caption">${esc(p.title || name(m))}</div>${p.notes ? `<p class="ns-module-notes">${esc(p.notes)}</p>` : ''}<div class="ns-content-blocks">${(p.blocks || []).map((block,i) => `<div class="ns-content-block"><span>${esc(block.label || '')}</span><strong data-ns-block="${i}">${esc(block.text || '')}</strong></div>`).join('')}</div>`;
+    const content = `<div class="ns-module-caption">${esc(p.title || (variant==='compact' && ({overviewStaffSummary:'Field staff',overviewEventsSummary:'Events',overviewGeneratingStations:'Generating stations',overviewFieldTracker:'Field tracker',overviewChatSummary:'Chat'}[el.id])) || name(m))}</div>${p.notes ? `<p class="ns-module-notes">${esc(p.notes)}</p>` : ''}<div class="ns-content-blocks">${(p.blocks || []).map((block,i) => `<div class="ns-content-block"><span>${esc(block.label || '')}</span><strong data-ns-block="${i}">${esc(block.text || '')}</strong></div>`).join('')}</div>`;
     if (custom.dataset.template !== content) {custom.innerHTML = content; custom.dataset.template = content;}
     (p.blocks || []).forEach((block,i) => {
       if (block.source) {
@@ -116,12 +122,6 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
         const value = source && !source.closest('.ns-module-content,#nsModuleEditor') ? source.textContent.trim() : 'Source unavailable';
         text($(`[data-ns-block="${i}"]`,custom), value || 'Awaiting data');
       }
-    });
-    Object.entries(p.labels || {}).forEach(([selector,value]) => {
-      try {
-        const target=$(selector,el), nodes=target?[...target.childNodes].filter(node=>node.nodeType===3 && node.textContent.trim()):[];
-        if(nodes.length){text(nodes[0],value);nodes.slice(1).forEach(node=>text(node,''));}
-      } catch {}
     });
     let edit = $(':scope > .ns-edit-module',el);
     if (!edit) {
@@ -139,6 +139,13 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       });
       presentationHidden.set(el,hidden);
     }
+    if(variant==='compact')window.NorthstarOverview?.present(m,el,p);
+    Object.entries(p.labels || {}).forEach(([selector,value]) => {
+      try {
+        const target=$(selector,el), nodes=target?[...target.childNodes].filter(node=>node.nodeType===3 && node.textContent.trim()):[];
+        if(nodes.length){text(nodes[0],value);nodes.slice(1).forEach(node=>text(node,''));}
+      } catch {}
+    });
   }
   function clearMask() {
     masked.forEach((prior,el) => {if(prior.value)el.style.setProperty('display',prior.value,prior.priority);else el.style.removeProperty('display');});
@@ -248,7 +255,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     const root=m.el.closest('.section');
     $$('.section').forEach(el=>el.classList.toggle('active',el===root));
     $('.page-header')?.classList.add('section-header-hidden');
-    if (m.id.startsWith('markets:') && m.id!=='markets:comparison') window.NorthstarMarketModules?.render(m.id.slice(8),m.el);
+    if (m.id.startsWith('markets:') && !['markets:comparison','markets:dispatch'].includes(m.id)) window.NorthstarMarketModules?.render(m.id.slice(8),m.el);
     const pane=m.el.dataset.outagePane;
     if (pane) $(`[data-outage-tab="${CSS.escape(pane)}"]`)?.click();
   }

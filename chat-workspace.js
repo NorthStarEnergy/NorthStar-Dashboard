@@ -34,12 +34,11 @@
   }
 
   function ensureCard() {
-    const root = document.querySelector('#overviewModules');
+    const root = document.querySelector('#tools');
     if (!root || document.querySelector('#overviewChat')) return document.querySelector('#overviewChat');
     const card = document.createElement('section');
     card.className = 'panel chat-panel';
     card.id = 'overviewChat';
-    card.dataset.overviewModule = '';
     card.dataset.moduleId = 'overview-chat';
     card.innerHTML = `
       <div class="chat-shell">
@@ -63,9 +62,7 @@
           </div>
         </form>
       </div>`;
-    const staff = document.querySelector('#overviewStaff');
-    if (staff) root.insertBefore(card, staff);
-    else root.appendChild(card);
+    root.appendChild(card);
     return card;
   }
 

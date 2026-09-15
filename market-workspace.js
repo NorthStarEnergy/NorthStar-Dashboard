@@ -3,12 +3,12 @@
   if (!document.querySelector('#marketDetail')) return;
 
   const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
-  const money = value => value == null || !Number.isFinite(Number(value)) ? '—' : `$${Number(value).toFixed(2)}`;
-  const mw = value => value == null || !Number.isFinite(Number(value)) ? '— MW' : `${Number(value).toFixed(1)} MW`;
+  const money = value => value == null || value === '' || !Number.isFinite(Number(value)) ? '—' : `$${Number(value).toFixed(2)}`;
+  const mw = value => value == null || value === '' || !Number.isFinite(Number(value)) ? '— MW' : `${Number(value).toFixed(1)} MW`;
   const time = value => { const date = new Date(value); return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); };
 
   const average = values => {
-    const finite = values.map(Number).filter(Number.isFinite);
+    const finite = values.filter(value => value != null && value !== '').map(Number).filter(Number.isFinite);
     return finite.length ? finite.reduce((total, value) => total + value, 0) / finite.length : null;
   };
 
@@ -18,7 +18,7 @@
       const points = node?.[primaryField] || node?.[fallbackField] || [];
       points.forEach(point => {
         const value = Number(point.value);
-        if (!point.time || !Number.isFinite(value)) return;
+        if (!point.time || point.value == null || point.value === '' || !Number.isFinite(value)) return;
         const values = byTime.get(point.time) || [];
         values.push(value);
         byTime.set(point.time, values);
@@ -132,7 +132,7 @@
       ...(Array.isArray(node.history) ? node.history.map(point => ({ ...point, kind: 'RT HISTORY' })) : []),
       ...(Array.isArray(node.daHistory) ? node.daHistory.map(point => ({ ...point, kind: 'DA HISTORY' })) : []),
       ...(Array.isArray(node.forward) ? node.forward.map(point => ({ ...point, kind: 'DA FORWARD' })) : [])
-    ].filter(point => Number.isFinite(Number(point.value))).slice(-36);
+    ].filter(point => point.value != null && point.value !== '' && Number.isFinite(Number(point.value))).slice(-36);
     if (!rows.length) return '<div class="muted-note">No price series is available for this node.</div>';
     const values = rows.map(point => Math.abs(Number(point.value)));
     const maximum = Math.max(1, ...values);

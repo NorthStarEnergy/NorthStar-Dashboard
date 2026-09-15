@@ -16,8 +16,9 @@
   const sparkline = client.querySelector('#dispatchSparkline');
   const overview = document.querySelector('#overview');
 
-  const mw = value => (Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)} MW` : '— MW');
-  const reserveMw = value => (Number.isFinite(Number(value)) ? Number(value).toFixed(0) : '—');
+  const numeric = value => value != null && value !== '' && Number.isFinite(Number(value));
+  const mw = value => (numeric(value) ? `${Number(value).toFixed(1)} MW` : '— MW');
+  const reserveMw = value => (numeric(value) ? Number(value).toFixed(0) : '—');
 
   function setHealthState(kind) {
     if (!healthButton) return;
@@ -33,7 +34,7 @@
   }
 
   function formatDelta(delta, tracking) {
-    if (!Number.isFinite(Number(delta))) return 'AWAITING TELEMETRY';
+    if (!numeric(delta)) return 'AWAITING TELEMETRY';
     const signed = Number(delta);
     const prefix = signed > 0 ? '+' : '';
     const text = `${prefix}${signed.toFixed(1)} MW vs dispatch`;
@@ -46,7 +47,7 @@
   function drawSparkline(history) {
     if (!sparkline) return;
     const points = (history || []).filter(
-      row => Number.isFinite(Number(row.outputMw)) && Number.isFinite(Number(row.dispatchMw)),
+      row => numeric(row.outputMw) && numeric(row.dispatchMw),
     );
     if (points.length < 2) {
       sparkline.innerHTML = '<rect x="0" y="15" width="120" height="1" fill="#29434d"/>';
@@ -78,9 +79,9 @@
     const tracking = payload?.tracking || 'unknown';
 
     if (headline) {
-      headline.innerHTML = `<span class="dispatch-output-value">${Number.isFinite(Number(output)) ? Number(output).toFixed(1) : '—'}</span>`
+      headline.innerHTML = `<span class="dispatch-output-value">${numeric(output) ? Number(output).toFixed(1) : '—'}</span>`
         + ' / '
-        + `<span class="dispatch-target-value">${Number.isFinite(Number(target)) ? Number(target).toFixed(1) : '—'}</span> MW`;
+        + `<span class="dispatch-target-value">${numeric(target) ? Number(target).toFixed(1) : '—'}</span> MW`;
     }
     if (deltaNode) {
       deltaNode.textContent = formatDelta(delta, tracking);
@@ -115,17 +116,18 @@
 
     drawSparkline(payload?.history);
 
-    if (payload?.healthy === false || payload?.stale) {
-      setHealthState(payload?.healthy === false ? 'fault' : 'stale');
+    const validTelemetry = numeric(output) && numeric(target);
+    if (!validTelemetry || payload?.healthy === false || payload?.stale) {
+      setHealthState(!validTelemetry || payload?.healthy === false ? 'fault' : 'stale');
     } else {
       setHealthState('ok');
     }
 
     if (typeof setHealth === 'function') {
-      setHealth('dispatch', payload?.healthy !== false && !payload?.stale);
+      setHealth('dispatch', validTelemetry && payload?.healthy !== false && !payload?.stale);
     }
     if (typeof watchdogMark === 'function') {
-      watchdogMark('dispatch', payload?.healthy !== false && !payload?.stale);
+      watchdogMark('dispatch', validTelemetry && payload?.healthy !== false && !payload?.stale);
     }
   }
 

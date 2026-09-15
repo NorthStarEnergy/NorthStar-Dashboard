@@ -1,3 +1,7 @@
+# Overview redesign — 2026-09-15
+
+Priority compact modules, responsive saved layouts, four-corner resize and optional snap, linked full views, editable live labels, and truthful source states. Five viewport sizes pass browser containment checks. See [report](packets/2026-09-15-overview-redesign.md).
+
 # Module workspace — 2026-09-15
 
 Section trees and browser-style module tabs replace stacked application lists.
