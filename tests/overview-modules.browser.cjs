@@ -67,6 +67,14 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   assert.equal(await page.locator('#overviewEventsSummary .ov-events a').count(),4,'Retains last good events on failure');
   assert.ok((await page.locator('#alarmIndicator').innerText()).includes('—'),'Failed staff source cannot imply no alarms');
   await page.click('.layout-edit-toggle');
+  assert.equal(await page.locator('.layout-style-menu [data-ui-style]').count(),9,'Edit mode offers nine dashboard styles');
+  await page.click('.layout-style-toggle');
+  await page.click('[data-ui-style="midnight"]');
+  assert.equal(await page.locator('body').getAttribute('data-theme'),'midnight','Selected dashboard style is applied');
+  assert.equal(await page.locator('[data-ui-style="midnight"]').getAttribute('aria-checked'),'true','Selected style is exposed to assistive technology');
+  await page.click('.layout-style-toggle');
+  await page.click('[data-ui-style-next]');
+  assert.equal(await page.locator('body').getAttribute('data-theme'),'forest','Next style cycles in the declared order');
   const weather=page.locator('#weatherStrip > .weather-card').first();
   await weather.hover();await page.waitForTimeout(100);
   assert.equal(await weather.locator(':scope > .periods:visible').count(),1,'Original forecast panel opens on hover');

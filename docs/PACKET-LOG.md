@@ -1,3 +1,11 @@
+# Editable UI style cycler — 2026-09-15
+
+Added nine persisted Edit-mode dashboard palettes, preview swatches, accessible selected state, and Next Style cycling. See [report](packets/2026-09-15-editable-ui-style-cycler.md).
+
+# Complete module editor — 2026-09-15
+
+Expanded editing to every registered module, with selectable module/presentation, text and image overrides, data blocks, restore controls, and custom placement. See [report](packets/2026-09-15-complete-module-editor.md).
+
 # Collapsible module menu — 2026-09-15
 
 Added a persistent per-section Show/Hide modules toggle. See [report](packets/2026-09-15-collapsible-module-menu.md).
