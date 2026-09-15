@@ -85,12 +85,12 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     // New modules survive refresh and have separate full and overview renderings.
     Object.entries(state.modules).filter(([,p]) => p.custom).forEach(([id,p]) => {
       let el = $(`[data-ns-custom="${CSS.escape(id)}"]`);
+      const target = document.getElementById(p.section);
+      if (!target) return;
       if (!el) {
         el = document.createElement('article'); el.className = 'panel'; el.dataset.nsCustom = id; el.dataset.moduleId = id;
-        const target = document.getElementById(p.section);
-        if (!target) return;
         target.append(el);
-      }
+      } else if (el.parentElement !== target) target.append(el);
       register(id, p.name || 'Custom module', p.section, el, p.parent || '');
     });
     register('tools:module-editor','Modules','modules',$('#modules .ns-catalog'));
@@ -110,7 +110,63 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       m.compact.forEach(el => {el.hidden = p.overviewVisible === false;applyPresentation(m, 'compact', el);});
     }
   }
-  function text(el, value) { if (el.textContent !== value) el.textContent = value; }
+  const owns = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
+  const editorExcluded = '.ns-module-content,.ns-window-controls,.canvas-move-handle,.canvas-resize-handle,.ns-edit-module,.ns-open-module,script,style,link';
+  function text(el, value) { if (el && el.textContent !== value) el.textContent = value; }
+  function directText(node) {
+    return [...node.childNodes].filter(child => child.nodeType === 3).map(child => child.textContent).join('').trim();
+  }
+  function directTextNodes(node) {
+    return [...node.childNodes].filter(child => child.nodeType === 3 && child.textContent.trim());
+  }
+  function setDirectText(node, value) {
+    const nodes = directTextNodes(node);
+    if (!nodes.length) { node.append(document.createTextNode(value)); return; }
+    text(nodes[0], value); nodes.slice(1).forEach(child => text(child, ''));
+  }
+  function editableSelector(root, node) {
+    const path=[];let current=node;
+    while(current && current!==root){
+      const siblings=[...current.parentElement.children].filter(sibling=>sibling.tagName===current.tagName);
+      path.unshift(current.tagName.toLowerCase()+':nth-of-type('+(siblings.indexOf(current)+1)+')');current=current.parentElement;
+    }
+    return path.join(' > ');
+  }
+  function editableParts(root) {
+    if (!root) return [];
+    const allowed='h1,h2,h3,h4,h5,h6,p,li,a,button,label,legend,span,small,strong,em,td,th,dt,dd,caption,summary,figcaption,option,output,div';
+    const partName = node => ({A:'Link',BUTTON:'Button',H1:'Heading',H2:'Heading',H3:'Heading',H4:'Heading',H5:'Heading',H6:'Heading',LABEL:'Field label',LEGEND:'Field label',OUTPUT:'Value'}[node.tagName] || 'Text');
+    const usable=node=>!node.closest(editorExcluded);
+    const textParts=$$(allowed,root).filter(node=>usable(node) && directText(node)).map(node=>{
+      const selector=editableSelector(root,node), value=directText(node);
+      return {kind:'text',key:'text|'+selector,selector,value,label:partName(node),live:!!node.id || [...node.attributes].some(attr=>attr.name.startsWith('data-') && !attr.name.startsWith('data-ns-'))};
+    });
+    const placeholders=$$('[placeholder]',root).filter(usable).map(node=>{
+      const selector=editableSelector(root,node);
+      return {kind:'placeholder',key:'placeholder|'+selector,selector,value:node.getAttribute('placeholder') || '',label:'Input hint',live:false};
+    });
+    const images=$$('img',root).filter(usable).map(node=>{
+      const selector=editableSelector(root,node);
+      return {kind:'image',key:'image|'+selector,selector,src:node.getAttribute('src') || '',alt:node.getAttribute('alt') || '',label:'Image',live:false};
+    });
+    return [...textParts,...placeholders,...images];
+  }
+  function applyEditableOverrides(m, variant, root) {
+    const p=view(m.id,variant);
+    Object.entries(p.labels || {}).forEach(([selector,value])=>{
+      try {const target=$(selector,root);if(target)setDirectText(target,value);} catch {}
+    });
+    Object.entries(p.elements || {}).forEach(([key,override])=>{
+      const divider=key.indexOf('|');if(divider<1)return;
+      const kind=key.slice(0,divider), selector=key.slice(divider+1);
+      try {
+        const target=$(selector,root);if(!target)return;
+        if(kind==='text' && owns(override,'value'))setDirectText(target,override.value);
+        if(kind==='placeholder' && owns(override,'value'))target.setAttribute('placeholder',override.value);
+        if(kind==='image'){if(owns(override,'src'))target.setAttribute('src',override.src);if(owns(override,'alt'))target.setAttribute('alt',override.alt);}
+      } catch {}
+    });
+  }
   function applyPresentation(m, variant, el) {
     const p = view(m.id,variant);
     presentationHidden.get(el)?.forEach((prior,node)=>{if(prior.value)node.style.setProperty('display',prior.value,prior.priority);else node.style.removeProperty('display');});
@@ -146,12 +202,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       presentationHidden.set(el,hidden);
     }
     if(variant==='compact')window.NorthstarOverview?.present(m,el,p);
-    Object.entries(p.labels || {}).forEach(([selector,value]) => {
-      try {
-        const target=$(selector,el), nodes=target?[...target.childNodes].filter(node=>node.nodeType===3 && node.textContent.trim()):[];
-        if(nodes.length){text(nodes[0],value);nodes.slice(1).forEach(node=>text(node,''));}
-      } catch {}
-    });
+    applyEditableOverrides(m,variant,el);
   }
   function clearMask() {
     masked.forEach((prior,el) => {if(prior.value)el.style.setProperty('display',prior.value,prior.priority);else el.style.removeProperty('display');});
@@ -289,27 +340,64 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     const target=id==='modules'?'tools:module-editor':mergedSections[id]?(items.find(m=>m.sourceSection===id)?.id || landing):landing;
     if(target)openModule(target);
   }
-  function fieldRows(m,variant) {
-    const el=variant==='full'?m.el:m.compact[0];if(!el)return [];
-    const directText=node=>[...node.childNodes].filter(child=>child.nodeType===3).map(child=>child.textContent).join('').trim();
-    return $$('h2,h3,label,span,small,header strong,.node-name',el).filter(node=>directText(node) && !node.closest('.ns-module-content,.ns-window-controls') && !node.id && !node.matches('[data-ns-block]')).slice(0,100).map(node=>{
-      const path=[];let current=node;
-      while(current && current!==el){const siblings=[...current.parentElement.children].filter(n=>n.tagName===current.tagName);path.unshift(current.tagName.toLowerCase()+':nth-of-type('+(siblings.indexOf(current)+1)+')');current=current.parentElement;}
-      return {selector:path.join(' > '),text:directText(node)};
+  function renderEditorParts(m, variant, p) {
+    const root=variant==='full'?m.el:m.compact[0], list=$('.ns-editor-part-list',editor);
+    list.replaceChildren();
+    const parts=editableParts(root), summary=$('[data-editor-parts-summary]',editor);
+    summary.textContent=parts.length?'Editable parts ('+parts.length+')':'Editable parts';
+    if(!parts.length){list.textContent='No editable text, controls, input hints, or images are available in this presentation yet.';return;}
+    parts.forEach(part=>{
+      const row=document.createElement('div');row.className='ns-editor-part';
+      row.dataset.editorPartKey=part.key;row.dataset.editorPartKind=part.kind;row.dataset.editorLegacy=part.selector || '';
+      const field=document.createElement('label');field.className='ns-editor-part-field';
+      const meta=document.createElement('span');meta.className='ns-editor-part-meta';
+      const name=document.createElement('strong');name.textContent=part.kind==='image'?'Image':part.value || part.label;
+      const detail=document.createElement('small');detail.textContent=part.kind==='image'?'Image path and description':part.label+(part.live?' · connected':'');
+      meta.append(name,detail);field.append(meta);
+      const prior=p.elements?.[part.key] || {};
+      if(part.kind==='image'){
+        const fields=document.createElement('div');fields.className='ns-editor-image-fields';
+        const src=document.createElement('input');src.type='text';src.setAttribute('aria-label','Image path');src.dataset.editorImageSrc='';src.value=owns(prior,'src')?prior.src:part.src;src.dataset.editorInitial=src.value;
+        const alt=document.createElement('input');alt.type='text';alt.setAttribute('aria-label','Image description');alt.dataset.editorImageAlt='';alt.value=owns(prior,'alt')?prior.alt:part.alt;alt.dataset.editorInitial=alt.value;
+        fields.append(src,alt);field.append(fields);
+      }else{
+        const value=owns(prior,'value')?prior.value:(owns(p.labels,part.selector)?p.labels[part.selector]:part.value);
+        const control=document.createElement(value.length>120?'textarea':'input');if(control.tagName==='TEXTAREA')control.rows=2;else control.type='text';control.dataset.editorPartValue='';control.value=value;control.dataset.editorInitial=value;control.setAttribute('aria-label',part.label);
+        field.append(control);
+      }
+      row.append(field);
+      const restore=document.createElement('button');restore.type='button';restore.dataset.editorRestore='';restore.textContent='Restore';restore.setAttribute('aria-label','Restore '+part.label);
+      restore.onclick=()=>{row.dataset.editorRestore='true';row.classList.add('ns-editor-part-restored');restore.textContent='Will restore';};row.append(restore);list.append(row);
     });
+  }
+  function renderCustomPlacement(m) {
+    const placement=$('[data-custom-placement]',editor), form=$('form',editor), module=pref(m.id);
+    placement.hidden=!module.custom;if(!module.custom)return;
+    const sectionInput=form.elements.moduleSection,parentInput=form.elements.moduleParent;
+    const owners=[...new Set([...registry.values()].map(item=>item.section))].sort((a,b)=>sectionTitle(a).localeCompare(sectionTitle(b)));
+    sectionInput.innerHTML=owners.map(owner=>`<option value="${esc(owner)}">${esc(sectionTitle(owner))}</option>`).join('');
+    sectionInput.value=module.section || m.section;
+    let selectedParent=module.parent || '';
+    const updateParents=()=>{
+      parentInput.innerHTML='<option value="">No parent module</option>'+[...registry.values()].filter(item=>item.section===sectionInput.value && item.id!==m.id).sort((a,b)=>name(a).localeCompare(name(b))).map(item=>`<option value="${esc(item.id)}">${esc(name(item))}</option>`).join('');
+      parentInput.value=selectedParent;
+    };
+    sectionInput.onchange=()=>{selectedParent='';updateParents();};updateParents();
   }
   function openEditor(id, variant='full', keepDraft=false) {
     const m=registry.get(id);if(!m)return;
     if(!keepDraft)editorDrafts={};
     editor.dataset.module=id;editor.dataset.variant=variant;
     const p=editorDrafts[variant] || view(id,variant), form=$('form',editor);
+    form.elements.modulePicker.innerHTML=[...registry.values()].sort((a,b)=>(sectionTitle(a.section)+' '+name(a)).localeCompare(sectionTitle(b.section)+' '+name(b))).map(item=>`<option value="${esc(item.id)}">${esc(sectionTitle(item.section))} / ${esc(name(item))}</option>`).join('');
+    form.elements.modulePicker.value=id;
     form.elements.moduleName.value=name(m);form.elements.variant.value=variant;form.elements.title.value=p.title || '';
     form.elements.notes.value=p.notes || '';form.elements.accent.value=p.accent || '#63b8df';form.elements.density.value=p.density || 'normal';
     form.elements.pin.checked=pref(id).overviewVisible !== false && (!!pref(id).pin || m.compact.length>0);
     form.elements.customOnly.checked=!!p.customOnly;
-    $('.ns-field-list',editor).innerHTML=fieldRows(m,variant).map(row=>`<label>${esc(row.text)}<input data-label-selector="${esc(row.selector)}" value="${esc(p.labels?.[row.selector] ?? row.text)}"></label>`).join('') || '<p>No existing labels in this presentation. Add content blocks below.</p>';
+    renderEditorParts(m,variant,p);renderCustomPlacement(m);
     $('.ns-block-list',editor).replaceChildren();(p.blocks || []).forEach(block=>appendBlock(block));
-    $('.ns-editor-status',editor).textContent='Saved on this browser. Data bindings stay linked to the source module.';
+    $('.ns-editor-status',editor).textContent='Text and images are saved with this presentation. Data blocks remain linked to their selected source.';
     if(!editor.open)editor.showModal();
   }
   function appendBlock(block={}) {
@@ -322,7 +410,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
   }
   function createEditor() {
     editor=document.createElement('dialog');editor.id='nsModuleEditor';
-    editor.innerHTML=`<form><header><h2>Module editor</h2><button type="button" data-editor-close aria-label="Close editor">×</button></header><div class="ns-editor-grid"><label>Module name · linked across views<input name="moduleName" required maxlength="100"></label><label>Presentation<select name="variant"><option value="full">Section full page</option><option value="compact">Overview display</option></select></label><label>Presentation title<input name="title" maxlength="120"></label><label>Accent<input type="color" name="accent"></label><label>Spacing<select name="density"><option value="normal">Normal</option><option value="compact">Compact</option></select></label><label class="ns-check"><input type="checkbox" name="pin">Show on Overview</label></div><label>Content / notes<textarea name="notes" rows="3"></textarea></label><details><summary>Existing labels</summary><div class="ns-field-list"></div></details><h3>Content and data tags</h3><div class="ns-block-list"></div><button type="button" data-add-block>+ Add content</button><p class="ns-editor-status" role="status"></p><footer><button type="button" data-editor-close>Cancel</button><button type="submit">Save module</button></footer></form>`;
+    editor.innerHTML=`<form><header><div><h2>Module editor</h2><label class="ns-module-picker">Selected module<select name="modulePicker" aria-label="Select module"></select></label></div><button type="button" data-editor-close aria-label="Close editor">×</button></header><div class="ns-editor-grid"><label>Module name · linked across views<input name="moduleName" required maxlength="100"></label><label>Presentation<select name="variant"><option value="full">Section full page</option><option value="compact">Overview display</option></select></label><label>Presentation title<input name="title" maxlength="120"></label><label>Accent<input type="color" name="accent"></label><label>Spacing<select name="density"><option value="normal">Normal</option><option value="compact">Compact</option></select></label><label class="ns-check"><input type="checkbox" name="pin">Show on Overview</label></div><label>Content / notes<textarea name="notes" rows="3"></textarea></label><section class="ns-custom-placement" data-custom-placement hidden><h3>Module location</h3><div class="ns-editor-grid"><label>Section<select name="moduleSection"></select></label><label>Parent module<select name="moduleParent"></select></label></div></section><details><summary data-editor-parts-summary>Editable parts</summary><p class="ns-editor-help">Edit every visible label, text value, control label, input hint, and image in this presentation. Use Restore to return a part to its source content.</p><div class="ns-editor-part-list ns-field-list"></div></details><h3>Content and data tags</h3><div class="ns-block-list"></div><button type="button" data-add-block>+ Add content</button><p class="ns-editor-status" role="status"></p><footer><button type="button" data-editor-close>Cancel</button><button type="submit">Save module</button></footer></form>`;
     document.body.append(editor);
     const customOnly=document.createElement('label');customOnly.className='ns-check';
     customOnly.innerHTML='<input type="checkbox" name="customOnly"> Display only my content and data blocks';
@@ -330,19 +418,35 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     $$('[data-editor-close]',editor).forEach(b=>b.onclick=()=>editor.close());
     $('[data-add-block]',editor).onclick=()=>appendBlock();
     const form=$('form',editor);
-    const collect=()=>({title:form.elements.title.value,notes:form.elements.notes.value,accent:form.elements.accent.value,density:form.elements.density.value,customOnly:form.elements.customOnly.checked,
-      labels:Object.fromEntries($$('[data-label-selector]',editor).map(input=>[input.dataset.labelSelector,input.value])),
-      blocks:$$('.ns-block-editor',editor).map(row=>({label:$('[data-block-label]',row).value,source:$('[data-block-source]',row).value,text:$('[data-block-text]',row).value}))});
+    const collect=()=>{
+      const prior=editorDrafts[editor.dataset.variant] || view(editor.dataset.module,editor.dataset.variant);
+      const labels={...(prior.labels || {})},elements=Object.fromEntries(Object.entries(prior.elements || {}).map(([key,value])=>[key,{...value}]));
+      $$('.ns-editor-part',editor).forEach(row=>{
+        const key=row.dataset.editorPartKey,legacy=row.dataset.editorLegacy;
+        if(row.dataset.editorRestore==='true'){delete elements[key];if(legacy)delete labels[legacy];return;}
+        if(row.dataset.editorPartKind==='image'){
+          const src=$('[data-editor-image-src]',row),alt=$('[data-editor-image-alt]',row);
+          if(src.value!==src.dataset.editorInitial || alt.value!==alt.dataset.editorInitial)elements[key]={...(elements[key] || {}),src:src.value,alt:alt.value};
+        }else{
+          const control=$('[data-editor-part-value]',row);
+          if(control.value!==control.dataset.editorInitial)elements[key]={...(elements[key] || {}),value:control.value};
+        }
+      });
+      return {title:form.elements.title.value,notes:form.elements.notes.value,accent:form.elements.accent.value,density:form.elements.density.value,customOnly:form.elements.customOnly.checked,labels,elements,
+        blocks:$$('.ns-block-editor',editor).map(row=>({label:$('[data-block-label]',row).value,source:$('[data-block-source]',row).value,text:$('[data-block-text]',row).value}))};
+    };
     form.elements.variant.onchange=()=>{
       const moduleName=form.elements.moduleName.value,pin=form.elements.pin.checked;
       editorDrafts[editor.dataset.variant]=collect();openEditor(editor.dataset.module,form.elements.variant.value,true);
       form.elements.moduleName.value=moduleName;form.elements.pin.checked=pin;
     };
+    form.elements.modulePicker.onchange=()=>openEditor(form.elements.modulePicker.value,form.elements.variant.value);
     form.onsubmit=event=>{
       event.preventDefault();const id=editor.dataset.module, variant=editor.dataset.variant, p=view(id,variant);
       pref(id).name=form.elements.moduleName.value.trim();pref(id).pin=form.elements.pin.checked;pref(id).overviewVisible=form.elements.pin.checked;
+      if(pref(id).custom){pref(id).section=form.elements.moduleSection.value;pref(id).parent=form.elements.moduleParent.value;}
       editorDrafts[variant]=collect();Object.entries(editorDrafts).forEach(([key,value])=>Object.assign(view(id,key),value));
-      save();discover();paint();renderCatalog();editor.close();
+      save();renderCatalog();discover();paint();editor.close();
     };
   }
   function renderCatalog() {
@@ -350,7 +454,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     let catalog=$('.ns-catalog',root);
     if(!catalog){root.replaceChildren();catalog=document.createElement('div');catalog.className='ns-catalog';root.append(catalog);}
     const owners=[...new Set([...registry.values()].map(m=>m.section))];
-    catalog.innerHTML=`<h2>Modules</h2><p>Choose a module to edit its full page or Overview display.</p><div class="ns-create"><label>New module name<input id="nsNewName" maxlength="100"></label><label>Section<select id="nsNewSection">${owners.map(id=>`<option value="${esc(id)}">${esc(sectionTitle(id))}</option>`).join('')}</select></label><label>Parent module<select id="nsNewParent"><option value="">None</option></select></label><button type="button" id="nsCreateModule">Create module</button></div><div class="ns-catalog-list">${[...registry.values()].map(m=>`<article><div><small>${esc(sectionTitle(m.section))}${m.parent?' / '+esc(name(registry.get(m.parent) || {id:m.parent,title:m.parent})):''}</small><h3>${esc(name(m))}</h3></div><button data-catalog-open="${esc(m.id)}">Open</button><button data-catalog-edit="${esc(m.id)}" data-variant="full">Edit full page</button><button data-catalog-edit="${esc(m.id)}" data-variant="compact">Edit Overview</button></article>`).join('')}</div>`;
+    catalog.innerHTML=`<h2>Modules</h2><p>Choose any module to edit its section page, Overview display, text, controls, images, and data tags.</p><div class="ns-create"><label>New module name<input id="nsNewName" maxlength="100"></label><label>Section<select id="nsNewSection">${owners.map(id=>`<option value="${esc(id)}">${esc(sectionTitle(id))}</option>`).join('')}</select></label><label>Parent module<select id="nsNewParent"><option value="">None</option></select></label><button type="button" id="nsCreateModule">Create module</button></div><div class="ns-catalog-list">${[...registry.values()].map(m=>`<article><div><small>${esc(sectionTitle(m.section))}${m.parent?' / '+esc(name(registry.get(m.parent) || {id:m.parent,title:m.parent})):''}</small><h3>${esc(name(m))}</h3></div><button data-catalog-open="${esc(m.id)}">Open</button><button data-catalog-edit="${esc(m.id)}" data-variant="full">Edit full page</button><button data-catalog-edit="${esc(m.id)}" data-variant="compact">Edit Overview</button></article>`).join('')}</div>`;
     const updateParents=()=>{$('#nsNewParent').innerHTML='<option value="">None</option>'+[...registry.values()].filter(m=>m.section===$('#nsNewSection').value).map(m=>`<option value="${esc(m.id)}">${esc(name(m))}</option>`).join('');};
     $('#nsNewSection').onchange=updateParents;updateParents();
     $('#nsCreateModule').onclick=()=>{
