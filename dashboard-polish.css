@@ -150,3 +150,27 @@ html[data-ns-styles=loading] #nsStatusBar,html[data-ns-styles=failed] #nsStatusB
 html body.ns-has-status.overview-canvas main .page-header>#marketTopTiles{display:none!important}
 
 #nsStatusBar,#nsStatusBar .ns-status-module{overflow:clip}
+
+/* Shared compact navigation and control rhythm across operator workspaces. */
+body{--ns-control-font:12px/1.35 var(--ns-section-font);--ns-control-radius:4px}
+body #sideNav{grid-auto-rows:30px!important;gap:3px!important}
+body #sideNav button{min-height:30px!important;padding:6px 8px!important;font-size:12px!important;gap:8px!important;border-radius:4px!important}
+body .ns-module-tabs button,
+body main :is([role=tab],.outage-tabs button,.field-view-nav button){font:700 var(--ns-control-font)!important;padding:6px 8px!important;border-radius:var(--ns-control-radius);text-transform:uppercase}
+body .ns-module-toolbar{gap:6px;padding:6px 0}
+body :is(.ns-module-toolbar,.layout-toolbar,.ns-catalog,#nsModuleEditor) button{font:var(--ns-control-font)!important;padding:6px 8px!important;border-radius:var(--ns-control-radius)!important}
+body .layout-toolbar button{min-height:28px!important}
+body .ns-catalog{padding:12px}
+body .ns-catalog-list{gap:6px}
+body .ns-catalog-list article{padding:8px;gap:6px;border-radius:4px}
+body .ns-catalog-list h3{font:700 12px/1.35 var(--ns-section-font);margin:2px 0}
+body .ns-catalog h2,body #nsModuleEditor h2{font:700 16px/1.35 var(--ns-section-font)}
+body #nsModuleEditor h3{font:700 12px/1.35 var(--ns-section-font)}
+body :is(.ns-create,#nsModuleEditor) label{font:12px/1.35 var(--ns-section-font);gap:4px}
+body :is(.ns-create,#nsModuleEditor) :is(input,select,textarea){font:12px/1.4 Arial,sans-serif;padding:6px 8px;border-radius:4px}
+body .ns-create{gap:8px;padding:8px 0}
+body .ns-editor-grid,body .ns-field-list{gap:8px;margin:8px 0}
+body #nsModuleEditor header,body #nsModuleEditor footer{gap:8px;margin-bottom:12px}
+body :is(#sideNav,.ns-module-tree,.ns-module-tabs,.ns-module-toolbar,.ns-catalog,#nsModuleEditor) button:focus-visible{outline:2px solid #e7c364;outline-offset:2px}
+@media(max-width:1050px){body #sideNav{grid-auto-rows:34px!important}body #sideNav button{min-height:34px!important}}
+@media(pointer:coarse){body #sideNav{grid-auto-rows:44px!important}body #sideNav button,body :is(.ns-module-tree,.ns-module-tabs,.ns-module-toolbar,.layout-toolbar,.ns-catalog,#nsModuleEditor) button{min-height:44px!important}}

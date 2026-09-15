@@ -1,3 +1,7 @@
+# Compact platform formatting — 2026-09-15
+
+Extended compact navigation and control styling across dashboard chrome, catalog and editor. See [report](packets/2026-09-15-platform-compact-format.md).
+
 # Compact section menu — 2026-09-15
 
 Reduced section rail widths and row spacing, aligning floating module offsets with CSS. See [report](packets/2026-09-15-compact-section-menu.md).
