@@ -126,3 +126,27 @@ body #sideNav button,body .ns-module-tree h2,body .ns-module-tree button,body .n
 body #sideNav button,body .ns-module-tree h2,body .ns-module-tree button,body .ns-module-tabs [role=tab]{text-transform:uppercase!important}
 html body.overview-canvas main #eventsCard,html body.overview-canvas main .section:not(#overview){display:none!important}
 html body.overview-canvas main #overviewModules>#overviewStaff,html body.overview-canvas main #staffGroups{display:none!important}
+
+body.ns-has-status .app>main{margin-top:calc(var(--ns-status-height,72px) + 12px)!important}
+html body.ns-has-status main #dispatchClient,html body.ns-has-status main #marketTopTiles,html body.ns-has-status main #overviewEventsSummary,html body.ns-has-status main #overviewFieldTracker{display:none!important}
+#nsStatusBar{position:fixed;top:0;right:0;z-index:700;display:grid;grid-template-columns:1.2fr 1fr 1.3fr 1fr;gap:1px;padding:7px 12px;background:#081218;border-bottom:1px solid #34515f;box-sizing:border-box;color:#e3edf2;font:11px/1.35 Arial,sans-serif}
+#nsStatusBar .ns-status-module{position:relative;min-width:0;padding:3px 23px 3px 12px;border-right:1px solid #29404c;height:53px;box-sizing:border-box}
+#nsStatusBar .ns-status-module:last-child{border-right:0}
+#nsStatusBar b{display:block;font:700 10px/1.4 Consolas,monospace;letter-spacing:.5px;color:#8cc9e9}
+#nsStatusBar span,#nsStatusBar small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#nsStatusBar small{font-size:9px;color:#91a8b6}#nsStatusBar b small{display:inline;font-weight:400}
+#nsStatusBar strong{font-size:13px;color:#fff}
+#nsStatusBar button[data-preview]{display:block;width:100%;padding:0;border:0;background:none;color:inherit;text-align:left;font:inherit;cursor:pointer}
+#nsStatusBar .ns-status-dogear{position:absolute;bottom:0;right:0;width:21px;height:21px;min-height:0;padding:0;border:0;background:linear-gradient(135deg,transparent 49%,#63b8df 50%);cursor:pointer;border-radius:0}
+#nsStatusBar button:focus-visible{outline:2px solid #e7c364;outline-offset:2px}
+#nsStatusEvents{position:fixed;z-index:710;width:640px;box-sizing:border-box;color:#e3edf2;background:#101d25;border:1px solid #547587;border-radius:0 0 8px 8px;box-shadow:0 12px 28px #0009;font:12px/1.5 Arial,sans-serif}
+#nsStatusEvents[hidden]{display:none!important}#nsStatusEvents header,#nsStatusEvents footer{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px}
+#nsStatusEvents button{background:#19303e;color:#ddecf5;border:1px solid #456475;border-radius:4px;padding:5px 9px;cursor:pointer}
+#nsStatusEvents .ns-status-log{max-height:min(440px,calc(100vh - 180px));overflow-y:auto;overscroll-behavior:contain;padding:0 14px}
+#nsStatusEvents article{padding:10px 0;border-top:1px solid #29404c}#nsStatusEvents article strong{display:block}#nsStatusEvents time,#nsStatusEvents small{display:block;color:#9db2bd;font-size:11px}#nsStatusEvents p{margin:4px 0}#nsStatusEvents a{color:#80c8ed;font-size:11px}
+html[data-ns-styles=loading] #nsStatusBar,html[data-ns-styles=failed] #nsStatusBar{visibility:hidden}
+@media(max-width:900px){#nsStatusBar{grid-template-columns:1fr 1fr;padding:5px}#nsStatusBar .ns-status-module{height:51px}#nsStatusBar .ns-status-module:nth-child(2){border-right:0}}
+
+html body.ns-has-status.overview-canvas main .page-header>#marketTopTiles{display:none!important}
+
+#nsStatusBar,#nsStatusBar .ns-status-module{overflow:clip}

@@ -26,7 +26,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
  fs.mkdirSync(out,{recursive:true});
  try{
   await page.goto(`http://127.0.0.1:${server.address().port}/northstar-clean.html`);
-  await page.waitForSelector('#overviewEventsSummary .ov-summary');
+  await page.waitForSelector('#nsStatusBar');
   await page.waitForFunction(()=>NorthstarOverview.feeds.dispatch?.checked && NorthstarOverview.feeds.events?.checked);
   const layouts=[];
   for(const width of [1920,1440,1371,1100,760,390]){
@@ -47,13 +47,13 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   assert.equal(await page.locator('#eventsCard:visible').count(),0,'Legacy Events content must not leak behind the indicators');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.northstarOverviewProfilesV2).beforeIndicatorRow.desktop.positions['canvas:dispatch:dispatchClient'].y),430,'Previous saved arrangement is backed up');
   assert.equal(await page.locator('#overviewSourceStatus').innerText(),'1 source needs attention');
-  assert.ok((await page.locator('#dispatchClient .ov-summary').innerText()).includes('24.5 MW'));
+  assert.ok((await page.locator('#dispatchClient .ov-summary').textContent()).includes('24.5 MW'));
   assert.equal(await page.locator('#overviewEventsSummary .ov-events a').count(),4);
-  await page.locator('#overviewEventsSummary .ns-open-module').click();
+  await page.locator('#nsStatusBar [data-status=events] .ns-status-dogear').click();
   await page.click('#erWrite');assert.equal(await page.locator('#logSubject:visible').count(),1,'Events composer remains reachable');
   assert.equal(await page.locator('.ns-module-window:visible').count(),1);
   await page.click('#sideNav [data-tab="overview"]');
-  await page.locator('#dispatchClient .ns-open-module').click();
+  await page.locator('#nsStatusBar [data-status=dispatch] .ns-status-dogear').click();
   assert.equal(await page.locator('#dispatchDetail:visible').count(),1);
   assert.equal(await page.locator('.ns-module-window:visible').count(),1);
   await page.click('#sideNav [data-tab="overview"]');
@@ -62,8 +62,8 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   await page.click('#sideNav [data-tab="overview"]');
   await page.evaluate(()=>{NorthstarOverview.update('dispatch',{outputMw:null,dispatchMw:null,deltaMw:null});NorthstarOverview.update('staff',null,true);NorthstarOverview.update('events',null,true);});
   await page.waitForTimeout(200);
-  assert.ok(!(await page.locator('#dispatchClient .ov-summary').innerText()).includes('0.0 MW'));
-  assert.ok((await page.locator('#overviewEventsSummary').innerText()).includes('Stale'));
+  assert.ok(!(await page.locator('#dispatchClient .ov-summary').textContent()).includes('0.0 MW'));
+  assert.ok((await page.locator('#overviewEventsSummary').textContent()).includes('Stale'));
   assert.equal(await page.locator('#overviewEventsSummary .ov-events a').count(),4,'Retains last good events on failure');
   assert.ok((await page.locator('#alarmIndicator').innerText()).includes('—'),'Failed staff source cannot imply no alarms');
   await page.click('.layout-edit-toggle');
@@ -78,14 +78,14 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   const dock=await page.locator('.layout-toolbar').boundingBox(),chat=await page.locator('#overviewChatSummary').boundingBox();
   assert.ok(chat.y+chat.height<=dock.y,'Bottom modules scroll fully above the editing bar');
   await page.evaluate(()=>window.scrollTo(0,0));
-  const tile=page.locator('#dispatchClient'),before=await tile.boundingBox();
+  const tile=page.locator('#overviewGeneratingStations'),before=await tile.boundingBox();
   await tile.locator('[data-corner="nw"]').focus();await page.keyboard.press('ArrowRight');
   const after=await tile.boundingBox();assert.equal(before.width-after.width,5);assert.equal(after.x-before.x,5);
   await page.click('.layout-save');const saved=await tile.boundingBox();
   await page.setViewportSize({width:1100,height:1000});await page.waitForTimeout(200);
   await page.setViewportSize({width:1440,height:1000});await page.waitForTimeout(200);
   assert.deepEqual(await tile.boundingBox(),saved,'Manual desktop layout survives profile switching');
-  await page.reload();await page.waitForSelector('#dispatchClient .ov-summary');
+  await page.reload();await page.waitForSelector('#nsStatusBar');
   assert.deepEqual(await tile.boundingBox(),saved,'Manual layout survives reload');
   await page.evaluate(()=>NorthstarModules.edit('markets:dispatch','compact'));
   await page.locator('#nsModuleEditor summary').click();
@@ -93,8 +93,8 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   await page.click('#nsModuleEditor button[type="submit"]');
   await page.evaluate(()=>NorthstarOverview.update('dispatch',{outputMw:30,dispatchMw:32,deltaMw:-2,healthy:false}));
   await page.waitForTimeout(100);
-  assert.ok((await tile.innerText()).includes('Generator output'),'Custom compact labels survive a changing feed');
-  assert.ok((await tile.innerText()).includes('Telemetry unavailable'),'HTTP success does not hide telemetry faults');
+  assert.ok((await page.locator('#dispatchClient').textContent()).includes('Generator output'),'Custom compact labels survive a changing feed');
+  assert.ok((await page.locator('#dispatchClient').textContent()).includes('Telemetry unavailable'),'HTTP success does not hide telemetry faults');
   assert.ok((await page.locator('#overviewSourceStatus').getAttribute('title')).includes('dispatch'));
   await page.click('.layout-edit-toggle');
   await page.check('[data-ov-snap]');
@@ -102,7 +102,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   const snapped=await page.evaluate(()=>JSON.parse(localStorage.northstarCanvasLayoutV1)['canvas:dispatch:dispatchClient']);
   assert.equal(snapped.x%16,0);
   await page.click('[data-ov-arrange]');
-  await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),page.click('[data-ov-cancel]')]);await page.waitForSelector('#dispatchClient .ov-summary');
+  await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),page.click('[data-ov-cancel]')]);await page.waitForSelector('#nsStatusBar');
   assert.deepEqual(await tile.boundingBox(),saved,'Cancel restores the layout from before editing');
   await page.evaluate(()=>NorthstarOverview.update('staff',{}));await page.waitForTimeout(100);
   assert.ok((await page.locator('#overviewStaffSummary').innerText()).includes('Stale'),'Malformed success cannot reset staff to zero');
@@ -113,7 +113,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   await page.click('.layout-edit-toggle');
   await page.click('[data-ov-previous]');
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.northstarCanvasLayoutV1)['canvas:dispatch:dispatchClient']),{x:640,y:430,w:330,h:210},'Previous custom arrangement remains recoverable');
-  await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),page.click('[data-ov-cancel]')]);await page.waitForSelector('#dispatchClient .ov-summary');
+  await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),page.click('[data-ov-cancel]')]);await page.waitForSelector('#nsStatusBar');
   const geometry=()=>[...document.querySelectorAll('[data-canvas-module]')].filter(e=>e.getClientRects().length).map(e=>({id:e.dataset.canvasModule,x:e.style.left,y:e.style.top,w:e.style.width,h:e.style.height})).sort((a,b)=>a.id.localeCompare(b.id));
   const stable=await page.evaluate(geometry);
   for(let pass=0;pass<5;pass++){
@@ -124,15 +124,6 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
    assert.equal(await page.locator('#staffGroups .staff-group:visible').count(),0);
   }
   await page.click('.layout-edit-toggle');
-  const marketTile=page.locator('#marketTopTiles [data-module-id="APIROQ"]');
-  await marketTile.locator('[data-corner="se"]').evaluate(el=>{
-   for(let i=0;i<12;i++)el.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',shiftKey:true,bubbles:true}));
-  });
-  await page.waitForTimeout(100);
-  assert.equal(await marketTile.locator('.ov-trend svg:visible').count(),1,'Expanded market shows its price history graphic');
-  assert.ok((await marketTile.locator('.ov-trend path').getAttribute('d')).includes('L'));
-  assert.ok((await marketTile.locator('.ov-trend svg').boundingBox()).width>150,'History graphic uses the module width, not icon dimensions');
-  await page.screenshot({path:path.join(out,'restored-market-graphic.png'),fullPage:false});
   await tile.locator('[data-corner="se"]').evaluate(el=>{
    for(let i=0;i<100;i++){
     el.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',shiftKey:true,bubbles:true}));

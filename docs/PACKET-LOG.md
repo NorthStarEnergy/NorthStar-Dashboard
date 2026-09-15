@@ -1,3 +1,7 @@
+# Persistent operations status bar — 2026-09-15
+
+Added the condensed cross-section event/dispatch/market/crew bar with bottom-right dogears and a 500ms hover event preview. See [report](packets/2026-09-15-persistent-status-bar.md).
+
 # Match weather cards to Atikokan — 2026-09-15
 
 Applied the saved Atikokan dimensions, 88 x 165 CSS pixels, to all eight Overview weather cards while preserving their positions. See [report](packets/2026-09-15-match-atikokan-size.md).

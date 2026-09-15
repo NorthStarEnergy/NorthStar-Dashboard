@@ -154,7 +154,7 @@
     positions = Object.fromEntries(Object.entries(positions).filter(([key,p]) => key.startsWith('canvas:') && valid(p)));
     // Keep the old canvas intact as a selectable arrangement, never delete it.
     if (!profiles.previous && Object.keys(positions).length) profiles.previous = JSON.parse(JSON.stringify(positions));
-    const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].map(el => ({
+    const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].filter(el=>!document.body.classList.contains('ns-has-status') || !el.matches('#dispatchClient,#marketTopTiles>*,#overviewEventsSummary,#overviewFieldTracker')).map(el => ({
       el, size, min:[1,1], key: 'canvas:' + group + ':' + (el.id || el.dataset.moduleId || el.dataset.site || group)
     })));
     const enabled = () => document.querySelector('#overview')?.classList.contains('active');

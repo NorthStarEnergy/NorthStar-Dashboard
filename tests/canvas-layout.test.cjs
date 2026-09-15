@@ -15,7 +15,7 @@ function element(id='',moduleId='') {
 const main=element('main'), weather=element('','Kenora'), dispatch=element('dispatchClient');
 let market=element('','APIROQ');
 const events=element('overviewEventsSummary','overview-events'), staff=element('','Station A');
-const document={documentElement:{dataset:{nsStyles:'ready'}},body:{classList:{toggle(){}}},createElement:()=>element(),
+const document={documentElement:{dataset:{nsStyles:'ready'}},body:{classList:{toggle(){},contains:()=>false}},createElement:()=>element(),
   querySelector:s=>s==='main'?main:s==='#overview'?{classList:{contains:()=>active}}:null,
   querySelectorAll:s=>s.includes('#weatherStrip')?[weather]:s==='#dispatchClient'?[dispatch]:
     s.includes('#marketTopTiles')?[market]:s.includes('#overviewModules >')?[events]:

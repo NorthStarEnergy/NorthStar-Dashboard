@@ -22,12 +22,14 @@
     return `<figure class="ov-trend"><figcaption>${escape(label)}</figcaption><svg viewBox="0 0 300 60" preserveAspectRatio="none" role="img" aria-label="${escape(label)}"><path d="${path}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></figure>`;
   }
   function update(key, data, error=false, context='') {
+    if(key==='events' && /[?&](cursor|q|type|source|severity|status|site|from|to)=/.test(context))return;
     const prior=feeds[key];
     const valid={staff:Array.isArray(data),alarms:Array.isArray(data),weather:Array.isArray(data?.stations),events:Array.isArray(data?.items),chat:Array.isArray(data?.messages),scada:Array.isArray(data?.readings),market:!!data?.nodes,dispatch:!!data && typeof data==='object'};
     if(valid[key]===false)error=true;
     if(key==='chat' && !error && context.includes('since=') && !data.messages?.length && prior?.data) data=prior.data;
     feeds[key]={data:error?prior?.data:data,checked:error?prior?.checked:Date.now(),error,context};
     window.NorthstarModules?.refresh();
+    window.dispatchEvent(new Event('northstar:feed-update'));
     refreshStatus();
   }
   const routes={'/api/market-prices':'market','/api/weather':'weather','/api/checkins':'staff','/api/dispatch/apiroq':'dispatch','/api/scada':'scada','/api/alerts':'alarms','/api/chat/messages':'chat'};
