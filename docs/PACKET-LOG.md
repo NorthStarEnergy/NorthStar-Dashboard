@@ -1,3 +1,7 @@
+# Saved Overview placement and uppercase menus — 2026-09-15
+
+Existing saved profiles receive the five-indicator row once, with a full profile backup. Legacy Events content is hidden behind Overview, and menu/tree/tab labels are uppercase. See [report](packets/2026-09-15-saved-row-caps.md).
+
 # Section consolidation and bold titles — 2026-09-15
 
 Flows, Modules and Training move into Tools; SCADA moves into Engineering. Legacy links, saved module IDs and UWPC access remain supported. Section titles use a bold monospace font matching the APIROQ style. See [report](packets/2026-09-15-section-merges.md).

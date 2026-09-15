@@ -11,7 +11,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const browser=await chromium.launch({channel:'msedge',headless:true});
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
- await page.addInitScript(()=>{if(!localStorage.northstarCanvasLayoutV1)localStorage.northstarCanvasLayoutV1=JSON.stringify({'canvas:dispatch:dispatchClient':{x:640,y:430,w:330,h:210}});});
+ await page.addInitScript(()=>{if(!localStorage.northstarCanvasLayoutV1){localStorage.northstarCanvasLayoutV1=JSON.stringify({'canvas:dispatch:dispatchClient':{x:640,y:430,w:330,h:210}});localStorage.northstarOverviewProfilesV2=JSON.stringify({desktop:{positions:{'canvas:dispatch:dispatchClient':{x:640,y:430,w:330,h:210}},width:1196,automatic:false}});}});
  page.on('pageerror',e=>errors.push(e.message));
  const now=new Date().toISOString();
  const fixture={
@@ -29,7 +29,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   await page.waitForSelector('#overviewEventsSummary .ov-summary');
   await page.waitForFunction(()=>NorthstarOverview.feeds.dispatch?.checked && NorthstarOverview.feeds.events?.checked);
   const layouts=[];
-  for(const width of [1920,1440,1100,760,390]){
+  for(const width of [1920,1440,1371,1100,760,390]){
    await page.setViewportSize({width,height:1000});await page.waitForTimeout(300);
    const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,cards:[...document.querySelectorAll('[data-canvas-module]')].filter(e=>e.getClientRects().length).map(e=>({id:e.id||e.dataset.moduleId,x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y,w:e.clientWidth,h:e.clientHeight,scrollW:e.scrollWidth,scrollH:e.scrollHeight}))}));
    layouts.push(layout);await page.screenshot({path:path.join(out,`overview-${width}.png`),fullPage:true});
@@ -39,6 +39,9 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   await page.setViewportSize({width:1440,height:1000});await page.waitForTimeout(200);
   assert.equal(await page.locator('#sideNav button .nav-icon').count(),await page.locator('#sideNav button').count(),'Every navigation section has an icon');
   assert.equal(await page.locator('.layout-toolbar > .overview-add-module').count(),1,'Overview controls share one bar');
+  assert.equal(await page.locator('#sideNav [data-tab="tools"]').evaluate(e=>getComputedStyle(e).textTransform),'uppercase');
+  assert.equal(await page.locator('#eventsCard:visible').count(),0,'Legacy Events content must not leak behind the indicators');
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.northstarOverviewProfilesV2).beforeIndicatorRow.desktop.positions['canvas:dispatch:dispatchClient'].y),430,'Previous saved arrangement is backed up');
   assert.equal(await page.locator('#overviewSourceStatus').innerText(),'1 source needs attention');
   assert.ok((await page.locator('#dispatchClient .ov-summary').innerText()).includes('24.5 MW'));
   assert.equal(await page.locator('#overviewEventsSummary .ov-events a').count(),4);
@@ -105,6 +108,6 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.northstarCanvasLayoutV1)['canvas:dispatch:dispatchClient']),{x:640,y:430,w:330,h:210},'Previous custom arrangement remains recoverable');
   await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),page.click('[data-ov-cancel]')]);await page.waitForSelector('#dispatchClient .ov-summary');
   fs.writeFileSync(path.join(out,'layout-validation.json'),JSON.stringify({fixture:true,layouts,errors},null,2));
-  assert.deepEqual(errors,[]);console.log('Overview browser scenarios passed: five viewport sizes, containment, links, stale/null values, four-corner resize and profile persistence.');
+  assert.deepEqual(errors,[]);console.log('Overview browser scenarios passed: six viewport sizes, containment, links, stale/null values, four-corner resize and profile persistence.');
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -123,3 +123,5 @@ body.overview-canvas main [data-ov-indicator=true]>.ns-open-module{top:3px!impor
  .ov-empty small{font-size:10px}
 }
 body #sideNav button,body .ns-module-tree h2,body .ns-module-tree button,body .ns-module-tabs [role=tab],body #overviewStatusStrip strong,body .page-header h1,body .section h1,body .section h2{font-family:var(--ns-section-font)!important;font-weight:700!important}
+body #sideNav button,body .ns-module-tree h2,body .ns-module-tree button,body .ns-module-tabs [role=tab]{text-transform:uppercase!important}
+html body.overview-canvas main #eventsCard,html body.overview-canvas main .section:not(#overview){display:none!important}

@@ -161,7 +161,7 @@
     const enabled = () => document.querySelector('#overview')?.classList.contains('active');
     function persist() {
       if(restoring || document.documentElement.dataset.nsStyles === 'loading' || document.documentElement.dataset.nsStyles === 'failed')return;
-      if (profile) profiles[profile] = {positions, width:lastWidth, automatic};
+      if (profile) profiles[profile] = {positions, width:lastWidth, automatic, indicatorRow:1};
       try { localStorage.setItem(profileKey, JSON.stringify(profiles)); } catch {}
       try { localStorage.setItem(storageKey, JSON.stringify(positions)); } catch {}
       writeZone('overview', {position: positions});
@@ -268,7 +268,7 @@
         }
       };
       const find=id=>all.find(e=>e.el.id===id || e.el.dataset.moduleId===id);
-      row([find('overviewEventsSummary'),find('dispatchClient'),find('overviewFieldTracker'),find('IESO') || all.find(e=>e.el.classList?.contains('ontario-market')),find('APIROQ')],96,[],220);
+      row([find('overviewEventsSummary'),find('dispatchClient'),find('overviewFieldTracker'),find('IESO') || all.find(e=>e.el.classList?.contains('ontario-market')),find('APIROQ')],96,[],200);
       const weather=all.filter(e=>e.key.startsWith('canvas:weather:'));
       const count=width>=1168?8:width>=600?4:width>=300?2:1;
       for(let i=0;i<weather.length;i+=count)row(weather.slice(i,i+count),128,[],132);
@@ -308,10 +308,16 @@
       const width = Math.max(260,container.clientWidth-48);
       const nextProfile=width>=1500?'wide':width>=1050?'desktop':width>=620?'laptop':'narrow';
       if(nextProfile!==profile){
-        if(profile)profiles[profile]={positions,width:lastWidth,automatic};
+        if(profile)profiles[profile]={positions,width:lastWidth,automatic,indicatorRow:1};
         profile=nextProfile;const saved=profiles[profile];
         positions=Object.fromEntries(Object.entries(saved?.positions||{}).filter(([,p])=>valid(p)));
         automatic=saved?.automatic!==false;
+        // Apply the requested row to existing browser layouts once, not only new defaults.
+        if(saved && saved.indicatorRow!==1){
+          profiles.beforeIndicatorRow ||= {};
+          profiles.beforeIndicatorRow[profile]=JSON.parse(JSON.stringify(saved));
+          positions={};automatic=true;
+        }
       }
       lastWidth=width;
       if(automatic)positions=arrange(all.filter(({el})=>!el.closest('[hidden]')),width);
