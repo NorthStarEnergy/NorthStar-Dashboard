@@ -89,7 +89,7 @@
     el.classList.add('ov-managed');el.dataset.ovKind=m.id.startsWith('weather:')?'weather':el.id==='overviewEventsSummary'?'events':'metric';
     el.tabIndex=0;el.setAttribute('role','group');
     const caption=el.querySelector('.ns-module-caption');if(caption){caption.title=caption.textContent;el.setAttribute('aria-label',caption.textContent);}
-    el.style.setProperty('padding',p.density==='compact' || m.id.startsWith('weather:')?'12px':'16px','important');
+    el.style.setProperty('padding','var(--ov-frame-padding,'+(p.density==='compact' || m.id.startsWith('weather:')?'12px':'16px')+')','important');
     el.style.setProperty('border-top-color',p.accent || 'var(--line)','important');
     let summary=el.querySelector(':scope > .ov-summary');
     if(!summary){summary=document.createElement('div');summary.className='ov-summary';el.append(summary);}

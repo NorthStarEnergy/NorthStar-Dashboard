@@ -83,6 +83,22 @@ body.overview-canvas.layout-edit main .canvas-resize-handle[data-corner=sw]::aft
 body.overview-canvas.layout-edit main .canvas-resize-handle[data-corner=se]::after{left:auto;top:auto;right:3px;bottom:3px}
 body.overview-canvas main [data-ov-size=expanded] .ov-secondary{display:block!important}
 body.overview-canvas main [data-ov-size=compact] .ov-metric>strong{font-size:26px}
+/* Short status indicators retain readings and freshness; opening reveals details. */
+body.overview-canvas main [data-ov-indicator=true].ov-managed{--ov-frame-padding:8px 12px;gap:4px!important;align-items:stretch!important}
+body.overview-canvas main [data-ov-indicator=true] .ns-module-caption{font-size:12px!important;line-height:16px!important;min-height:16px!important}
+body.overview-canvas main [data-ov-indicator=true]>.ov-summary{gap:3px}
+body.overview-canvas main [data-ov-indicator=true] .ov-metric{gap:1px}
+body.overview-canvas main [data-ov-indicator=true] .ov-metric>span{font-size:10px!important;line-height:12px!important}
+body.overview-canvas main [data-ov-indicator=true] .ov-metric>strong{font-size:20px!important;line-height:22px!important}
+body.overview-canvas main [data-ov-indicator=true] .ov-freshness{font-size:9px;line-height:11px;padding-top:3px;white-space:nowrap}
+body.overview-canvas main [data-ov-indicator=true] .ov-events>a{padding:0;border:0;gap:6px;grid-template-columns:54px minmax(0,1fr) auto;font-size:11px}
+body.overview-canvas main [data-ov-indicator=true] .ov-events>a:nth-child(n+2){display:none!important}
+body.overview-canvas main [data-ov-indicator=true] .ov-events small{font-size:9px;margin-top:2px}
+body.overview-canvas main [data-ov-indicator=true] .ov-empty{min-height:0;gap:3px;align-items:flex-start;text-align:left}
+body.overview-canvas main [data-ov-indicator=true] .ov-empty-icon{display:none}
+body.overview-canvas main [data-ov-indicator=true] .ov-empty strong{font-size:12px}
+body.overview-canvas main [data-ov-indicator=true] .ov-empty small{font-size:10px}
+body.overview-canvas main [data-ov-indicator=true]>.ns-open-module{top:3px!important;right:8px!important}
 @media(max-width:1050px){
  body .app{grid-template-columns:68px minmax(0,1fr)!important}
  body .layout-toolbar{left:68px!important}

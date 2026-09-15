@@ -1,3 +1,7 @@
+# Short Overview indicator row — 2026-09-15
+
+Events, dispatch, crew tracking, IESO and APIROQ prices share a 96 px desktop row. Compact content retains source status and adapts when resized. See [report](packets/2026-09-15-overview-indicators.md).
+
 # Event return and stylesheet recovery — 2026-09-15
 
 Restores the correct section after an event report, retries failed styles before layout initialization, and preserves saved geometry when assets remain unavailable. Browser regression coverage includes both return paths and injected stylesheet failures. See [report](packets/2026-09-15-event-return-fix.md).

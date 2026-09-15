@@ -138,8 +138,8 @@
     const storageKey = 'northstarCanvasLayoutV1';
     const groups = [
       ['weather', '#weatherStrip > .weather-card', [170, 136], [132, 124]],
-      ['dispatch', '#dispatchClient', [360, 174], [260, 156]],
-      ['market', '#marketTopTiles > .node-card, #marketTopTiles > .ontario-market', [340, 230], [240, 150]],
+      ['dispatch', '#dispatchClient', [360, 96], [200, 88]],
+      ['market', '#marketTopTiles > .node-card, #marketTopTiles > .ontario-market', [340, 230], [200, 88]],
       ['staff', '#staffGroups > .staff-group', [320, 180], [220, 100]],
       ['overview', '#overviewModules > [data-overview-module]:not(#overviewStaff):not(#eventsCard)', [480, 300], [240, 150]],
     ];
@@ -156,7 +156,7 @@
     // Keep the old canvas intact as a selectable arrangement, never delete it.
     if (!profiles.previous && Object.keys(positions).length) profiles.previous = JSON.parse(JSON.stringify(positions));
     const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].map(el => ({
-      el, size, min, key: 'canvas:' + group + ':' + (el.id || el.dataset.moduleId || el.dataset.site || group)
+      el, size, min:['overviewStaffSummary','overviewEventsSummary','overviewFieldTracker'].includes(el.id)?[200,88]:min, key: 'canvas:' + group + ':' + (el.id || el.dataset.moduleId || el.dataset.site || group)
     })));
     const enabled = () => document.querySelector('#overview')?.classList.contains('active');
     function persist() {
@@ -177,6 +177,7 @@
       const el = entry.el;
       el.dataset.canvasModule = entry.key;
       el.dataset.ovSize = p.h < 160 || p.w < 220 ? 'compact' : p.h >= 240 && p.w >= 300 ? 'expanded' : 'standard';
+      el.dataset.ovIndicator = String(p.h <= 112);
       [['position','absolute'],['left',p.x+'px'],['top',p.y+'px'],['width',p.w+'px'],['height',p.h+'px'],
        ['min-width','0'],['min-height','0'],['max-width','none'],['max-height','none'],['margin','0'],['transform','none']]
         .forEach(([k,v]) => el.style.setProperty(k,v,'important'));
@@ -267,12 +268,11 @@
         }
       };
       const find=id=>all.find(e=>e.el.id===id || e.el.dataset.moduleId===id);
-      row([find('overviewStaffSummary'),find('dispatchClient'),find('IESO') || all.find(e=>e.el.classList?.contains('ontario-market'))],174);
-      row([find('overviewEventsSummary'),find('APIROQ')],238,[2,1]);
+      row([find('overviewEventsSummary'),find('dispatchClient'),find('overviewFieldTracker'),find('IESO') || all.find(e=>e.el.classList?.contains('ontario-market')),find('APIROQ')],96,[],220);
       const weather=all.filter(e=>e.key.startsWith('canvas:weather:'));
       const count=width>=1168?8:width>=600?4:width>=300?2:1;
       for(let i=0;i<weather.length;i+=count)row(weather.slice(i,i+count),128,[],132);
-      row([find('overviewGeneratingStations'),find('overviewFieldTracker'),find('overviewChatSummary')],160);
+      row([find('overviewStaffSummary'),find('overviewGeneratingStations'),find('overviewChatSummary')],160);
       const rest=all.filter(e=>!used.has(e.key));
       for(let i=0;i<rest.length;i+=width<900?2:3)row(rest.slice(i,i+(width<900?2:3)),260);
       return next;
