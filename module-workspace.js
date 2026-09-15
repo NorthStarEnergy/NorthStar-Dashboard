@@ -24,10 +24,15 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
   const view = (id, variant) => pref(id)[variant] ||= {};
   const sectionState = id => state.sections[id] ||= {tabs:[], active:'', landing:'', floating:false, boxes:{}};
   const name = m => pref(m.id).name || m.title;
+  const mergedSections = {flows:'tools',modules:'tools',training:'tools',scada:'switching'};
+  const ownerSection = id => mergedSections[id] || id;
+  const sectionTitle = id => ({switching:'Engineering',logbook:'Events',tools:'Tools',crew:'Crew check-ins',mobile:'Field tracker'}[id] || id.replace(/-/g,' '));
+  const belongs = (m,owner) => m && (m.section===owner || (owner==='switching' && (m.id==='outages:uwpc' || m.parent==='outages:uwpc')));
+  const sectionItems = owner => [...registry.values()].filter(m=>belongs(m,owner)).sort((a,b)=>Number(a.sourceSection!==owner)-Number(b.sourceSection!==owner));
   function register(id, title, owner, el, parent = '', compact = []) {
     if (!el) return;
     const old = registry.get(id);
-    registry.set(id, {id,title,section:owner,el,parent,compact});
+    registry.set(id, {id,title,section:ownerSection(owner),sourceSection:owner,el,parent,compact});
     el.dataset.nsModule = id;
     compact.forEach(node => node.dataset.nsCompact = id);
     if (old?.el !== el) applyPresentation(registry.get(id), 'full', el);
@@ -44,7 +49,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       if (key === 'switching-plans') return;
       register('outages:'+key, {current:'Current outages',uwpc:'UWPC',reports:'Outage reports'}[key] || key, 'outages', el);
     });
-    $$('#switching [data-module-id]').forEach(el => register('outages:'+el.dataset.moduleId, label(el), 'outages', el, 'outages:uwpc'));
+    $$('#switching [data-module-id]').filter(el=>!el.dataset.nsCustom).forEach(el => register('outages:'+el.dataset.moduleId, label(el), 'outages', el, 'outages:uwpc'));
     $$('.section').filter(el => !['overview','weather','markets','outages','switching','modules'].includes(el.id)).forEach(root => {
       if(root.id==='logbook' && $('.logbook-layout',root))$('.logbook-layout',root).hidden=false;
       const explicit = (root.id==='logbook'?$$('#eventRegister,.logbook-card,.logbook-report',root):root.id==='tools'?$$('.tool-grid,.workbench-card,#deviceLibrary,#overviewChat',root):$$('[data-module-id],.workbench-card',root)).filter(el=>el!==root && !el.dataset.nsCustom);
@@ -53,14 +58,14 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       (candidates.length ? candidates : [root]).forEach((el, i) => {
         if (!el.id && !el.dataset.moduleId) el.dataset.moduleId = root.id+'-module-'+i;
         const id=root.id+':'+(el.dataset.moduleId || el.id);currentIds.add(id);
-        register(id, label(el), root.id, el);
+        register(id, ({flows:'Flows',training:'Training'}[root.id]) || label(el), root.id, el);
       });
-      for(const [id,m] of registry)if(m.section===root.id && !pref(id).custom && !currentIds.has(id))registry.delete(id);
+      for(const [id,m] of registry)if(m.sourceSection===root.id && !pref(id).custom && !currentIds.has(id))registry.delete(id);
     });
     // Match existing overview cards to their full page. Their feed anchors stay intact.
     const aliases = [['#overviewStaffSummary','crew'],['#overviewFieldTracker','mobile'],['#overviewGeneratingStations','scada']];
     aliases.forEach(([selector, owner]) => {
-      const m = [...registry.values()].find(m => m.section === owner), el = $(selector);
+      const m = [...registry.values()].find(m => m.sourceSection === owner), el = $(selector);
       if (m && el && !m.compact.includes(el)) { m.compact.push(el); el.dataset.nsCompact = m.id; }
     });
     register('markets:dispatch','APIROQ dispatch','markets',$('#dispatchDetail'),'',$$('#dispatchClient'));
@@ -88,6 +93,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       }
       register(id, p.name || 'Custom module', p.section, el, p.parent || '');
     });
+    register('tools:module-editor','Modules','modules',$('#modules .ns-catalog'));
     for (const [id,m] of registry) if (!m.el.isConnected) registry.delete(id);
     for (const m of registry.values()) {
       const p = pref(m.id);
@@ -175,12 +181,12 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     if (!shell || painting) return;
     painting = true;
     clearMask();
-    const enabled = !['overview','modules'].includes(section);
+    const enabled = section !== 'overview';
     shell.hidden = !enabled; document.body.classList.toggle('ns-in-section',enabled);
-    const items = [...registry.values()].filter(m => m.section === section);
+    const items = sectionItems(section);
     if (!enabled || !items.length) {painting=false;return;}
     const s = sectionState(section);
-    s.tabs = (s.tabs || []).filter(id => registry.has(id) && registry.get(id).section === section);
+    s.tabs = (s.tabs || []).filter(id => belongs(registry.get(id),section));
     const landing = items.find(m => m.id === s.landing)?.id || items[0].id;
     if (!s.tabs.length) s.tabs.push(landing);
     if (!s.tabs.includes(s.active)) s.active = s.tabs[0];
@@ -209,7 +215,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       addWindowControls(m);
     });
     tree.replaceChildren();
-    const head=document.createElement('h2');head.textContent=section.replace(/-/g,' ');tree.append(head);
+    const head=document.createElement('h2');head.textContent=sectionTitle(section);tree.append(head);
     const build = (parent, host) => items.filter(m => (m.parent || '') === parent).forEach(m => {
       const children=items.some(child=>child.parent===m.id), row=document.createElement('div'); row.className='ns-tree-row';
       if (children) {
@@ -261,7 +267,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
   }
   function openModule(id) {
     const m=registry.get(id);if(!m)return;
-    section=m.section;const s=sectionState(section);s.tabs ||= [];
+    if(!belongs(m,section))section=m.section;const s=sectionState(section);s.tabs ||= [];
     if(!s.tabs.includes(id))s.tabs.push(id);s.active=id;
     activateSource(m);paint();save();rememberSection(section);window.scrollTo(0,0);
   }
@@ -271,11 +277,11 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
   }
   function enter(id) {
     rememberSection(id);
-    section=id==='switching'?'outages':id;
-    if (['overview','modules'].includes(section)) {clearMask();document.body.classList.remove('ns-in-section','ns-floating');shell.hidden=true;return;}
-    discover();const s=sectionState(section), items=[...registry.values()].filter(m=>m.section===section);
-    const landing=registry.get(s.landing)?.section===section?s.landing:items[0]?.id;
-    const target=id==='switching'?(items.find(m=>m.parent==='outages:uwpc')?.id || landing):landing;
+    section=ownerSection(id);
+    if (section==='overview') {clearMask();document.body.classList.remove('ns-in-section','ns-floating');shell.hidden=true;return;}
+    discover();const s=sectionState(section), items=sectionItems(section);
+    const landing=belongs(registry.get(s.landing),section)?s.landing:items[0]?.id;
+    const target=id==='modules'?'tools:module-editor':mergedSections[id]?(items.find(m=>m.sourceSection===id)?.id || landing):landing;
     if(target)openModule(target);
   }
   function fieldRows(m,variant) {
@@ -339,7 +345,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     let catalog=$('.ns-catalog',root);
     if(!catalog){root.replaceChildren();catalog=document.createElement('div');catalog.className='ns-catalog';root.append(catalog);}
     const owners=[...new Set([...registry.values()].map(m=>m.section))];
-    catalog.innerHTML=`<h2>Modules</h2><p>Choose a module to edit its full page or Overview display.</p><div class="ns-create"><label>New module name<input id="nsNewName" maxlength="100"></label><label>Section<select id="nsNewSection">${owners.map(id=>`<option>${esc(id)}</option>`).join('')}</select></label><label>Parent module<select id="nsNewParent"><option value="">None</option></select></label><button type="button" id="nsCreateModule">Create module</button></div><div class="ns-catalog-list">${[...registry.values()].map(m=>`<article><div><small>${esc(m.section)}${m.parent?' / '+esc(name(registry.get(m.parent) || {id:m.parent,title:m.parent})):''}</small><h3>${esc(name(m))}</h3></div><button data-catalog-open="${esc(m.id)}">Open</button><button data-catalog-edit="${esc(m.id)}" data-variant="full">Edit full page</button><button data-catalog-edit="${esc(m.id)}" data-variant="compact">Edit Overview</button></article>`).join('')}</div>`;
+    catalog.innerHTML=`<h2>Modules</h2><p>Choose a module to edit its full page or Overview display.</p><div class="ns-create"><label>New module name<input id="nsNewName" maxlength="100"></label><label>Section<select id="nsNewSection">${owners.map(id=>`<option value="${esc(id)}">${esc(sectionTitle(id))}</option>`).join('')}</select></label><label>Parent module<select id="nsNewParent"><option value="">None</option></select></label><button type="button" id="nsCreateModule">Create module</button></div><div class="ns-catalog-list">${[...registry.values()].map(m=>`<article><div><small>${esc(sectionTitle(m.section))}${m.parent?' / '+esc(name(registry.get(m.parent) || {id:m.parent,title:m.parent})):''}</small><h3>${esc(name(m))}</h3></div><button data-catalog-open="${esc(m.id)}">Open</button><button data-catalog-edit="${esc(m.id)}" data-variant="full">Edit full page</button><button data-catalog-edit="${esc(m.id)}" data-variant="compact">Edit Overview</button></article>`).join('')}</div>`;
     const updateParents=()=>{$('#nsNewParent').innerHTML='<option value="">None</option>'+[...registry.values()].filter(m=>m.section===$('#nsNewSection').value).map(m=>`<option value="${esc(m.id)}">${esc(name(m))}</option>`).join('');};
     $('#nsNewSection').onchange=updateParents;updateParents();
     $('#nsCreateModule').onclick=()=>{
@@ -355,7 +361,22 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     shell=document.createElement('div');shell.className='ns-section-shell';shell.hidden=true;
     shell.innerHTML='<aside class="ns-module-tree" aria-label="Section modules"></aside><div class="ns-section-top"><div class="ns-module-tabs" role="tablist" aria-label="Open module pages"></div><div class="ns-module-toolbar"><button data-ns-action="float" type="button">Arrange module windows</button><button data-ns-action="landing" type="button">Set as landing module</button><button data-ns-action="edit" type="button">Edit module</button></div></div>';
     main.prepend(shell);tree=$('.ns-module-tree',shell);tabs=$('.ns-module-tabs',shell);toolbar=$('.ns-module-toolbar',shell);
-    createEditor();discover();renderCatalog();
+    createEditor();discover();renderCatalog();discover();
+    // Keep legacy module IDs and source roots; merge only their navigation owners.
+    if(!state.sectionMergeV1){
+      Object.entries(mergedSections).forEach(([from,to])=>{
+        const prior=state.sections[from];if(!prior)return;
+        const target=sectionState(to);
+        target.tabs=[...new Set([...(target.tabs || []),...(prior.tabs || [])])].filter(id=>belongs(registry.get(id),to));
+        target.boxes={...(prior.boxes || {}),...(target.boxes || {})};
+        if(!target.landing && belongs(registry.get(prior.landing),to))target.landing=prior.landing;
+        if(!target.active && belongs(registry.get(prior.active),to))target.active=prior.active;
+      });
+      state.sectionMergeV1=true;save();
+    }
+    $$('#sideNav [data-tab]').forEach(button=>{
+      if(mergedSections[button.dataset.tab]){button.dataset.nsMerged='true';button.hidden=true;}
+    });
     try{if(!localStorage.getItem(KEY+'Saved'))localStorage.setItem(KEY+'Saved',JSON.stringify(state));}catch{}
     window.addEventListener('resize',()=>paint());
     tabs.onclick=event=>{

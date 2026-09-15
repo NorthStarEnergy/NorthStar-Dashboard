@@ -1,4 +1,6 @@
 /* Readable platform chrome and compact Overview proportions. */
+body{--ns-section-font:Consolas,'Cascadia Mono','Courier New',monospace}
+body #sideNav button[data-ns-merged]{display:none!important}
 body{font-family:Arial,sans-serif;padding-bottom:var(--ns-dock-height,56px)}
 body .app{grid-template-columns:196px minmax(0,1fr)!important}
 body .app>aside{padding:20px 12px 12px!important;background:var(--rail);min-width:0;gap:0}
@@ -120,3 +122,4 @@ body.overview-canvas main [data-ov-indicator=true]>.ns-open-module{top:3px!impor
  .ov-events>a{grid-template-columns:56px minmax(0,1fr)}.ov-events b{display:none}
  .ov-empty small{font-size:10px}
 }
+body #sideNav button,body .ns-module-tree h2,body .ns-module-tree button,body .ns-module-tabs [role=tab],body #overviewStatusStrip strong,body .page-header h1,body .section h1,body .section h2{font-family:var(--ns-section-font)!important;font-weight:700!important}

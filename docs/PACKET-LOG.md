@@ -1,3 +1,7 @@
+# Section consolidation and bold titles — 2026-09-15
+
+Flows, Modules and Training move into Tools; SCADA moves into Engineering. Legacy links, saved module IDs and UWPC access remain supported. Section titles use a bold monospace font matching the APIROQ style. See [report](packets/2026-09-15-section-merges.md).
+
 # Short Overview indicator row — 2026-09-15
 
 Events, dispatch, crew tracking, IESO and APIROQ prices share a 96 px desktop row. Compact content retains source status and adapts when resized. See [report](packets/2026-09-15-overview-indicators.md).
