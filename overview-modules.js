@@ -99,6 +99,25 @@
     return {key,body,footer:freshness(key)};
   }
   function present(m,el,p){
+    if(m.id.startsWith('weather:')){
+      // Preserve the pre-redesign weatherCard/forecast renderer and its live anchors.
+      el.classList.remove('ov-managed');el.classList.add('ns-weather-original');
+      el.dataset.ovKind='weather-original';
+      el.querySelector(':scope > .ov-summary')?.remove();
+      el.style.removeProperty('padding');el.style.removeProperty('border-top-color');
+      if(!p.customOnly){
+        [...el.children].filter(child=>child.matches('header,.weather-icon,.weather-current,.weather-extra-line,.periods')).forEach(child=>child.style.removeProperty('display'));
+      }
+      if(!el.dataset.weatherForecastBound){
+        el.dataset.weatherForecastBound='1';
+        const place=()=>{const rect=el.getBoundingClientRect(),width=Math.min(520,innerWidth-24);el.style.setProperty('--weather-forecast-left',Math.max(12,Math.min(rect.left,innerWidth-width-12))-rect.left+'px');};
+        el.addEventListener('pointerenter',place);el.addEventListener('focusin',place);
+      }
+      const heading=el.querySelector('header .station-title strong');
+      if(heading && p.title)heading.textContent=p.title;
+      el.tabIndex=0;el.setAttribute('role','group');el.setAttribute('aria-label',p.title || m.title);
+      return;
+    }
     const content=render(m.id,el);if(!content)return;
     el.classList.add('ov-managed');el.dataset.ovKind=m.id.startsWith('weather:')?'weather':el.id==='overviewEventsSummary'?'events':'metric';
     el.tabIndex=0;el.setAttribute('role','group');

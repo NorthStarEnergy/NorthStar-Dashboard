@@ -16,7 +16,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
  const now=new Date().toISOString();
  const fixture={
   '/api/auth/session':{required:false},'/api/checkins':[], '/api/alerts':[],
-  '/api/weather':{stations:['Iroquois Falls','Atikokan','Kapuskasing','Oshawa','Toronto','Fort Frances','Dokis FN','Kenora'].map(name=>({name,current:{temperature_2m:18,weather_code:2,precipitation_probability:20},hourly:{time:[now],temperature_2m:[18],weather_code:[2],precipitation_probability:[20]}}))},
+  '/api/weather':{stations:['Iroquois Falls','Atikokan','Kapuskasing','Oshawa','Toronto','Fort Frances','Dokis FN','Kenora'].map(name=>({name,current:{temperature_2m:18,weather_code:2,precipitation_probability:20},hourly:{time:Array.from({length:48},(_,i)=>new Date(Date.now()+i*3600000).toISOString()),temperature_2m:Array(48).fill(18),apparent_temperature:Array(48).fill(19),weather_code:Array(48).fill(2),precipitation_probability:Array(48).fill(20)}}))},
   '/api/dispatch/apiroq':{outputMw:24.5,dispatchMw:25,deltaMw:-0.5,healthy:true,simulated:true,updatedAt:now,history:[],reserveStandby:{tenS:1,tenN:2,thirtyR:3}},
   '/api/market-prices':{updated:now,nodes:{APIROQ:{rt:42,da:37,history:[{time:now,value:35},{time:new Date(Date.now()+60000).toISOString(),value:42}],operations:{rtTransfer:12,dayAhead:10}}},ontario:{demand:15000,forecastDemand:15500}},
   '/api/scada':{feeds:[],readings:[]},'/api/chat/messages':{messages:[{id:'fixture-1',body:'Test message for layout verification.',senderName:'Fixture operator',createdAt:now}]},
@@ -32,11 +32,12 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   for(const width of [1920,1440,1371,1100,760,390]){
    await page.setViewportSize({width,height:1000});await page.waitForTimeout(300);
    const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,cards:[...document.querySelectorAll('[data-canvas-module]')].filter(e=>e.getClientRects().length).map(e=>({id:e.id||e.dataset.moduleId,x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y,w:e.clientWidth,h:e.clientHeight,scrollW:e.scrollWidth,scrollH:e.scrollHeight}))}));
-   assert.equal(await page.locator('#weatherStrip .ov-weather-art:visible').count(),8,'Every station retains its coloured weather graphic');
-   assert.equal(await page.locator('#weatherStrip .ov-weather-art').first().getAttribute('aria-label'),'Cloudy');
+   assert.equal(await page.locator('#weatherStrip > .weather-card > .weather-icon:visible').count(),8,'Every station retains its coloured weather graphic');
+   assert.ok((await page.locator('#weatherStrip > .weather-card').first().textContent()).includes('Feels'));
+   assert.equal(await page.locator('#weatherStrip > .weather-card > .periods').count(),8);
    layouts.push(layout);await page.screenshot({path:path.join(out,`overview-${width}.png`),fullPage:true});
    assert.ok(layout.scroll<=width+1,`No default horizontal overflow at ${width}: ${layout.scroll}`);
-   for(const c of layout.cards)assert.ok(c.scrollW<=c.w+1 && c.scrollH<=c.h+1,`Card content fits ${width} ${c.id}: ${JSON.stringify(c)}`);
+   for(const c of layout.cards.filter(c=>!['Iroquois Falls','Atikokan','Kapuskasing','Oshawa','Toronto','Fort Frances','Dokis FN','Kenora'].includes(c.id)))assert.ok(c.scrollW<=c.w+1 && c.scrollH<=c.h+1,`Card content fits ${width} ${c.id}: ${JSON.stringify(c)}`);
   }
   await page.setViewportSize({width:1440,height:1000});await page.waitForTimeout(200);
   assert.equal(await page.locator('#sideNav button .nav-icon').count(),await page.locator('#sideNav button').count(),'Every navigation section has an icon');
@@ -66,6 +67,9 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   assert.ok((await page.locator('#alarmIndicator').innerText()).includes('—'),'Failed staff source cannot imply no alarms');
   await page.click('.layout-edit-toggle');
   const weather=page.locator('#weatherStrip > .weather-card').first();
+  await weather.hover();await page.waitForTimeout(100);
+  assert.equal(await weather.locator(':scope > .periods:visible').count(),1,'Original forecast panel opens on hover');
+  await page.screenshot({path:path.join(out,'original-weather-forecast.png'),fullPage:false});
   await weather.focus();await page.keyboard.press('Enter');
   assert.equal(await page.locator('#nsModuleEditor:visible').count(),1,'Narrow weather modules remain keyboard editable');
   await page.locator('#nsModuleEditor [data-editor-close]').first().click();

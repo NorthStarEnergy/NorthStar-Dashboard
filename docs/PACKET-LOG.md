@@ -1,3 +1,7 @@
+# Restore pre-redesign weather cards — 2026-09-15
+
+Reconnected the original weather renderers from b766d9f to the module canvas, preserving native card formatting and forecasts. See [report](packets/2026-09-15-original-weather-cards.md).
+
 # Restore coloured weather artwork — 2026-09-15
 
 Replaced the unintended outline substitutions with coloured weather graphics in all Overview weather modules. See [report](packets/2026-09-15-weather-art-restoration.md).
