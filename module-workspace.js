@@ -263,7 +263,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     const m=registry.get(id);if(!m)return;
     section=m.section;const s=sectionState(section);s.tabs ||= [];
     if(!s.tabs.includes(id))s.tabs.push(id);s.active=id;
-    activateSource(m);paint();save();
+    activateSource(m);paint();save();window.scrollTo(0,0);
   }
   function enter(id) {
     section=id==='switching'?'outages':id;
@@ -371,6 +371,11 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       const el=event.target.closest('[data-ns-compact],[data-ns-module]');
       if(el){event.preventDefault();event.stopPropagation();openEditor(el.dataset.nsCompact || el.dataset.nsModule,el.dataset.nsCompact?'compact':'full');}
     },true);
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Enter' && document.body.classList.contains('layout-edit') && event.target.matches('[data-ns-compact]')){
+        event.preventDefault();openEditor(event.target.dataset.nsCompact,'compact');
+      }
+    });
     $('.layout-save')?.addEventListener('click',()=>{save();try{localStorage.setItem(KEY+'Saved',JSON.stringify(state));}catch{}});
     $('.overview-add-module')?.addEventListener('click',()=>$('#nsNewName')?.focus());
     const schedule=()=>{if(!frame)frame=requestAnimationFrame(()=>{frame=0;observer.disconnect();discover();paint();observer.observe(main,{subtree:true,childList:true});});};

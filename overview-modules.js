@@ -6,8 +6,9 @@
   const fmt = (v,suffix='',digits=0) => number(v) ? Number(v).toLocaleString(undefined,{maximumFractionDigits:digits,minimumFractionDigits:digits})+suffix : '—';
   const money = v => number(v) ? '$'+fmt(v,'',2) : '—';
   const time = value => value && !Number.isNaN(new Date(value).valueOf()) ? new Date(value).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
-  const metric = (label,value) => `<div class="ov-metric"><span>${escape(label)}</span><strong>${escape(value)}</strong></div>`;
+  const metric = (label,value) => `<div class="ov-metric"><span>${escape(label)}</span><strong>${String(value).endsWith(' MW')?escape(String(value).slice(0,-3))+' <em class="ov-unit">MW</em>':escape(value)}</strong></div>`;
   const rows = value => Array.isArray(value)?value:[];
+  const empty = (message,detail) => `<div class="ov-empty"><span class="ov-empty-icon" aria-hidden="true">–</span><strong>${escape(message)}</strong><small>${escape(detail)}</small></div>`;
   function update(key, data, error=false, context='') {
     const prior=feeds[key];
     const valid={staff:Array.isArray(data),alarms:Array.isArray(data),weather:Array.isArray(data?.stations),events:Array.isArray(data?.items),chat:Array.isArray(data?.messages),scada:Array.isArray(data?.readings),market:!!data?.nodes,dispatch:!!data && typeof data==='object'};
@@ -56,7 +57,8 @@
       key='weather';const name=id.slice(8),station=feeds.weather?.data?.stations?.find(s=>s.name===name),c=station?.current || {},h=station?.hourly || {};
       const index=Math.max(0,(h.time||[]).findIndex(t=>new Date(t).valueOf()>=Date.now())),temperature=c.temperature_2m ?? h.temperature_2m?.[index],probability=c.precipitation_probability ?? h.precipitation_probability?.[index],code=c.weather_code ?? h.weather_code?.[index];
       const ccode=Number(code),condition=!number(code)?'Conditions unavailable':[95,96,99].includes(ccode)?'Thunderstorms':[71,73,75,77,85,86].includes(ccode)?'Snow':[61,63,65,66,67,80,81,82].includes(ccode)?'Rain':[51,53,55,56,57].includes(ccode)?'Drizzle':[45,48].includes(ccode)?'Fog':[2,3].includes(ccode)?'Cloudy':[0,1].includes(ccode)?'Clear':'Conditions unavailable';
-      body=`<div class="ov-weather-value">${escape(fmt(temperature,'°'))}</div><div class="ov-weather-condition">${escape(condition)}</div><div class="ov-secondary">Precipitation ${escape(fmt(probability,'%'))}</div>`;
+      const weatherIcon=condition==='Clear'?'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>':'<path d="M7 18a5 5 0 1 1 1-10 6 6 0 0 1 11 3 4 4 0 0 1-1 7H7Z"/>';
+      body=`<div class="ov-weather-main"><div class="ov-weather-value">${escape(fmt(temperature,'°'))}</div><svg viewBox="0 0 24 24" aria-hidden="true">${weatherIcon}</svg></div><div class="ov-weather-condition">${escape(condition)}</div><div class="ov-secondary">Precipitation ${escape(fmt(probability,'%'))}</div>`;
       if(!station)return {key,body,footer:'Station unavailable'};
     } else if(id==='markets:dispatch'){
       key='dispatch';const d=feeds.dispatch?.data || {};
@@ -71,25 +73,29 @@
       if(el.id==='overviewFieldTracker')body+=`<div class="ov-secondary">Open tracker for location and worker detail</div>`;
     } else if(el.id==='overviewEventsSummary'){
       key='events';const f=feeds.events,events=rows(f?.data?.items);
-      body=events.length?`<div class="ov-events">${events.slice(0,4).map((e,i)=>`<a class="${i>1?'ov-secondary':''}" href="event-detail.html?id=${encodeURIComponent(e.eventId)}"><time>${escape(time(e.occurredAt)||'—')}</time><span>${escape(e.summary || e.eventType)}<small>${escape(e.site || e.source || 'Recorded event')}</small></span><b>${escape(e.severity || '')}</b></a>`).join('')}</div>`:`<p class="ov-empty">${f?.checked?'No recorded events':'Event service unavailable'}</p>`;
+      body=events.length?`<div class="ov-events">${events.slice(0,4).map((e,i)=>`<a class="${i>1?'ov-secondary':''}" href="event-detail.html?id=${encodeURIComponent(e.eventId)}"><time>${escape(time(e.occurredAt)||'—')}</time><span>${escape(e.summary || e.eventType)}<small>${escape(e.site || e.source || 'Recorded event')}</small></span><b class="ov-severity-${escape(['critical','warning'].includes(e.severity)?e.severity:'info')}">${escape(e.severity || '')}</b></a>`).join('')}</div>`:empty(f?.checked?'No recorded events':'Events unavailable',f?.checked?'New activity will appear here.':'Open Events to check the connection.');
     } else if(el.id==='overviewGeneratingStations'){
       key='scada';const d=feeds.scada?.data,readings=rows(d?.readings),sites=[...new Set(readings.map(r=>r.siteCode).filter(Boolean))];
       const configured=rows(d?.feeds),current=configured.filter(feed=>feed.status==='Current').length;
-      body=`<div class="ov-metrics">${metric('Sites with records',d?String(sites.length):'—')}${metric('Current feeds',d?current+' / '+configured.length:'—')}</div><div class="ov-secondary">${escape(configured.length?configured.map(feed=>feed.status || 'Unknown').join(' · '):'No feeds configured')}</div>`;
+      body=`<div class="ov-metrics">${metric('Sites with records',d?String(sites.length):'—')}${metric('Current feeds',d?current+' / '+configured.length:'—')}</div><div class="ov-secondary">${escape(d?(configured.length?configured.map(feed=>feed.status || 'Unknown').join(' · '):'No feeds configured'):'Station data unavailable')}</div>`;
     } else if(el.id==='overviewChatSummary'){
       key='chat';const f=feeds.chat,messages=rows(f?.data?.messages),last=messages.at(-1);
-      body=last?`<p class="ov-chat-message">${escape(last.body || last.text || last.content || '')}</p><div class="ov-secondary">${escape(last.senderName || last.author || last.source || 'Recorded message')} · ${escape(time(last.createdAt))}</div>`:`<p class="ov-empty">${f?.checked?'No messages in this room':'Chat service unavailable'}</p>`;
+      body=last?`<p class="ov-chat-message">${escape(last.body || last.text || last.content || '')}</p><div class="ov-secondary">${escape(last.senderName || last.author || last.source || 'Recorded message')} · ${escape(time(last.createdAt))}</div>`:empty(f?.checked?'No messages yet':'Chat unavailable',f?.checked?'Open Chat to join the conversation.':'Open Chat to check the connection.');
     } else return null;
     return {key,body,footer:freshness(key)};
   }
   function present(m,el,p){
     const content=render(m.id,el);if(!content)return;
     el.classList.add('ov-managed');el.dataset.ovKind=m.id.startsWith('weather:')?'weather':el.id==='overviewEventsSummary'?'events':'metric';
-    el.style.setProperty('padding',p.density==='compact'?'12px':'16px','important');
+    el.tabIndex=0;el.setAttribute('role','group');
+    const caption=el.querySelector('.ns-module-caption');if(caption){caption.title=caption.textContent;el.setAttribute('aria-label',caption.textContent);}
+    el.style.setProperty('padding',p.density==='compact' || m.id.startsWith('weather:')?'12px':'16px','important');
     el.style.setProperty('border-top-color',p.accent || 'var(--line)','important');
     let summary=el.querySelector(':scope > .ov-summary');
     if(!summary){summary=document.createElement('div');summary.className='ov-summary';el.append(summary);}
-    const markup=`<div class="ov-summary-body">${content.body}</div><footer class="ov-freshness${issue(content.key)?' stale':''}">${escape(content.footer)}</footer>`;
+    const problem=issue(content.key);el.dataset.ovState=problem?'attention':'received';
+    const emptyUnavailable=content.body.includes('class="ov-empty"') && problem==='Source unavailable';
+    const markup=`<div class="ov-summary-body">${content.body}</div><footer ${emptyUnavailable?'hidden ':''}class="ov-freshness${problem?' stale':''}" title="${escape(content.footer)}"><span class="ov-source-dot" aria-hidden="true"></span>${escape(content.footer)}</footer>`;
     if(summary.dataset.render!==markup){summary.innerHTML=markup;summary.dataset.render=markup;}
     summary.hidden=!!p.customOnly;
     // Isolate the compact renderer from inherited per-card grid/position rules.
@@ -101,7 +107,7 @@
   }
   function refreshStatus(){
     const node=document.getElementById('overviewSourceStatus');
-    if(node){const keys=['staff','dispatch','market','events'],missing=keys.filter(k=>issue(k));const value=missing.length?'Sources needing attention: '+missing.join(', '):'Overview sources received';if(node.textContent!==value)node.textContent=value;}
+    if(node){const keys=['staff','dispatch','market','weather','events','scada','chat'],missing=keys.filter(k=>issue(k));const value=missing.length?missing.length+(missing.length===1?' source needs attention':' sources need attention'):'Sources received';if(node.textContent!==value)node.textContent=value;node.dataset.state=missing.length?'attention':'received';node.title=missing.map(k=>({staff:'Field staff',dispatch:'APIROQ dispatch',market:'Markets',weather:'Weather',events:'Events',scada:'Generating stations',chat:'Chat'}[k])+': '+issue(k)).join('\n');node.setAttribute('aria-label',value+(missing.length?'. '+node.title:''));}
     const detail=document.getElementById('dispatchDetail');
     if(detail){const d=feeds.dispatch?.data || {},markup=`<h2>APIROQ dispatch</h2><div class="ov-metrics">${metric('Output',fmt(d.outputMw,' MW',1))}${metric('Dispatch',fmt(d.dispatchMw,' MW',1))}${metric('Difference',fmt(d.deltaMw,' MW',1))}</div><p>${escape(freshness('dispatch'))}</p><p>${escape(d.source || 'Awaiting telemetry')}${d.simulated?' · SIMULATED':''}</p><p>OR standby: ${escape(fmt(d.reserveStandby?.tenS,' MW'))} 10S / ${escape(fmt(d.reserveStandby?.tenN,' MW'))} 10N / ${escape(fmt(d.reserveStandby?.thirtyR,' MW'))} 30R</p>`;if(detail.dataset.snapshot!==markup){detail.innerHTML=markup;detail.dataset.snapshot=markup;}}
     window.renderAlarmBar?.();

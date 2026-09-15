@@ -1,7 +1,7 @@
 /* Real DOM layout + read-only API fixtures. Never talks to the running backend. */
 const {chromium}=require('playwright');
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-redesign');
+const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-polish');
 (async()=>{
  const server=http.createServer((req,res)=>{
   const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);
@@ -37,6 +37,9 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-r
    for(const c of layout.cards)assert.ok(c.scrollW<=c.w+1 && c.scrollH<=c.h+1,`Card content fits ${width} ${c.id}: ${JSON.stringify(c)}`);
   }
   await page.setViewportSize({width:1440,height:1000});await page.waitForTimeout(200);
+  assert.equal(await page.locator('#sideNav button .nav-icon').count(),await page.locator('#sideNav button').count(),'Every navigation section has an icon');
+  assert.equal(await page.locator('.layout-toolbar > .overview-add-module').count(),1,'Overview controls share one bar');
+  assert.equal(await page.locator('#overviewSourceStatus').innerText(),'1 source needs attention');
   assert.ok((await page.locator('#dispatchClient .ov-summary').innerText()).includes('24.5 MW'));
   assert.equal(await page.locator('#overviewEventsSummary .ov-events a').count(),4);
   await page.locator('#overviewEventsSummary .ns-open-module').click();
@@ -57,6 +60,14 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-r
   assert.equal(await page.locator('#overviewEventsSummary .ov-events a').count(),4,'Retains last good events on failure');
   assert.ok((await page.locator('#alarmIndicator').innerText()).includes('—'),'Failed staff source cannot imply no alarms');
   await page.click('.layout-edit-toggle');
+  const weather=page.locator('#weatherStrip > .weather-card').first();
+  await weather.focus();await page.keyboard.press('Enter');
+  assert.equal(await page.locator('#nsModuleEditor:visible').count(),1,'Narrow weather modules remain keyboard editable');
+  await page.locator('#nsModuleEditor [data-editor-close]').first().click();
+  await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));await page.waitForTimeout(80);
+  const dock=await page.locator('.layout-toolbar').boundingBox(),chat=await page.locator('#overviewChatSummary').boundingBox();
+  assert.ok(chat.y+chat.height<=dock.y,'Bottom modules scroll fully above the editing bar');
+  await page.evaluate(()=>window.scrollTo(0,0));
   const tile=page.locator('#dispatchClient'),before=await tile.boundingBox();
   await tile.locator('[data-corner="nw"]').focus();await page.keyboard.press('ArrowRight');
   const after=await tile.boundingBox();assert.equal(before.width-after.width,5);assert.equal(after.x-before.x,5);
@@ -74,7 +85,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-r
   await page.waitForTimeout(100);
   assert.ok((await tile.innerText()).includes('Generator output'),'Custom compact labels survive a changing feed');
   assert.ok((await tile.innerText()).includes('Telemetry unavailable'),'HTTP success does not hide telemetry faults');
-  assert.ok((await page.locator('#overviewSourceStatus').innerText()).includes('dispatch'));
+  assert.ok((await page.locator('#overviewSourceStatus').getAttribute('title')).includes('dispatch'));
   await page.click('.layout-edit-toggle');
   await page.check('[data-ov-snap]');
   await tile.locator('[data-corner="move"]').focus();await page.keyboard.press('ArrowRight');

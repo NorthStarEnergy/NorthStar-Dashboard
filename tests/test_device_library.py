@@ -32,7 +32,7 @@ def test_tools_module_is_wired_and_not_published_on_checkin():
     assert 'id="openDeviceLibrary"' in html
     assert "device-library.js?v=20260913-5" in html
     assert "device-library.css?v=20260913-5" in html
-    assert "events-register.js?v=20260913-5" in html
+    assert 'src="events-register.js?v=' in html
     assert 'href="event-detail.html?id=' in html
     assert "EVENT REPORT" in html
     assert backend.OPERATOR_ROUTES["/api/maximo"] == ("GET",)

@@ -1,3 +1,7 @@
+# Dashboard visual polish — 2026-09-15
+
+Rendered local-UI review led to readable navigation, tighter Overview modules, clear empty states, a shared editing dock, small corner grips and keyboard content editing. See [report](packets/2026-09-15-dashboard-polish.md).
+
 # Overview redesign — 2026-09-15
 
 Priority compact modules, responsive saved layouts, four-corner resize and optional snap, linked full views, editable live labels, and truthful source states. Five viewport sizes pass browser containment checks. See [report](packets/2026-09-15-overview-redesign.md).
