@@ -448,6 +448,7 @@ class HostnameSeparationTest(unittest.TestCase):
         self.assertIn('"https://$operatorHost/northstar-clean.html"', launcher)
         self.assertIn("'http://localhost:4180/northstar-clean.html'", launcher)
         self.assertIn("if ($LocalOnly)", launcher)
+        self.assertIn("& $pythonFile @pythonArguments 1>> $stdoutLog 2>> $stderrLog", launcher)
 
         login = (ROOT / "operator-login.html").read_text(encoding="utf-8")
         self.assertIn("r.status===404", login)

@@ -191,10 +191,15 @@ if ($ServiceMode -and $health) {
 
 if ($ServiceMode) {
     Write-Host 'Service mode: running the backend in the foreground.'
-    Start-Process -FilePath $pythonFile -ArgumentList $pythonArguments `
-        -WorkingDirectory $projectRoot -NoNewWindow -Wait `
-        -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
+    # Keep Python in the scheduled task's process tree.  Start-Process -Wait
+    # still detaches it on this host, so ending the task leaves an old backend
+    # listening on 4180 and prevents the next release from taking effect.
+    & $pythonFile @pythonArguments 1>> $stdoutLog 2>> $stderrLog
+    $backendExitCode = $LASTEXITCODE
     Write-Host 'The backend exited.'
+    if ($backendExitCode) {
+        throw "NorthStar backend exited with code $backendExitCode."
+    }
     return
 }
 

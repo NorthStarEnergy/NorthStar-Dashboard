@@ -12,6 +12,11 @@ part of the committed release instead of existing only in the running workspace.
 The static-server regression suite now requests that exact file, so a future
 deployment cannot omit it without failing validation.
 
+The scheduled-service launcher now invokes Python directly instead of using a
+detached `Start-Process` child. Ending the scheduled task will therefore stop
+the backend it owns, allowing the next restart to load a new dashboard release.
+
 Validation: `node tests/flows-workspace.test.cjs`, the browser recovery suite, the
 focused Flow/static suite (25 passed), and the complete Python suite (265 passed).
-After the service restart, `/api/flows` and both Flow assets returned HTTP 200.
+After the service restart, both Flow assets returned HTTP 200 and `/api/flows`
+returned its expected operator sign-in guard before authentication.
