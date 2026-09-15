@@ -126,6 +126,15 @@ const root=path.resolve(__dirname,'..');
    await page.click('#sideNav [data-tab="weather"]');
    fs.mkdirSync(path.join(root,'outputs'),{recursive:true});
    await page.screenshot({path:path.join(root,'outputs','module-workspace-browser.png'),fullPage:false});
+   for (const [width,rail] of [[1500,180],[800,140]]) {
+     await page.setViewportSize({width,height:980});
+     await page.click('#sideNav [data-tab="tools"]');
+     assert.equal(Math.round((await page.locator('.ns-module-tree').boundingBox()).width),rail);
+     const treeBox=await page.locator('.ns-module-tree').boundingBox();
+     const topBox=await page.locator('.ns-section-top').boundingBox();
+     assert.ok(topBox.x>=treeBox.x+treeBox.width,'Tabs clear the compact section rail');
+     assert.equal(await page.locator('.ns-module-tree').evaluate(e=>e.scrollWidth<=e.clientWidth),true,'Module names fit without horizontal scrolling');
+   }
    console.log('Browser errors:',errors);
    assert.equal(errors.length,0);
    console.log('Module browser scenarios passed.');

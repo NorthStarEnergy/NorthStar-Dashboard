@@ -1,3 +1,7 @@
+# Compact section menu — 2026-09-15
+
+Reduced section rail widths and row spacing, aligning floating module offsets with CSS. See [report](packets/2026-09-15-compact-section-menu.md).
+
 # Persistent operations status bar — 2026-09-15
 
 Added the condensed cross-section event/dispatch/market/crew bar with bottom-right dogears and a 500ms hover event preview. See [report](packets/2026-09-15-persistent-status-bar.md).
