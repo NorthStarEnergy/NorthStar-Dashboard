@@ -1,3 +1,7 @@
+# Unrestricted module sizing and Overview graphics — 2026-09-15
+
+Removed content minimums and restored feed-based charts to larger Overview cards. See [report](packets/2026-09-15-unrestricted-module-sizing.md).
+
 # Dashboard asset connection backlog — 2026-09-15
 
 Reproduced connection resets during the 51-asset navigation burst; increased the server backlog from the stdlib default to 128. Administrator backend restart required. See [report](packets/2026-09-15-asset-connection-backlog.md).

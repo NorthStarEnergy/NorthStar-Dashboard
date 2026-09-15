@@ -9,6 +9,18 @@
   const metric = (label,value) => `<div class="ov-metric"><span>${escape(label)}</span><strong>${String(value).endsWith(' MW')?escape(String(value).slice(0,-3))+' <em class="ov-unit">MW</em>':escape(value)}</strong></div>`;
   const rows = value => Array.isArray(value)?value:[];
   const empty = (message,detail) => `<div class="ov-empty"><span class="ov-empty-icon" aria-hidden="true">–</span><strong>${escape(message)}</strong><small>${escape(detail)}</small></div>`;
+  function trend(values, label) {
+    const finite=values.filter(number).map(Number);
+    if(finite.length<2)return `<div class="ov-trend ov-trend-empty">${escape(label)} unavailable</div>`;
+    const low=Math.min(...finite),span=Math.max(...finite)-low || 1;
+    let drawing=false;
+    const path=values.map((value,i)=>{
+      if(!number(value)){drawing=false;return '';}
+      const command=drawing?'L':'M';drawing=true;
+      return command+(4+i*292/Math.max(1,values.length-1)).toFixed(1)+','+(52-(Number(value)-low)*44).toFixed(1);
+    }).join(' ');
+    return `<figure class="ov-trend"><figcaption>${escape(label)}</figcaption><svg viewBox="0 0 300 60" preserveAspectRatio="none" role="img" aria-label="${escape(label)}"><path d="${path}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></figure>`;
+  }
   function update(key, data, error=false, context='') {
     const prior=feeds[key];
     const valid={staff:Array.isArray(data),alarms:Array.isArray(data),weather:Array.isArray(data?.stations),events:Array.isArray(data?.items),chat:Array.isArray(data?.messages),scada:Array.isArray(data?.readings),market:!!data?.nodes,dispatch:!!data && typeof data==='object'};
@@ -59,6 +71,7 @@
       const ccode=Number(code),condition=!number(code)?'Conditions unavailable':[95,96,99].includes(ccode)?'Thunderstorms':[71,73,75,77,85,86].includes(ccode)?'Snow':[61,63,65,66,67,80,81,82].includes(ccode)?'Rain':[51,53,55,56,57].includes(ccode)?'Drizzle':[45,48].includes(ccode)?'Fog':[2,3].includes(ccode)?'Cloudy':[0,1].includes(ccode)?'Clear':'Conditions unavailable';
       const weatherIcon=condition==='Clear'?'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>':'<path d="M7 18a5 5 0 1 1 1-10 6 6 0 0 1 11 3 4 4 0 0 1-1 7H7Z"/>';
       body=`<div class="ov-weather-main"><div class="ov-weather-value">${escape(fmt(temperature,'°'))}</div><svg viewBox="0 0 24 24" aria-hidden="true">${weatherIcon}</svg></div><div class="ov-weather-condition">${escape(condition)}</div><div class="ov-secondary">Precipitation ${escape(fmt(probability,'%'))}</div>`;
+      body+=trend((h.temperature_2m || []).slice(index,index+24),'Temperature forecast');
       if(!station)return {key,body,footer:'Station unavailable'};
     } else if(id==='markets:dispatch'){
       key='dispatch';const d=feeds.dispatch?.data || {};
@@ -66,6 +79,7 @@
     } else if(id.startsWith('markets:') && id!=='markets:comparison'){
       key='market';const code=id.slice(8),data=window.NorthstarMarketModules?.data() || feeds.market?.data,n=data?.nodes?.[code] || {};
       body=`<div class="ov-metrics">${metric('Real-time',money(n.rt))}${metric('Day-ahead',money(n.da))}</div><div class="ov-secondary">${code==='IESO'?'Demand':'Transfer'} ${escape(fmt(n.operations?.rtTransfer,' MW'))} · ${code==='IESO'?'Forecast':'Schedule'} ${escape(fmt(n.operations?.dayAhead,' MW'))}</div>`;
+      body+=trend(rows(n.history).slice(-48).map(point=>point.value),'Real-time price history');
       if(code==='APIROQ')body+=`<div class="ov-expanded">Operating reserve · 10S ${escape(money(n.reserve?.tenS))} · 10N ${escape(money(n.reserve?.tenN))} · 30R ${escape(money(n.reserve?.thirtyR))}</div>`;
     } else if(el.id==='overviewStaffSummary' || el.id==='overviewFieldTracker'){
       key='staff';const f=feeds.staff,active=rows(f?.data).filter(r=>r.status!=='checked-out');

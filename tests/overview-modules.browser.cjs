@@ -18,7 +18,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   '/api/auth/session':{required:false},'/api/checkins':[], '/api/alerts':[],
   '/api/weather':{stations:['Iroquois Falls','Atikokan','Kapuskasing','Oshawa','Toronto','Fort Frances','Dokis FN','Kenora'].map(name=>({name,current:{temperature_2m:18,weather_code:2,precipitation_probability:20},hourly:{time:[now],temperature_2m:[18],weather_code:[2],precipitation_probability:[20]}}))},
   '/api/dispatch/apiroq':{outputMw:24.5,dispatchMw:25,deltaMw:-0.5,healthy:true,simulated:true,updatedAt:now,history:[],reserveStandby:{tenS:1,tenN:2,thirtyR:3}},
-  '/api/market-prices':{updated:now,nodes:{APIROQ:{rt:42,da:37,history:[],operations:{rtTransfer:12,dayAhead:10}}},ontario:{demand:15000,forecastDemand:15500}},
+  '/api/market-prices':{updated:now,nodes:{APIROQ:{rt:42,da:37,history:[{time:now,value:35},{time:new Date(Date.now()+60000).toISOString(),value:42}],operations:{rtTransfer:12,dayAhead:10}}},ontario:{demand:15000,forecastDemand:15500}},
   '/api/scada':{feeds:[],readings:[]},'/api/chat/messages':{messages:[{id:'fixture-1',body:'Test message for layout verification.',senderName:'Fixture operator',createdAt:now}]},
   '/api/events/register':{items:Array.from({length:4},(_,i)=>({eventId:'fixture-'+i,occurredAt:now,summary:'Layout verification event '+(i+1),site:'Iroquois Falls',severity:'info',source:'Test fixture'})),nextCursor:null},
  };
@@ -116,6 +116,25 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
    assert.deepEqual(await page.evaluate(geometry),stable,'Reload '+pass+' must preserve visible module geometry despite changing crew data');
    assert.equal(await page.locator('#staffGroups .staff-group:visible').count(),0);
   }
+  await page.click('.layout-edit-toggle');
+  const marketTile=page.locator('#marketTopTiles [data-module-id="APIROQ"]');
+  await marketTile.locator('[data-corner="se"]').evaluate(el=>{
+   for(let i=0;i<12;i++)el.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',shiftKey:true,bubbles:true}));
+  });
+  await page.waitForTimeout(100);
+  assert.equal(await marketTile.locator('.ov-trend svg:visible').count(),1,'Expanded market shows its price history graphic');
+  assert.ok((await marketTile.locator('.ov-trend path').getAttribute('d')).includes('L'));
+  assert.ok((await marketTile.locator('.ov-trend svg').boundingBox()).width>150,'History graphic uses the module width, not icon dimensions');
+  await page.screenshot({path:path.join(out,'restored-market-graphic.png'),fullPage:false});
+  await tile.locator('[data-corner="se"]').evaluate(el=>{
+   for(let i=0;i<100;i++){
+    el.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',shiftKey:true,bubbles:true}));
+    el.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowUp',shiftKey:true,bubbles:true}));
+   }
+  });
+  const tiny=await tile.boundingBox();assert.ok(tiny.width<=2 && tiny.height<=2,'Module can shrink to one pixel without padding forcing a minimum');
+  await page.click('.layout-save');await page.reload();await page.waitForSelector('#dispatchClient .ov-summary',{state:'attached'});
+  const restoredTiny=await tile.boundingBox();assert.equal(restoredTiny.width,tiny.width);assert.equal(restoredTiny.height,tiny.height);
   await page.screenshot({path:path.join(out,'reload-stability.png'),fullPage:false});
   fs.writeFileSync(path.join(out,'layout-validation.json'),JSON.stringify({fixture:true,layouts,errors,repeatedReloads:5,stableGeometry:stable},null,2));
   assert.deepEqual(errors,[]);console.log('Overview browser scenarios passed: six viewport sizes, containment, links, stale/null values, four-corner resize and profile persistence.');

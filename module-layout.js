@@ -13,7 +13,7 @@
 (() => {
   // Section windows and Overview share this file as their geometry owner.
   window.NorthstarWindowLayout = {
-    resize(box, corner, dx, dy, min = [260, 180]) {
+    resize(box, corner, dx, dy, min = [1, 1]) {
       const next = {...box}, west = corner.includes('w'), north = corner.includes('n');
       next.w = Math.max(min[0], Math.min(west ? box.x + box.w : Infinity, box.w + (west ? -dx : dx)));
       next.h = Math.max(min[1], Math.min(north ? box.y + box.h : Infinity, box.h + (north ? -dy : dy)));
@@ -53,13 +53,13 @@
   };
   const ZONES = [
     { id: 'overview', canvas: true },
-    { id: 'staff', container: '#staffGroups', item: '.staff-group', step: [20, 20], min: [180, 90] },
-    { id: 'market',  container: '#nodeCards',       item: '.node-card',    step: [20, 20], min: [200, 120] },
+    { id: 'staff', container: '#staffGroups', item: '.staff-group', step: [20, 20], min: [1, 1] },
+    { id: 'market',  container: '#nodeCards',       item: '.node-card',    step: [20, 20], min: [1, 1] },
     // Weather-tab station tiles can be resized independently.
-    { id: 'weather', container: '#weatherGridFull', item: '.weather-card', step: [10, 10], min: [320, 60], resize: true, sizesInEditOnly: true },
+    { id: 'weather', container: '#weatherGridFull', item: '.weather-card', step: [10, 10], min: [1, 1], resize: true, sizesInEditOnly: true },
     // The header strip renders the same station cards as the Weather tab, so it
     // keeps its own zone id — reordering the strip must not reorder the tab.
-    { id: 'switching', container: '#switchingGrid', item: '.switching-module', step: [20, 20], min: [260, 180] },
+    { id: 'switching', container: '#switchingGrid', item: '.switching-module', step: [20, 20], min: [1, 1] },
   ];
 
   const STORE = 'northstarModuleLayout';
@@ -155,7 +155,7 @@
     // Keep the old canvas intact as a selectable arrangement, never delete it.
     if (!profiles.previous && Object.keys(positions).length) profiles.previous = JSON.parse(JSON.stringify(positions));
     const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].map(el => ({
-      el, size, min:['overviewStaffSummary','overviewEventsSummary','overviewFieldTracker'].includes(el.id)?[200,88]:min, key: 'canvas:' + group + ':' + (el.id || el.dataset.moduleId || el.dataset.site || group)
+      el, size, min:[1,1], key: 'canvas:' + group + ':' + (el.id || el.dataset.moduleId || el.dataset.site || group)
     })));
     const enabled = () => document.querySelector('#overview')?.classList.contains('active');
     function persist() {
@@ -177,6 +177,8 @@
       el.dataset.canvasModule = entry.key;
       el.dataset.ovSize = p.h < 160 || p.w < 220 ? 'compact' : p.h >= 240 && p.w >= 300 ? 'expanded' : 'standard';
       el.dataset.ovIndicator = String(p.h <= 112);
+      el.style.setProperty('--ov-frame-padding',Math.min(p.h<=112?8:12,Math.max(0,(Math.min(p.w,p.h)-2)/4))+'px');
+      el.style.setProperty('border-width',Math.min(1,p.w/4,p.h/4)+'px','important');
       [['position','absolute'],['left',p.x+'px'],['top',p.y+'px'],['width',p.w+'px'],['height',p.h+'px'],
        ['min-width','0'],['min-height','0'],['max-width','none'],['max-height','none'],['margin','0'],['transform','none']]
         .forEach(([k,v]) => el.style.setProperty(k,v,'important'));
@@ -435,6 +437,9 @@
   }
 
   function setSize(el, width, height, autoHeight = false) {
+    el.style.setProperty('box-sizing','border-box','important');
+    el.style.setProperty('padding',Math.min(12,Math.max(0,(Math.min(width,height)-2)/4))+'px','important');
+    el.style.setProperty('border-width',Math.min(1,width/4,height/4)+'px','important');
     el.style.setProperty('width', `${width}px`, 'important');
     el.style.setProperty('height', autoHeight ? 'auto' : `${height}px`, 'important');
     el.style.setProperty('min-width', '0', 'important');

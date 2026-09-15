@@ -40,3 +40,8 @@ body.overview-canvas.layout-edit #overviewArrangementTools{display:flex;flex-wra
 #overviewArrangementTools button{font:12px/1.4 Arial,sans-serif;padding:6px 8px}#overviewArrangementTools label{display:flex;align-items:center;gap:4px}.ov-profile-label{text-transform:capitalize;color:var(--muted)}
 body.overview-canvas .layout-toolbar{max-width:calc(100vw - 48px);flex-wrap:wrap}
 @media(max-width:650px){#overviewSourceStatus{font-size:10px}body.overview-canvas #overviewStatusStrip{gap:12px;padding-right:95px}#overviewStatusStrip strong{font-size:18px}.ov-events>a{grid-template-columns:54px minmax(0,1fr)}.ov-events b{display:none}}
+
+.ov-trend{margin:10px 0 0;color:var(--blue);min-width:0}
+.ov-trend figcaption,.ov-trend-empty{font:10px/1.3 Arial,sans-serif;color:var(--muted)}
+html body.overview-canvas main .ov-managed .ov-trend svg{display:block!important;width:100%!important;height:48px!important;max-width:none!important;margin-top:4px;position:static!important}
+body.overview-canvas main [data-ov-size=compact] .ov-trend{display:none!important}

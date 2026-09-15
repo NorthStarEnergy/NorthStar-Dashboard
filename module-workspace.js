@@ -236,7 +236,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
   function drawBox(m, box) {
     const el=m.el;
     const rail = innerWidth <= 850 ? 178 : 252;
-    [['position','absolute'],['left',(box.x+rail)+'px'],['top',(box.y+104)+'px'],['width',box.w+'px'],['height',box.h+'px'],['padding-top','44px'],['min-width','0'],['min-height','0'],['max-width','none'],['max-height','none']].forEach(([k,v])=>el.style.setProperty(k,v,'important'));
+    [['position','absolute'],['left',(box.x+rail)+'px'],['top',(box.y+104)+'px'],['width',box.w+'px'],['height',box.h+'px'],['padding',Math.min(16,Math.max(0,(Math.min(box.w,box.h)-2)/4))+'px'],['padding-top',Math.min(44,Math.max(0,(box.h-2)/2))+'px'],['box-sizing','border-box'],['border-width',Math.min(1,box.w/4,box.h/4)+'px'],['min-width','0'],['min-height','0'],['max-width','none'],['max-height','none']].forEach(([k,v])=>el.style.setProperty(k,v,'important'));
     const s=sectionState(section), boxes=(s.tabs || []).map(id=>s.boxes?.[id]).filter(Boolean);
     shell.style.minHeight=Math.max(650,...boxes.map(b=>b.y+b.h+60))+'px';
   }
