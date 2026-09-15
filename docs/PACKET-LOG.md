@@ -1,3 +1,7 @@
+# Dashboard asset connection backlog — 2026-09-15
+
+Reproduced connection resets during the 51-asset navigation burst; increased the server backlog from the stdlib default to 128. Administrator backend restart required. See [report](packets/2026-09-15-asset-connection-backlog.md).
+
 # Dashboard loading guard scope — 2026-09-15
 
 Optional injected scripts no longer block dashboard startup; required asset failures identify the filename. See [report](packets/2026-09-15-load-guard-scope.md).

@@ -677,6 +677,9 @@ class NorthstarHTTPServer(ThreadingHTTPServer):
     """HTTP server that refuses to share its port with an older instance."""
 
     allow_reuse_address = False
+    # A dashboard navigation opens 51 asset requests through the tunnel.
+    # The stdlib backlog of 5 drops connections during that burst on Windows.
+    request_queue_size = 128
     daemon_threads = True
 
     def server_bind(self) -> None:

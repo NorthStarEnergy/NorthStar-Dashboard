@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import socket
 import sys
 import tempfile
 import threading
@@ -107,6 +108,19 @@ class APITest(unittest.TestCase):
             self.backend.NorthstarHTTPServer(
                 ("127.0.0.1", self.server.server_port), self.backend.Handler
             )
+
+    def test_dashboard_connection_burst_waits_for_accept(self) -> None:
+        # Model the tunnel delivering the full asset burst while accept is busy.
+        queued = self.backend.NorthstarHTTPServer(("127.0.0.1", 0), self.backend.Handler)
+        connections = []
+        try:
+            for _ in range(64):
+                connections.append(socket.create_connection(queued.server_address, timeout=2))
+            self.assertEqual(len(connections), 64)
+        finally:
+            for connection in connections:
+                connection.close()
+            queued.server_close()
 
     # The demo operator login (Packet 19) has its own suite: tests/test_demo_auth.py.
 
