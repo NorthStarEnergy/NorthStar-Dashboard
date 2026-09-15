@@ -1,3 +1,7 @@
+# Overview refresh stability — 2026-09-15
+
+Feed updates no longer rearrange saved canvas geometry or add native roster panels to Overview. Failed scripts show recovery UI before partial initialization. See [report](packets/2026-09-15-refresh-stability.md).
+
 # Saved Overview placement and uppercase menus — 2026-09-15
 
 Existing saved profiles receive the five-indicator row once, with a full profile backup. Legacy Events content is hidden behind Overview, and menu/tree/tab labels are uppercase. See [report](packets/2026-09-15-saved-row-caps.md).

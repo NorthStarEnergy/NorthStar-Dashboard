@@ -140,7 +140,6 @@
       ['weather', '#weatherStrip > .weather-card', [170, 136], [132, 124]],
       ['dispatch', '#dispatchClient', [360, 96], [200, 88]],
       ['market', '#marketTopTiles > .node-card, #marketTopTiles > .ontario-market', [340, 230], [200, 88]],
-      ['staff', '#staffGroups > .staff-group', [320, 180], [220, 100]],
       ['overview', '#overviewModules > [data-overview-module]:not(#overviewStaff):not(#eventsCard)', [480, 300], [240, 150]],
     ];
     const originals = new WeakMap(), bound = new WeakSet();
@@ -310,6 +309,7 @@
       if(nextProfile!==profile){
         if(profile)profiles[profile]={positions,width:lastWidth,automatic,indicatorRow:1};
         profile=nextProfile;const saved=profiles[profile];
+        lastWidth=Number(saved?.width) || 0;
         positions=Object.fromEntries(Object.entries(saved?.positions||{}).filter(([,p])=>valid(p)));
         automatic=saved?.automatic!==false;
         // Apply the requested row to existing browser layouts once, not only new defaults.
@@ -319,8 +319,9 @@
           positions={};automatic=true;
         }
       }
+      const reflow=automatic && (!Object.keys(positions).length || width!==lastWidth);
       lastWidth=width;
-      if(automatic)positions=arrange(all.filter(({el})=>!el.closest('[hidden]')),width);
+      if(reflow)positions=arrange(all.filter(({el})=>!el.closest('[hidden]')),width);
       const label=tools.querySelector('.ov-profile-label');if(label)label.textContent=profile+' layout';
       const previous=tools.querySelector('[data-ov-previous]');if(previous)previous.disabled=!profiles.previous;
       const activeKeys = new Set(all.filter(({el})=>!el.closest('[hidden]')).map(e=>e.key));

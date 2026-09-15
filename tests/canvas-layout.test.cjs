@@ -28,7 +28,8 @@ const context={document,window:{scrollX:0,scrollY:0,scrollBy(){},addEventListene
 vm.createContext(context);vm.runInContext(source.slice(start,end)+'\nthis.canvas=setupCanvas();',context);
 const get=key=>JSON.parse(memory.get('northstarCanvasLayoutV1'))[key];
 const fire=(handle,name,values={})=>handle.listeners.get(name)({preventDefault(){},stopPropagation(){},...values});
-for(const el of [weather,dispatch,market,events,staff])assert.equal(el.children.length,5);
+for(const el of [weather,dispatch,market,events])assert.equal(el.children.length,5);
+assert.equal(staff.children.length,0,'Feed-owned roster groups are not extra Overview modules');
 const initial=get('canvas:market:APIROQ');
 for(let i=0;i<60;i++)fire(market.children[0],'keydown',{key:'ArrowRight',shiftKey:true});
 assert.equal(get('canvas:market:APIROQ').x,initial.x+1200,'market crosses its former group and viewport boundaries');
@@ -66,5 +67,5 @@ fire(dispatch.children[4],'keydown',{key:'ArrowUp',shiftKey:true});
 assert.equal(get('canvas:dispatch:dispatchClient').y+get('canvas:dispatch:dispatchClient').h,oppositeBottom,'North resize preserves opposite edge');
 active=false;context.canvas.sync();assert.equal(main.properties['min-height'],undefined,'other workspaces retain normal layout');
 active=true;context.canvas.sync();assert.equal(dispatch.properties.left,finalBox.x+'px');
-assert.ok(persisted.position['canvas:staff:Station A']);
+assert.ok(!persisted.position['canvas:staff:Station A']);
 console.log('Shared canvas: independent movement, resizing, Done, feed refresh, stable IDs, pointer cancel and tab restoration passed.');

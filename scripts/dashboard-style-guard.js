@@ -3,6 +3,8 @@
   const root = document.documentElement;
   root.dataset.nsStyles = 'loading';
   let release, running = false, status;
+  const failedScripts = new Set();
+  document.addEventListener('error',event=>{if(event.target?.tagName==='SCRIPT' && event.target.src)failedScripts.add(event.target.src);},true);
   window.northstarStylesReady = new Promise(resolve => { release = resolve; });
   const valid = link => {
     try { return !!link.sheet && link.sheet.cssRules.length > 0; }
@@ -28,7 +30,7 @@
       status = document.createElement('div'); status.id = 'nsStyleStatus';
       status.setAttribute('role', 'status');
       status.innerHTML = '<strong>Loading dashboard…</strong><p></p><button type="button">Retry loading</button>';
-      status.querySelector('button').onclick = check;
+      status.querySelector('button').onclick = () => failedScripts.size || !window.northstarOperatorSession ? location.reload() : check();
       document.body.append(status);
     }
     status.hidden = false;
@@ -45,14 +47,15 @@
         await retry(link, deadline - Date.now());
       }
     }
-    const ready = [...document.querySelectorAll('link[rel="stylesheet"]')].every(valid);
+    const scriptsReady = !failedScripts.size && !!window.northstarOperatorSession;
+    const ready = scriptsReady && [...document.querySelectorAll('link[rel="stylesheet"]')].every(valid);
     root.dataset.nsStyles = ready ? 'ready' : 'failed';
     status.hidden = ready;
     if (ready) {
       release();
       window.dispatchEvent(new Event('northstar:styles-ready'));
     } else {
-      status.querySelector('strong').textContent = 'Dashboard display could not load';
+      status.querySelector('strong').textContent = scriptsReady ? 'Dashboard display could not load' : 'Dashboard files could not load';
       status.querySelector('p').textContent = 'Check your connection, then retry. Your saved layout has not been reset.';
       status.querySelector('button').hidden = false;
     }

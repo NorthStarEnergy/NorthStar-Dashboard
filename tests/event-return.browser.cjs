@@ -10,6 +10,7 @@ assert.ok(html.trimEnd().endsWith('</body>\n</html>'));
  const server=http.createServer((req,res)=>{
   const url=new URL(req.url,'http://localhost'),file=path.resolve(root,'.'+url.pathname);
   if(!file.startsWith(root+path.sep)||!['.html','.js','.css','.svg','.png','.ico'].includes(path.extname(file))){res.writeHead(404);return res.end();}
+  if(mode==='scriptfail' && url.pathname==='/module-workspace.js'){res.writeHead(503,{'Content-Type':'text/javascript'});return res.end('');}
   if(path.extname(file)==='.css'&&((mode==='transient'&&!failed.has(url.pathname))||(mode==='persistent'&&url.pathname==='/dashboard-polish.css'))){
    failed.add(url.pathname);requests.push({path:url.pathname,status:503});res.writeHead(503,{'Content-Type':'text/plain'});return res.end('Injected stylesheet failure');
   }
@@ -68,6 +69,11 @@ assert.ok(html.trimEnd().endsWith('</body>\n</html>'));
   await page.screenshot({path:path.join(out,'stylesheet-retry-state.png'),fullPage:false});
   mode='normal';await page.click('#nsStyleStatus button');await checkEvents();
   assert.equal(await page.evaluate(()=>JSON.stringify(JSON.parse(localStorage.northstarOverviewProfilesV2).desktop)),saved);
+  mode='scriptfail';await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.nsStyles==='failed');
+  assert.equal(await page.evaluate(()=>!!window.NorthstarModules),false);
+  assert.equal(await page.locator('.app').evaluate(e=>getComputedStyle(e).visibility),'hidden');
+  assert.equal(await page.evaluate(()=>JSON.stringify(JSON.parse(localStorage.northstarOverviewProfilesV2).desktop)),saved);
+  mode='normal';await page.click('#nsStyleStatus button');await checkEvents();
   assert.deepEqual(errors,[]);
   fs.writeFileSync(path.join(out,'browser-validation.json'),JSON.stringify({fixture:true,scenarios:['Overview event and browser Back','Events report and browser Back','Events return link with failed stylesheets','Persistent stylesheet failure preserves layout','Retry restores section without resetting layout'],failedStylesheets:[...failed],requests,pageErrors:errors},null,2));
   console.log('Event return browser checks passed: history, return link, stylesheet recovery, persistent failure, retry and saved layout preservation.');

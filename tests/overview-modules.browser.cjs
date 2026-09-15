@@ -107,7 +107,17 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   await page.click('[data-ov-previous]');
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.northstarCanvasLayoutV1)['canvas:dispatch:dispatchClient']),{x:640,y:430,w:330,h:210},'Previous custom arrangement remains recoverable');
   await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),page.click('[data-ov-cancel]')]);await page.waitForSelector('#dispatchClient .ov-summary');
-  fs.writeFileSync(path.join(out,'layout-validation.json'),JSON.stringify({fixture:true,layouts,errors},null,2));
+  const geometry=()=>[...document.querySelectorAll('[data-canvas-module]')].filter(e=>e.getClientRects().length).map(e=>({id:e.dataset.canvasModule,x:e.style.left,y:e.style.top,w:e.style.width,h:e.style.height})).sort((a,b)=>a.id.localeCompare(b.id));
+  const stable=await page.evaluate(geometry);
+  for(let pass=0;pass<5;pass++){
+   fixture['/api/checkins']=Array.from({length:pass%2?8:2},(_,i)=>({id:'reload-'+i,name:'Fixture worker '+i,site:i%2?'Kenora':'Iroquois Falls',status:'checked-in',checkedInAt:now,overdue:false,needsHelp:false}));
+   await page.reload();await page.waitForFunction(()=>!!NorthstarModules && NorthstarOverview.feeds.staff?.checked);
+   await page.waitForTimeout(700);
+   assert.deepEqual(await page.evaluate(geometry),stable,'Reload '+pass+' must preserve visible module geometry despite changing crew data');
+   assert.equal(await page.locator('#staffGroups .staff-group:visible').count(),0);
+  }
+  await page.screenshot({path:path.join(out,'reload-stability.png'),fullPage:false});
+  fs.writeFileSync(path.join(out,'layout-validation.json'),JSON.stringify({fixture:true,layouts,errors,repeatedReloads:5,stableGeometry:stable},null,2));
   assert.deepEqual(errors,[]);console.log('Overview browser scenarios passed: six viewport sizes, containment, links, stale/null values, four-corner resize and profile persistence.');
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
