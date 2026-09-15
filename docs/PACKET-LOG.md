@@ -1,3 +1,7 @@
+# Restore coloured weather artwork — 2026-09-15
+
+Replaced the unintended outline substitutions with coloured weather graphics in all Overview weather modules. See [report](packets/2026-09-15-weather-art-restoration.md).
+
 # Unrestricted module sizing and Overview graphics — 2026-09-15
 
 Removed content minimums and restored feed-based charts to larger Overview cards. See [report](packets/2026-09-15-unrestricted-module-sizing.md).

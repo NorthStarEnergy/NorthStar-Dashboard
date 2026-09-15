@@ -69,8 +69,8 @@
       key='weather';const name=id.slice(8),station=feeds.weather?.data?.stations?.find(s=>s.name===name),c=station?.current || {},h=station?.hourly || {};
       const index=Math.max(0,(h.time||[]).findIndex(t=>new Date(t).valueOf()>=Date.now())),temperature=c.temperature_2m ?? h.temperature_2m?.[index],probability=c.precipitation_probability ?? h.precipitation_probability?.[index],code=c.weather_code ?? h.weather_code?.[index];
       const ccode=Number(code),condition=!number(code)?'Conditions unavailable':[95,96,99].includes(ccode)?'Thunderstorms':[71,73,75,77,85,86].includes(ccode)?'Snow':[61,63,65,66,67,80,81,82].includes(ccode)?'Rain':[51,53,55,56,57].includes(ccode)?'Drizzle':[45,48].includes(ccode)?'Fog':[2,3].includes(ccode)?'Cloudy':[0,1].includes(ccode)?'Clear':'Conditions unavailable';
-      const weatherIcon=condition==='Clear'?'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>':'<path d="M7 18a5 5 0 1 1 1-10 6 6 0 0 1 11 3 4 4 0 0 1-1 7H7Z"/>';
-      body=`<div class="ov-weather-main"><div class="ov-weather-value">${escape(fmt(temperature,'°'))}</div><svg viewBox="0 0 24 24" aria-hidden="true">${weatherIcon}</svg></div><div class="ov-weather-condition">${escape(condition)}</div><div class="ov-secondary">Precipitation ${escape(fmt(probability,'%'))}</div>`;
+      const weatherIcon=({'Clear':'☀️','Cloudy':ccode===2?'🌤️':'☁️','Rain':'🌧️','Drizzle':'🌦️','Snow':'🌨️','Fog':'🌫️','Thunderstorms':'⛈️'})[condition] || '—';
+      body=`<div class="ov-weather-main"><div class="ov-weather-value">${escape(fmt(temperature,'°'))}</div><span class="ov-weather-art" role="img" aria-label="${escape(condition)}">${weatherIcon}</span></div><div class="ov-weather-condition">${escape(condition)}</div><div class="ov-secondary">Precipitation ${escape(fmt(probability,'%'))}</div>`;
       body+=trend((h.temperature_2m || []).slice(index,index+24),'Temperature forecast');
       if(!station)return {key,body,footer:'Station unavailable'};
     } else if(id==='markets:dispatch'){

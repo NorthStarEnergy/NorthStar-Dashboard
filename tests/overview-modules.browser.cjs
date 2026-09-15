@@ -32,6 +32,8 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   for(const width of [1920,1440,1371,1100,760,390]){
    await page.setViewportSize({width,height:1000});await page.waitForTimeout(300);
    const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,cards:[...document.querySelectorAll('[data-canvas-module]')].filter(e=>e.getClientRects().length).map(e=>({id:e.id||e.dataset.moduleId,x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y,w:e.clientWidth,h:e.clientHeight,scrollW:e.scrollWidth,scrollH:e.scrollHeight}))}));
+   assert.equal(await page.locator('#weatherStrip .ov-weather-art:visible').count(),8,'Every station retains its coloured weather graphic');
+   assert.equal(await page.locator('#weatherStrip .ov-weather-art').first().getAttribute('aria-label'),'Cloudy');
    layouts.push(layout);await page.screenshot({path:path.join(out,`overview-${width}.png`),fullPage:true});
    assert.ok(layout.scroll<=width+1,`No default horizontal overflow at ${width}: ${layout.scroll}`);
    for(const c of layout.cards)assert.ok(c.scrollW<=c.w+1 && c.scrollH<=c.h+1,`Card content fits ${width} ${c.id}: ${JSON.stringify(c)}`);

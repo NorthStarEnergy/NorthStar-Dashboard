@@ -45,3 +45,5 @@ body.overview-canvas .layout-toolbar{max-width:calc(100vw - 48px);flex-wrap:wrap
 .ov-trend figcaption,.ov-trend-empty{font:10px/1.3 Arial,sans-serif;color:var(--muted)}
 html body.overview-canvas main .ov-managed .ov-trend svg{display:block!important;width:100%!important;height:48px!important;max-width:none!important;margin-top:4px;position:static!important}
 body.overview-canvas main [data-ov-size=compact] .ov-trend{display:none!important}
+
+html body.overview-canvas main .ov-managed .ov-weather-art{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;width:40px;height:40px;font:32px/1 "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif;color:initial}
