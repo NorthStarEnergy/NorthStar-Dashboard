@@ -32,6 +32,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   for(const width of [1920,1440,1371,1100,760,390]){
    await page.setViewportSize({width,height:1000});await page.waitForTimeout(300);
    const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,cards:[...document.querySelectorAll('[data-canvas-module]')].filter(e=>e.getClientRects().length).map(e=>({id:e.id||e.dataset.moduleId,x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y,w:e.clientWidth,h:e.clientHeight,scrollW:e.scrollWidth,scrollH:e.scrollHeight}))}));
+   for(const card of await page.locator('#weatherStrip > .weather-card').all()){const rect=await card.boundingBox();assert.equal(rect.width,88);assert.equal(rect.height,165);}
    assert.equal(await page.locator('#weatherStrip > .weather-card > .weather-icon:visible').count(),8,'Every station retains its coloured weather graphic');
    assert.ok((await page.locator('#weatherStrip > .weather-card').first().textContent()).includes('Feels'));
    assert.equal(await page.locator('#weatherStrip > .weather-card > .periods').count(),8);

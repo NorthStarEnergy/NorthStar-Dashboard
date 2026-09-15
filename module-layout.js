@@ -145,7 +145,7 @@
     const originals = new WeakMap(), bound = new WeakSet();
     let positions = {}, frame = 0, gesture = false, topLayer = 30, restoring = false;
     const profileKey = 'northstarOverviewProfilesV2';
-    let profiles = {}, profile = '', lastWidth = 0, automatic = true, snapping = false, editSnapshot = null;
+    let profiles = {}, profile = '', lastWidth = 0, automatic = true, snapping = false, editSnapshot = null, weatherSizeApplied = false;
     try { profiles = JSON.parse(localStorage.getItem(profileKey) || '{}'); } catch {}
     if (!profiles || typeof profiles !== 'object' || Array.isArray(profiles)) profiles = {};
     try { positions = JSON.parse(localStorage.getItem(storageKey) || 'null') || readZone('overview').position; } catch {}
@@ -160,7 +160,7 @@
     const enabled = () => document.querySelector('#overview')?.classList.contains('active');
     function persist() {
       if(restoring || document.documentElement.dataset.nsStyles === 'loading' || document.documentElement.dataset.nsStyles === 'failed')return;
-      if (profile) profiles[profile] = {positions, width:lastWidth, automatic, indicatorRow:1, weatherOriginal:1};
+      if (profile) profiles[profile] = {positions, width:lastWidth, automatic, indicatorRow:1, weatherOriginal:1,weatherAtikokanSize:weatherSizeApplied};
       try { localStorage.setItem(profileKey, JSON.stringify(profiles)); } catch {}
       try { localStorage.setItem(storageKey, JSON.stringify(positions)); } catch {}
       writeZone('overview', {position: positions});
@@ -309,8 +309,9 @@
       const width = Math.max(260,container.clientWidth-48);
       const nextProfile=width>=1500?'wide':width>=1050?'desktop':width>=620?'laptop':'narrow';
       if(nextProfile!==profile){
-        if(profile)profiles[profile]={positions,width:lastWidth,automatic,indicatorRow:1,weatherOriginal:1};
+        if(profile)profiles[profile]={positions,width:lastWidth,automatic,indicatorRow:1,weatherOriginal:1,weatherAtikokanSize:weatherSizeApplied};
         profile=nextProfile;const saved=profiles[profile];
+        weatherSizeApplied=saved?.weatherAtikokanSize===true;
         lastWidth=Number(saved?.width) || 0;
         positions=Object.fromEntries(Object.entries(saved?.positions||{}).filter(([,p])=>valid(p)));
         automatic=saved?.automatic!==false;
@@ -341,8 +342,10 @@
           }
           positions[entry.key]=candidate;occupied.push(candidate);
         }
+        if((!weatherSizeApplied || reflow) && entry.key.startsWith('canvas:weather:')){positions[entry.key].w=88;positions[entry.key].h=165;}
         paint(entry);bind(entry);
       });
+      if(!weatherSizeApplied && all.some(entry=>entry.key.startsWith('canvas:weather:'))){weatherSizeApplied=true;}
       bounds();persist();
     }
     function schedule() { if (!frame) frame = requestAnimationFrame(sync); }

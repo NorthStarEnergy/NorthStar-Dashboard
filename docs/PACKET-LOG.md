@@ -1,3 +1,7 @@
+# Match weather cards to Atikokan — 2026-09-15
+
+Applied the saved Atikokan dimensions, 88 x 165 CSS pixels, to all eight Overview weather cards while preserving their positions. See [report](packets/2026-09-15-match-atikokan-size.md).
+
 # Restore pre-redesign weather cards — 2026-09-15
 
 Reconnected the original weather renderers from b766d9f to the module canvas, preserving native card formatting and forecasts. See [report](packets/2026-09-15-original-weather-cards.md).
