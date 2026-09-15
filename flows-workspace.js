@@ -52,19 +52,19 @@
     const liveCount = sources.filter(source => source.public && source.status === 'ok').length;
     const publicCount = sources.filter(source => source.public).length;
     const overall = payload.stale ? 'stale' : (liveCount ? 'ok' : 'not_configured');
-    root.innerHTML = `<section class="panel flows-hero" data-module-id="flow-status">
+    root.innerHTML = `<section class="panel flows-hero">
       <div><label>WATER MANAGEMENT · READ-ONLY SOURCES</label><h2>Flows</h2><p class="muted-note" id="flowsSummary">${liveCount}/${publicCount} public sources reporting${payload.updated ? ` · checked ${escape(observedAt(payload.updated))}` : ' · awaiting first source refresh'}</p></div>
       <div class="flows-hero-actions"><span class="flows-status-pill ${overall}" id="flowsOverall">${payload.stale ? 'SOURCE ATTENTION' : liveCount ? 'PUBLIC DATA REPORTING' : 'AWAITING DATA'}</span><button class="secondary-btn" type="button" data-flows-reload>RELOAD DISPLAY</button></div>
     </section>
-    <section class="panel" data-module-id="flow-gauges"><div class="flows-module-head"><div><label>CURRENT OBSERVATIONS</label><h3>Gauge readings</h3><p class="muted-note">A blank metric means that source did not report that measure.</p></div></div><div class="flows-gauge-grid">${gauges.length ? gauges.map(gaugeCard).join('') : '<div class="muted-note">Waiting for source observations…</div>'}</div></section>
-    <section class="panel" data-module-id="flow-sources"><div class="flows-module-head"><div><label>CONNECTION HEALTH</label><h3>Source adapters</h3><p class="muted-note">Public sources are pulled server-side. Private reporting is not contacted until access is configured.</p></div></div><div class="flows-source-list">${sources.map(sourceCard).join('')}</div></section>
-    <p class="flows-caution" data-module-id="flow-notice">${escape(payload.notice || 'Read-only display. Do not use this page to operate equipment.')}${payload.error ? ` <span class="flows-error">Source attention: ${escape(payload.error)}.</span>` : ''}</p>`;
+    <section class="panel"><div class="flows-module-head"><div><label>CURRENT OBSERVATIONS</label><h3>Gauge readings</h3><p class="muted-note">A blank metric means that source did not report that measure.</p></div></div><div class="flows-gauge-grid">${gauges.length ? gauges.map(gaugeCard).join('') : '<div class="muted-note">Waiting for source observations…</div>'}</div></section>
+    <section class="panel"><div class="flows-module-head"><div><label>CONNECTION HEALTH</label><h3>Source adapters</h3><p class="muted-note">Public sources are pulled server-side. Private reporting is not contacted until access is configured.</p></div></div><div class="flows-source-list">${sources.map(sourceCard).join('')}</div></section>
+    <p class="flows-caution">${escape(payload.notice || 'Read-only display. Do not use this page to operate equipment.')}${payload.error ? ` <span class="flows-error">Source attention: ${escape(payload.error)}.</span>` : ''}</p>`;
     window.watchdogMark?.('flows', !payload.stale && liveCount > 0);
     window.NorthstarModules?.refresh?.();
   }
 
   function renderError(root) {
-    root.innerHTML = `<section class="panel flows-hero" data-module-id="flow-status"><div><label>WATER MANAGEMENT · READ-ONLY SOURCES</label><h2>Flows</h2><p class="muted-note flows-error">The source snapshot is unavailable. Existing readings are not replaced with estimates.</p></div><div class="flows-hero-actions"><span class="flows-status-pill error">DISPLAY UNAVAILABLE</span><button class="secondary-btn" type="button" data-flows-reload>RETRY DISPLAY</button></div></section>`;
+    root.innerHTML = `<section class="panel flows-hero"><div><label>WATER MANAGEMENT · READ-ONLY SOURCES</label><h2>Flows</h2><p class="muted-note flows-error">The source snapshot is unavailable. Existing readings are not replaced with estimates.</p></div><div class="flows-hero-actions"><span class="flows-status-pill error">DISPLAY UNAVAILABLE</span><button class="secondary-btn" type="button" data-flows-reload>RETRY DISPLAY</button></div></section>`;
     window.watchdogMark?.('flows', false);
     window.NorthstarModules?.refresh?.();
   }

@@ -1,3 +1,7 @@
+# Flow workspace consolidation — 2026-09-15
+
+Flows now opens as one complete Tools module rather than four identically named submodules. See [report](packets/2026-09-15-flow-workspace-consolidation.md).
+
 # Flow workspace asset recovery — 2026-09-15
 
 Committed the Flow workspace stylesheet, script, backend source adapter, and static-asset regression check so `flows-workspace.js` is always part of the release. See [report](packets/2026-09-15-flow-workspace-asset-recovery.md).
