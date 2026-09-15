@@ -4,7 +4,7 @@
   root.dataset.nsStyles = 'loading';
   let release, running = false, status;
   const failedScripts = new Set();
-  document.addEventListener('error',event=>{if(event.target?.tagName==='SCRIPT' && event.target.src)failedScripts.add(event.target.src);},true);
+  document.addEventListener('error',event=>{if(event.target?.tagName==='SCRIPT' && event.target.src && event.target.hasAttribute('data-ns-required'))failedScripts.add(event.target.src);},true);
   window.northstarStylesReady = new Promise(resolve => { release = resolve; });
   const valid = link => {
     try { return !!link.sheet && link.sheet.cssRules.length > 0; }
@@ -56,7 +56,9 @@
       window.dispatchEvent(new Event('northstar:styles-ready'));
     } else {
       status.querySelector('strong').textContent = scriptsReady ? 'Dashboard display could not load' : 'Dashboard files could not load';
-      status.querySelector('p').textContent = 'Check your connection, then retry. Your saved layout has not been reset.';
+      const missingFiles = [...failedScripts].map(src => new URL(src).pathname.split('/').pop());
+      if (!window.northstarOperatorSession) missingFiles.unshift('operator-session.js');
+      status.querySelector('p').textContent = (missingFiles.length ? 'Could not load: ' + missingFiles.join(', ') + '. ' : '') + 'Retry loading. Your saved layout has not been reset.';
       status.querySelector('button').hidden = false;
     }
     running = false;

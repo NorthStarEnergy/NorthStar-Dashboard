@@ -14,7 +14,7 @@ assert.ok(html.trimEnd().endsWith('</body>\n</html>'));
   if(path.extname(file)==='.css'&&((mode==='transient'&&!failed.has(url.pathname))||(mode==='persistent'&&url.pathname==='/dashboard-polish.css'))){
    failed.add(url.pathname);requests.push({path:url.pathname,status:503});res.writeHead(503,{'Content-Type':'text/plain'});return res.end('Injected stylesheet failure');
   }
-  fs.readFile(file,(error,data)=>{res.writeHead(error?404:200,{'Content-Type':{'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml'}[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});res.end(error?'':data);});
+  fs.readFile(file,(error,data)=>{res.writeHead(error?404:200,{'Content-Type':{'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml'}[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});if(!error && url.pathname==='/northstar-clean.html')data=Buffer.from(data.toString().replace('</head>','<script defer src="https://blocked-analytics.invalid/beacon.js"></script></head>'));res.end(error?'':data);});
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const origin=`http://127.0.0.1:${server.address().port}`;
@@ -73,9 +73,10 @@ assert.ok(html.trimEnd().endsWith('</body>\n</html>'));
   assert.equal(await page.evaluate(()=>!!window.NorthstarModules),false);
   assert.equal(await page.locator('.app').evaluate(e=>getComputedStyle(e).visibility),'hidden');
   assert.equal(await page.evaluate(()=>JSON.stringify(JSON.parse(localStorage.northstarOverviewProfilesV2).desktop)),saved);
+  assert.match(await page.locator('#nsStyleStatus p').innerText(),/module-workspace\.js/);
   mode='normal';await page.click('#nsStyleStatus button');await checkEvents();
   assert.deepEqual(errors,[]);
-  fs.writeFileSync(path.join(out,'browser-validation.json'),JSON.stringify({fixture:true,scenarios:['Overview event and browser Back','Events report and browser Back','Events return link with failed stylesheets','Persistent stylesheet failure preserves layout','Retry restores section without resetting layout'],failedStylesheets:[...failed],requests,pageErrors:errors},null,2));
+  fs.writeFileSync(path.join(out,'browser-validation.json'),JSON.stringify({fixture:true,scenarios:['Overview event and browser Back','Events report and browser Back','Events return link with failed stylesheets','Persistent stylesheet failure preserves layout','Retry restores section without resetting layout','Blocked third-party analytics does not block startup','Required script failure identifies the file and recovers'],failedStylesheets:[...failed],requests,pageErrors:errors},null,2));
   console.log('Event return browser checks passed: history, return link, stylesheet recovery, persistent failure, retry and saved layout preservation.');
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

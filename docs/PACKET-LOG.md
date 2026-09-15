@@ -1,3 +1,7 @@
+# Dashboard loading guard scope — 2026-09-15
+
+Optional injected scripts no longer block dashboard startup; required asset failures identify the filename. See [report](packets/2026-09-15-load-guard-scope.md).
+
 # Overview refresh stability — 2026-09-15
 
 Feed updates no longer rearrange saved canvas geometry or add native roster panels to Overview. Failed scripts show recovery UI before partial initialization. See [report](packets/2026-09-15-refresh-stability.md).
