@@ -78,6 +78,6 @@ def test_flow_api_is_operator_only_and_uses_the_live_workspace() -> None:
     assert backend.OPERATOR_ROUTES["/api/flows"] == ("GET",)
     assert "/api/flows" not in backend.CHECKIN_PUBLIC_ROUTES
     assert 'id="flowsWorkspace" data-module-id="flows-workspace"' in html
-    assert "flows-workspace.js?v=20260915-1" in html
-    assert "flows-workspace.css?v=20260915-1" in html
+    assert "flows-workspace.js?v=20260915-water-log-3" in html
+    assert "flows-workspace.css?v=20260915-water-log-3" in html
     assert "WATER MANAGEMENT / FLOWS — PLANNED" not in html

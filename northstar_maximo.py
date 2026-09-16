@@ -9,6 +9,7 @@ alone is not a successful connection.
 from __future__ import annotations
 
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any, Callable
@@ -27,8 +28,13 @@ DEFAULT_ASSET_OS = "mxapiasset"
 DEFAULT_WO_OS = "mxapiwo"
 MAX_BODY = 1_000_000
 FETCH_TIMEOUT = 15
+EQUIPMENT_SNAPSHOT_FILENAME = "equipment-master.json"
+EQUIPMENT_PAGE_SIZE = 50
+EQUIPMENT_PAGE_LIMIT = 100
+EQUIPMENT_SEARCH_LIMIT = 200
 
 _FETCH: Callable[[str, dict[str, str]], dict[str, Any]] | None = None
+_SNAPSHOT_CACHE: tuple[tuple[str, int, int] | None, dict[str, Any] | None] | None = None
 
 
 def config_path() -> Path:
@@ -38,8 +44,162 @@ def config_path() -> Path:
     return ROOT / "data" / ".northstar-maximo.json"
 
 
+def equipment_snapshot_path() -> Path:
+    """Return the local, operator-only Maximo equipment snapshot path."""
+    override = os.environ.get("NORTHSTAR_MAXIMO_SNAPSHOT", "").strip()
+    if override:
+        return Path(override).expanduser()
+    return ROOT / "data" / "maximo" / EQUIPMENT_SNAPSHOT_FILENAME
+
+
 def _strip_secret(value: str) -> str:
     return str(value or "").strip()
+
+
+def _text(value: Any, limit: int = 2_000) -> str:
+    return str(value or "").strip()[:limit]
+
+
+def _snapshot_fingerprint(path: Path) -> tuple[str, int, int] | None:
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return (str(path), stat.st_mtime_ns, stat.st_size)
+
+
+def _load_equipment_snapshot() -> dict[str, Any] | None:
+    """Load a validated local import without ever exposing its filesystem path."""
+    global _SNAPSHOT_CACHE
+    path = equipment_snapshot_path()
+    fingerprint = _snapshot_fingerprint(path)
+    if _SNAPSHOT_CACHE and _SNAPSHOT_CACHE[0] == fingerprint:
+        return _SNAPSHOT_CACHE[1]
+    snapshot: dict[str, Any] | None = None
+    if fingerprint:
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            raw = {}
+        if isinstance(raw, dict) and isinstance(raw.get("assets"), list):
+            assets = []
+            for candidate in raw["assets"]:
+                if not isinstance(candidate, dict):
+                    continue
+                asset_num = _text(candidate.get("assetNum"), 160)
+                site = _text(candidate.get("site"), 80)
+                if not asset_num or not site:
+                    continue
+                assets.append({
+                    "assetNum": asset_num,
+                    "description": _text(candidate.get("description")),
+                    "location": _text(candidate.get("location"), 320),
+                    "locationDescription": _text(candidate.get("locationDescription")),
+                    "parent": _text(candidate.get("parent"), 160),
+                    "rotatingItem": _text(candidate.get("rotatingItem"), 320),
+                    "site": site,
+                })
+            source = raw.get("source") if isinstance(raw.get("source"), dict) else {}
+            site_counts: dict[str, int] = {}
+            for asset in assets:
+                site_counts[asset["site"]] = site_counts.get(asset["site"], 0) + 1
+            snapshot = {
+                "assets": assets,
+                "source": {
+                    "filename": Path(_text(source.get("filename"), 255)).name,
+                    "sha256": _text(source.get("sha256"), 128),
+                    "sheetName": _text(source.get("sheetName"), 255),
+                    "importedAt": _text(source.get("importedAt"), 80),
+                    "headers": [
+                        _text(value, 120) for value in source.get("headers", [])
+                        if isinstance(value, (str, int, float))
+                    ][:20],
+                },
+                "siteCounts": [
+                    {"code": code, "assets": count}
+                    for code, count in sorted(site_counts.items())
+                ],
+            }
+    _SNAPSHOT_CACHE = (fingerprint, snapshot)
+    return snapshot
+
+
+def equipment_master_status() -> dict[str, Any]:
+    """Describe the locally imported master list without reading Maximo remotely."""
+    snapshot = _load_equipment_snapshot()
+    if not snapshot:
+        return {
+            "available": False,
+            "state": "No imported equipment master",
+            "readOnly": True,
+            "href": "/api/maximo/equipment",
+            "assetCount": 0,
+            "siteCount": 0,
+        }
+    return {
+        "available": True,
+        "state": "Loaded local equipment master",
+        "readOnly": True,
+        "href": "/api/maximo/equipment",
+        "assetCount": len(snapshot["assets"]),
+        "siteCount": len(snapshot["siteCounts"]),
+        "source": snapshot["source"],
+    }
+
+
+def _bounded_int(value: Any, *, name: str, default: int, maximum: int) -> int:
+    if value in (None, ""):
+        return default
+    try:
+        parsed = int(str(value))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a whole number") from exc
+    if parsed < 1 or parsed > maximum:
+        raise ValueError(f"{name} must be between 1 and {maximum}")
+    return parsed
+
+
+def equipment(query: str = "", site: str = "", page: Any = 1, limit: Any = EQUIPMENT_PAGE_SIZE) -> dict[str, Any]:
+    """Search the complete, local equipment list with bounded pagination."""
+    requested_query = _text(query, EQUIPMENT_SEARCH_LIMIT)
+    requested_site = _text(site, 80)
+    page_number = _bounded_int(page, name="page", default=1, maximum=1_000_000)
+    page_limit = _bounded_int(limit, name="limit", default=EQUIPMENT_PAGE_SIZE, maximum=EQUIPMENT_PAGE_LIMIT)
+    snapshot = _load_equipment_snapshot()
+    status = equipment_master_status()
+    base = {
+        **status,
+        "query": requested_query,
+        "site": requested_site,
+        "page": page_number,
+        "limit": page_limit,
+        "total": 0,
+        "pages": 0,
+        "sites": [],
+        "assets": [],
+    }
+    if not snapshot:
+        return base
+    terms = [term.casefold() for term in requested_query.split()]
+    rows = []
+    for asset in snapshot["assets"]:
+        if requested_site and asset["site"] != requested_site:
+            continue
+        searchable = " ".join(asset.values()).casefold()
+        if terms and not all(term in searchable for term in terms):
+            continue
+        rows.append(asset)
+    total = len(rows)
+    pages = math.ceil(total / page_limit) if total else 0
+    start = (page_number - 1) * page_limit
+    base.update({
+        "source": snapshot["source"],
+        "sites": snapshot["siteCounts"],
+        "total": total,
+        "pages": pages,
+        "assets": [dict(asset) for asset in rows[start:start + page_limit]],
+    })
+    return base
 
 
 def _load_file() -> dict[str, Any]:

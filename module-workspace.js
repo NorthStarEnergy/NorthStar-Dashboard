@@ -283,8 +283,8 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     });
     const moduleButton = m => {const b=document.createElement('button');b.type='button';b.textContent=name(m)+(m.id===landing?' ★':'');b.className=m.id===active?'active':'';b.dataset.openModule=m.id;b.setAttribute('aria-current',m.id===active?'page':'false');b.onclick=()=>openModule(m.id);return b;};
     build('',tree);
-    tabs.innerHTML = s.tabs.map(id=>`<div class="ns-tab"><button type="button" role="tab" aria-selected="${id===active}" data-module-tab="${esc(id)}">${esc(name(registry.get(id)))}</button><button type="button" data-close-module="${esc(id)}" aria-label="Close ${esc(name(registry.get(id)))}">×</button></div>`).join('');
-    $('[data-ns-action="float"]',toolbar).textContent=s.floating?'Maximize active module':'Arrange module windows';
+    tabs.innerHTML = s.tabs.map(id=>`<div class="ns-tab" draggable="true" data-tab-id="${esc(id)}"><button type="button" role="tab" aria-selected="${id===active}" data-module-tab="${esc(id)}">${esc(name(registry.get(id)))}</button><button type="button" data-popout-module="${esc(id)}" aria-label="Pop out ${esc(name(registry.get(id)))}">↗</button><button type="button" data-close-module="${esc(id)}" aria-label="Close ${esc(name(registry.get(id)))}">×</button></div>`).join('');
+    $('[data-ns-action="float"]',toolbar).textContent=s.floating?'Maximize active module':'Pop out module windows';
     $('[data-ns-action="landing"]',toolbar).textContent=active===landing?'★ Landing module':'Set as landing module';
     $$('#sideNav [data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===section));
     painting=false;
@@ -488,7 +488,29 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     });
     try{if(!localStorage.getItem(KEY+'Saved'))localStorage.setItem(KEY+'Saved',JSON.stringify(state));}catch{}
     window.addEventListener('resize',()=>paint());
+    let draggedTab = '';
+    tabs.addEventListener('dragstart',event=>{
+      const tab=event.target.closest('.ns-tab');
+      if(!tab)return;
+      draggedTab=tab.dataset.tabId;tab.classList.add('ns-tab-dragging');
+      event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',draggedTab);
+    });
+    tabs.addEventListener('dragover',event=>{
+      if(event.target.closest('.ns-tab') && draggedTab)event.preventDefault();
+    });
+    tabs.addEventListener('dragend',event=>{event.target.closest('.ns-tab')?.classList.remove('ns-tab-dragging');draggedTab='';});
+    tabs.addEventListener('drop',event=>{
+      event.preventDefault();
+      const target=event.target.closest('.ns-tab'), targetId=target?.dataset.tabId;
+      if(!draggedTab || !targetId || draggedTab===targetId)return;
+      const s=sectionState(section), order=s.tabs.filter(id=>id!==draggedTab), index=order.indexOf(targetId);
+      const rect=target.getBoundingClientRect();
+      order.splice(index + (event.clientX - rect.left > rect.width / 2 ? 1 : 0),0,draggedTab);
+      s.tabs=order;paint();save();draggedTab='';
+    });
     tabs.onclick=event=>{
+      const popout=event.target.closest('[data-popout-module]');
+      if(popout){const s=sectionState(section);s.active=popout.dataset.popoutModule;s.floating=true;paint();save();return;}
       const open=event.target.closest('[data-module-tab]'),close=event.target.closest('[data-close-module]');
       if(open)openModule(open.dataset.moduleTab);
       if(close){const s=sectionState(section);s.tabs=s.tabs.filter(id=>id!==close.dataset.closeModule);if(s.active===close.dataset.closeModule)s.active=s.tabs.at(-1) || '';paint();save();}

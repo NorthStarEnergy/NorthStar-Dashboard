@@ -14,7 +14,8 @@ body.ns-in-section main>.page-header{display:none!important}
 .ns-tree-children{margin-left:7px;border-left:1px solid #335264;padding-left:4px}
 .ns-section-top{position:absolute;left:196px;right:16px;top:0;pointer-events:auto;background:var(--bg,#0b151e);z-index:40}
 .ns-module-tabs{display:flex;overflow-x:auto;gap:4px;border-bottom:1px solid #335264;padding-top:8px}
-.ns-tab{display:flex;flex:none;max-width:300px;background:#142733;border-radius:6px 6px 0 0}
+.ns-tab{display:flex;flex:none;max-width:300px;background:#142733;border-radius:6px 6px 0 0;cursor:grab;touch-action:none}
+.ns-tab:active,.ns-tab.ns-tab-dragging{cursor:grabbing;opacity:.7}
 .ns-tab button{border:0;background:transparent;color:#c5d6e2;padding:10px;font:13px system-ui;cursor:pointer}
 .ns-tab [role=tab]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ns-tab [aria-selected=true]{background:#254b60;color:#fff;border-bottom:2px solid #78c6ed}

@@ -9,13 +9,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import shutil
 import sqlite3
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -71,6 +72,81 @@ FIELD_REPORT_STATES = (
     "RESOLVED", "VERIFIED", "CLOSED",
 )
 ACTION_ITEM_STATES = ("OPEN", "ASSIGNED", "IN PROGRESS", "RESOLVED", "VERIFIED", "CLOSED")
+DAILY_OPERATION_STATES = ("DRAFT", "PUBLISHED")
+DAILY_OPERATION_REGIONS = ("EAST", "WEST", "QUEBEC")
+DAILY_OPERATION_SOURCE_CHECKS = (
+    ("hydrometric", "Hydrometric readings"),
+    ("scada_production", "SCADA / production summary"),
+    ("forecast_weather", "Forecast / weather"),
+    ("outages", "Outages / incidents"),
+    ("unit_cycling", "Unit cycling"),
+    ("maintenance", "Maintenance / service requests"),
+)
+DAILY_OPERATION_METRICS = (
+    ("gauge_water_level", "Gauge water level"),
+    ("gauge_discharge", "Gauge discharge"),
+    ("water_level", "Water level"),
+    ("inflow", "Inflow"),
+    ("outflow", "Outflow"),
+    ("spill", "Spill / leakage"),
+    ("generation", "Generation"),
+    ("precipitation", "Precipitation"),
+    ("water_temperature", "Water temperature"),
+    ("forecast", "Forecast"),
+    ("unit_status", "Unit status"),
+    ("operation_note", "Operational note"),
+)
+UNIT_CYCLING_EVENT_TYPES = (
+    ("START", "Start"),
+    ("STOP", "Stop"),
+    ("TRIP", "Trip"),
+    ("SYNCHRONIZED", "Synchronized"),
+    ("DESYNCHRONIZED", "Desynchronized"),
+    ("TEST", "Test / exercise"),
+    ("OTHER", "Other operational event"),
+)
+UNIT_CYCLING_STATE_BY_EVENT = {
+    "START": "RUNNING",
+    "SYNCHRONIZED": "RUNNING",
+    "STOP": "STOPPED",
+    "DESYNCHRONIZED": "STOPPED",
+    "TRIP": "TRIPPED",
+    "TEST": "TESTING",
+    "OTHER": "RECORDED",
+}
+WATER_OBSERVATION_METRICS = (
+    ("ELEVATION", "Reservoir elevation", "m"),
+    ("INFLOW", "Inflow", "m³/s"),
+    ("OUTFLOW", "Outflow", "m³/s"),
+    ("PRECIPITATION", "Precipitation", "mm"),
+    ("STORAGE", "Storage", "m³/s·days"),
+    ("RULE_CURVE", "Rule curve position", "%"),
+    ("GENERATION", "Generation", "MWh"),
+    ("GATE_POSITION", "Gate position", "%"),
+    ("FLOW_FORECAST", "Flow forecast", "m³/s"),
+)
+WATER_OBSERVATION_QUALITIES = (
+    ("VERIFIED", "Verified"),
+    ("PRELIMINARY", "Preliminary"),
+    ("ESTIMATED", "Estimated"),
+    ("CORRECTED", "Correction record"),
+)
+WATER_OBSERVATION_SOURCE_TYPES = (
+    ("HYDROMETRIC", "Hydrometric station"),
+    ("MANUAL_READ", "Manual field / control-room read"),
+    ("OPERATIONS_REPORT", "Operations report"),
+    ("FORECAST", "Forecast source"),
+    ("CALCULATED", "Calculated estimate"),
+)
+WATER_OBSERVATION_FACILITIES = (
+    ("EAST", "Lake Abitibi"), ("EAST", "Twin Falls"), ("EAST", "Iroquois Falls"),
+    ("EAST", "Island Falls"), ("EAST", "Old Woman Falls"), ("EAST", "White Otter Falls"),
+    ("EAST", "Camp Three Rapids"), ("EAST", "Big Beaver Falls"), ("EAST", "Okikendawt"),
+    ("QUEBEC", "COGEN"), ("QUEBEC", "Bird"), ("QUEBEC", "McDougall"),
+    ("QUEBEC", "Ayers 1"), ("QUEBEC", "Ayers 2"),
+    ("WEST", "Raft Lake"), ("WEST", "Calm Lake"), ("WEST", "Sturgeon Falls"),
+    ("WEST", "Namakan Lake"), ("WEST", "Rainy Lake"), ("WEST", "Lake of the Woods"),
+)
 
 
 class SwitchingConflict(ValueError):
@@ -444,6 +520,95 @@ CREATE INDEX IF NOT EXISTS idx_field_report_attachments_report ON field_report_a
 CREATE INDEX IF NOT EXISTS idx_action_items_status ON action_items(status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_action_items_report ON action_items(report_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_action_item_events_action ON action_item_events(action_id, seq DESC);
+
+CREATE TABLE IF NOT EXISTS daily_operation_reports (
+    id TEXT PRIMARY KEY,
+    report_date TEXT NOT NULL,
+    region TEXT NOT NULL,
+    title TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('DRAFT','PUBLISHED')),
+    source_checks TEXT NOT NULL DEFAULT '[]',
+    metrics_json TEXT NOT NULL DEFAULT '[]',
+    notes TEXT NOT NULL DEFAULT '',
+    validation_json TEXT NOT NULL DEFAULT '{}',
+    record_version INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    updated_by TEXT NOT NULL,
+    published_at TEXT,
+    published_by TEXT,
+    snapshot_sha256 TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS daily_operation_events (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id TEXT NOT NULL REFERENCES daily_operation_reports(id),
+    at TEXT NOT NULL,
+    actor TEXT NOT NULL,
+    event TEXT NOT NULL,
+    prior_status TEXT,
+    new_status TEXT,
+    details TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS daily_operation_snapshots (
+    report_id TEXT NOT NULL REFERENCES daily_operation_reports(id),
+    snapshot_version INTEGER NOT NULL,
+    payload TEXT NOT NULL,
+    sha256 TEXT NOT NULL,
+    published_at TEXT NOT NULL,
+    published_by TEXT NOT NULL,
+    PRIMARY KEY (report_id, snapshot_version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_operation_reports_date
+    ON daily_operation_reports(report_date DESC, region, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_daily_operation_events_report
+    ON daily_operation_events(report_id, seq DESC);
+
+CREATE TABLE IF NOT EXISTS unit_cycling_records (
+    id TEXT PRIMARY KEY,
+    station TEXT NOT NULL,
+    unit_name TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    running_hours REAL,
+    running_days REAL,
+    reason TEXT NOT NULL DEFAULT '',
+    source_ref TEXT NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_unit_cycling_records_occurred
+    ON unit_cycling_records(occurred_at DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_unit_cycling_records_unit
+    ON unit_cycling_records(station, unit_name, occurred_at DESC);
+
+CREATE TABLE IF NOT EXISTS water_observations (
+    id TEXT PRIMARY KEY,
+    region TEXT NOT NULL,
+    facility TEXT NOT NULL,
+    observed_at TEXT NOT NULL,
+    metric_type TEXT NOT NULL,
+    value REAL NOT NULL,
+    unit TEXT NOT NULL,
+    quality TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    source_ref TEXT NOT NULL,
+    review_band_low REAL,
+    review_band_high REAL,
+    notes TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_water_observations_observed
+    ON water_observations(observed_at DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_water_observations_facility
+    ON water_observations(region, facility, metric_type, observed_at DESC);
 
 CREATE TABLE IF NOT EXISTS controlled_sources (
     id TEXT PRIMARY KEY,
@@ -3616,6 +3781,666 @@ def field_report_history(report_id: str | None = None, limit: int = 250) -> list
     return [{"seq": r["seq"], "reportId": r["report_id"], "at": r["at"], "actor": r["actor"],
              "event": r["event"], "priorStatus": r["prior_status"], "newStatus": r["new_status"],
              "details": r["details"]} for r in rows]
+
+
+def daily_operation_catalog() -> dict[str, Any]:
+    return {
+        "regions": list(DAILY_OPERATION_REGIONS),
+        "sourceChecks": [
+            {"key": key, "label": label} for key, label in DAILY_OPERATION_SOURCE_CHECKS
+        ],
+        "sourceStates": ["NOT REVIEWED", "REVIEWED", "NOT APPLICABLE", "EXCEPTION"],
+        "metrics": [{"key": key, "label": label} for key, label in DAILY_OPERATION_METRICS],
+    }
+
+
+def _daily_json(value: object, fallback: Any) -> Any:
+    try:
+        return json.loads(str(value))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return fallback
+
+
+def _daily_source_checks(value: object) -> list[dict[str, str]]:
+    records = value if isinstance(value, list) else []
+    provided = {
+        str(item.get("key", "")).strip().lower(): item
+        for item in records if isinstance(item, dict)
+    }
+    result: list[dict[str, str]] = []
+    for key, label in DAILY_OPERATION_SOURCE_CHECKS:
+        item = provided.get(key, {})
+        state = str(item.get("state", "NOT REVIEWED")).strip().upper()
+        if state not in {"NOT REVIEWED", "REVIEWED", "NOT APPLICABLE", "EXCEPTION"}:
+            state = "NOT REVIEWED"
+        result.append({
+            "key": key,
+            "label": label,
+            "state": state,
+            "note": str(item.get("note", "")).strip()[:1000],
+        })
+    return result
+
+
+def _daily_metrics(value: object) -> list[dict[str, Any]]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError("metrics must be a list")
+    if len(value) > 250:
+        raise ValueError("a daily report may contain at most 250 staged metrics")
+    records: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            raise ValueError("each metric must be an object")
+        metric_key = str(item.get("metricKey", "")).strip().lower()[:80]
+        station = str(item.get("station", "")).strip()[:160]
+        raw_value = item.get("value", "")
+        if isinstance(raw_value, bool):
+            normalized_value: str | float = str(raw_value)
+        elif isinstance(raw_value, (int, float)):
+            normalized_value = float(raw_value)
+        else:
+            normalized_value = str(raw_value if raw_value is not None else "").strip()[:160]
+        unit = str(item.get("unit", "")).strip()[:60]
+        observed_at = str(item.get("observedAt", "")).strip()[:80]
+        source = str(item.get("source", "")).strip()[:160]
+        source_ref = str(item.get("sourceRef", "")).strip()[:240]
+        note = str(item.get("note", "")).strip()[:1000]
+        if not any((metric_key, station, str(normalized_value), unit, observed_at, source, source_ref, note)):
+            continue
+        records.append({
+            "station": station,
+            "metricKey": metric_key,
+            "value": normalized_value,
+            "unit": unit,
+            "observedAt": observed_at,
+            "source": source,
+            "sourceRef": source_ref,
+            "note": note,
+        })
+    return records
+
+
+def _daily_report_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    report_date = str(payload.get("reportDate", "")).strip()[:10]
+    try:
+        date.fromisoformat(report_date)
+    except ValueError as exc:
+        raise ValueError("report date must use YYYY-MM-DD") from exc
+    region = str(payload.get("region", "")).strip().upper()
+    region = {"QC": "QUEBEC", "QUÉBEC": "QUEBEC"}.get(region, region)
+    if region not in DAILY_OPERATION_REGIONS:
+        raise ValueError("region must be EAST, WEST, or QUEBEC")
+    title = str(payload.get("title", "Daily Operations Report")).strip()[:200] or "Daily Operations Report"
+    return {
+        "reportDate": report_date,
+        "region": region,
+        "title": title,
+        "sourceChecks": _daily_source_checks(payload.get("sourceChecks")),
+        "metrics": _daily_metrics(payload.get("metrics")),
+        "notes": str(payload.get("notes", "")).strip()[:8000],
+    }
+
+
+def _daily_validation(fields: dict[str, Any]) -> dict[str, Any]:
+    errors: list[str] = []
+    exceptions: list[str] = []
+    for source in fields["sourceChecks"]:
+        if source["state"] == "NOT REVIEWED":
+            errors.append(f"{source['label']} has not been explicitly reviewed")
+        elif source["state"] in {"NOT APPLICABLE", "EXCEPTION"}:
+            if not source["note"]:
+                errors.append(f"{source['label']} requires a reason for {source['state'].lower()}")
+            else:
+                exceptions.append(source["label"])
+
+    known_metrics = {key for key, _ in DAILY_OPERATION_METRICS}
+    text_metrics = {"unit_status", "operation_note"}
+    if not fields["metrics"]:
+        errors.append("at least one controlled metric is required")
+    for index, metric in enumerate(fields["metrics"], 1):
+        prefix = f"metric {index}"
+        if not metric["station"]:
+            errors.append(f"{prefix} is missing a station")
+        if metric["metricKey"] not in known_metrics:
+            errors.append(f"{prefix} has an unknown metric type")
+        if not metric["source"]:
+            errors.append(f"{prefix} is missing a source")
+        if not metric["observedAt"]:
+            errors.append(f"{prefix} is missing an observation time")
+        else:
+            try:
+                datetime.fromisoformat(metric["observedAt"].replace("Z", "+00:00"))
+            except ValueError:
+                errors.append(f"{prefix} has an invalid observation time")
+        if metric["metricKey"] in text_metrics:
+            if not str(metric["value"]).strip():
+                errors.append(f"{prefix} is missing a value")
+        else:
+            try:
+                number = float(metric["value"])
+                if not math.isfinite(number):
+                    raise ValueError
+            except (TypeError, ValueError):
+                errors.append(f"{prefix} requires a finite numeric value")
+            if not metric["unit"]:
+                errors.append(f"{prefix} is missing a unit")
+    return {
+        "ready": not errors,
+        "errors": errors,
+        "exceptions": exceptions,
+        "metricCount": len(fields["metrics"]),
+        "reviewedSourceCount": sum(item["state"] == "REVIEWED" for item in fields["sourceChecks"]),
+    }
+
+
+def _daily_operation_record(row: sqlite3.Row, snapshot: dict[str, Any] | None = None) -> dict[str, Any]:
+    source_checks = _daily_json(row["source_checks"], [])
+    metrics = _daily_json(row["metrics_json"], [])
+    validation = _daily_json(row["validation_json"], {})
+    return {
+        "id": row["id"], "reportDate": row["report_date"], "region": row["region"],
+        "title": row["title"], "status": row["status"],
+        "sourceChecks": source_checks if isinstance(source_checks, list) else [],
+        "metrics": metrics if isinstance(metrics, list) else [],
+        "notes": row["notes"], "validation": validation if isinstance(validation, dict) else {},
+        "version": row["record_version"], "createdAt": row["created_at"],
+        "createdBy": row["created_by"], "updatedAt": row["updated_at"],
+        "updatedBy": row["updated_by"], "publishedAt": row["published_at"],
+        "publishedBy": row["published_by"], "snapshotSha256": row["snapshot_sha256"],
+        "immutable": row["status"] == "PUBLISHED", "snapshot": snapshot,
+    }
+
+
+def _append_daily_operation_event(connection: sqlite3.Connection, report_id: str, actor: str,
+                                  event: str, prior: str | None, new: str | None,
+                                  details: str = "") -> None:
+    timestamp = now_iso()
+    stored_details = details.strip()[:4000]
+    connection.execute(
+        "INSERT INTO daily_operation_events (report_id,at,actor,event,prior_status,new_status,details)"
+        " VALUES (?,?,?,?,?,?,?)",
+        (report_id, timestamp, actor, event, prior, new, stored_details),
+    )
+    events.append_event(
+        connection, event_type=events.event_type("daily_operations", event), occurred_at=timestamp,
+        actor_id=actor, aggregate_type="daily_operation_report", aggregate_id=report_id,
+        source="daily_operations", severity="warning" if "exception" in details.lower() else "info",
+        summary=event.replace("_", " ").title(),
+        payload={"priorStatus": prior, "newStatus": new, "details": stored_details},
+    )
+
+
+def create_daily_operation_report(payload: dict[str, Any], actor: str) -> dict[str, Any]:
+    fields = _daily_report_fields(payload)
+    validation = _daily_validation(fields)
+    actor = actor.strip()[:160] or "operator console"
+    timestamp = now_iso()
+    with _LOCK, _session() as connection:
+        report_id = _unique_id(connection, "daily_operation_reports", "daily")
+        connection.execute(
+            "INSERT INTO daily_operation_reports (id,report_date,region,title,status,source_checks,metrics_json,"
+            "notes,validation_json,record_version,created_at,created_by,updated_at,updated_by)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (report_id, fields["reportDate"], fields["region"], fields["title"], "DRAFT",
+             json.dumps(fields["sourceChecks"], ensure_ascii=False, separators=(",", ":")),
+             json.dumps(fields["metrics"], ensure_ascii=False, separators=(",", ":")), fields["notes"],
+             json.dumps(validation, ensure_ascii=False, separators=(",", ":")), 1,
+             timestamp, actor, timestamp, actor),
+        )
+        _append_daily_operation_event(connection, report_id, actor, "draft_created", None, "DRAFT",
+                                      f"{len(fields['metrics'])} staged metric(s)")
+        row = connection.execute("SELECT * FROM daily_operation_reports WHERE id=?", (report_id,)).fetchone()
+    return _daily_operation_record(row)
+
+
+def list_daily_operation_reports(limit: int = 60) -> list[dict[str, Any]]:
+    with _LOCK, _session() as connection:
+        rows = connection.execute(
+            "SELECT * FROM daily_operation_reports ORDER BY report_date DESC,updated_at DESC,id DESC LIMIT ?",
+            (max(1, min(limit, 250)),),
+        ).fetchall()
+    return [_daily_operation_record(row) for row in rows]
+
+
+def get_daily_operation_report(report_id: str) -> dict[str, Any] | None:
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM daily_operation_reports WHERE id=?", (report_id,)).fetchone()
+        if not row:
+            return None
+        snapshot_row = connection.execute(
+            "SELECT * FROM daily_operation_snapshots WHERE report_id=? ORDER BY snapshot_version DESC LIMIT 1",
+            (report_id,),
+        ).fetchone()
+    snapshot = None
+    if snapshot_row:
+        snapshot = _daily_json(snapshot_row["payload"], {})
+        if not isinstance(snapshot, dict):
+            snapshot = None
+    return _daily_operation_record(row, snapshot)
+
+
+def _daily_expected_version(row: sqlite3.Row, payload: dict[str, Any]) -> None:
+    expected = payload.get("version")
+    if expected is None:
+        raise ValueError("report version is required")
+    try:
+        if int(expected) != row["record_version"]:
+            raise ValueError("daily report changed; refresh and try again")
+    except (TypeError, ValueError) as exc:
+        if "changed" in str(exc):
+            raise
+        raise ValueError("report version is invalid") from exc
+
+
+def save_daily_operation_draft(report_id: str, payload: dict[str, Any], actor: str) -> dict[str, Any] | None:
+    fields = _daily_report_fields(payload)
+    validation = _daily_validation(fields)
+    actor = actor.strip()[:160] or "operator console"
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM daily_operation_reports WHERE id=?", (report_id,)).fetchone()
+        if not row:
+            return None
+        if row["status"] == "PUBLISHED":
+            raise ValueError("published daily reports are immutable")
+        _daily_expected_version(row, payload)
+        timestamp = now_iso()
+        connection.execute(
+            "UPDATE daily_operation_reports SET report_date=?,region=?,title=?,source_checks=?,metrics_json=?,notes=?,"
+            "validation_json=?,record_version=record_version+1,updated_at=?,updated_by=? WHERE id=?",
+            (fields["reportDate"], fields["region"], fields["title"],
+             json.dumps(fields["sourceChecks"], ensure_ascii=False, separators=(",", ":")),
+             json.dumps(fields["metrics"], ensure_ascii=False, separators=(",", ":")), fields["notes"],
+             json.dumps(validation, ensure_ascii=False, separators=(",", ":")), timestamp, actor, report_id),
+        )
+        _append_daily_operation_event(connection, report_id, actor, "draft_updated", "DRAFT", "DRAFT",
+                                      f"{len(fields['metrics'])} staged metric(s)")
+        row = connection.execute("SELECT * FROM daily_operation_reports WHERE id=?", (report_id,)).fetchone()
+    return _daily_operation_record(row)
+
+
+def publish_daily_operation_report(report_id: str, payload: dict[str, Any], actor: str) -> dict[str, Any] | None:
+    actor = actor.strip()[:160] or "operator console"
+    with _LOCK, _session() as connection:
+        row = connection.execute("SELECT * FROM daily_operation_reports WHERE id=?", (report_id,)).fetchone()
+        if not row:
+            return None
+        if row["status"] == "PUBLISHED":
+            raise ValueError("daily report is already published and immutable")
+        _daily_expected_version(row, payload)
+        fields = {
+            "reportDate": row["report_date"], "region": row["region"], "title": row["title"],
+            "sourceChecks": _daily_source_checks(_daily_json(row["source_checks"], [])),
+            "metrics": _daily_metrics(_daily_json(row["metrics_json"], [])), "notes": row["notes"],
+        }
+        validation = _daily_validation(fields)
+        if not validation["ready"]:
+            raise ValueError("daily report cannot be published: " + "; ".join(validation["errors"][:3]))
+        timestamp = now_iso()
+        snapshot_version = row["record_version"] + 1
+        snapshot = {
+            "schemaVersion": 1, "reportId": report_id, "snapshotVersion": snapshot_version,
+            **fields, "validation": validation, "publishedAt": timestamp, "publishedBy": actor,
+        }
+        encoded_snapshot = json.dumps(snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        digest = hashlib.sha256(encoded_snapshot.encode("utf-8")).hexdigest()
+        connection.execute(
+            "INSERT INTO daily_operation_snapshots (report_id,snapshot_version,payload,sha256,published_at,published_by)"
+            " VALUES (?,?,?,?,?,?)",
+            (report_id, snapshot_version, encoded_snapshot, digest, timestamp, actor),
+        )
+        connection.execute(
+            "UPDATE daily_operation_reports SET status='PUBLISHED',validation_json=?,record_version=?,updated_at=?,"
+            "updated_by=?,published_at=?,published_by=?,snapshot_sha256=? WHERE id=?",
+            (json.dumps(validation, ensure_ascii=False, separators=(",", ":")), snapshot_version, timestamp,
+             actor, timestamp, actor, digest, report_id),
+        )
+        detail = f"v{snapshot_version} · {len(fields['metrics'])} metrics"
+        if validation["exceptions"]:
+            detail += " · exception: " + ", ".join(validation["exceptions"])
+        _append_daily_operation_event(connection, report_id, actor, "published", "DRAFT", "PUBLISHED", detail)
+        row = connection.execute("SELECT * FROM daily_operation_reports WHERE id=?", (report_id,)).fetchone()
+    return _daily_operation_record(row, snapshot)
+
+
+def daily_operation_history(report_id: str | None = None, limit: int = 250) -> list[dict[str, Any]]:
+    limit = max(1, min(limit, 1000))
+    with _LOCK, _session() as connection:
+        rows = connection.execute(
+            "SELECT * FROM daily_operation_events" + (" WHERE report_id=?" if report_id else "") +
+            " ORDER BY seq DESC LIMIT ?", ((report_id, limit) if report_id else (limit,))
+        ).fetchall()
+    return [{"seq": row["seq"], "reportId": row["report_id"], "at": row["at"], "actor": row["actor"],
+             "event": row["event"], "priorStatus": row["prior_status"], "newStatus": row["new_status"],
+             "details": row["details"]} for row in rows]
+
+
+def unit_cycling_catalog() -> dict[str, Any]:
+    return {
+        "eventTypes": [{"key": key, "label": label} for key, label in UNIT_CYCLING_EVENT_TYPES],
+        "appendOnly": True,
+        "requiresReason": ["TRIP", "OTHER"],
+        "timezone": "America/Toronto",
+    }
+
+
+def _unit_cycling_number(value: object, label: str) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be a finite non-negative number") from exc
+    if not math.isfinite(number) or number < 0 or number > 10_000_000:
+        raise ValueError(f"{label} must be a finite non-negative number")
+    return number
+
+
+def _unit_cycling_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    station = str(payload.get("station", "")).strip()[:120]
+    unit_name = str(payload.get("unitName", payload.get("unit", ""))).strip()[:120]
+    event_type = str(payload.get("eventType", "")).strip().upper()
+    occurred_at = str(payload.get("occurredAt", "")).strip()[:80]
+    reason = str(payload.get("reason", "")).strip()[:2000]
+    if not station:
+        raise ValueError("station is required")
+    if not unit_name:
+        raise ValueError("unit is required")
+    if event_type not in UNIT_CYCLING_STATE_BY_EVENT:
+        raise ValueError("event type is not supported")
+    if not occurred_at:
+        raise ValueError("event time is required")
+    try:
+        occurred = datetime.fromisoformat(occurred_at.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("event time must be a valid ISO date and time") from exc
+    if occurred.tzinfo is None:
+        occurred = occurred.replace(tzinfo=TZ)
+    if event_type in {"TRIP", "OTHER"} and not reason:
+        raise ValueError(f"a reason is required for {event_type.lower()} events")
+    return {
+        "station": station,
+        "unitName": unit_name,
+        "eventType": event_type,
+        "occurredAt": occurred.isoformat(),
+        "runningHours": _unit_cycling_number(payload.get("runningHours"), "running hours"),
+        "runningDays": _unit_cycling_number(payload.get("runningDays"), "running days"),
+        "reason": reason,
+        "sourceRef": str(payload.get("sourceRef", "")).strip()[:240],
+        "notes": str(payload.get("notes", "")).strip()[:4000],
+    }
+
+
+def _unit_cycling_record(row: sqlite3.Row) -> dict[str, Any]:
+    event_type = row["event_type"]
+    return {
+        "id": row["id"], "station": row["station"], "unitName": row["unit_name"],
+        "eventType": event_type, "state": UNIT_CYCLING_STATE_BY_EVENT.get(event_type, "RECORDED"),
+        "occurredAt": row["occurred_at"], "runningHours": row["running_hours"],
+        "runningDays": row["running_days"], "reason": row["reason"], "sourceRef": row["source_ref"],
+        "notes": row["notes"], "createdAt": row["created_at"], "createdBy": row["created_by"],
+        "immutable": True,
+    }
+
+
+def create_unit_cycling_record(payload: dict[str, Any], actor: str) -> dict[str, Any]:
+    fields = _unit_cycling_fields(payload)
+    actor = actor.strip()[:160] or "operator console"
+    timestamp = now_iso()
+    with _LOCK, _session() as connection:
+        record_id = _unique_id(connection, "unit_cycling_records", "cycle")
+        connection.execute(
+            "INSERT INTO unit_cycling_records (id,station,unit_name,event_type,occurred_at,running_hours,running_days,"
+            "reason,source_ref,notes,created_at,created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            (record_id, fields["station"], fields["unitName"], fields["eventType"], fields["occurredAt"],
+             fields["runningHours"], fields["runningDays"], fields["reason"], fields["sourceRef"], fields["notes"],
+             timestamp, actor),
+        )
+        events.append_event(
+            connection, event_type=events.event_type("unit_cycling", "recorded"), occurred_at=fields["occurredAt"],
+            actor_id=actor, aggregate_type="unit_cycling_record", aggregate_id=record_id,
+            source="unit_cycling", severity="warning" if fields["eventType"] == "TRIP" else "info",
+            summary=f"{fields['eventType']} · {fields['station']} · {fields['unitName']}",
+            payload={**fields, "state": UNIT_CYCLING_STATE_BY_EVENT[fields["eventType"]]},
+        )
+        row = connection.execute("SELECT * FROM unit_cycling_records WHERE id=?", (record_id,)).fetchone()
+    return _unit_cycling_record(row)
+
+
+def list_unit_cycling_records(limit: int = 200) -> list[dict[str, Any]]:
+    with _LOCK, _session() as connection:
+        rows = connection.execute(
+            "SELECT * FROM unit_cycling_records ORDER BY occurred_at DESC,created_at DESC LIMIT ?",
+            (max(1, min(limit, 1000)),),
+        ).fetchall()
+    return [_unit_cycling_record(row) for row in rows]
+
+
+def unit_cycling_summary(limit: int = 200) -> dict[str, Any]:
+    records = list_unit_cycling_records(limit)
+    today = datetime.now(TZ).date().isoformat()
+    states: dict[tuple[str, str], dict[str, Any]] = {}
+    for record in records:
+        key = (record["station"], record["unitName"])
+        if key not in states:
+            states[key] = record
+    current = sorted(states.values(), key=lambda record: (record["station"].lower(), record["unitName"].lower()))
+    today_records = [record for record in records if record["occurredAt"][:10] == today]
+    return {
+        "generatedAt": now_iso(), "eventsToday": len(today_records),
+        "tripsToday": sum(record["eventType"] == "TRIP" for record in today_records),
+        "runningUnits": sum(record["state"] == "RUNNING" for record in current),
+        "trippedUnits": sum(record["state"] == "TRIPPED" for record in current),
+        "unitStates": current, "records": records,
+    }
+
+
+def water_observation_catalog() -> dict[str, Any]:
+    return {
+        "regions": list(DAILY_OPERATION_REGIONS),
+        "facilities": [{"region": region, "name": name} for region, name in WATER_OBSERVATION_FACILITIES],
+        "metrics": [{"key": key, "label": label, "unit": unit}
+                    for key, label, unit in WATER_OBSERVATION_METRICS],
+        "qualities": [{"key": key, "label": label} for key, label in WATER_OBSERVATION_QUALITIES],
+        "sourceTypes": [{"key": key, "label": label} for key, label in WATER_OBSERVATION_SOURCE_TYPES],
+        "appendOnly": True,
+        "timezone": "America/Toronto",
+        "reviewBand": "Optional review band. It is a recorded comparison, not a control limit.",
+    }
+
+
+def _water_observation_number(value: object, label: str, *, required: bool = False) -> float | None:
+    if value in (None, ""):
+        if required:
+            raise ValueError(f"{label} is required")
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be a finite number") from exc
+    if not math.isfinite(number) or abs(number) > 1_000_000_000:
+        raise ValueError(f"{label} must be a finite number")
+    return number
+
+
+def _water_observation_band_state(value: float, lower: float | None, upper: float | None) -> str:
+    if lower is None or upper is None:
+        return "NO REVIEW BAND"
+    if value < lower:
+        return "BELOW REVIEW BAND"
+    if value > upper:
+        return "ABOVE REVIEW BAND"
+    return "WITHIN REVIEW BAND"
+
+
+def _water_observation_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    region = str(payload.get("region", "")).strip().upper()
+    facility = str(payload.get("facility", "")).strip()[:120]
+    metric_type = str(payload.get("metricType", "")).strip().upper()
+    observed_at = str(payload.get("observedAt", payload.get("occurredAt", ""))).strip()[:80]
+    quality = str(payload.get("quality", "")).strip().upper()
+    source_type = str(payload.get("sourceType", "")).strip().upper()
+    source_ref = str(payload.get("sourceRef", "")).strip()[:240]
+    metric_map = {key: (label, unit) for key, label, unit in WATER_OBSERVATION_METRICS}
+    if region not in DAILY_OPERATION_REGIONS:
+        raise ValueError("region is not supported")
+    if not facility:
+        raise ValueError("facility is required")
+    if metric_type not in metric_map:
+        raise ValueError("metric type is not supported")
+    if quality not in {key for key, _ in WATER_OBSERVATION_QUALITIES}:
+        raise ValueError("quality is not supported")
+    if source_type not in {key for key, _ in WATER_OBSERVATION_SOURCE_TYPES}:
+        raise ValueError("source type is not supported")
+    if not source_ref:
+        raise ValueError("source reference is required")
+    if not observed_at:
+        raise ValueError("observation time is required")
+    try:
+        observed = datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("observation time must be a valid ISO date and time") from exc
+    if observed.tzinfo is None:
+        observed = observed.replace(tzinfo=TZ)
+    value = _water_observation_number(payload.get("value"), "value", required=True)
+    lower = _water_observation_number(payload.get("reviewBandLow"), "review band lower")
+    upper = _water_observation_number(payload.get("reviewBandHigh"), "review band upper")
+    if (lower is None) != (upper is None):
+        raise ValueError("both review band values are required when recording a review band")
+    if lower is not None and upper is not None and lower > upper:
+        raise ValueError("review band lower value cannot exceed the upper value")
+    if metric_type in {"ELEVATION", "INFLOW", "OUTFLOW", "PRECIPITATION", "STORAGE", "GENERATION", "FLOW_FORECAST"} and value < 0:
+        raise ValueError("value cannot be negative for this metric")
+    if metric_type in {"RULE_CURVE", "GATE_POSITION"} and not 0 <= value <= 100:
+        raise ValueError("percent value must be between 0 and 100")
+    label, unit = metric_map[metric_type]
+    return {
+        "region": region,
+        "facility": facility,
+        "observedAt": observed.isoformat(),
+        "metricType": metric_type,
+        "metricLabel": label,
+        "value": value,
+        "unit": unit,
+        "quality": quality,
+        "sourceType": source_type,
+        "sourceRef": source_ref,
+        "reviewBandLow": lower,
+        "reviewBandHigh": upper,
+        "notes": str(payload.get("notes", "")).strip()[:4000],
+    }
+
+
+def _water_observation_record(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "region": row["region"],
+        "facility": row["facility"],
+        "observedAt": row["observed_at"],
+        "metricType": row["metric_type"],
+        "metricLabel": next((label for key, label, _ in WATER_OBSERVATION_METRICS if key == row["metric_type"]),
+                            row["metric_type"].replace("_", " ").title()),
+        "value": row["value"],
+        "unit": row["unit"],
+        "quality": row["quality"],
+        "sourceType": row["source_type"],
+        "sourceRef": row["source_ref"],
+        "reviewBandLow": row["review_band_low"],
+        "reviewBandHigh": row["review_band_high"],
+        "bandStatus": _water_observation_band_state(row["value"], row["review_band_low"], row["review_band_high"]),
+        "notes": row["notes"],
+        "createdAt": row["created_at"],
+        "createdBy": row["created_by"],
+        "immutable": True,
+    }
+
+
+def create_water_observation(payload: dict[str, Any], actor: str) -> dict[str, Any]:
+    fields = _water_observation_fields(payload)
+    actor = actor.strip()[:160] or "operator console"
+    timestamp = now_iso()
+    with _LOCK, _session() as connection:
+        record_id = _unique_id(connection, "water_observations", "water")
+        connection.execute(
+            "INSERT INTO water_observations (id,region,facility,observed_at,metric_type,value,unit,quality,"
+            "source_type,source_ref,review_band_low,review_band_high,notes,created_at,created_by)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (record_id, fields["region"], fields["facility"], fields["observedAt"], fields["metricType"],
+             fields["value"], fields["unit"], fields["quality"], fields["sourceType"], fields["sourceRef"],
+             fields["reviewBandLow"], fields["reviewBandHigh"], fields["notes"], timestamp, actor),
+        )
+        band_status = _water_observation_band_state(
+            fields["value"], fields["reviewBandLow"], fields["reviewBandHigh"]
+        )
+        events.append_event(
+            connection, event_type=events.event_type("water_observations", "recorded"),
+            occurred_at=fields["observedAt"], actor_id=actor, aggregate_type="water_observation",
+            aggregate_id=record_id, source="water_observations",
+            severity="warning" if band_status in {"BELOW REVIEW BAND", "ABOVE REVIEW BAND"} else "info",
+            summary=f"{fields['metricLabel']} · {fields['region']} · {fields['facility']}",
+            payload={**fields, "bandStatus": band_status},
+        )
+        row = connection.execute("SELECT * FROM water_observations WHERE id=?", (record_id,)).fetchone()
+    return _water_observation_record(row)
+
+
+def list_water_observations(limit: int = 240, *, region: str | None = None,
+                            facility: str | None = None, metric_type: str | None = None) -> list[dict[str, Any]]:
+    clauses: list[str] = []
+    params: list[Any] = []
+    if region:
+        clauses.append("region=?")
+        params.append(region.strip().upper())
+    if facility:
+        clauses.append("facility=?")
+        params.append(facility.strip()[:120])
+    if metric_type:
+        clauses.append("metric_type=?")
+        params.append(metric_type.strip().upper())
+    query = "SELECT * FROM water_observations"
+    if clauses:
+        query += " WHERE " + " AND ".join(clauses)
+    query += " ORDER BY observed_at DESC,created_at DESC,id DESC LIMIT ?"
+    params.append(max(1, min(limit, 1000)))
+    with _LOCK, _session() as connection:
+        rows = connection.execute(query, params).fetchall()
+    return [_water_observation_record(row) for row in rows]
+
+
+def _water_observation_is_stale(record: dict[str, Any], reference: datetime) -> bool:
+    try:
+        observed = datetime.fromisoformat(str(record["observedAt"]).replace("Z", "+00:00"))
+    except (KeyError, TypeError, ValueError):
+        return True
+    if observed.tzinfo is None:
+        observed = observed.replace(tzinfo=TZ)
+    return reference - observed.astimezone(TZ) > timedelta(hours=36)
+
+
+def water_observation_summary(limit: int = 600) -> dict[str, Any]:
+    records = list_water_observations(limit)
+    latest_by_series: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for record in records:
+        latest_by_series.setdefault((record["region"], record["facility"], record["metricType"]), record)
+    latest_readings = sorted(
+        latest_by_series.values(),
+        key=lambda record: (record["region"], record["facility"].lower(), record["metricType"]),
+    )
+    reference = datetime.now(TZ)
+    today = reference.date().isoformat()
+    alerts = [record for record in latest_readings
+              if record["bandStatus"] in {"BELOW REVIEW BAND", "ABOVE REVIEW BAND"}]
+    stale = [record for record in latest_readings if _water_observation_is_stale(record, reference)]
+    return {
+        "generatedAt": now_iso(),
+        "observationsToday": sum(record["observedAt"][:10] == today for record in records),
+        "facilitiesMonitored": len({(record["region"], record["facility"]) for record in latest_readings}),
+        "reviewBandAlerts": len(alerts),
+        "staleSeries": len(stale),
+        "latestReadings": latest_readings,
+        "records": records,
+    }
 
 
 def _action_record(row: sqlite3.Row) -> dict[str, Any]:

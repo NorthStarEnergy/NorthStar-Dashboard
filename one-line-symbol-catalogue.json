@@ -2,6 +2,7 @@
   "profile": "northstar-ieee-compat-2026.3",
   "catalogueVersion": "2026.3",
   "notationSource": "Workplace Figure A-1 circuit notation",
+  "drawingReference": "FirstLight FLC-4.1-C-10-APP-B single-line drawing convention",
   "graphicalStandard": "IEEE/ANSI 315-1975 (inactive-reserved)",
   "designationStandard": "IEEE C37.2-2022 (active)",
   "windingConfigs": [

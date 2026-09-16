@@ -1,3 +1,7 @@
+# Legacy SOP reference library — 2026-09-15
+
+Imported 94 private FirstLight SOP PDFs as `LEGACY_REFERENCE`, with checksums, operator-only serving, company-library access, and affected-station Operating Instructions listings. See [report](packets/2026-09-15-legacy-sop-library.md).
+
 # Overview weather header — 2026-09-15
 
 Replaced the retired Overview header strip with 75% whole-card weather modules and protected saved layouts during status-bar startup. See [report](packets/2026-09-15-overview-weather-header.md).

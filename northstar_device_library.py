@@ -1,4 +1,4 @@
-"""Company device library: area → site → station menus → components.
+"""Company device library: Operations → Plants → station conditions, plus area/site equipment.
 
 Each generating station opens with Operations, Equipment, Data, Notes, and
 Reports (Twin Falls whiteboard). This is a reference repository. It does not
@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 import northstar_events as events
 import northstar_sites as sites
 import northstar_store as store
+import northstar_sop_library as sop_library
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS device_library_notes (
@@ -196,6 +197,44 @@ def _catalog() -> dict:
         "kind": "company",
         "children": [],
     }
+    plant_nodes: list[dict] = []
+    equipment_master_id = "menu:company:maximo-equipment-master"
+    items[equipment_master_id] = {
+        "id": equipment_master_id,
+        "kind": "menu",
+        "menuKey": "maximo-equipment-master",
+        "name": "Maximo Equipment Master",
+        "description": (
+            "Complete imported Maximo equipment list. Search by asset, description, location, "
+            "parent, or Maximo site code. Read-only reference data; not a command surface."
+        ),
+    }
+    tree["children"].append({
+        "id": equipment_master_id,
+        "name": "Maximo Equipment Master",
+        "kind": "menu",
+        "menuKey": "maximo-equipment-master",
+        "children": [],
+    })
+    sop_library_id = "menu:company:legacy-sop-library"
+    items[sop_library_id] = {
+        "id": sop_library_id,
+        "kind": "menu",
+        "menuKey": "legacy-sop-library",
+        "name": "Legacy SOP Library (review required)",
+        "description": (
+            "Imported legacy SOP PDFs. Review the document owner, revision, and current applicability "
+            "before relying on any procedure."
+        ),
+        "childIds": [],
+    }
+    tree["children"].append({
+        "id": sop_library_id,
+        "name": "Legacy SOP Library (review required)",
+        "kind": "menu",
+        "menuKey": "legacy-sop-library",
+        "children": [],
+    })
     for area in areas:
         items[area["id"]] = {
             "id": area["id"], "kind": "area", "name": area["name"],
@@ -240,11 +279,21 @@ def _catalog() -> dict:
                 items, site_id, site_name, area["id"], area["name"], key, name, description, children, pending,
             )
             operations = add("operations", "Operations", f"{site_name} operations.", [
+                add("events", "Events",
+                    "Recorded events, reports, and alarms for this plant. Open an event to view its details."),
+                add("technical", "Technical",
+                    "Plant technical reference material and engineering records."),
+                add("notes", "Notes",
+                    "Append-only plant notes. Notes do not acknowledge, clear, or change an alarm."),
+                add("media", "Media",
+                    "Plant photos, drawings, and other approved media records."),
+                add("records", "Records",
+                    "Plant operational records and supporting evidence."),
                 add("operating-conditions", "Operating Conditions",
-                    "Live operating conditions will appear here after an authorized station feed is connected. "
-                    + PENDING_NOTE, pending=True),
+                    "Recorded operating directives and notes for this plant. Imported material is "
+                    "reference-only; verify its current applicability before relying on it."),
                 add("operating-instructions", "Operating Instructions",
-                    "Operating instructions will appear here after authorized procedures are filed. "
+                    "Authorized procedures and legacy reference SOPs appear here when filed. "
                     + PENDING_NOTE, pending=True),
                 add("field-notes", "Field Notes",
                     "Append-only field notes. A note does not acknowledge, clear, or change an alarm."),
@@ -276,8 +325,53 @@ def _catalog() -> dict:
                 "id": site_id, "name": site_name, "kind": "site",
                 "children": [operations, equipment, data, notes, reports],
             }
+            plant_id = f"folder:company:operations:plant:{_slug(site_name)}"
+            items[plant_id] = {
+                "id": plant_id,
+                "kind": "folder",
+                "name": site_name,
+                "siteId": site_id,
+                "site": site_name,
+                "areaId": area["id"],
+                "area": area["name"],
+                "description": f"{site_name} operating reference records.",
+                "childIds": [child["id"] for child in operations["children"]],
+            }
+            plant_nodes.append({
+                "id": plant_id,
+                "name": site_name,
+                "kind": "folder",
+                "children": operations["children"],
+            })
             area_node["children"].append(site_node)
         tree["children"].append(area_node)
+    operations_id = "folder:company:operations"
+    plants_id = "folder:company:operations:plants"
+    items[operations_id] = {
+        "id": operations_id,
+        "kind": "folder",
+        "name": "Operations",
+        "description": "Operating reference material organized by plant.",
+        "childIds": [plants_id],
+    }
+    items[plants_id] = {
+        "id": plants_id,
+        "kind": "folder",
+        "name": "Plants",
+        "description": "Select a plant to view its operating conditions.",
+        "childIds": [plant["id"] for plant in plant_nodes],
+    }
+    tree["children"].insert(0, {
+        "id": operations_id,
+        "name": "Operations",
+        "kind": "folder",
+        "children": [{
+            "id": plants_id,
+            "name": "Plants",
+            "kind": "folder",
+            "children": plant_nodes,
+        }],
+    })
     return {"tree": tree, "items": items}
 
 
@@ -470,6 +564,21 @@ def item(item_id: str) -> dict:
             data["maximo"] = maximo_reference(station_id)
         except LookupError:
             pass
+    elif record.get("menuKey") == "maximo-equipment-master":
+        from northstar_maximo import equipment_master_status
+        data["maximo"] = equipment_master_status()
+    if record.get("menuKey") in {"operating-instructions", "legacy-sop-library"}:
+        source = sop_library.catalog(
+            record.get("siteId") if record.get("menuKey") == "operating-instructions" else ""
+        )
+        data["procedures"] = source["documents"]
+        data["procedureSource"] = {
+            "name": source["sourceName"],
+            "status": source["status"],
+            "notice": source["notice"],
+        }
+        if source["documents"]:
+            data["state"] = "LEGACY_REFERENCE - review required"
     return data
 
 

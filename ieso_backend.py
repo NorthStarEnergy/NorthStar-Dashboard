@@ -35,8 +35,11 @@ import northstar_ai as ai
 import northstar_chat as chat
 import northstar_dispatch as dispatch
 import northstar_device_library as device_library
+import northstar_sop_library as sop_library
 import northstar_flows as flows
+import northstar_incident_library as incident_library
 import northstar_maximo as maximo
+import northstar_service_requests as service_requests
 import northstar_sites as sites
 import northstar_uwpc as uwpc
 
@@ -157,6 +160,20 @@ OPERATOR_ROUTES = {
     "/api/scada/readings": ("GET",),
     "/api/scada/import": ("POST",),
     "/api/flows": ("GET",),
+    "/api/water-management/catalog": ("GET",),
+    "/api/daily-operations": ("GET", "POST"),
+    "/api/daily-operations/catalog": ("GET",),
+    "/api/daily-operations/history": ("GET",),
+    "/api/unit-cycling": ("GET", "POST"),
+    "/api/unit-cycling/catalog": ("GET",),
+    "/api/unit-cycling/summary": ("GET",),
+    "/api/water-observations": ("GET", "POST"),
+    "/api/water-observations/catalog": ("GET",),
+    "/api/water-observations/summary": ("GET",),
+    "/api/service-requests": ("GET",),
+    "/api/service-requests/catalog": ("GET",),
+    "/api/incident-library": ("GET",),
+    "/api/incident-library/catalog": ("GET",),
     "/api/retention": ("GET", "POST"),
     "/api/site-policies": ("GET", "POST"),
     "/api/switching/drafts": ("GET", "POST"),
@@ -176,7 +193,9 @@ OPERATOR_ROUTES = {
     "/api/library": ("GET",),
     "/api/library/item": ("GET",),
     "/api/library/notes": ("POST",),
+    "/api/library/procedures": ("GET",),
     "/api/maximo": ("GET",),
+    "/api/maximo/equipment": ("GET",),
     "/api/maximo/station": ("GET",),
     "/api/sites": ("GET",),
     "/api/uwpc": ("GET",),
@@ -215,6 +234,10 @@ OPERATOR_ROUTE_PATTERNS = (
     ("GET", re.compile(r"^/api/field-reports/[^/]+/attachments$")),
     ("POST", re.compile(r"^/api/field-reports/[^/]+/attachments$")),
     ("GET", re.compile(r"^/api/field-reports/[^/]+/attachments/[^/]+$")),
+    ("GET", re.compile(r"^/api/library/procedures/[a-z0-9-]+/file$")),
+    ("GET", re.compile(r"^/api/daily-operations/[^/]+$")),
+    ("POST", re.compile(r"^/api/daily-operations/[^/]+/draft$")),
+    ("POST", re.compile(r"^/api/daily-operations/[^/]+/publish$")),
     ("POST", re.compile(r"^/api/action-items/[^/]+/status$")),
     ("POST", re.compile(r"^/api/governance-decisions/[^/]+$")),
     ("GET", re.compile(r"^/api/voice/recordings/.+$")),
@@ -1324,6 +1347,106 @@ class Handler(SimpleHTTPRequestHandler):
         if route == "/api/field-operations/summary":
             self._send_json(store.field_operations_summary())
             return
+        if route == "/api/daily-operations/catalog":
+            self._send_json(store.daily_operation_catalog())
+            return
+        if route == "/api/daily-operations":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                limit = int(query.get("limit", ["60"])[0])
+            except ValueError:
+                limit = 60
+            self._send_json(store.list_daily_operation_reports(limit))
+            return
+        if route == "/api/daily-operations/history":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                limit = int(query.get("limit", ["250"])[0])
+            except ValueError:
+                limit = 250
+            self._send_json(store.daily_operation_history(query.get("id", [None])[0], limit))
+            return
+        if route.startswith("/api/daily-operations/") and "/" not in route[len("/api/daily-operations/"):]:
+            record = store.get_daily_operation_report(route[len("/api/daily-operations/"):])
+            self._send_json(record or {"error": "daily operation report not found"}, 200 if record else 404)
+            return
+        if route == "/api/unit-cycling/catalog":
+            self._send_json(store.unit_cycling_catalog())
+            return
+        if route == "/api/unit-cycling/summary":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                limit = int(query.get("limit", ["200"])[0])
+            except ValueError:
+                limit = 200
+            self._send_json(store.unit_cycling_summary(limit))
+            return
+        if route == "/api/unit-cycling":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                limit = int(query.get("limit", ["200"])[0])
+            except ValueError:
+                limit = 200
+            self._send_json(store.list_unit_cycling_records(limit))
+            return
+        if route == "/api/water-observations/catalog":
+            self._send_json(store.water_observation_catalog())
+            return
+        if route == "/api/water-observations/summary":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                limit = int(query.get("limit", ["600"])[0])
+            except ValueError:
+                limit = 600
+            self._send_json(store.water_observation_summary(limit))
+            return
+        if route == "/api/water-observations":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                limit = int(query.get("limit", ["240"])[0])
+            except ValueError:
+                limit = 240
+            self._send_json(store.list_water_observations(
+                limit,
+                region=query.get("region", [None])[0],
+                facility=query.get("facility", [None])[0],
+                metric_type=query.get("metricType", [None])[0],
+            ))
+            return
+        if route == "/api/service-requests/catalog":
+            self._send_json(service_requests.catalog())
+            return
+        if route == "/api/service-requests":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                snapshot = service_requests.list_requests(
+                    query=query.get("q", [""])[0],
+                    status=query.get("status", [""])[0],
+                    due=query.get("due", [""])[0],
+                    page=query.get("page", [1])[0],
+                    limit=query.get("limit", [75])[0],
+                )
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(snapshot)
+            return
+        if route == "/api/incident-library/catalog":
+            self._send_json(incident_library.catalog())
+            return
+        if route == "/api/incident-library":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                records = incident_library.list_incidents(
+                    query=query.get("q", [""])[0],
+                    category=query.get("category", [""])[0],
+                    year=query.get("year", [""])[0],
+                    page=query.get("page", [1])[0],
+                    limit=query.get("limit", [60])[0],
+                )
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(records)
+            return
         if route == "/api/readiness":
             self._send_json(store.readiness_summary())
             return
@@ -1470,6 +1593,15 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.split("?", 1)[0] == "/api/flows":
             self._send_json(FLOWS.get())
             return
+        if self.path.split("?", 1)[0] == "/api/water-management/catalog":
+            catalog_path = ROOT / "data" / "water-management" / "catalog.json"
+            try:
+                catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                self._send_json({"error": "water management catalog unavailable"}, 503)
+                return
+            self._send_json(catalog)
+            return
         if self.path.split("?", 1)[0] == "/api/market-prices":
             body = json.dumps(STORE.get(), separators=(",", ":")).encode()
             self.send_response(200)
@@ -1541,6 +1673,28 @@ class Handler(SimpleHTTPRequestHandler):
                 inline=True,
             )
             return
+        if route == "/api/library/procedures":
+            query = parse_qs(urlparse(self.path).query)
+            self._send_json(sop_library.catalog(query.get("siteId", [""])[0]))
+            return
+        procedure_file = re.fullmatch(r"/api/library/procedures/([a-z0-9-]+)/file", route)
+        if procedure_file:
+            try:
+                procedure, body = sop_library.read_document(procedure_file.group(1))
+            except sop_library.DocumentIntegrityError as exc:
+                self._send_json({"error": str(exc)}, 409)
+                return
+            except LookupError as exc:
+                self._send_json({"error": str(exc)}, 404)
+                return
+            self._send_binary(
+                body,
+                "application/pdf",
+                procedure["filename"],
+                procedure["sha256"],
+                inline=True,
+            )
+            return
         if route == "/api/library":
             query = parse_qs(urlparse(self.path).query)
             self._send_json(device_library.tree(query.get("q", [""])[0]))
@@ -1559,6 +1713,20 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if route == "/api/maximo":
             self._send_json(maximo.status())
+            return
+        if route == "/api/maximo/equipment":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                result = maximo.equipment(
+                    query=query.get("q", [""])[0],
+                    site=query.get("site", [""])[0],
+                    page=query.get("page", [1])[0],
+                    limit=query.get("limit", [maximo.EQUIPMENT_PAGE_SIZE])[0],
+                )
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+                return
+            self._send_json(result)
             return
         if route == "/api/maximo/station":
             query = parse_qs(urlparse(self.path).query)
@@ -1846,17 +2014,18 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json({"error": "invalid credentials"}, 401)
             return
         lifetime = demo_session_seconds()
-        token, _ = DEMO_SESSIONS.create(DEMO_AUTH["username"], lifetime)
+        actor = username.strip()
+        token, _ = DEMO_SESSIONS.create(actor, lifetime)
         DEMO_LOGIN_THROTTLE.reset(self._throttle_key())
         log_event(
             "Operator sign-in",
-            f"Demo operator {DEMO_AUTH['username']} signed in",
+            f"Demo operator {actor} signed in",
             "Demo authentication session opened on the operator hostname."
             " This is the single shared demo credential, not an employee identity.",
-            DEMO_AUTH["username"],
+            actor,
         )
         body = json.dumps(
-            {"authenticated": True, "username": DEMO_AUTH["username"], "expiresIn": lifetime},
+            {"authenticated": True, "username": actor, "expiresIn": lifetime},
             separators=(",", ":"),
         ).encode()
         self.send_response(200)
@@ -1999,6 +2168,43 @@ class Handler(SimpleHTTPRequestHandler):
             except ValueError as exc:
                 raise APIError(400, str(exc)) from exc
             self._send_json(record, 201)
+            return
+        if route == "/api/daily-operations":
+            try:
+                record = store.create_daily_operation_report(self._json_body(), self._operator_actor())
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record, 201)
+            return
+        if route == "/api/unit-cycling":
+            try:
+                record = store.create_unit_cycling_record(self._json_body(), self._operator_actor())
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record, 201)
+            return
+        if route == "/api/water-observations":
+            try:
+                record = store.create_water_observation(self._json_body(), self._operator_actor())
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record, 201)
+            return
+        daily_draft = re.fullmatch(r"/api/daily-operations/([^/]+)/draft", route)
+        if daily_draft:
+            try:
+                record = store.save_daily_operation_draft(daily_draft.group(1), self._json_body(), self._operator_actor())
+            except (TypeError, ValueError) as exc:
+                raise APIError(409 if "changed" in str(exc) else 400, str(exc)) from exc
+            self._send_json(record or {"error": "daily operation report not found"}, 200 if record else 404)
+            return
+        daily_publish = re.fullmatch(r"/api/daily-operations/([^/]+)/publish", route)
+        if daily_publish:
+            try:
+                record = store.publish_daily_operation_report(daily_publish.group(1), self._json_body(), self._operator_actor())
+            except (TypeError, ValueError) as exc:
+                raise APIError(409 if "changed" in str(exc) else 400, str(exc)) from exc
+            self._send_json(record or {"error": "daily operation report not found"}, 200 if record else 404)
             return
         if route == "/api/controlled-sources":
             try:
@@ -2571,6 +2777,8 @@ class Handler(SimpleHTTPRequestHandler):
                 market_snapshot=STORE.get(),
                 event_filter=str(payload.get("event_filter") or "").strip(),
                 section=str(payload.get("section") or "").strip(),
+                model=str(payload.get("model") or "").strip(),
+                response_profile=str(payload.get("response_profile") or "balanced").strip(),
             )
         except ai.AssistantUnavailable as exc:
             if conversation_id:

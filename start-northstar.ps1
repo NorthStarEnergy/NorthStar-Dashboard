@@ -134,6 +134,19 @@ $stderrLog = Join-Path $dataDirectory 'northstar-backend.err.log'
 $env:NORTHSTAR_PORT = [string]$port
 $env:NORTHSTAR_BIND_HOST = '127.0.0.1'
 
+# Keep the API credential out of source control and load it only into the backend
+# process. A caller-provided value always takes precedence over .env.local.
+$runtimeEnvFile = Join-Path $projectRoot '.env.local'
+if (-not $env:OPENAI_API_KEY -and (Test-Path -LiteralPath $runtimeEnvFile)) {
+    foreach ($line in Get-Content -LiteralPath $runtimeEnvFile) {
+        if ($line -match '^\s*OPENAI_API_KEY\s*=\s*(.+?)\s*$') {
+            $env:OPENAI_API_KEY = $Matches[1].Trim().Trim('"').Trim("'")
+            break
+        }
+    }
+}
+if (-not $env:NORTHSTAR_AI_ENGINE) { $env:NORTHSTAR_AI_ENGINE = 'openai' }
+
 # Public deployment settings. Both are safe to leave set for local-only use:
 # the gate only engages when it is 'access' or 'demo', and the check-in origin
 # is only consulted when generating QR placard links.

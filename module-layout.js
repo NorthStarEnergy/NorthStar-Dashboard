@@ -149,6 +149,10 @@
     let statusReady = !window.NORTHSTAR_PERSISTENT_STATUS || document.body.classList.contains('ns-has-status');
     const profileKey = 'northstarOverviewProfilesV2';
     let profiles = {}, profile = '', lastWidth = 0, automatic = true, snapping = false, editSnapshot = null, weatherSizeApplied = false;
+    const guideLayer = document.createElement('div');
+    guideLayer.className = 'canvas-alignment-guides';
+    guideLayer.setAttribute('aria-hidden', 'true');
+    container.append(guideLayer);
     try { profiles = JSON.parse(localStorage.getItem(profileKey) || '{}'); } catch {}
     if (!profiles || typeof profiles !== 'object' || Array.isArray(profiles)) profiles = {};
     try { positions = JSON.parse(localStorage.getItem(storageKey) || 'null') || readZone('overview').position; } catch {}
@@ -194,6 +198,46 @@
       [['position','absolute'],['left',p.x+'px'],['top',p.y+'px'],['width',p.w+'px'],['height',p.h+'px'],
        ['min-width','0'],['min-height','0'],['max-width','none'],['max-height','none'],['margin','0'],['transform','none']]
         .forEach(([k,v]) => el.style.setProperty(k,v,'important'));
+    }
+    function guideTargets(excludeKey) {
+      const x = [0], y = [0];
+      Object.entries(positions).forEach(([key, p]) => {
+        if (key === excludeKey || !valid(p)) return;
+        x.push(p.x, p.x + p.w / 2, p.x + p.w);
+        y.push(p.y, p.y + p.h / 2, p.y + p.h);
+      });
+      return { x, y };
+    }
+    function closest(value, targets, threshold = 8) {
+      let best = value, distance = threshold + 1;
+      targets.forEach(target => { const next = Math.abs(value - target); if (next < distance) { best = target; distance = next; } });
+      return best;
+    }
+    function snapMove(p, targets) {
+      const xs = [p.x, p.x + p.w / 2, p.x + p.w].map((edge, i) => closest(edge, targets.x) - [0, p.w / 2, p.w][i]);
+      const ys = [p.y, p.y + p.h / 2, p.y + p.h].map((edge, i) => closest(edge, targets.y) - [0, p.h / 2, p.h][i]);
+      p.x = Math.max(0, xs.reduce((best, next) => Math.abs(next - p.x) < Math.abs(best - p.x) ? next : best, p.x));
+      p.y = Math.max(0, ys.reduce((best, next) => Math.abs(next - p.y) < Math.abs(best - p.y) ? next : best, p.y));
+    }
+    function snapResize(p, corner, targets, min) {
+      const right = p.x + p.w, bottom = p.y + p.h;
+      if (corner.includes('w')) { const x = closest(p.x, targets.x); if (right - x >= min[0]) { p.x = Math.max(0, x); p.w = right - p.x; } }
+      else if (corner.includes('e')) { const x = closest(right, targets.x); if (x - p.x >= min[0]) p.w = x - p.x; }
+      if (corner.includes('n')) { const y = closest(p.y, targets.y); if (bottom - y >= min[1]) { p.y = Math.max(0, y); p.h = bottom - p.y; } }
+      else if (corner.includes('s')) { const y = closest(bottom, targets.y); if (y - p.y >= min[1]) p.h = y - p.y; }
+    }
+    function renderGuides() {
+      guideLayer.innerHTML = '';
+      if (!editing() || !enabled()) return;
+      const {x, y} = guideTargets();
+      [...new Set(x.map(Math.round))].forEach(left => {
+        const line = document.createElement('span'); line.className = 'canvas-alignment-guide vertical';
+        line.style.setProperty('left', `${left}px`); guideLayer.append(line);
+      });
+      [...new Set(y.map(Math.round))].forEach(top => {
+        const line = document.createElement('span'); line.className = 'canvas-alignment-guide horizontal';
+        line.style.setProperty('top', `${top}px`); guideLayer.append(line);
+      });
     }
     function placeWeatherHeader(next, weather, width) {
       const {width: cardWidth, height: cardHeight, left, top, gap, scale} = WEATHER_CARD;
@@ -251,13 +295,17 @@
           if(snapping){
             if(resize){
               const right=p.x+p.w,bottom=p.y+p.h;
-              p.w=Math.max(entry.min[0],Math.min(corner.includes('w')?right:Infinity,Math.round(p.w/16)*16));p.h=Math.max(entry.min[1],Math.min(corner.includes('n')?bottom:Infinity,Math.round(p.h/16)*16));
+              p.w=Math.max(entry.min[0],Math.min(corner.includes('w')?right:Infinity,p.w));p.h=Math.max(entry.min[1],Math.min(corner.includes('n')?bottom:Infinity,p.h));
               if(corner.includes('w'))p.x=Math.max(0,right-p.w);
               if(corner.includes('n'))p.y=Math.max(0,bottom-p.h);
-            }else{p.x=Math.max(0,Math.round(p.x/16)*16);p.y=Math.max(0,Math.round(p.y/16)*16);}
+              snapResize(p, corner, guideTargets(entry.key), entry.min);
+            }else{
+              p.x=Math.max(0,Math.round(p.x/16)*16);p.y=Math.max(0,Math.round(p.y/16)*16);
+              snapMove(p, guideTargets(entry.key));
+            }
           }
           p.y=Math.max(0,p.y);
-          paint(entry); bounds();
+          paint(entry); bounds(); renderGuides();
         };
         handle.addEventListener('keydown', event => {
           if (!editing() || !enabled() || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
@@ -318,17 +366,18 @@
       return next;
     }
     const tools=document.createElement('div');tools.id='overviewArrangementTools';
-    tools.innerHTML='<span class="ov-profile-label"></span><label><input type="checkbox" data-ov-snap> Snap to 16 px</label><button type="button" data-ov-arrange>Arrange default</button><button type="button" data-ov-previous>Previous arrangement</button><button type="button" data-ov-fit>Bring into view</button><button type="button" data-ov-cancel>Cancel</button>';
+    tools.innerHTML='<span class="ov-profile-label"></span><label><input type="checkbox" data-ov-snap aria-label="Toggle alignment guide snapping"> Alignment guides + snap</label><button type="button" data-ov-arrange>Arrange default</button><button type="button" data-ov-previous>Previous arrangement</button><button type="button" data-ov-fit>Bring into view</button><button type="button" data-ov-cancel>Cancel</button>';
     document.querySelector('.layout-toolbar')?.prepend(tools);
     document.querySelector('.layout-edit-toggle')?.addEventListener('click',()=>{
       if(!editing())editSnapshot=['northstarModuleWorkspaceV1',profileKey,storageKey,STORE,'northstarTabOrder','northstarClosedOverviewModules'].map(key=>[key,localStorage.getItem(key)]);
+      setTimeout(renderGuides, 0);
     },true);
     tools.querySelector('[data-ov-cancel]')?.addEventListener('click',()=>{
       if(!editSnapshot)return;
       restoring=true;
       editSnapshot.forEach(([key,value])=>value===null?localStorage.removeItem(key):localStorage.setItem(key,value));location.reload();
     });
-    tools.querySelector('[data-ov-snap]')?.addEventListener('change',e=>snapping=e.target.checked);
+    tools.querySelector('[data-ov-snap]')?.addEventListener('change',e=>{snapping=e.target.checked;renderGuides();});
     tools.querySelector('[data-ov-arrange]')?.addEventListener('click',()=>{automatic=true;positions={};sync();});
     tools.querySelector('[data-ov-previous]')?.addEventListener('click',()=>{if(profiles.previous){positions=JSON.parse(JSON.stringify(profiles.previous));Object.values(positions).forEach(p=>p.y=Math.max(88,p.y));automatic=false;sync();}});
     tools.querySelector('[data-ov-fit]')?.addEventListener('click',()=>{Object.values(positions).forEach(p=>{p.w=Math.min(p.w,lastWidth);p.x=Math.max(16,Math.min(p.x,lastWidth+16-p.w));});automatic=false;sync();});
@@ -396,7 +445,7 @@
         paint(entry);bind(entry);
       });
       if(!weatherSizeApplied && all.some(entry=>entry.key.startsWith('canvas:weather:'))){weatherSizeApplied=true;}
-      bounds();persist();
+      bounds();persist();renderGuides();
     }
     function schedule() { if (!frame) frame = requestAnimationFrame(sync); }
     new MutationObserver(schedule).observe(container,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
@@ -667,6 +716,10 @@
       'body.layout-edit [data-layout-zone] > *{cursor:move;outline:1px dashed #2f5d74;outline-offset:2px}',
       'body.layout-edit [data-layout-zone] > *.module-dragging{opacity:.6;z-index:5;cursor:grabbing}',
       'body.layout-edit [data-layout-zone] .module-resize-handle{display:block}',
+      '.canvas-alignment-guides{position:absolute;inset:0;pointer-events:none;z-index:20;overflow:visible}',
+      '.canvas-alignment-guide{position:absolute;display:block;opacity:.58;border-color:#e7c364;border-style:dashed;border-width:0}',
+      '.canvas-alignment-guide.vertical{top:0;bottom:0;border-left-width:1px}',
+      '.canvas-alignment-guide.horizontal{left:0;right:0;border-top-width:1px}',
       '[data-layout-zone="weatherStrip"] > .weather-card{cursor:grab;touch-action:none}',
       '[data-layout-zone="weatherStrip"] > .weather-card.module-dragging{opacity:.65;z-index:6;cursor:grabbing}',
     ].join('');

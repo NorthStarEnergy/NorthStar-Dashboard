@@ -20,7 +20,9 @@ def database(tmp_path, monkeypatch):
     monkeypatch.delenv("NORTHSTAR_MAXIMO_USER", raising=False)
     monkeypatch.delenv("NORTHSTAR_MAXIMO_PASSWORD", raising=False)
     monkeypatch.delenv("NORTHSTAR_MAXIMO_CONFIG", raising=False)
+    monkeypatch.delenv("NORTHSTAR_MAXIMO_SNAPSHOT", raising=False)
     monkeypatch.setattr(maximo, "_FETCH", None)
+    monkeypatch.setattr(maximo, "_SNAPSHOT_CACHE", None)
     with store._session() as connection:
         connection.executescript(store.SCHEMA)
         library.init_schema(connection)
@@ -68,6 +70,43 @@ def test_status_does_not_call_maximo(database, monkeypatch):
     assert snapshot["state"] == "Configured — not yet verified"
     assert called == []
     assert "secret-key" not in json.dumps(snapshot)
+
+
+def test_imported_equipment_master_is_complete_and_searchable(database, monkeypatch):
+    snapshot_path = database / "equipment-master.json"
+    snapshot_path.write_text(json.dumps({
+        "schemaVersion": 1,
+        "source": {
+            "filename": "equipment.xlsx",
+            "sha256": "a" * 64,
+            "sheetName": "List of Assets",
+            "headers": ["Asset", "Description", "Location", "Description", "Parent", "Rotating Item", "Site"],
+            "importedAt": "2026-09-15T12:00:00+00:00",
+        },
+        "assets": [
+            {"assetNum": "100", "description": "Unit Generator", "location": "IRO-200", "locationDescription": "Powerhouse", "parent": "", "rotatingItem": "", "site": "IRO"},
+            {"assetNum": "101", "description": "Generator relay", "location": "IRO-200", "locationDescription": "Powerhouse", "parent": "100", "rotatingItem": "", "site": "IRO"},
+            {"assetNum": "200", "description": "Line breaker", "location": "FFO-100", "locationDescription": "Switchyard", "parent": "", "rotatingItem": "", "site": "FFO"},
+        ],
+    }), encoding="utf-8")
+    monkeypatch.setenv("NORTHSTAR_MAXIMO_SNAPSHOT", str(snapshot_path))
+    monkeypatch.setattr(maximo, "_SNAPSHOT_CACHE", None)
+
+    status = maximo.equipment_master_status()
+    assert status["available"] is True
+    assert status["assetCount"] == 3
+    assert status["siteCount"] == 2
+    assert status["source"]["filename"] == "equipment.xlsx"
+
+    page = maximo.equipment(query="generator", site="IRO", page="1", limit="1")
+    assert page["readOnly"] is True
+    assert page["total"] == 2
+    assert page["pages"] == 2
+    assert page["assets"][0]["assetNum"] == "100"
+    assert page["assets"][0]["locationDescription"] == "Powerhouse"
+    assert {row["code"] for row in page["sites"]} == {"FFO", "IRO"}
+    with pytest.raises(ValueError):
+        maximo.equipment(page="0")
 
 
 def test_station_reads_assets_and_work_orders_when_configured(database, monkeypatch):
@@ -150,7 +189,7 @@ def service(database, monkeypatch):
 
 
 def test_maximo_routes_remain_operator_only_even_with_forged_public_header(service):
-    for path in ["/api/maximo", "/api/maximo/station?id=site:iroquois-falls"]:
+    for path in ["/api/maximo", "/api/maximo/equipment", "/api/maximo/station?id=site:iroquois-falls"]:
         assert service(path)[0] == 403
         assert service(path, public=True, authorized=True)[0] == 403
 
@@ -161,6 +200,10 @@ def test_maximo_station_roundtrip_stays_empty_until_configured(service):
     assert snapshot["state"] == "Setup pending"
     assert service("/api/maximo/station", authorized=True)[0] == 400
     assert service("/api/maximo/station?id=missing", authorized=True)[0] == 404
+    code, equipment = service("/api/maximo/equipment?limit=1", authorized=True)
+    assert code == 200
+    assert equipment["available"] is False
+    assert equipment["readOnly"] is True
     code, station = service("/api/maximo/station?id=site:iroquois-falls", authorized=True)
     assert code == 200
     assert station["assets"] == []

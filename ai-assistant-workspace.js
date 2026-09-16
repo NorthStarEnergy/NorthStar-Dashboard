@@ -1,6 +1,6 @@
 (() => {
   const SECTION_SCOPES = {
-    overview: 'general',
+    overview: 'dashboard',
     events: 'events',
     markets: 'market',
     outages: 'outages',
@@ -9,7 +9,7 @@
     switching: 'site',
     voice: 'general',
     scada: 'general',
-    assistant: 'general',
+    assistant: 'dashboard',
     weather: 'general',
     mobile: 'site',
     'field-operations': 'site',
@@ -38,6 +38,11 @@
     site: [
       'Give me a site operations snapshot from outages and recent events.',
       'What changed recently across outages and logbook entries?',
+    ],
+    dashboard: [
+      'Search all available dashboard records for the latest operational concerns.',
+      'Find engineering references relevant to relay protection and reliability.',
+      'What shift summaries, incident reports, or procedures match this question?',
     ],
     general: [
       'Give me an operational health snapshot.',
@@ -156,7 +161,7 @@
     renderScopes() {
       const node = this.root.querySelector('[data-ai-scopes]');
       if (!node) return;
-      const scopes = ['events', 'general', 'market', 'outages', 'logbook', 'site'];
+      const scopes = ['dashboard', 'events', 'general', 'market', 'outages', 'logbook', 'site'];
       node.innerHTML = scopes.map(scope => `<button type="button" data-scope="${scope}" class="${scope === this.scope ? 'active' : ''}">${scope.toUpperCase()}</button>`).join('');
     }
 
@@ -174,7 +179,8 @@
         const response = await fetch('/api/ai/status?ts=' + Date.now());
         if (!response.ok) throw new Error('status unavailable');
         const status = await response.json();
-        badge.textContent = String(status.engine || 'summary').toUpperCase();
+        const sourceCount = Number(status.knowledge?.totalRecords || 0);
+        badge.textContent = `${String(status.engine || 'summary').toUpperCase()} · ${sourceCount || '—'} SOURCES`;
       } catch {
         badge.textContent = 'UNAVAILABLE';
       }
@@ -214,6 +220,7 @@
             context_scope: this.scope,
             section: this.section,
             event_filter: this.scope === 'events' ? eventFilterValue() : '',
+            response_profile: 'balanced',
           }),
         });
         const payload = await response.json();
@@ -272,6 +279,22 @@
     const dialog = document.querySelector('#aiDialog');
     if (!dialog) return;
     dialog.showModal();
+    const statusNode = dialog.querySelector('#aiDialogStatus');
+    if (statusNode) {
+      statusNode.textContent = 'CHECKING CONNECTION…';
+      fetch('/api/ai/status?ts=' + Date.now())
+        .then(response => response.ok ? response.json() : Promise.reject(response.status))
+        .then(status => {
+          const engine = String(status.engine || 'none').toUpperCase();
+          const sourceCount = Number(status.knowledge?.totalRecords || 0);
+          statusNode.textContent = engine === 'NONE' ? 'AI DISABLED' : `${engine} · ACTIVE · ${sourceCount || '—'} SOURCES`;
+        })
+        .catch(status => {
+          statusNode.textContent = Number(status) === 401 || Number(status) === 403
+            ? 'SIGN IN REQUIRED'
+            : 'AI UNAVAILABLE';
+        });
+    }
     if (!dialog.dataset.aiBound) {
       dialog.dataset.aiBound = '1';
       const log = dialog.querySelector('#chatLog');
@@ -302,6 +325,8 @@
               context_scope: state.scope,
               section: state.section,
               event_filter: state.scope === 'events' ? eventFilterValue() : '',
+              model: dialog.querySelector('#aiModel')?.value || '',
+              response_profile: dialog.querySelector('#aiSpeed')?.value || 'balanced',
             }),
           });
           const payload = await response.json();

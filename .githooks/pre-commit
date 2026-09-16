@@ -1,0 +1,16 @@
+#!/bin/sh
+# Keep the visible dashboard build number in step with staged dashboard UI work.
+set -eu
+
+staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
+if ! printf '%s\n' "$staged_files" | grep -Eq '(^northstar-clean\.html$|^[^/]+\.(js|css)$)'; then
+  exit 0
+fi
+
+# A deliberate bump (with a descriptive summary) wins over the generic safety bump.
+if printf '%s\n' "$staged_files" | grep -qx 'dashboard-build-data.js'; then
+  exit 0
+fi
+
+python scripts/bump-dashboard-version.py --summary "Dashboard update"
+git add dashboard-build-data.js BUILD-VERSION.txt

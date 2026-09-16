@@ -1,0 +1,38 @@
+/* Build badge, overview shortcut, and release-history dialog. */
+body .app>aside .brand.brand-home{grid-template-columns:30px minmax(0,1fr) auto!important;grid-template-rows:auto auto!important;column-gap:8px!important}
+body .app>aside .brand .brand-home-control{display:grid;grid-column:1 / 3;grid-row:1 / 3;grid-template-columns:30px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:0 8px;min-width:0;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+body .app>aside .brand .brand-home-control:focus-visible{outline:2px solid var(--blue);outline-offset:5px;border-radius:5px}
+body .app>aside .brand .brand-home-control img{display:block!important;grid-column:1!important;grid-row:1 / 3!important;width:28px!important;height:28px!important;margin:0!important}
+body .app>aside .brand .brand-home-control .brand-name{display:block!important;grid-column:2!important;grid-row:1!important;margin:0!important;font:700 18px/1.2 Arial,sans-serif!important;letter-spacing:-.4px!important}
+body .app>aside .brand .brand-home-control small{display:block!important;grid-column:2!important;grid-row:2!important;margin:0!important;font:9px/1.4 Arial,sans-serif!important;letter-spacing:.6px!important;text-align:left!important}
+body .app>aside .brand .dashboard-build-label{position:relative!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:20px!important;cursor:pointer!important}
+body .app>aside .brand .dashboard-build-label:focus-visible{outline:1px solid var(--blue);outline-offset:2px}
+body .app>aside .brand .dashboard-build-label::after{content:attr(data-build-date)!important;position:absolute;z-index:800;left:0;bottom:calc(100% + 7px);width:max-content;max-width:220px;padding:8px 10px;border:1px solid var(--line);border-radius:5px;background:#14232c;color:var(--text);font:800 10px monospace;letter-spacing:.2px;box-shadow:0 8px 22px #0009;opacity:0;visibility:hidden;transform:translateY(4px) scale(.98);transform-origin:bottom left;transition:opacity .15s ease,transform .15s ease,visibility .15s ease;pointer-events:none}
+body .app>aside .brand .dashboard-build-label:hover::after,body .app>aside .brand .dashboard-build-label:focus-visible::after{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
+.northstar-build-history{width:min(620px,calc(100vw - 28px));max-height:min(700px,calc(100vh - 28px));margin:auto;padding:0;border:1px solid var(--line);border-radius:10px;background:#0d1a21;color:var(--text);box-shadow:0 20px 70px #000c}
+.northstar-build-history::backdrop{background:#000a}
+.northstar-build-history-panel{display:flex;flex-direction:column;max-height:inherit;padding:18px}
+.northstar-build-history header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+.northstar-build-history h2{margin:0;color:#fff;font:800 15px/1.2 Arial,sans-serif}
+.northstar-build-history-close{width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:5px;background:#152933;color:var(--muted);font:24px/1 Arial,sans-serif;cursor:pointer}
+.northstar-build-history-close:hover,.northstar-build-history-close:focus-visible{border-color:var(--blue);color:#fff}
+.northstar-build-history-list{display:grid;gap:0;max-height:calc(100vh - 180px);margin:0;padding:0;overflow:auto;list-style:none;border-top:1px solid var(--line)}
+.northstar-build-history-list li{display:grid;grid-template-columns:145px minmax(0,1fr);gap:12px;padding:10px 2px;border-bottom:1px solid #263842}
+.northstar-build-history-list li>div{display:grid;align-content:start;gap:3px}
+.northstar-build-history-list strong{color:var(--blue);font:800 11px monospace}
+.northstar-build-history-list time{color:var(--muted);font:10px Arial,sans-serif}
+.northstar-build-history-list p{margin:0;overflow:hidden;color:#d8e3e8;font:11px/1.35 Arial,sans-serif;text-overflow:ellipsis;white-space:nowrap}
+.northstar-build-history-note{margin:12px 0 0;color:var(--muted);font:10px/1.4 Arial,sans-serif}
+@media(max-width:1050px){
+  body .app>aside .brand.brand-home{display:grid!important;grid-template-columns:1fr!important;grid-template-rows:auto auto!important;justify-items:center!important;gap:2px!important;min-height:45px!important}
+  body .app>aside .brand .brand-home-control{display:grid!important;grid-column:1!important;grid-row:1!important;grid-template-columns:1fr!important;grid-template-rows:1fr!important;gap:0!important}
+  body .app>aside .brand .brand-home-control img{grid-column:1!important;grid-row:1!important;width:28px!important;height:28px!important}
+  body .app>aside .brand .brand-home-control :is(.brand-name,small){display:none!important}
+  body .app>aside .brand .dashboard-build-label{display:inline-flex!important;grid-column:1!important;grid-row:2!important;min-height:12px!important;font-size:7px!important}
+  body .app>aside .brand .dashboard-build-label::after{left:0;bottom:auto;top:calc(100% + 5px);transform-origin:top left}
+  body .app>aside .brand .dashboard-build-label:hover::after,body .app>aside .brand .dashboard-build-label:focus-visible::after{transform:translateY(0) scale(1)}
+}
+@media(max-width:520px){
+  .northstar-build-history-panel{padding:14px}
+  .northstar-build-history-list li{grid-template-columns:112px minmax(0,1fr);gap:8px}
+}

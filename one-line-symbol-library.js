@@ -38,6 +38,7 @@
     }
     return leads+dots+path(`M${x-20} ${y}h40`)+`<rect class="node-shape" x="${x-12}" y="${y-7}" width="24" height="14" rx="2"/>`;
   };
+  const staticLoad = (x, y) => path(`M${x-38} ${y}h10`)+`<rect class="node-shape" x="${x-28}" y="${y-18}" width="56" height="36"/>`+path(`M${x+28} ${y}h10`)+text(x,y+4,'LOAD');
   const aliases = {
     ldr: 'light-sensor',
     photoresistor: 'light-sensor',
@@ -51,7 +52,7 @@
   const definitions = [
     {
       id:'source', name:'AC source / utility', category:'Network', glyph:'∿', prefix:'SRC',
-      standard:'IEEE/ANSI 315 convention',
+      standard:'FirstLight static single-line convention',
       terminals:[{id:'R', dx:25, dy:0}, {id:'L', dx:-25, dy:0}],
       draw:({x,y}) => circle(x,y,25)+path(`M${x-14} ${y}q7-13 14 0t14 0`),
     },
@@ -63,9 +64,9 @@
     },
     {
       id:'line', name:'Line / cable', category:'Network', glyph:'╱', prefix:'LIN',
-      standard:'IEEE/ANSI 315 convention',
+      standard:'FirstLight static single-line convention',
       terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
-      draw:({x,y}) => path(`M${x-38} ${y}H${x+38}M${x-8} ${y+9}l8-18m8 18l8-18`),
+      draw:({x,y}) => path(`M${x-38} ${y}H${x+38}`),
     },
     {
       id:'junction', name:'Connected junction', category:'Network', glyph:'●', prefix:'JCT',
@@ -87,11 +88,11 @@
     },
     {
       id:'disconnect', name:'Line switch', category:'Primary equipment', glyph:'⊕', prefix:'DSC',
-      functionNumber:'89', standard:'Workplace one-line convention', switching:true,
+      functionNumber:'89', standard:'FirstLight static single-line convention', switching:true,
       terminals:[{id:'L', dx:-34, dy:0}, {id:'R', dx:34, dy:0}],
       draw:symbol => {
         const {x,y} = symbol;
-        return path(`M${x-34} ${y}h18M${x+16} ${y}h18`)+rotarySwitch(x,y,isOpen(symbol));
+        return fuseArm(x,y,isOpen(symbol));
       },
     },
     {
@@ -120,11 +121,11 @@
     },
     {
       id:'load-break', name:'Load-break switch', category:'Primary equipment', glyph:'⊗', prefix:'LBS',
-      functionNumber:'89', standard:'Workplace one-line convention', switching:true,
+      functionNumber:'89', standard:'FirstLight static single-line convention', switching:true,
       terminals:[{id:'L', dx:-34, dy:0}, {id:'R', dx:34, dy:0}],
       draw:symbol => {
         const {x,y} = symbol;
-        return path(`M${x-34} ${y}h18M${x+16} ${y}h18`)+rotarySwitch(x,y,isOpen(symbol))+path(`M${x+10} ${y-22}q10-8 16 4`);
+        return fuseArm(x,y,isOpen(symbol))+path(`M${x+10} ${y-22}q10-8 16 4`);
       },
     },
     {
@@ -138,11 +139,11 @@
     },
     {
       id:'sectionalizer', name:'Sectionalizer', category:'Primary equipment', glyph:'S', prefix:'SEC',
-      functionNumber:'89', standard:'Workplace one-line convention', switching:true,
+      functionNumber:'89', standard:'FirstLight static single-line convention', switching:true,
       terminals:[{id:'L', dx:-34, dy:0}, {id:'R', dx:34, dy:0}],
       draw:symbol => {
         const {x,y} = symbol;
-        return path(`M${x-34} ${y}h18M${x+16} ${y}h18`)+rotarySwitch(x,y,isOpen(symbol))+text(x,y+30,'S');
+        return fuseArm(x,y,isOpen(symbol))+text(x,y+30,'S');
       },
     },
     {
@@ -201,9 +202,9 @@
     },
     {
       id:'generator', name:'Generator', category:'Primary equipment', glyph:'G', prefix:'GEN',
-      standard:'IEEE/ANSI 315 convention',
+      standard:'FirstLight static single-line convention',
       terminals:[{id:'T', dx:0, dy:-25}],
-      draw:({x,y}) => circle(x,y,25)+text(x,y+5,'G'),
+      draw:({x,y}) => circle(x,y,25)+path(`M${x-14} ${y}q7-13 14 0t14 0`),
     },
     {
       id:'motor', name:'Motor', category:'Primary equipment', glyph:'M', prefix:'MTR',
@@ -237,9 +238,9 @@
     },
     {
       id:'load', name:'General load', category:'Primary equipment', glyph:'▽', prefix:'LOD',
-      standard:'IEEE/ANSI 315 convention',
+      standard:'FirstLight static single-line convention',
       terminals:[{id:'L', dx:-38, dy:0}],
-      draw:({x,y}) => path(`M${x-38} ${y}h18M${x-20} ${y-22}L${x+28} ${y}l-48 22z`),
+      draw:({x,y}) => staticLoad(x,y),
     },
     {
       id:'ct', name:'Current transformer', category:'Measurement & protection', glyph:'CT', prefix:'CT',

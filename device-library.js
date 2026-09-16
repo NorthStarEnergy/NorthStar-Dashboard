@@ -1,7 +1,7 @@
 /**
  * Company device library (Tools).
  *
- * Area → site → Operations / Equipment / Data / Notes / Reports.
+ * Operations → Plants → plant folders, plus area/site equipment.
  * Left pane is a Windows-style folder tree; folder glyphs are nested sunflowers.
  * Reference data only. Notes are append-only and never acknowledge alarms.
  */
@@ -30,7 +30,7 @@
       <div class="dl-head">
         <div>
           <h3>Device Library</h3>
-          <p>Company repository by area and site. Each generating station opens with Operations, Equipment, Data, Notes, and Reports.</p>
+          <p>Plant records are filed by Operations → Plants → plant folders. Area and site equipment records remain available below.</p>
         </div>
         <div class="dl-counts" id="dlCounts"></div>
       </div>
@@ -38,7 +38,7 @@
       <div class="dl-layout">
         <div class="dl-tree-pane">
           <div class="dl-tree-tools">
-            <input id="dlSearch" type="search" maxlength="200" placeholder="Search devices, sites, folders" aria-label="Search the device library">
+            <input id="dlSearch" type="search" maxlength="200" placeholder="Search plants, devices, sites, folders" aria-label="Search the device library">
             <button type="button" id="dlExpand">Expand</button>
             <button type="button" id="dlCollapse">Collapse</button>
           </div>
@@ -63,6 +63,7 @@
     let query = '';
     let searchTimer = 0;
     let loadToken = 0;
+    let equipmentMaster = { query: '', site: '', page: 1 };
 
     async function json(url, options = {}) {
       const response = await fetch(url, { cache: 'no-store', ...options });
@@ -98,7 +99,7 @@
     function expandDefaults() {
       expanded = new Set(['company:northstar']);
       walk(snapshot?.tree, node => {
-        if (node.kind === 'area') expanded.add(node.id);
+        if (node.kind === 'area' || node.id === 'folder:company:operations') expanded.add(node.id);
       });
     }
 
@@ -191,6 +192,14 @@
         if (!href) return '';
         return `<li><a class="dl-event" href="${esc(href)}">${esc(event.summary || event.eventType)}<small>${esc(when(event.occurredAt))} · ${esc(event.category || event.source || '')} · ${esc(event.severity || '')}</small></a></li>`;
       }).join('');
+      const procedureRows = (record.procedures || []).map(procedure => {
+        const id = String(procedure.id || '');
+        if (!/^flc-[a-f0-9]{16}$/.test(id)) return '';
+        const href = `/api/library/procedures/${id}/file`;
+        const detail = [procedure.procedureCode, procedure.revision, procedure.language, procedure.kind, 'OPEN PDF']
+          .filter(Boolean).map(value => esc(String(value))).join(' · ');
+        return `<li><a class="dl-event" href="${esc(href)}" target="_blank" rel="noopener">${esc(procedure.title || procedure.filename || 'Legacy SOP PDF')}<small>${detail}</small></a></li>`;
+      }).join('');
       const scheduled = record.menuKey === 'notes';
       nodes.detail.innerHTML = `
         <p class="dl-crumb">${esc(crumb || record.name)}</p>
@@ -204,6 +213,12 @@
         </div>` : ''}
         <p class="dl-status">${esc(record.note || '')}</p>
         ${record.menuKey === 'maximo-database' ? '<div class="dl-maximo" id="dlMaximo"><p class="dl-status">Loading Maximo…</p></div>' : ''}
+        ${record.menuKey === 'maximo-equipment-master' ? '<div class="dl-maximo" id="dlMaximoEquipment"><p class="dl-status">Loading equipment master…</p></div>' : ''}
+        ${record.procedureSource ? `<div class="dl-events dl-procedures">
+          <h5>${esc(record.procedureSource.name || 'Procedure library')}</h5>
+          <p class="dl-status">${esc(record.procedureSource.status || '')} · ${esc(record.procedureSource.notice || '')}</p>
+          <ul class="dl-event-list">${procedureRows || '<li class="dl-status">No matching legacy SOP PDFs are installed for this library item.</li>'}</ul>
+        </div>` : ''}
         <div class="dl-events">
           <h5>Event reports</h5>
           <p class="dl-status">Recorded events, reports and alarms open a dedicated log. This list stays empty until a write exists. It does not invent readings or acknowledge alarms.</p>
@@ -255,6 +270,10 @@
         if (token !== loadToken) return;
         renderDetail(record);
         if (record.menuKey === 'maximo-database' && record.siteId) loadMaximo(record.siteId, token);
+        if (record.menuKey === 'maximo-equipment-master') {
+          equipmentMaster = { query: '', site: '', page: 1 };
+          loadMaximoEquipment(token);
+        }
       } catch (error) {
         if (token !== loadToken) return;
         nodes.detail.innerHTML = `<div class="dl-error">${esc(error.status === 404
@@ -278,7 +297,38 @@
         <h6>Assets</h6>
         ${rows(snapshot.assets || [], snapshot.configured ? 'No Maximo assets returned for this station.' : 'Maximo is not connected. Station asset records will appear here after authorized setup.')}
         <h6>Work orders</h6>
-        ${rows(snapshot.workOrders || [], snapshot.configured ? 'No Maximo work orders returned for this station.' : 'Work orders are read-only from Maximo. None are shown until the connection is authorized.')}`;
+        ${rows(snapshot.workOrders || [], snapshot.configured ? 'No Maximo work orders returned for this station.' : 'Work orders are read-only from Maximo. None are shown until the connection is authorized.')}
+        ${snapshot.equipmentMaster?.available ? `<p class="dl-status">The local equipment master has ${esc(String(snapshot.equipmentMaster.assetCount || 0))} assets across ${esc(String(snapshot.equipmentMaster.siteCount || 0))} Maximo site codes. <button type="button" data-open="menu:company:maximo-equipment-master">Open equipment master</button></p>` : ''}`;
+    }
+
+    function renderMaximoEquipment(snapshot) {
+      const box = host.querySelector('#dlMaximoEquipment');
+      if (!box) return;
+      const source = snapshot.source || {};
+      const assetCount = Number(snapshot.assetCount || 0);
+      const siteCount = Number(snapshot.siteCount || 0);
+      const options = (snapshot.sites || []).map(row => `<option value="${esc(row.code)}"${row.code === snapshot.site ? ' selected' : ''}>${esc(row.code)} (${esc(String(row.assets || 0))})</option>`).join('');
+      const rows = (snapshot.assets || []).map(asset => `<tr>
+        <td>${esc(asset.assetNum)}</td><td>${esc(asset.description)}</td><td>${esc(asset.location)}</td>
+        <td>${esc(asset.locationDescription)}</td><td>${esc(asset.parent)}</td><td>${esc(asset.rotatingItem)}</td><td>${esc(asset.site)}</td>
+      </tr>`).join('');
+      const first = snapshot.total ? (snapshot.page - 1) * snapshot.limit + 1 : 0;
+      const last = snapshot.total ? Math.min(snapshot.page * snapshot.limit, snapshot.total) : 0;
+      const canPrevious = snapshot.page > 1;
+      const canNext = snapshot.page < snapshot.pages;
+      const importedAt = source.importedAt ? `Imported ${esc(when(source.importedAt))}` : '';
+      box.innerHTML = `
+        <h5>Maximo Equipment Master</h5>
+        <p class="dl-status">${esc(snapshot.state || 'No imported equipment master')} · ${esc(String(assetCount))} assets · ${esc(String(siteCount))} Maximo site codes</p>
+        ${source.filename ? `<p class="dl-crumb">${esc(source.filename)}${source.sheetName ? ` \\ ${esc(source.sheetName)}` : ''}${importedAt ? ` \\ ${importedAt}` : ''}</p>` : ''}
+        ${snapshot.available ? `<form class="dl-maximo-controls" id="dlMaximoEquipmentSearch">
+          <label>Search<input id="dlMaximoSearch" type="search" maxlength="200" value="${esc(snapshot.query)}" placeholder="Asset, description, location, parent" aria-label="Search Maximo equipment"></label>
+          <label>Site<select id="dlMaximoSite" aria-label="Filter by Maximo site"><option value="">All sites</option>${options}</select></label>
+          <button type="submit">Search</button>
+        </form>
+        <p class="dl-status">${snapshot.total ? `Showing ${esc(String(first))}–${esc(String(last))} of ${esc(String(snapshot.total))} matching assets.` : 'No matching assets.'}</p>
+        <div class="dl-maximo-table"><table><thead><tr><th>Asset</th><th>Asset description</th><th>Location</th><th>Location description</th><th>Parent</th><th>Rotating item</th><th>Site</th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="dl-status">No matching assets.</td></tr>'}</tbody></table></div>
+        ${snapshot.pages > 1 ? `<div class="dl-maximo-pages"><button type="button" data-maximo-page="${esc(String(snapshot.page - 1))}"${canPrevious ? '' : ' disabled'}>Previous</button><span>Page ${esc(String(snapshot.page))} of ${esc(String(snapshot.pages))}</span><button type="button" data-maximo-page="${esc(String(snapshot.page + 1))}"${canNext ? '' : ' disabled'}>Next</button></div>` : ''}` : ''}`;
     }
 
     async function loadMaximo(stationId, token) {
@@ -293,6 +343,33 @@
           ? 'The Maximo API needs a backend service restart.'
           : error.message)}</p>`;
       }
+    }
+
+    async function loadMaximoEquipment(token) {
+      const params = new URLSearchParams();
+      if (equipmentMaster.query) params.set('q', equipmentMaster.query);
+      if (equipmentMaster.site) params.set('site', equipmentMaster.site);
+      params.set('page', String(equipmentMaster.page));
+      try {
+        const snapshot = await json(`/api/maximo/equipment?${params}`);
+        if (token !== loadToken) return;
+        equipmentMaster = { query: snapshot.query || '', site: snapshot.site || '', page: snapshot.page || 1 };
+        renderMaximoEquipment(snapshot);
+      } catch (error) {
+        if (token !== loadToken) return;
+        const box = host.querySelector('#dlMaximoEquipment');
+        if (box) box.innerHTML = `<h5>Maximo Equipment Master</h5><p class="dl-error">${esc(error.status === 404
+          ? 'The Maximo API needs a backend service restart.'
+          : error.message)}</p>`;
+      }
+    }
+
+    function refreshMaximoEquipment(page) {
+      equipmentMaster.page = page;
+      const token = ++loadToken;
+      const box = host.querySelector('#dlMaximoEquipment');
+      if (box) box.innerHTML = '<p class="dl-status">Loading equipment master…</p>';
+      loadMaximoEquipment(token);
     }
 
     async function loadTree() {
@@ -350,10 +427,22 @@
 
     nodes.detail.addEventListener('click', event => {
       const open = event.target.closest('[data-open]');
-      if (open) select(open.dataset.open);
+      if (open) {
+        select(open.dataset.open);
+        return;
+      }
+      const page = event.target.closest('[data-maximo-page]');
+      if (page && !page.disabled) refreshMaximoEquipment(Number(page.dataset.maximoPage));
     });
 
     nodes.detail.addEventListener('submit', async event => {
+      if (event.target.matches('#dlMaximoEquipmentSearch')) {
+        event.preventDefault();
+        equipmentMaster.query = host.querySelector('#dlMaximoSearch')?.value.trim() || '';
+        equipmentMaster.site = host.querySelector('#dlMaximoSite')?.value || '';
+        refreshMaximoEquipment(1);
+        return;
+      }
       if (!event.target.matches('#dlNoteForm')) return;
       event.preventDefault();
       const text = host.querySelector('#dlNoteText')?.value || '';

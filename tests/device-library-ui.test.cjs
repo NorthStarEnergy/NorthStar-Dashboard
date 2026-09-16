@@ -7,14 +7,18 @@ const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'northstar-clean.html'), 'utf8');
 assert.ok(html.includes('id="deviceLibrary"'));
 assert.ok(html.includes('id="openDeviceLibrary"'));
-assert.ok(html.includes('device-library.js?v=20260913-5'));
-assert.ok(html.includes('device-library.css?v=20260913-5'));
+assert.ok(html.includes('device-library.js?v=20260915-operating-conditions-1'));
+assert.ok(html.includes('device-library.css?v=20260915-operating-conditions-1'));
 assert.ok(html.includes('northstar-sites.js?v=20260914-2'));
 assert.ok(html.includes('outages-workspace.js?v=8'));
 const libraryJs = fs.readFileSync(path.join(root, 'device-library.js'), 'utf8');
 assert.ok(libraryJs.includes('/api/maximo/station'));
-assert.ok(libraryJs.includes('Operations, Equipment, Data, Notes, and Reports'));
+assert.ok(libraryJs.includes('/api/maximo/equipment'));
+assert.ok(libraryJs.includes('/api/library/procedures/${id}/file'));
+assert.ok(libraryJs.includes('record.procedures'));
 assert.ok(libraryJs.includes("menuKey === 'maximo-database'"));
+assert.ok(libraryJs.includes("menuKey === 'maximo-equipment-master'"));
+assert.ok(libraryJs.includes('Operations → Plants → plant'));
 assert.ok(html.includes('id="tools"'));
 new vm.Script(fs.readFileSync(path.join(root, 'device-library.js'), 'utf8'), { filename: 'device-library.js' });
 new vm.Script(fs.readFileSync(path.join(root, 'northstar-sites.js'), 'utf8'), { filename: 'northstar-sites.js' });
@@ -151,6 +155,19 @@ const answer = (request, value, status = 200) => request.resolve({
       category: 'outage',
       severity: 'warning',
     }],
+    procedureSource: {
+      name: 'FirstLight legacy SOP library',
+      status: 'LEGACY_REFERENCE',
+      notice: 'Review required.',
+    },
+    procedures: [{
+      id: 'flc-0123456789abcdef',
+      title: '<script>procedure</script>',
+      procedureCode: 'FLC-2.2-C-02',
+      revision: 'REV-1',
+      language: 'English',
+      kind: 'Procedure',
+    }],
     contents: [{ id: 'area:northeast', name: 'Northeast Ontario', kind: 'area' }],
   });
   await flush();
@@ -168,6 +185,10 @@ const answer = (request, value, status = 200) => request.resolve({
   assert.ok(detail.includes('ADD NOTE'));
   assert.ok(detail.includes('do not acknowledge'));
   assert.ok(detail.includes('Event reports'));
+  assert.ok(detail.includes('FirstLight legacy SOP library'));
+  assert.ok(detail.includes('OPEN PDF'));
+  assert.ok(detail.includes('&lt;script&gt;procedure&lt;/script&gt;'));
+  assert.ok(!detail.includes('<script>procedure</script>'));
   assert.ok(detail.includes('href="event-detail.html?id=libnote_1"'));
   assert.ok(detail.includes('href="event-detail.html?id=outage-1"'));
   assert.ok(detail.includes('Open event report'));

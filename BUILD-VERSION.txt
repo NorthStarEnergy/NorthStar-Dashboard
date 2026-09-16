@@ -1,3 +1,3 @@
-v0.39
-2026-09-11
-Canonical dashboard source; unified module builder, operator schematics, AI integration, demo telemetry, and weather period strip.
+v0.43
+2026-09-15
+Replaced the AI search icon with a NorthStar sparkle.

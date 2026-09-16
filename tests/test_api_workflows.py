@@ -179,6 +179,85 @@ class APITest(unittest.TestCase):
             ), 200
         )
 
+    def test_daily_operations_routes_are_operator_only(self) -> None:
+        self.enable_operator_gate()
+        payload = {
+            "reportDate": "2026-09-15", "region": "EAST", "title": "Daily Operations Report",
+            "metrics": [], "sourceChecks": [],
+        }
+        for method, path in (
+            ("GET", "/api/daily-operations"),
+            ("GET", "/api/daily-operations/catalog"),
+            ("GET", "/api/daily-operations/history"),
+            ("POST", "/api/daily-operations"),
+            ("POST", "/api/daily-operations/daily-test/draft"),
+            ("POST", "/api/daily-operations/daily-test/publish"),
+        ):
+            with self.subTest(method=method, path=path):
+                self.assertEqual(self.gated_request(method, path, payload if method == "POST" else MISSING), 403)
+
+        self.assertEqual(self.gated_request("POST", "/api/daily-operations", payload, identity="jwt"), 201)
+
+    def test_unit_cycling_routes_are_operator_only(self) -> None:
+        self.enable_operator_gate()
+        payload = {
+            "station": "Iroquois Falls", "unitName": "Unit 1", "eventType": "START",
+            "occurredAt": "2026-09-15T08:00", "runningHours": 1234.5,
+        }
+        for method, path in (
+            ("GET", "/api/unit-cycling"),
+            ("GET", "/api/unit-cycling/catalog"),
+            ("GET", "/api/unit-cycling/summary"),
+            ("POST", "/api/unit-cycling"),
+        ):
+            with self.subTest(method=method, path=path):
+                self.assertEqual(self.gated_request(method, path, payload if method == "POST" else MISSING), 403)
+
+        self.assertEqual(self.gated_request("POST", "/api/unit-cycling", payload, identity="jwt"), 201)
+
+    def test_water_observation_routes_are_operator_only(self) -> None:
+        self.enable_operator_gate()
+        payload = {
+            "region": "EAST", "facility": "Lake Abitibi", "metricType": "ELEVATION",
+            "occurredAt": "2026-09-15T08:00", "value": 266.6, "quality": "VERIFIED",
+            "sourceType": "HYDROMETRIC", "sourceRef": "04LF001",
+            "reviewBandLow": 266.2, "reviewBandHigh": 267.0,
+        }
+        for method, path in (
+            ("GET", "/api/water-observations"),
+            ("GET", "/api/water-observations/catalog"),
+            ("GET", "/api/water-observations/summary"),
+            ("POST", "/api/water-observations"),
+        ):
+            with self.subTest(method=method, path=path):
+                self.assertEqual(self.gated_request(method, path, payload if method == "POST" else MISSING), 403)
+
+        self.assertEqual(self.gated_request("POST", "/api/water-observations", payload, identity="jwt"), 201)
+
+    def test_service_request_snapshot_routes_are_operator_only(self) -> None:
+        self.enable_operator_gate()
+        for path in (
+            "/api/service-requests",
+            "/api/service-requests/catalog",
+            "/api/service-requests?status=NEW&due=overdue",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(self.gated_request("GET", path), 403)
+
+        self.assertEqual(self.gated_request("GET", "/api/service-requests/catalog", identity="jwt"), 200)
+
+    def test_incident_library_routes_are_operator_only(self) -> None:
+        self.enable_operator_gate()
+        for path in (
+            "/api/incident-library",
+            "/api/incident-library/catalog",
+            "/api/incident-library?year=2025&category=01_OCC",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(self.gated_request("GET", path), 403)
+
+        self.assertEqual(self.gated_request("GET", "/api/incident-library/catalog", identity="jwt"), 200)
+
     def test_public_health_is_liveness_only_and_hides_filesystem_paths(self) -> None:
         self.enable_operator_gate()
         request = Request(self.base + "/api/health", method="GET")

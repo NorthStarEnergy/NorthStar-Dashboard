@@ -30,12 +30,13 @@ def test_tools_module_is_wired_and_not_published_on_checkin():
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
     assert 'id="deviceLibrary"' in html
     assert 'id="openDeviceLibrary"' in html
-    assert "device-library.js?v=20260913-5" in html
-    assert "device-library.css?v=20260913-5" in html
+    assert "device-library.js?v=20260915-operations-plant-folders-1" in html
+    assert "device-library.css?v=20260915-operations-plant-folders-1" in html
     assert 'src="events-register.js?v=' in html
     assert 'href="event-detail.html?id=' in html
     assert "EVENT REPORT" in html
     assert backend.OPERATOR_ROUTES["/api/maximo"] == ("GET",)
+    assert backend.OPERATOR_ROUTES["/api/maximo/equipment"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/maximo/station"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/sites"] == ("GET",)
     assert "northstar-sites.js?v=20260914-2" in html
@@ -56,11 +57,37 @@ def test_catalog_is_area_then_site_then_station_folders(database):
     assert snapshot["counts"]["areas"] == 3
     assert snapshot["counts"]["sites"] == 18
     assert snapshot["counts"]["devices"] > 100
-    areas = [child["name"] for child in snapshot["tree"]["children"]]
+    root_children = snapshot["tree"]["children"]
+    assert [child["name"] for child in root_children] == [
+        "Operations", "Maximo Equipment Master", "Legacy SOP Library (review required)",
+        "West", "East", "Quebec",
+    ]
+    library_operations = root_children[0]
+    assert [child["name"] for child in library_operations["children"]] == ["Plants"]
+    plants = library_operations["children"][0]
+    assert [child["name"] for child in plants["children"]] == [
+        "Fort Frances", "Calm Lake", "Sturgeon Falls", "Kenora", "Norman",
+        "Twin Falls", "Iroquois Falls", "Island Falls", "Old Woman Falls",
+        "White Otter Rapids", "Camp Three Rapids", "Big Beaver Falls", "Okikendawt GS",
+        "McDougal", "Bird GS", "Cogent", "Aiyers 1", "Aiyers 2",
+    ]
+    kenora_plant = next(child for child in plants["children"] if child["name"] == "Kenora")
+    assert [child["name"] for child in kenora_plant["children"]] == [
+        "Events", "Technical", "Notes", "Media", "Records",
+        "Operating Conditions", "Operating Instructions", "Field Notes",
+    ]
+    assert [child["id"] for child in kenora_plant["children"][:5]] == [
+        "menu:site:kenora:events", "menu:site:kenora:technical", "menu:site:kenora:notes",
+        "menu:site:kenora:media", "menu:site:kenora:records",
+    ]
+    assert kenora_plant["children"][5]["id"] == "menu:site:kenora:operating-conditions"
+    master = library.item("menu:company:maximo-equipment-master")
+    assert master["maximo"]["href"] == "/api/maximo/equipment"
+    areas = [child["name"] for child in root_children if child["kind"] == "area"]
     assert areas == ["West", "East", "Quebec"]
-    west = next(child for child in snapshot["tree"]["children"] if child["id"] == "area:west")
-    east = next(child for child in snapshot["tree"]["children"] if child["id"] == "area:east")
-    quebec = next(child for child in snapshot["tree"]["children"] if child["id"] == "area:quebec")
+    west = next(child for child in root_children if child["id"] == "area:west")
+    east = next(child for child in root_children if child["id"] == "area:east")
+    quebec = next(child for child in root_children if child["id"] == "area:quebec")
     assert [child["name"] for child in west["children"]] == [
         "Fort Frances", "Calm Lake", "Sturgeon Falls", "Kenora", "Norman",
     ]
@@ -77,6 +104,7 @@ def test_catalog_is_area_then_site_then_station_folders(database):
     ]
     operations = next(child for child in twin["children"] if child["name"] == "Operations")
     assert [child["name"] for child in operations["children"]] == [
+        "Events", "Technical", "Notes", "Media", "Records",
         "Operating Conditions", "Operating Instructions", "Field Notes",
     ]
     equipment = next(child for child in twin["children"] if child["name"] == "Equipment")
@@ -106,6 +134,8 @@ def test_every_station_follows_the_twin_falls_whiteboard(database):
     snapshot = library.tree()
     stations = []
     for area in snapshot["tree"]["children"]:
+        if area["kind"] != "area":
+            continue
         stations.extend(area["children"])
     assert len(stations) == 18
     for station in stations:
@@ -114,14 +144,22 @@ def test_every_station_follows_the_twin_falls_whiteboard(database):
         ]
         operations, equipment, data, notes, reports = station["children"]
         assert [child["name"] for child in operations["children"]] == [
+            "Events", "Technical", "Notes", "Media", "Records",
             "Operating Conditions", "Operating Instructions", "Field Notes",
         ]
+        for folder in operations["children"][:5]:
+            record = library.item(folder["id"])
+            assert record["kind"] == "menu"
+            assert record["childIds"] == []
         assert equipment["children"][0]["name"] == "Maximo Database"
         assert {child["name"] for child in equipment["children"][1:]} == {
             "Powerhouse", "Switchyard", "Protection & Control", "Waterways", "Station Service",
         }
-        conditions = library.item(operations["children"][0]["id"])
-        assert conditions["state"] == "Setup pending"
+        conditions = library.item(next(
+            child["id"] for child in operations["children"] if child["name"] == "Operating Conditions"
+        ))
+        assert conditions.get("state") is None
+        assert "reference-only" in conditions["description"].lower()
         assert conditions.get("readings") in (None, [])
         dumped = json.dumps(conditions)
         assert "MW" not in dumped
@@ -132,14 +170,42 @@ def test_every_station_follows_the_twin_falls_whiteboard(database):
         assert [child["name"] for child in reports["children"]] == [
             "Daily Production", "Flows", "Outages", "Forecasting",
         ]
-        for leaf in (*data["children"], *reports["children"], operations["children"][1]):
+        for leaf in (*data["children"], *reports["children"], operations["children"][6]):
             record = library.item(leaf["id"])
             if record.get("menuKey") == "outages":
                 assert record.get("state") != "Setup pending"
                 assert record["events"] == []
                 continue
+            if record.get("menuKey") == "operating-instructions":
+                assert record["state"] in {"Setup pending", "LEGACY_REFERENCE - review required"}
+                assert isinstance(record.get("procedures"), list)
+                continue
             assert record["state"] == "Setup pending"
             assert record.get("readings") in (None, [])
+
+
+def test_operating_directives_are_filed_under_operations_plants(database):
+    snapshot = library.tree()
+    operations = snapshot["tree"]["children"][0]
+    plants = operations["children"][0]
+    kenora = next(child for child in plants["children"] if child["name"] == "Kenora")
+    conditions_id = next(
+        child["id"] for child in kenora["children"] if child["name"] == "Operating Conditions"
+    )
+    result = library.add_note(
+        conditions_id,
+        "Source: H2O Northwest Operating Directives.xlsx / KE GS row 8\\n"
+        "Equipment: KE GS\\nDirective: Cold lube-oil start note",
+        "operating-directives import",
+        "h2o-nw-ke-8",
+    )
+    conditions = library.item(conditions_id)
+    assert result["duplicate"] is False
+    assert [note["text"] for note in conditions["notes"]] == [
+        "Source: H2O Northwest Operating Directives.xlsx / KE GS row 8\\n"
+        "Equipment: KE GS\\nDirective: Cold lube-oil start note",
+    ]
+    assert library.item("menu:site:kenora:operating-instructions")["notes"] == []
 
 
 def test_search_keeps_matching_devices_and_their_folders(database):
@@ -177,7 +243,7 @@ def test_item_lookup_and_empty_id(database):
     assert "maximo" not in data
     conditions = library.item("menu:site:twin-falls:operating-conditions")
     assert conditions["menuKey"] == "operating-conditions"
-    assert conditions["state"] == "Setup pending"
+    assert conditions.get("state") is None
     assert "maximo" not in conditions
     assert conditions.get("readings") in (None, [])
     dumped = json.dumps(conditions)
@@ -312,7 +378,7 @@ def test_station_menus_list_recorded_event_reports_only(database):
     other = library.item("menu:site:iroquois-falls:outages")
     assert opened["eventId"] not in {row["eventId"] for row in other["events"]}
     conditions = library.item("menu:site:twin-falls:operating-conditions")
-    assert conditions["state"] == "Setup pending"
+    assert conditions.get("state") is None
     assert [row["eventId"] for row in conditions["events"]] == ["site-alarm"]
     production = library.item("menu:site:twin-falls:daily-production")
     assert production["events"] == []
@@ -377,7 +443,12 @@ def service(database, monkeypatch):
 
 
 def test_library_routes_remain_operator_only_even_with_forged_public_header(service):
-    for path in ["/api/library", "/api/library/item?id=company:northstar"]:
+    for path in [
+        "/api/library",
+        "/api/library/item?id=company:northstar",
+        "/api/library/procedures",
+        "/api/library/procedures/flc-0123456789abcdef/file",
+    ]:
         assert service(path)[0] == 403
         assert service(path, public=True, authorized=True)[0] == 403
     assert service("/api/library/notes", public=True, authorized=True, payload={})[0] == 403
@@ -387,6 +458,10 @@ def test_library_tree_and_notes_use_the_server_actor(service):
     code, snapshot = service("/api/library", authorized=True)
     assert code == 200
     assert snapshot["tree"]["name"] == "NorthStar Energy"
+    assert any(child["id"] == "menu:company:legacy-sop-library" for child in snapshot["tree"]["children"])
+    code, procedures = service("/api/library/procedures", authorized=True)
+    assert code == 200
+    assert procedures["status"] == "LEGACY_REFERENCE"
     code, missing = service("/api/library/item", authorized=True)
     assert code == 400
     assert service("/api/library/item?id=missing", authorized=True)[0] == 404

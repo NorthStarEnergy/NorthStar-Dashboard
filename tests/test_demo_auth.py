@@ -150,6 +150,20 @@ class DemoAuthTest(unittest.TestCase):
         self.assertNotIn("ron", token)
         self.assertNotIn(TEST_PASSWORD, cookie_header)
 
+    def test_multiple_accounts_create_sessions_for_the_matching_user(self) -> None:
+        self.backend.DEMO_AUTH = self.auth.normalise_config({
+            "accounts": [self.auth.build_config(name, TEST_PASSWORD)
+                         for name in ("Ron", "Ryan")]
+        })
+        for name in ("Ron", "Ryan"):
+            status, body, headers = self.sign_in(name)
+            self.assertEqual(status, 200)
+            self.assertEqual(body["username"], name)
+            cookie = headers["Set-Cookie"].split(";", 1)[0]
+            status, session, _ = self.call("GET", "/api/auth/session", cookie=cookie)
+            self.assertEqual(status, 200)
+            self.assertEqual(session["username"], name)
+
     def test_wrong_username_wrong_password_and_blank_password_all_fail(self) -> None:
         for label, username, password in (
             ("wrong username", "operator", TEST_PASSWORD),

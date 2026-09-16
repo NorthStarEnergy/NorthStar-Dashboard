@@ -23,6 +23,8 @@ import re
 import secrets
 import shlex
 import subprocess
+import urllib.error
+import urllib.request
 import uuid
 from datetime import datetime
 from typing import Any
@@ -30,11 +32,13 @@ from zoneinfo import ZoneInfo
 
 import northstar_events as events
 import northstar_store as store
+import northstar_knowledge as knowledge
 
 ROOT = __import__("pathlib").Path(__file__).resolve().parent
 TZ = ZoneInfo("America/Toronto")
 
 ALLOWED_SCOPES = frozenset({
+    "dashboard",
     "general",
     "events",
     "market",
@@ -309,6 +313,21 @@ def _build_context(
         )
     if scope not in ALL_SCOPES:
         raise ValueError(f"Unknown context scope: {scope}")
+    if scope == "dashboard":
+        records = knowledge.search(question, limit=20)
+        def source_kind(row: dict[str, Any]) -> str:
+            source = str(row.get("source") or "")
+            if source.startswith("database:"):
+                return "dashboard-database"
+            if source.startswith("public:"):
+                return "engineering-catalog"
+            return "reference-file"
+
+        citations = [
+            _citation(source=row["source"], source_kind=source_kind(row), record_id=row["path"])
+            for row in records
+        ]
+        return {"scope": scope, "question": question, "records": records, "citations": citations, "summary": "\n\n".join(row["excerpt"] for row in records)}
 
     if scope == "events":
         query = question.strip() or event_filter.strip()
@@ -430,6 +449,112 @@ def _run_command_engine(question: str, context: dict[str, Any]) -> str:
     return stdout
 
 
+def _openai_api_key() -> str:
+    configured = os.environ.get("OPENAI_API_KEY", "").strip()
+    if configured:
+        return configured
+    env_file = ROOT / ".env.local"
+    try:
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            match = re.match(r"^\s*OPENAI_API_KEY\s*=\s*(.+?)\s*$", line)
+            if match:
+                return match.group(1).strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return ""
+
+
+def _response_profile(profile: str) -> tuple[str, int, str]:
+    """Bound response depth and GPT-5 reasoning effort for predictable operator latency."""
+    profiles = {
+        "fast": ("fast", 400, "none"),
+        "balanced": ("balanced", 750, "low"),
+        "thorough": ("thorough", 1200, "medium"),
+    }
+    return profiles.get(profile.strip().lower(), profiles["balanced"])
+
+
+def _allowed_models() -> set[str]:
+    configured = os.environ.get("NORTHSTAR_AI_ALLOWED_MODELS", "").strip()
+    if configured:
+        return {item.strip() for item in configured.split(",") if item.strip()}
+    return {os.environ.get("NORTHSTAR_AI_MODEL", "gpt-5.4-mini").strip() or "gpt-5.4-mini"}
+
+
+def _run_openai_engine(
+    question: str,
+    context: dict[str, Any],
+    model: str = "",
+    response_profile: str = "balanced",
+) -> str:
+    api_key = _openai_api_key()
+    if not api_key:
+        raise AssistantUnavailable("OPENAI_API_KEY is not set")
+    model = model or os.environ.get("NORTHSTAR_AI_MODEL", "gpt-5.4-mini").strip() or "gpt-5.4-mini"
+    if model not in _allowed_models():
+        raise ValueError("The selected model is not enabled for NorthStar AI")
+    _, max_output_tokens, reasoning_effort = _response_profile(response_profile)
+    timeout = max(10, int(os.environ.get("NORTHSTAR_AI_TIMEOUT_SECONDS", "120")))
+    source_context = json.dumps(
+        {
+            "scope": context.get("scope"),
+            "summary": context.get("summary"),
+            "records": context.get("records"),
+            "citations": context.get("citations"),
+        },
+        ensure_ascii=False,
+        default=str,
+    )
+    body = json.dumps(
+        {
+            "model": model,
+            "instructions": (
+                "You are the NorthStar Operations AI. Answer only from the supplied "
+                "retrieved records. Do not infer missing operational facts, issue equipment "
+                "commands, or provide safety releases. State when the records do not answer "
+                "the question. Every operational or engineering claim must cite one or more "
+                "supplied citation IDs. Keep the answer concise."
+            ),
+            "input": f"Question: {question}\n\nRetrieved records:\n{source_context}",
+            "max_output_tokens": max_output_tokens,
+            "reasoning": {"effort": reasoning_effort},
+            "store": False,
+        }
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        "https://api.openai.com/v1/responses",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        try:
+            payload = json.loads(exc.read().decode("utf-8", errors="replace"))
+            detail = str(payload.get("error", {}).get("message") or "").strip()
+        except (OSError, ValueError, AttributeError):
+            detail = ""
+        suffix = f": {detail[:280]}" if detail else ""
+        raise AssistantUnavailable(f"OpenAI request failed ({exc.code}){suffix}") from exc
+    except urllib.error.URLError as exc:
+        raise AssistantUnavailable("OpenAI service is unreachable") from exc
+    output = result.get("output") or []
+    answer = "\n".join(
+        str(part.get("text") or "").strip()
+        for item in output
+        for part in item.get("content") or []
+        if part.get("type") == "output_text"
+    ).strip()
+    if not answer:
+        raise RuntimeError("OpenAI returned no answer")
+    return answer
+
+
 def _persist_query(
     *,
     actor: str,
@@ -470,6 +595,8 @@ def query(
     market_snapshot: dict[str, Any] | None = None,
     event_filter: str = "",
     section: str = "",
+    model: str = "",
+    response_profile: str = "balanced",
     persist: bool = True,
 ) -> dict[str, Any]:
     """Answer an operator question for a single explicit scope."""
@@ -502,6 +629,12 @@ def query(
         label = "Model-assisted synthesis"
         model_version = os.environ.get("NORTHSTAR_AI_MODEL_VERSION", "external-command")
         inferred = True
+    elif engine == "openai":
+        profile, _, _ = _response_profile(response_profile)
+        answer = _run_openai_engine(cleaned, context, model, profile).strip()
+        label = "Model-assisted synthesis"
+        model_version = model or os.environ.get("NORTHSTAR_AI_MODEL", "gpt-5.4-mini")
+        inferred = True
     else:
         raise AssistantUnavailable(f"Unsupported AI engine: {engine}")
 
@@ -515,6 +648,7 @@ def query(
         "citations": citations,
         "uncertainty": _uncertainty(len(citations), inferred=inferred),
         "model_version": model_version,
+        "response_profile": _response_profile(response_profile)[0],
         "input_snapshot_id": snapshot_id,
         "persisted": False,
         "label": label,
@@ -537,6 +671,9 @@ def query(
 def status() -> dict[str, Any]:
   return {
       "engine": engine_name(),
+      "models": sorted(_allowed_models()),
+      "responseProfiles": ["fast", "balanced", "thorough"],
+      "knowledge": knowledge.status(),
       "allowedScopes": sorted(ALLOWED_SCOPES),
       "restrictedScopes": sorted(RESTRICTED_SCOPES),
       "enabledRestrictedScopes": sorted(enabled_restricted_scopes()),
