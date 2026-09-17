@@ -1,3 +1,9 @@
+# Overview weather module fit — 2026-09-17
+
+Densified Overview weather card face content so title, icon, temperature,
+condition, and precip fit inside the saved module size. See
+[report](packets/2026-09-17-weather-module-fit.md).
+
 # Operations data catalog — 2026-09-17
 
 Added a private, auditable metadata catalog and operator-facing library view for the known operations data collections. See [report](packets/2026-09-17-operations-data-catalog.md).

@@ -3,11 +3,16 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.44",
+    "version": "v0.45",
     "published": "2026-09-17",
-    "summary": "Dashboard update"
+    "summary": "Fit Overview weather card contents inside the saved module size."
   },
   "history": [
+    {
+      "version": "v0.45",
+      "published": "2026-09-17",
+      "summary": "Fit Overview weather card contents inside the saved module size."
+    },
     {
       "version": "v0.44",
       "published": "2026-09-17",

@@ -44,19 +44,31 @@ body.overview-canvas main [data-ov-size=compact] .ov-trend{display:none!importan
 
 html body.overview-canvas main .ov-managed .ov-weather-art{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;width:40px;height:40px;font:32px/1 "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif;color:initial}
 
-/* Native weather markup/styles retained from b766d9f, before the module redesign. */
-html body.overview-canvas main #weatherStrip>.ns-weather-original{display:block!important;text-align:center!important;padding:min(12px,var(--ov-frame-padding,12px)) min(6px,var(--ov-frame-padding,6px))!important}
+/* Native weather markup/styles retained from b766d9f, before the module redesign.
+   Card geometry stays at the saved Overview size; only face content is densified
+   so title / icon / temp / condition / precip fit inside the frame. */
+html body.overview-canvas main #weatherStrip>.ns-weather-original{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:space-evenly!important;text-align:center!important;box-sizing:border-box!important;padding:4px 3px!important;overflow:hidden!important;gap:0!important}
 html body.overview-canvas main #weatherStrip>.ns-weather-original>.ns-module-content .ns-module-caption{display:none!important}
 html body.overview-canvas main #weatherStrip>.ns-weather-original>.ns-module-content:has(.ns-content-blocks:empty):not(:has(.ns-module-notes)){display:none!important}
 html body.overview-canvas main #weatherStrip>.ns-weather-original>.ns-open-module{display:none!important}
 html body.overview-canvas main #weatherStrip>.ns-weather-original>.ns-edit-module{display:none!important}
 html body.overview-canvas.layout-edit main #weatherStrip>.ns-weather-original>.ns-edit-module{display:block!important;position:absolute;right:26px;top:2px;width:22px;height:22px;overflow:hidden;font-size:0;padding:0;z-index:110}
 html body.overview-canvas.layout-edit main #weatherStrip>.ns-weather-original>.ns-edit-module::after{content:'✎';font-size:14px}
-html body.overview-canvas main #weatherStrip>.ns-weather-original .weather-icon{font-family:"Segoe UI Emoji","Apple Color Emoji",sans-serif}
+html body.overview-canvas main #weatherStrip>.ns-weather-original>header{display:block!important;margin:0!important;padding:0!important;min-height:0!important;width:100%!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original .station-title{display:block!important;margin:0!important;min-width:0!important;width:100%!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original .station-title strong{display:block!important;margin:0!important;padding:0 8px 0 0!important;font:600 11px/1.15 Arial,sans-serif!important;letter-spacing:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;min-height:0!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original .details-btn{top:2px!important;right:2px!important;width:10px!important;height:10px!important;font-size:8px!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original>.weather-icon{display:block!important;flex:0 0 auto!important;width:auto!important;height:20px!important;margin:2px 0 0!important;padding:0!important;font:20px/20px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif!important;color:initial}
+html body.overview-canvas main #weatherStrip>.ns-weather-original>.weather-current{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:1px!important;margin:2px 0 0!important;padding:0!important;min-width:0!important;width:100%!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original>.weather-current b{display:block!important;margin:0!important;padding:0!important;font:700 22px/1 Arial,sans-serif!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original>.weather-current span{display:block!important;margin:0!important;padding:0!important;font:600 9px/1.1 Arial,sans-serif!important;letter-spacing:.2px!important;text-transform:uppercase!important;color:var(--muted,#82929d)!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:100%!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original>:is(.weather-extra-line){display:block!important;margin:2px 0 0!important;padding:0!important;font:600 9px/1.1 Arial,sans-serif!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:100%!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original>.weather-current+.weather-extra-line{display:none!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original>:is(.weather-extra-line):has(.precip-dot){display:none!important}
 
 html body.overview-canvas main #weatherStrip>.ns-weather-original>.periods{display:none!important;left:var(--weather-forecast-left,0px)!important;right:auto!important;transform:none!important;width:min(520px,calc(100vw - 24px))!important}
 html body.overview-canvas main #weatherStrip>.ns-weather-original:is(:hover,:focus-within)>.periods{display:grid!important}
-html body.overview-canvas main #weatherStrip>.ns-weather-original:is(:hover,:focus-within){z-index:200!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original:is(:hover,:focus-within){z-index:200!important;overflow:visible!important}
 
 /* The Overview weather row replaces the retired title/source/alarm strip.
    Zoom scales the native card and every child together, including icons, text,
