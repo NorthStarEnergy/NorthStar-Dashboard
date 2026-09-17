@@ -21,8 +21,8 @@ def load_data(path: Path) -> dict[str, object]:
 def test_dashboard_build_sources_are_wired() -> None:
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
     assert "dashboard-build-data.js?v=20260915-build-history-1" in html
-    assert "dashboard-build.js?v=20260915-build-history-1" in html
-    assert "dashboard-build.css?v=20260915-build-history-1" in html
+    assert "dashboard-build.js?v=20260916-ai-icon-1" in html
+    assert "dashboard-build.css?v=20260916-ai-icon-1" in html
     data = load_data(ROOT / "dashboard-build-data.js")
     assert data["current"] == data["history"][0]
     assert data["current"]["version"] == "v0.43"

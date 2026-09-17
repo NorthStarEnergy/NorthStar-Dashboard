@@ -14,8 +14,8 @@ vm.runInNewContext(dataScript, context, { filename: 'dashboard-build-data.js' })
 const build = context.window.NORTHSTAR_BUILD_DATA;
 
 assert.ok(html.includes('dashboard-build-data.js?v=20260915-build-history-1'));
-assert.ok(html.includes('dashboard-build.js?v=20260915-build-history-1'));
-assert.ok(html.includes('dashboard-build.css?v=20260915-build-history-1'));
+assert.ok(html.includes('dashboard-build.js?v=20260916-ai-icon-1'));
+assert.ok(html.includes('dashboard-build.css?v=20260916-ai-icon-1'));
 assert.equal(build.current.version, 'v0.43');
 assert.equal(build.history[0].version, build.current.version);
 assert.equal(build.history[0].published, build.current.published);
@@ -28,13 +28,16 @@ for (const entry of build.history) {
 assert.ok(uiScript.includes('const overview ='));
 assert.ok(uiScript.includes("className = 'brand-home-control'"));
 assert.ok(uiScript.includes("brand.querySelector(':scope > small')?.remove()"));
-assert.ok(uiScript.includes("assistantControl.textContent = '✦'"));
+assert.ok(uiScript.includes("icon.className = 'northstar-ai-icon'"));
+assert.ok(uiScript.includes("icon.src = 'northstar-symbol-transparent.png'"));
+assert.ok(uiScript.includes("window.addEventListener('northstar-ai-thinking'"));
 assert.ok(uiScript.includes("assistantControl.setAttribute('aria-label', 'Open NorthStar AI')"));
 assert.ok(uiScript.includes('showModal()'));
 assert.ok(uiScript.includes('badge.dataset.buildDate'));
 assert.ok(stylesheet.includes('.northstar-build-history'));
 assert.ok(stylesheet.includes('.brand-home'));
 assert.ok(stylesheet.includes('.brand-home-control'));
+assert.ok(stylesheet.includes('northstar-ai-thinking-spin'));
 new vm.Script(uiScript, { filename: 'dashboard-build.js' });
 
 console.log('Dashboard build UI source contract passed.');

@@ -3,11 +3,16 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.43",
-    "published": "2026-09-15",
-    "summary": "Replaced the AI search icon with a NorthStar sparkle."
+    "version": "v0.44",
+    "published": "2026-09-17",
+    "summary": "Dashboard update"
   },
   "history": [
+    {
+      "version": "v0.44",
+      "published": "2026-09-17",
+      "summary": "Dashboard update"
+    },
     {
       "version": "v0.43",
       "published": "2026-09-15",

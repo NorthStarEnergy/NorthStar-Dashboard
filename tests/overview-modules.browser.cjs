@@ -36,10 +36,11 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
    for(const card of await page.locator('#weatherStrip > .weather-card').all()){
     const rect=await card.boundingBox();weatherBoxes.push(rect);
     assert.ok(Math.abs(rect.width-66)<.1,`Weather card width is scaled to 75% at ${width}px`);
-    assert.ok(Math.abs(rect.height-123.75)<.1,`Weather card height is scaled to 75% at ${width}px`);
+    assert.ok(Math.abs(rect.height-88.5)<.1,`Weather card height is scaled to 75% at ${width}px`);
    }
    assert.ok(Math.min(...weatherBoxes.map(rect=>rect.y))<220,`Weather row uses the reclaimed Overview header at ${width}px`);
    assert.equal(await page.locator('#weatherStrip > .weather-card > .weather-icon:visible').count(),8,'Every station retains its coloured weather graphic');
+   assert.equal(await page.locator('#weatherStrip > .weather-card > .weather-icon').first().evaluate(el=>getComputedStyle(el).fontSize),'24px','Overview weather graphics are 150% of their prior 16px size');
    assert.ok((await page.locator('#weatherStrip > .weather-card').first().textContent()).includes('Feels'));
    assert.equal(await page.locator('#weatherStrip > .weather-card > .periods').count(),8);
    layouts.push(layout);await page.screenshot({path:path.join(out,`overview-${width}.png`),fullPage:true});
@@ -74,14 +75,8 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   assert.equal(await page.locator('#overviewEventsSummary .ov-events a').count(),4,'Retains last good events on failure');
   assert.ok((await page.locator('#alarmIndicator').textContent()).includes('—'),'Failed staff source cannot imply no alarms');
   await page.click('.layout-edit-toggle');
-  assert.equal(await page.locator('.layout-style-menu [data-ui-style]').count(),9,'Edit mode offers nine dashboard styles');
-  await page.click('.layout-style-toggle');
-  await page.click('[data-ui-style="midnight"]');
-  assert.equal(await page.locator('body').getAttribute('data-theme'),'midnight','Selected dashboard style is applied');
-  assert.equal(await page.locator('[data-ui-style="midnight"]').getAttribute('aria-checked'),'true','Selected style is exposed to assistive technology');
-  await page.click('.layout-style-toggle');
-  await page.click('[data-ui-style-next]');
-  assert.equal(await page.locator('body').getAttribute('data-theme'),'forest','Next style cycles in the declared order');
+  assert.equal(await page.locator('.layout-toolbar.editing #overviewArrangementTools:visible').count(),1,'Edit mode exposes compact layout controls without a dashboard-wide bottom bar');
+  assert.equal(await page.locator('.layout-toolbar.editing .overview-add-module:visible').count(),1,'Edit mode exposes module creation');
   const weather=page.locator('#weatherStrip > .weather-card').first();
   await weather.hover();await page.waitForTimeout(100);
   assert.equal(await weather.locator(':scope > .periods:visible').count(),1,'Original forecast panel opens on hover');

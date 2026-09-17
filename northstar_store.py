@@ -707,6 +707,9 @@ def init_db() -> None:
         from northstar_chat import init_schema as init_chat_schema
 
         init_chat_schema(connection)
+        from northstar_data_catalog import init_schema as init_data_catalog_schema
+
+        init_data_catalog_schema(connection)
         _migrate_unified_events(connection)
         _seed_readiness_registry(connection)
         connection.execute(

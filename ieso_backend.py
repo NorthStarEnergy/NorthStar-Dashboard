@@ -42,6 +42,7 @@ import northstar_maximo as maximo
 import northstar_service_requests as service_requests
 import northstar_sites as sites
 import northstar_uwpc as uwpc
+import northstar_data_catalog as data_catalog
 
 ROOT = Path(__file__).resolve().parent
 
@@ -161,6 +162,8 @@ OPERATOR_ROUTES = {
     "/api/scada/import": ("POST",),
     "/api/flows": ("GET",),
     "/api/water-management/catalog": ("GET",),
+    "/api/data-catalog": ("GET",),
+    "/api/data-catalog/refresh": ("POST",),
     "/api/daily-operations": ("GET", "POST"),
     "/api/daily-operations/catalog": ("GET",),
     "/api/daily-operations/history": ("GET",),
@@ -1602,6 +1605,14 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             self._send_json(catalog)
             return
+        if route == "/api/data-catalog":
+            query = parse_qs(urlparse(self.path).query)
+            self._send_json(data_catalog.snapshot(
+                query=query.get("q", [""])[0],
+                collection_id=query.get("collectionId", [""])[0],
+                limit=query.get("limit", [100])[0],
+            ))
+            return
         if self.path.split("?", 1)[0] == "/api/market-prices":
             body = json.dumps(STORE.get(), separators=(",", ":")).encode()
             self.send_response(200)
@@ -2061,6 +2072,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _do_POST(self) -> None:
         route = self.path.split("?", 1)[0]
+        if route == "/api/data-catalog/refresh":
+            self._json_body(4 * 1024)
+            self._send_json(data_catalog.refresh_known_sources(self._operator_actor()))
+            return
         if route == "/api/events/notes":
             payload = self._json_body(40 * 1024)
             try:

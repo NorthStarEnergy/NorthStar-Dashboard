@@ -1,3 +1,7 @@
+# Operations data catalog — 2026-09-17
+
+Added a private, auditable metadata catalog and operator-facing library view for the known operations data collections. See [report](packets/2026-09-17-operations-data-catalog.md).
+
 # Legacy SOP reference library — 2026-09-15
 
 Imported 94 private FirstLight SOP PDFs as `LEGACY_REFERENCE`, with checksums, operator-only serving, company-library access, and affected-station Operating Instructions listings. See [report](packets/2026-09-15-legacy-sop-library.md).

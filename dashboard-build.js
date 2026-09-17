@@ -4,6 +4,7 @@
 
   const buildData = window.NORTHSTAR_BUILD_DATA;
   if (!buildData?.current || !Array.isArray(buildData.history)) return;
+  let activeAssistantRequests = 0;
 
   const formatDate = value => {
     const [year, month, day] = String(value).split('-').map(Number);
@@ -23,13 +24,36 @@
     document.querySelector('#overview')?.scrollIntoView({ block: 'start' });
   };
 
+  const applyAssistantThinkingState = () => {
+    const assistantControl = document.getElementById('aiOpen');
+    if (!assistantControl) return;
+    const thinking = activeAssistantRequests > 0;
+    assistantControl.classList.toggle('is-thinking', thinking);
+    assistantControl.setAttribute('aria-busy', String(thinking));
+    assistantControl.title = thinking ? 'NorthStar AI is thinking' : 'Open NorthStar AI';
+  };
+
   const setAssistantIcon = () => {
     const assistantControl = document.getElementById('aiOpen');
     if (!assistantControl) return;
-    assistantControl.textContent = '✦';
-    assistantControl.title = 'Open NorthStar AI';
+    const icon = document.createElement('img');
+    icon.className = 'northstar-ai-icon';
+    icon.src = 'northstar-symbol-transparent.png';
+    icon.alt = '';
+    icon.setAttribute('aria-hidden', 'true');
+    assistantControl.replaceChildren(icon);
     assistantControl.setAttribute('aria-label', 'Open NorthStar AI');
+    applyAssistantThinkingState();
   };
+
+  const setAssistantThinking = active => {
+    activeAssistantRequests = Math.max(0, activeAssistantRequests + (active ? 1 : -1));
+    applyAssistantThinkingState();
+  };
+
+  window.addEventListener('northstar-ai-thinking', event => {
+    if (typeof event.detail?.active === 'boolean') setAssistantThinking(event.detail.active);
+  });
 
   const createHistoryDialog = () => {
     const existing = document.getElementById('northstarBuildHistory');

@@ -136,8 +136,9 @@
     const container = document.querySelector('main');
     if (!container) return null;
     const storageKey = 'northstarCanvasLayoutV1';
-    const WEATHER_HEADER_LAYOUT_VERSION = 1;
-    const WEATHER_CARD = { width: 88, height: 165, left: 16, top: 12, gap: 16, scale: .75 };
+    const WEATHER_HEADER_LAYOUT_VERSION = 2;
+    const WEATHER_DENSITY_VERSION = 1;
+    const WEATHER_CARD = { width: 88, height: 118, left: 16, top: 12, gap: 16, scale: .75 };
     const groups = [
       ['weather', '#weatherStrip > .weather-card', [WEATHER_CARD.width, WEATHER_CARD.height], [1, 1]],
       ['dispatch', '#dispatchClient', [360, 96], [200, 88]],
@@ -148,13 +149,14 @@
     let positions = {}, frame = 0, gesture = false, topLayer = 30, restoring = false, activeSignature = '';
     let statusReady = !window.NORTHSTAR_PERSISTENT_STATUS || document.body.classList.contains('ns-has-status');
     const profileKey = 'northstarOverviewProfilesV2';
-    let profiles = {}, profile = '', lastWidth = 0, automatic = true, snapping = false, editSnapshot = null, weatherSizeApplied = false;
+    let profiles = {}, profile = '', lastWidth = 0, automatic = true, snapping = false, editSnapshot = null, weatherSizeApplied = false, weatherDensityApplied = false;
     const guideLayer = document.createElement('div');
     guideLayer.className = 'canvas-alignment-guides';
     guideLayer.setAttribute('aria-hidden', 'true');
     container.append(guideLayer);
     try { profiles = JSON.parse(localStorage.getItem(profileKey) || '{}'); } catch {}
     if (!profiles || typeof profiles !== 'object' || Array.isArray(profiles)) profiles = {};
+    try { weatherDensityApplied = localStorage.getItem('northstarOverviewWeatherDensityVersion') === String(WEATHER_DENSITY_VERSION); } catch {}
     try { positions = JSON.parse(localStorage.getItem(storageKey) || 'null') || readZone('overview').position; } catch {}
     if (!positions || typeof positions !== 'object' || Array.isArray(positions)) positions = {};
     const valid = p => p && ['x','y','w','h'].every(k => Number.isFinite(p[k])) && p.x >= 0 && p.y >= 0 && p.w > 0 && p.h > 0;
@@ -441,10 +443,11 @@
           }
           positions[entry.key]=candidate;occupied.push(candidate);
         }
-        if((missing || !weatherSizeApplied || reflow) && entry.key.startsWith('canvas:weather:')){positions[entry.key].w=WEATHER_CARD.width;positions[entry.key].h=WEATHER_CARD.height;}
+        if((missing || !weatherSizeApplied || !weatherDensityApplied || reflow) && entry.key.startsWith('canvas:weather:')){positions[entry.key].w=WEATHER_CARD.width;positions[entry.key].h=WEATHER_CARD.height;}
         paint(entry);bind(entry);
       });
       if(!weatherSizeApplied && all.some(entry=>entry.key.startsWith('canvas:weather:'))){weatherSizeApplied=true;}
+      if(!weatherDensityApplied && all.some(entry=>entry.key.startsWith('canvas:weather:'))){weatherDensityApplied=true;try{localStorage.setItem('northstarOverviewWeatherDensityVersion',String(WEATHER_DENSITY_VERSION));}catch{}}
       bounds();persist();renderGuides();
     }
     function schedule() { if (!frame) frame = requestAnimationFrame(sync); }

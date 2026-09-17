@@ -36,6 +36,8 @@ def test_tools_module_is_wired_and_not_published_on_checkin():
     assert 'href="event-detail.html?id=' in html
     assert "EVENT REPORT" in html
     assert backend.OPERATOR_ROUTES["/api/maximo"] == ("GET",)
+    assert backend.OPERATOR_ROUTES["/api/data-catalog"] == ("GET",)
+    assert backend.OPERATOR_ROUTES["/api/data-catalog/refresh"] == ("POST",)
     assert backend.OPERATOR_ROUTES["/api/maximo/equipment"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/maximo/station"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/sites"] == ("GET",)
@@ -60,7 +62,7 @@ def test_catalog_is_area_then_site_then_station_folders(database):
     root_children = snapshot["tree"]["children"]
     assert [child["name"] for child in root_children] == [
         "Operations", "Maximo Equipment Master", "Legacy SOP Library (review required)",
-        "West", "East", "Quebec",
+        "Operations Data Catalog", "West", "East", "Quebec",
     ]
     library_operations = root_children[0]
     assert [child["name"] for child in library_operations["children"]] == ["Plants"]
@@ -83,6 +85,9 @@ def test_catalog_is_area_then_site_then_station_folders(database):
     assert kenora_plant["children"][5]["id"] == "menu:site:kenora:operating-conditions"
     master = library.item("menu:company:maximo-equipment-master")
     assert master["maximo"]["href"] == "/api/maximo/equipment"
+    source_catalog = library.item("menu:company:operations-data-catalog")
+    assert source_catalog["menuKey"] == "operations-data-catalog"
+    assert "metadata" in source_catalog["description"].lower()
     areas = [child["name"] for child in root_children if child["kind"] == "area"]
     assert areas == ["West", "East", "Quebec"]
     west = next(child for child in root_children if child["id"] == "area:west")
@@ -452,6 +457,16 @@ def test_library_routes_remain_operator_only_even_with_forged_public_header(serv
         assert service(path)[0] == 403
         assert service(path, public=True, authorized=True)[0] == 403
     assert service("/api/library/notes", public=True, authorized=True, payload={})[0] == 403
+
+
+def test_operations_data_catalog_routes_are_operator_only(service):
+    assert service("/api/data-catalog")[0] == 403
+    assert service("/api/data-catalog", public=True, authorized=True)[0] == 403
+    assert service("/api/data-catalog/refresh", public=True, authorized=True, payload={})[0] == 403
+    code, snapshot = service("/api/data-catalog", authorized=True)
+    assert code == 200
+    assert snapshot["summary"]["catalogReady"] is False
+    assert "Raw source files" in snapshot["note"]
 
 
 def test_library_tree_and_notes_use_the_server_actor(service):

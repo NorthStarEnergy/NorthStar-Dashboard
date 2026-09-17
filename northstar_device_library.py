@@ -235,6 +235,25 @@ def _catalog() -> dict:
         "menuKey": "legacy-sop-library",
         "children": [],
     })
+    data_catalog_id = "menu:company:operations-data-catalog"
+    items[data_catalog_id] = {
+        "id": data_catalog_id,
+        "kind": "menu",
+        "menuKey": "operations-data-catalog",
+        "name": "Operations Data Catalog",
+        "description": (
+            "Controlled metadata inventory for operational source collections. "
+            "Cataloging verifies and indexes sources without altering or serving raw files."
+        ),
+        "childIds": [],
+    }
+    tree["children"].append({
+        "id": data_catalog_id,
+        "name": "Operations Data Catalog",
+        "kind": "menu",
+        "menuKey": "operations-data-catalog",
+        "children": [],
+    })
     for area in areas:
         items[area["id"]] = {
             "id": area["id"], "kind": "area", "name": area["name"],

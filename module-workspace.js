@@ -14,7 +14,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
   const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const label = el => ($('h1,h2,h3,header strong', el)?.textContent || el.getAttribute('aria-label') || el.dataset.moduleId || el.id || 'Module').trim().replace(/[-_]/g,' ');
-  let section = 'overview', active = '', shell, tree, tabs, toolbar, editor, frame = 0, painting = false;
+  let section = 'overview', active = '', shell, tree, tabs, edgeToggle, editor, frame = 0, painting = false;
   let editorDrafts = {};
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
@@ -239,9 +239,10 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     const s = sectionState(section);
     document.body.classList.toggle('ns-menu-collapsed',!!s.menuCollapsed);
     tree.hidden=!!s.menuCollapsed;
-    const menuToggle=$('[data-ns-action="menu"]',toolbar);
-    menuToggle.textContent=s.menuCollapsed?'Show modules':'Hide modules';
-    menuToggle.setAttribute('aria-expanded',String(!s.menuCollapsed));
+    edgeToggle.textContent=s.menuCollapsed?'›':'‹';
+    edgeToggle.title=s.menuCollapsed?'Show modules':'Hide modules';
+    edgeToggle.setAttribute('aria-label',edgeToggle.title);
+    edgeToggle.setAttribute('aria-expanded',String(!s.menuCollapsed));
     s.tabs = (s.tabs || []).filter(id => belongs(registry.get(id),section));
     const landing = items.find(m => m.id === s.landing)?.id || items[0].id;
     if (!s.tabs.length) s.tabs.push(landing);
@@ -271,7 +272,9 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       addWindowControls(m);
     });
     tree.replaceChildren();
-    const head=document.createElement('h2');head.textContent=sectionTitle(section);tree.append(head);
+    const actions=document.createElement('div');actions.className='ns-module-menu-actions';
+    actions.innerHTML=`<button data-ns-action="float" type="button">${s.floating?'Maximize module':'Arrange windows'}</button><button data-ns-action="landing" type="button">${active===landing?'Landing module':'Set landing'}</button><button data-ns-action="edit" type="button">Edit module</button>`;
+    tree.append(actions);
     const build = (parent, host) => items.filter(m => (m.parent || '') === parent).forEach(m => {
       const children=items.some(child=>child.parent===m.id), row=document.createElement('div'); row.className='ns-tree-row';
       if (children) {
@@ -284,8 +287,6 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     const moduleButton = m => {const b=document.createElement('button');b.type='button';b.textContent=name(m)+(m.id===landing?' ★':'');b.className=m.id===active?'active':'';b.dataset.openModule=m.id;b.setAttribute('aria-current',m.id===active?'page':'false');b.onclick=()=>openModule(m.id);return b;};
     build('',tree);
     tabs.innerHTML = s.tabs.map(id=>`<div class="ns-tab" draggable="true" data-tab-id="${esc(id)}"><button type="button" role="tab" aria-selected="${id===active}" data-module-tab="${esc(id)}">${esc(name(registry.get(id)))}</button><button type="button" data-popout-module="${esc(id)}" aria-label="Pop out ${esc(name(registry.get(id)))}">↗</button><button type="button" data-close-module="${esc(id)}" aria-label="Close ${esc(name(registry.get(id)))}">×</button></div>`).join('');
-    $('[data-ns-action="float"]',toolbar).textContent=s.floating?'Maximize active module':'Pop out module windows';
-    $('[data-ns-action="landing"]',toolbar).textContent=active===landing?'★ Landing module':'Set as landing module';
     $$('#sideNav [data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===section));
     painting=false;
   }
@@ -468,8 +469,8 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
   function init() {
     const main=$('main');if(!main)return;
     shell=document.createElement('div');shell.className='ns-section-shell';shell.hidden=true;
-    shell.innerHTML='<aside id="nsSectionModuleMenu" class="ns-module-tree" aria-label="Section modules"></aside><div class="ns-section-top"><div class="ns-module-tabs" role="tablist" aria-label="Open module pages"></div><div class="ns-module-toolbar"><button data-ns-action="menu" type="button" aria-controls="nsSectionModuleMenu" aria-expanded="true">Hide modules</button><button data-ns-action="float" type="button">Arrange module windows</button><button data-ns-action="landing" type="button">Set as landing module</button><button data-ns-action="edit" type="button">Edit module</button></div></div>';
-    main.prepend(shell);tree=$('.ns-module-tree',shell);tabs=$('.ns-module-tabs',shell);toolbar=$('.ns-module-toolbar',shell);
+    shell.innerHTML='<aside id="nsSectionModuleMenu" class="ns-module-tree" aria-label="Section modules"></aside><button class="ns-menu-edge-toggle" type="button" aria-controls="nsSectionModuleMenu" aria-expanded="true" aria-label="Hide modules">‹</button><div class="ns-section-top"><div class="ns-module-tabs" role="tablist" aria-label="Open module pages"></div></div>';
+    main.prepend(shell);tree=$('.ns-module-tree',shell);tabs=$('.ns-module-tabs',shell);edgeToggle=$('.ns-menu-edge-toggle',shell);
     createEditor();discover();renderCatalog();discover();
     // Keep legacy module IDs and source roots; merge only their navigation owners.
     if(!state.sectionMergeV1){
@@ -515,9 +516,11 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       if(open)openModule(open.dataset.moduleTab);
       if(close){const s=sectionState(section);s.tabs=s.tabs.filter(id=>id!==close.dataset.closeModule);if(s.active===close.dataset.closeModule)s.active=s.tabs.at(-1) || '';paint();save();}
     };
-    toolbar.onclick=event=>{
+    edgeToggle.onclick=()=>{
+      const s=sectionState(section);s.menuCollapsed=!s.menuCollapsed;paint();save();
+    };
+    tree.onclick=event=>{
       const action=event.target.dataset.nsAction,s=sectionState(section);
-      if(action==='menu'){s.menuCollapsed=!s.menuCollapsed;paint();save();}
       if(action==='float'){s.floating=!s.floating;paint();save();}
       if(action==='landing'){s.landing=active;paint();save();}
       if(action==='edit')openEditor(active);

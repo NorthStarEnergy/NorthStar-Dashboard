@@ -1,22 +1,25 @@
 /* Second navigation rail and browser-like section workspace. */
 .ns-section-shell[hidden],.ns-module-hidden{display:none!important}
 html body #weatherStrip>.weather-card[hidden],html body #marketTopTiles>[hidden],html body #overviewModules [data-ns-compact][hidden]{display:none!important}
-body.ns-in-section main{padding-left:196px!important;padding-top:104px!important;min-height:calc(100vh - 40px)!important}
+body.ns-in-section main{padding-left:196px!important;padding-top:44px!important;min-height:calc(100vh - 40px)!important}
 body.ns-in-section main>.page-header{display:none!important}
 .ns-section-shell{position:absolute;inset:0 0 auto 0;pointer-events:none}
 .ns-module-tree{position:absolute;left:0;top:0;width:180px;height:calc(100vh - 38px);overflow:auto;background:var(--panel,#101e29);border-right:1px solid var(--line,#2b414d);padding:10px 6px;box-sizing:border-box;pointer-events:auto}
-.ns-module-tree h2{font:600 12px system-ui;text-transform:capitalize;padding:4px 6px 10px;letter-spacing:.06em}
 .ns-module-tree button{width:100%;text-align:left;padding:6px 6px;border:0;background:transparent;color:var(--text,#dbe7ef);font:12px/1.35 system-ui;border-radius:4px;min-width:0;overflow-wrap:anywhere;white-space:normal;cursor:pointer}
 .ns-module-tree button:hover,.ns-module-tree button.active{background:#234456;color:#fff}
+.ns-module-menu-actions{display:grid;gap:2px;margin:0 0 8px;padding:0 0 8px;border-bottom:1px solid #335264}
+.ns-module-menu-actions button{font-size:11px!important;color:#aac6d7!important}
+.ns-menu-edge-toggle{position:absolute;top:10px;left:180px;z-index:45;width:18px;height:32px;padding:0;border:1px solid #365b71;border-left:0;border-radius:0 5px 5px 0;background:#17303f;color:#d9edf8;font:700 20px/1 system-ui;cursor:pointer;pointer-events:auto}
+.ns-menu-edge-toggle:hover{background:#254b60;color:#fff}
 .ns-module-tree details summary{display:flex;align-items:center;cursor:pointer}
 .ns-module-tree details summary::before{content:'▸';color:#82b3ce}
 .ns-module-tree details[open]>summary::before{content:'▾'}
 .ns-tree-children{margin-left:7px;border-left:1px solid #335264;padding-left:4px}
 .ns-section-top{position:absolute;left:196px;right:16px;top:0;pointer-events:auto;background:var(--bg,#0b151e);z-index:40}
-.ns-module-tabs{display:flex;overflow-x:auto;gap:4px;border-bottom:1px solid #335264;padding-top:8px}
-.ns-tab{display:flex;flex:none;max-width:300px;background:#142733;border-radius:6px 6px 0 0;cursor:grab;touch-action:none}
+.ns-module-tabs{display:flex;overflow-x:auto;gap:2px;border-bottom:1px solid #335264;padding-top:2px}
+.ns-tab{display:flex;flex:none;max-width:210px;background:#142733;border-radius:4px 4px 0 0;cursor:grab;touch-action:none}
 .ns-tab:active,.ns-tab.ns-tab-dragging{cursor:grabbing;opacity:.7}
-.ns-tab button{border:0;background:transparent;color:#c5d6e2;padding:10px;font:13px system-ui;cursor:pointer}
+.ns-tab button{border:0;background:transparent;color:#c5d6e2;padding:4px 6px;font:11px/1.2 system-ui;cursor:pointer}
 .ns-tab [role=tab]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ns-tab [aria-selected=true]{background:#254b60;color:#fff;border-bottom:2px solid #78c6ed}
 .ns-module-toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0}
@@ -26,7 +29,7 @@ body.ns-in-section #weatherGridFull>.ns-module-window{display:block!important;al
 body.ns-in-section #weatherGridFull>.ns-module-window>.periods{margin-top:20px!important;display:grid!important}
 body.ns-in-section .section:not(.ns-source-section){display:none!important}
 body.ns-in-section .ns-source-section{display:block!important;position:relative!important;min-height:650px}
-body.ns-in-section .ns-module-window{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;min-width:0!important;height:auto!important;min-height:calc(100vh - 180px)!important;box-sizing:border-box!important;overflow:auto!important;border:1px solid var(--ns-accent,#335264)!important;padding:18px!important;margin:0!important}
+body.ns-in-section .ns-module-window{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;min-width:0!important;height:auto!important;min-height:calc(100vh - 112px)!important;box-sizing:border-box!important;overflow:auto!important;border:1px solid var(--ns-accent,#335264)!important;padding:18px!important;margin:0!important}
 body.ns-in-section .ns-module-window .module-resize-handle{display:none!important}
 body.ns-floating .ns-source-section{position:static!important;display:contents!important}
 body.ns-floating .ns-module-window{inset:unset;overflow:auto!important;padding-top:42px!important}
@@ -67,9 +70,10 @@ body.ns-floating .ns-window-controls{display:contents}
 .ns-editor-part{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid #2c4859;border-radius:5px;padding:8px;background:#0e1d27}.ns-editor-part-field{display:grid;grid-template-columns:minmax(150px,.75fr) minmax(220px,1.55fr);gap:8px;align-items:center;min-width:0}
 .ns-editor-part-meta{min-width:0}.ns-editor-part-meta strong,.ns-editor-part-meta small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ns-editor-part-meta strong{font:600 12px system-ui;color:#dcebf4}.ns-editor-part-meta small{margin-top:3px;font:11px system-ui;color:#93afc0}
 .ns-editor-part :is(input,textarea){width:100%;min-width:0}.ns-editor-part textarea{min-height:48px;resize:vertical}.ns-editor-image-fields{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ns-editor-part-restored{opacity:.7}.ns-editor-part-restored button{color:#e5c387}
-@media(max-width:850px){body.ns-in-section main{padding-left:152px!important;padding-top:136px!important}.ns-module-tree{width:140px}.ns-section-top{left:152px}.ns-module-tree button{font-size:11px;padding:6px 4px}.ns-catalog-list article{flex-wrap:wrap}.ns-catalog-list article>div{flex-basis:100%}.ns-block-editor{grid-template-columns:1fr 1fr}.ns-editor-grid,.ns-field-list,.ns-editor-part,.ns-editor-part-field{grid-template-columns:1fr}.ns-editor-image-fields{grid-template-columns:1fr}.ns-module-picker select{min-width:0;width:100%}}
+@media(max-width:850px){body.ns-in-section main{padding-left:152px!important;padding-top:44px!important}.ns-module-tree{width:140px}.ns-menu-edge-toggle{left:140px}.ns-section-top{left:152px}.ns-module-tree button{font-size:11px;padding:6px 4px}.ns-catalog-list article{flex-wrap:wrap}.ns-catalog-list article>div{flex-basis:100%}.ns-block-editor{grid-template-columns:1fr 1fr}.ns-editor-grid,.ns-field-list,.ns-editor-part,.ns-editor-part-field{grid-template-columns:1fr}.ns-editor-image-fields{grid-template-columns:1fr}.ns-module-picker select{min-width:0;width:100%}}
 
 /* Keep the toggle outside the hidden rail so it is always reachable. */
 body.ns-in-section.ns-menu-collapsed main{padding-left:16px!important}
 body.ns-menu-collapsed .ns-section-top{left:16px}
+body.ns-menu-collapsed .ns-menu-edge-toggle{left:0;border-left:0;border-radius:0 5px 5px 0}
 .ns-module-tree[hidden]{display:none!important}

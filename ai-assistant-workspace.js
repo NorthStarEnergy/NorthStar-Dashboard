@@ -58,6 +58,10 @@
       .replace(/"/g, '&quot;');
   }
 
+  function setAssistantThinking(active) {
+    window.dispatchEvent(new CustomEvent('northstar-ai-thinking', { detail: { active } }));
+  }
+
   function activeSection() {
     return document.querySelector('.section.active')?.id || 'assistant';
   }
@@ -208,6 +212,7 @@
       const question = String(prompt || this.inputNode?.value || '').trim();
       if (!question || this.busy) return;
       this.busy = true;
+      setAssistantThinking(true);
       if (this.sendNode) this.sendNode.disabled = true;
       this.appendMessage('user', question);
       if (this.inputNode) this.inputNode.value = '';
@@ -234,6 +239,7 @@
         this.appendMessage('system', 'Assistant request failed: ' + error.message);
       } finally {
         this.busy = false;
+        setAssistantThinking(false);
         if (this.sendNode) this.sendNode.disabled = false;
       }
     }
@@ -313,6 +319,7 @@
         const question = String(questionText || input.value || '').trim();
         if (!question || state.busy) return;
         state.busy = true;
+        setAssistantThinking(true);
         send.disabled = true;
         append('user', question);
         input.value = '';
@@ -342,6 +349,7 @@
           append('system', 'Assistant request failed: ' + error.message);
         } finally {
           state.busy = false;
+          setAssistantThinking(false);
           send.disabled = false;
         }
       };
@@ -385,6 +393,7 @@
     },
     ask(question, options = {}) {
       const scope = options.scope || defaultScope(options.section || activeSection());
+      setAssistantThinking(true);
       return fetch('/api/ai/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -394,7 +403,7 @@
           section: options.section || activeSection(),
           event_filter: options.eventFilter || '',
         }),
-      }).then(response => response.json().then(body => ({ ok: response.ok, body })));
+      }).then(response => response.json().then(body => ({ ok: response.ok, body }))).finally(() => setAssistantThinking(false));
     },
     defaultScope,
     mountEventsAssistant,

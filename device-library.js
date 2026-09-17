@@ -64,6 +64,7 @@
     let searchTimer = 0;
     let loadToken = 0;
     let equipmentMaster = { query: '', site: '', page: 1 };
+    let dataCatalog = { collectionId: '' };
 
     async function json(url, options = {}) {
       const response = await fetch(url, { cache: 'no-store', ...options });
@@ -214,6 +215,7 @@
         <p class="dl-status">${esc(record.note || '')}</p>
         ${record.menuKey === 'maximo-database' ? '<div class="dl-maximo" id="dlMaximo"><p class="dl-status">Loading Maximo…</p></div>' : ''}
         ${record.menuKey === 'maximo-equipment-master' ? '<div class="dl-maximo" id="dlMaximoEquipment"><p class="dl-status">Loading equipment master…</p></div>' : ''}
+        ${record.menuKey === 'operations-data-catalog' ? '<div class="dl-maximo" id="dlDataCatalog"><p class="dl-status">Loading operations data catalog…</p></div>' : ''}
         ${record.procedureSource ? `<div class="dl-events dl-procedures">
           <h5>${esc(record.procedureSource.name || 'Procedure library')}</h5>
           <p class="dl-status">${esc(record.procedureSource.status || '')} · ${esc(record.procedureSource.notice || '')}</p>
@@ -273,6 +275,10 @@
         if (record.menuKey === 'maximo-equipment-master') {
           equipmentMaster = { query: '', site: '', page: 1 };
           loadMaximoEquipment(token);
+        }
+        if (record.menuKey === 'operations-data-catalog') {
+          dataCatalog = { collectionId: '' };
+          loadDataCatalog(token);
         }
       } catch (error) {
         if (token !== loadToken) return;
@@ -372,6 +378,79 @@
       loadMaximoEquipment(token);
     }
 
+    function bytes(value) {
+      const count = Number(value || 0);
+      if (!Number.isFinite(count) || count < 1) return 'Size not supplied';
+      const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+      let amount = count;
+      let unit = 0;
+      while (amount >= 1024 && unit < units.length - 1) { amount /= 1024; unit += 1; }
+      return `${amount >= 10 || unit === 0 ? amount.toFixed(0) : amount.toFixed(1)} ${units[unit]}`;
+    }
+
+    function renderDataCatalog(snapshot) {
+      const box = host.querySelector('#dlDataCatalog');
+      if (!box) return;
+      const run = snapshot.latestRun || {};
+      const collections = (snapshot.collections || []).map(collection => `<tr>
+        <td><button type="button" data-data-catalog-collection="${esc(collection.id)}">${esc(collection.title)}</button></td>
+        <td>${esc(collection.domain)}</td><td>${esc(collection.state)}</td>
+        <td>${esc(String(collection.artifactCount || 0))}</td>
+      </tr>`).join('');
+      const artifacts = (snapshot.artifacts || []).map(artifact => `<tr>
+        <td>${esc(artifact.relativePath)}</td><td>${esc(artifact.origin)}</td>
+        <td>${esc(artifact.status)}</td><td>${esc(bytes(artifact.byteCount))}</td>
+        <td>${esc(artifact.sha256 ? artifact.sha256.slice(0, 16) : 'Not supplied')}</td>
+      </tr>`).join('');
+      const selected = (snapshot.collections || []).find(item => item.id === snapshot.selectedCollectionId);
+      box.innerHTML = `
+        <h5>Operations Data Catalog</h5>
+        <p class="dl-status">${esc(snapshot.note || '')}</p>
+        <p class="dl-status">${snapshot.summary?.catalogReady
+          ? `${esc(String(snapshot.summary.collectionCount || 0))} collections · ${esc(String(snapshot.summary.artifactCount || 0))} active catalog entries`
+          : 'Catalog has not run yet. Run an intake refresh to index the known source collections.'}</p>
+        <p class="dl-status">${run.completedAt ? `Last intake: ${esc(when(run.completedAt))} · ${esc(run.state || '')}` : 'No completed intake run yet.'}
+          <button type="button" data-data-catalog-refresh>REFRESH CATALOG</button></p>
+        <div class="dl-maximo-table"><table><thead><tr><th>Collection</th><th>Domain</th><th>State</th><th>Entries</th></tr></thead>
+          <tbody>${collections || '<tr><td colspan="4" class="dl-status">No source collections cataloged yet.</td></tr>'}</tbody></table></div>
+        ${selected ? `<h6>${esc(selected.title)} · source entries</h6><p class="dl-status">${esc(selected.description || '')}</p>
+          <div class="dl-maximo-table"><table><thead><tr><th>Path</th><th>Origin</th><th>Status</th><th>Size</th><th>SHA-256</th></tr></thead>
+          <tbody>${artifacts || '<tr><td colspan="5" class="dl-status">No active entries for this collection.</td></tr>'}</tbody></table></div>` : ''}`;
+    }
+
+    async function loadDataCatalog(token) {
+      const params = new URLSearchParams();
+      if (dataCatalog.collectionId) params.set('collectionId', dataCatalog.collectionId);
+      try {
+        const snapshot = await json(`/api/data-catalog${params.toString() ? `?${params}` : ''}`);
+        if (token !== loadToken) return;
+        renderDataCatalog(snapshot);
+      } catch (error) {
+        if (token !== loadToken) return;
+        const box = host.querySelector('#dlDataCatalog');
+        if (box) box.innerHTML = `<h5>Operations Data Catalog</h5><p class="dl-error">${esc(error.status === 404
+          ? 'The data-catalog update needs a backend service restart.'
+          : error.message)}</p>`;
+      }
+    }
+
+    async function refreshDataCatalog() {
+      const box = host.querySelector('#dlDataCatalog');
+      if (box) box.innerHTML = '<p class="dl-status">Cataloging source metadata…</p>';
+      const token = ++loadToken;
+      try {
+        await json('/api/data-catalog/refresh', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+        });
+        if (token !== loadToken) return;
+        dataCatalog.collectionId = '';
+        loadDataCatalog(token);
+      } catch (error) {
+        if (token !== loadToken) return;
+        if (box) box.innerHTML = `<p class="dl-error">${esc(error.message)}</p>`;
+      }
+    }
+
     async function loadTree() {
       const params = new URLSearchParams();
       if (query) params.set('q', query);
@@ -433,6 +512,14 @@
       }
       const page = event.target.closest('[data-maximo-page]');
       if (page && !page.disabled) refreshMaximoEquipment(Number(page.dataset.maximoPage));
+      const collection = event.target.closest('[data-data-catalog-collection]');
+      if (collection) {
+        dataCatalog.collectionId = collection.dataset.dataCatalogCollection || '';
+        const token = ++loadToken;
+        loadDataCatalog(token);
+        return;
+      }
+      if (event.target.closest('[data-data-catalog-refresh]')) refreshDataCatalog();
     });
 
     nodes.detail.addEventListener('submit', async event => {
