@@ -35,7 +35,7 @@ def test_dashboard_loads_symbol_library_before_editor() -> None:
     assert "Catalogue 2026.3" in html
     assert "Figure A-1" in html
     assert "Workplace line switch" in html
-    assert 'href="one-line-editor.css?v=20260918-1"' in html
+    assert 'href="one-line-editor.css?v=20260918-2"' in html
     assert 'href="one-line-scada.css?v=20260918-1"' in html
     assert 'href="one-line-technical.css?v=20260918-1"' in html
     assert 'class="one-line-toolbar"' in html

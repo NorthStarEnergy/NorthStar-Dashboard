@@ -19,4 +19,4 @@ No new feeds.
 
 ## Activation required
 
-Static assets are `one-line-editor.css?v=20260918-1`, `one-line-scada.css?v=20260918-1`, and `one-line-technical.css?v=20260918-1`. HTML is served from disk; no backend restart is required for this packet.
+Static assets are `one-line-editor.css?v=20260918-2`, `one-line-scada.css?v=20260918-1`, and `one-line-technical.css?v=20260918-1`. HTML is served from disk; no backend restart is required for this packet.
