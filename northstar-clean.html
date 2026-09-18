@@ -82,7 +82,7 @@
   <script data-ns-required src="overview-modules.js?v=20260915-weather-header-1"></script>
   <link rel="stylesheet" href="lamination-dashboard.css">
   <link rel="stylesheet" href="switching-workspace.css?v=20260914-6">
-  <link rel="stylesheet" href="one-line-editor.css?v=20260918-2">
+  <link rel="stylesheet" href="one-line-editor.css?v=20260918-3">
   <link rel="stylesheet" href="one-line-scada.css?v=20260918-1">
   <link rel="stylesheet" href="one-line-technical.css?v=20260918-1">
   <link rel="stylesheet" href="engineering-sitemap.css?v=20260915-1">
@@ -622,7 +622,7 @@
             <div>
               <label>ENGINEERING · SCHEMATIC BUILDER</label>
               <h2>One-line drawing board</h2>
-              <p>Draft, arrange, connect, and export a topology-aware one-line. Catalogue 2026.3 · Figure A-1 · Workplace line switch. This is a black drafting board, not a live mimic and not operational release.</p>
+              <p>Black drafting board · Catalogue 2026.3 · Figure A-1. Not a live mimic and not operational release.</p>
             </div>
             <span class="one-line-badge">DRAFTING ONLY · NOT RELEASE</span>
           </div>
@@ -669,7 +669,7 @@
             <div class="one-line-canvas-wrap">
               <div class="one-line-titleblock"><span>NORTHSTAR</span><strong>ONE-LINE</strong><em>DRAFT BOARD</em></div>
               <svg class="one-line-canvas" id="oneLineCanvas" viewBox="0 0 1000 560" role="img" aria-label="Interactive electrical one-line diagram editor"></svg>
-              <div class="one-line-empty" id="oneLineEmpty" hidden>Choose a symbol, then click the canvas.<br>Use CONNECT to join two symbols.</div>
+              <div class="one-line-empty" id="oneLineEmpty" hidden>Select a library symbol, then click the board.<br>CONNECT snaps a conductor between two terminals.</div>
               <div class="scada-status-legend"><span><i class="energized"></i>ENERGIZED</span><span><i class="offline"></i>OPEN / OFFLINE</span><span><i class="comms-loss"></i>COMMUNICATION LOSS</span><span><i class="maintenance"></i>MAINTENANCE / OUTAGE</span><span><i class="major-outage"></i>MAJOR OUTAGE</span></div>
             </div>
             <aside class="one-line-inspector">
@@ -1067,5 +1067,38 @@ document.querySelector('#quickLogForm').onsubmit=async e=>{e.preventDefault();co
 <style id="stallion-trial-theme">body[data-theme="stallion"]{--bg:#202020;--rail:#2b2b2b;--panel:#171717;--panel2:#202020;--line:#4a4a4a;--blue:#ffc453;--green:#9bd7b0;--gold:#ffc453;--muted:#bdbdbd;--text:#f2f2f2;--red:#ff8b82;--theme-selected:#202020;--theme-action:#ffc453;--theme-action-text:#171717}body[data-theme="stallion"] :is(button,.primary-btn,.secondary-btn,input,select,textarea){font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif!important;letter-spacing:0!important}body[data-theme="stallion"] :is(button,.primary-btn,.secondary-btn){border-radius:10px!important;font-weight:650!important;min-height:38px!important;padding:9px 16px!important;transition:background .16s ease,border-color .16s ease,transform .16s ease,box-shadow .16s ease!important}body[data-theme="stallion"] :is(button,.primary-btn,.secondary-btn):hover{transform:translateY(-1px);box-shadow:0 5px 14px #0005}body[data-theme="stallion"] .primary-btn,body[data-theme="stallion"] .layout-toolbar .layout-edit-toggle{border-color:#ffc453!important;background:#ffc453!important;color:#171717!important}body[data-theme="stallion"] :is(.panel,.quick-log,.events-card,.node-card,.graph-card,.weather-card,.crew-board,.layout-style-menu){border-radius:12px!important;box-shadow:0 8px 24px #0003}.layout-style-menu [data-ui-style="stallion"]::before{background:linear-gradient(135deg,#171717 0 48%,#ffc453 49% 100%)}</style>
 <script id="stallion-trial-theme-loader">(()=>{const add=()=>{const menu=document.querySelector('.layout-style-menu');if(!menu||menu.querySelector('[data-ui-style="stallion"]'))return;const button=document.createElement('button');button.type='button';button.role='menuitemradio';button.dataset.uiStyle='stallion';button.textContent='STALLION TRIAL';button.onclick=()=>{document.body.dataset.theme='stallion';try{localStorage.setItem('northstarUiStyle','stallion')}catch{}menu.querySelectorAll('[data-ui-style]').forEach(x=>{const selected=x===button;x.classList.toggle('selected',selected);x.setAttribute('aria-checked',String(selected))});menu.classList.remove('open');document.querySelector('.layout-style-toggle')?.setAttribute('aria-expanded','false')};menu.insertBefore(button,menu.querySelector('[data-ui-style-next]'))};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',add);else add();new MutationObserver(add).observe(document.body,{childList:true,subtree:true})})();</script>
 <script>try{if(localStorage.getItem('northstarUiStyle')==='stallion')document.body.dataset.theme='stallion'}catch{}</script>
+<style id="one-line-black-board">
+html body #oneLineEditor,
+html body #oneLineEditor.panel,
+html body #oneLineEditor.one-line-editor,
+html body.ns-in-section #oneLineEditor.ns-module-window,
+html body.overview-canvas main #oneLineEditor[data-canvas-module],
+html body.overview-canvas main #oneLineEditor.ov-managed{
+  background:#000!important;
+  border-color:#1c1c1c!important;
+  color:#f2f5f6!important;
+  box-shadow:inset 0 0 0 1px #111!important;
+}
+html body.ns-in-section #oneLineEditor.ns-module-window{padding:10px 12px 12px!important;border-radius:6px!important}
+html body #oneLineEditor h2{margin:4px 0 0!important;color:#fff!important;font:700 18px/1.15 Arial,sans-serif!important}
+html body #oneLineEditor :is(input,select,textarea){background:#050505!important;border-color:#333!important;color:#fff!important}
+html body #oneLineEditor :is(button,.primary-btn,.secondary-btn){background:#141414!important;border:1px solid #3a3a3a!important;color:#dce4e8!important;min-height:0!important;border-radius:2px!important;box-shadow:none!important;transform:none!important;font:800 8px/1 monospace!important;letter-spacing:.05em!important;padding:7px 9px!important}
+html body #oneLineEditor :is(button,.primary-btn,.secondary-btn):hover{border-color:#7ec8e8!important;color:#fff!important;background:#1a2226!important}
+html body #oneLineEditor .primary-btn{background:#16303c!important;border-color:#3d6f84!important;color:#dff4ff!important}
+html body #oneLineEditor .one-line-canvas-wrap,
+html body #oneLineEditor .one-line-canvas{background:#000!important}
+@media print{
+  html body #oneLineEditor,
+  html body #oneLineEditor.panel,
+  html body #oneLineEditor.one-line-editor,
+  html body.ns-in-section #oneLineEditor.ns-module-window,
+  html body #oneLineEditor .one-line-canvas-wrap,
+  html body #oneLineEditor .one-line-canvas{
+    background:#fff!important;
+    color:#111!important;
+    box-shadow:none!important;
+  }
+}
+</style>
 </body>
 </html>
