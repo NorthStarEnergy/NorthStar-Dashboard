@@ -1,3 +1,7 @@
+# One-line catalogue 2026.4 — 2026-09-18
+
+Synced JSON catalogue, aliases, and dashboard labels to the 2026.4 symbol library (VCB/SF6/HVI/cutout/MOD/GSU/CVT/meters). See [report](packets/2026-09-18-one-line-catalogue-2026-4.md).
+
 # Black schematic builder — 2026-09-18
 
 The Engineering one-line board is a black drafting surface with a command toolbar. It is not a live mimic. See [report](packets/2026-09-18-black-schematic-builder.md).

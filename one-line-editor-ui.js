@@ -203,7 +203,7 @@
     state.edges = normaliseEdges(state.edges);
     state.selected = null;
     state.revision = 0;
-    markDirty('Workplace catalogue 2026.3 feeder example loaded');
+    markDirty('Workplace catalogue 2026.4 feeder example loaded');
     render();
   }
   function startCircuitDemo() {
