@@ -3,11 +3,16 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.47",
+    "version": "v0.48",
     "published": "2026-09-18",
-    "summary": "Widen the top Event log into a filterable unacknowledged alarm listing."
+    "summary": "Unify status, Overview, and market dogears to the weather clip-path triangle."
   },
   "history": [
+    {
+      "version": "v0.48",
+      "published": "2026-09-18",
+      "summary": "Unify status, Overview, and market dogears to the weather clip-path triangle."
+    },
     {
       "version": "v0.47",
       "published": "2026-09-18",

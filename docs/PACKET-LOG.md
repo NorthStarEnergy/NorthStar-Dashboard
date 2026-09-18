@@ -1,3 +1,8 @@
+# Unified dogear style — 2026-09-18
+
+Replaced status / Overview / market `↗` expand arrows with the weather-module
+clip-path triangle dogear. See [report](packets/2026-09-18-dogear-unify.md).
+
 # Event log alarm listing — 2026-09-18
 
 Widened the top Event log into a filterable alarm listing with unacknowledged

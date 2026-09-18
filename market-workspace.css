@@ -10,13 +10,15 @@
 #markets .node-buttons{grid-template-columns:repeat(5,minmax(0,1fr))!important}
 @media(max-width:700px){#markets .node-buttons{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 
-/* Folded-corner links for every market summary tile. */
+/* Folded-corner links for every market summary tile — same clip-path dogear as weather. */
 .market-card-grid .ontario-market,
 .market-card-grid .node-card{position:relative;overflow:hidden}
-.market-card-grid .market-dogear{position:absolute!important;top:0!important;right:0!important;z-index:5;display:block!important;width:12px!important;height:12px!important;min-width:12px!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:linear-gradient(225deg,#527181 0 49%,#3e5963 50% 53%,transparent 54%)!important;box-shadow:none!important;color:transparent!important;cursor:pointer;text-decoration:none!important;transition:filter .15s ease,transform .15s ease}
+.market-card-grid .market-dogear{position:absolute!important;top:0!important;right:0!important;z-index:5;display:block!important;width:11px!important;height:11px!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:transparent!important;font-size:0!important;line-height:0!important;overflow:hidden!important;cursor:pointer;text-decoration:none!important}
+.market-card-grid .market-dogear::after{content:''!important;position:absolute;inset:0;background:#527181;clip-path:polygon(100% 0,100% 100%,0 0);transition:background .12s ease}
 .market-card-grid .market-dogear:hover,
-.market-card-grid .market-dogear:focus-visible{filter:brightness(1.18);transform:scale(1.05);transform-origin:top right;outline:0}
-.market-card-grid .market-dogear:focus-visible{box-shadow:inset 0 0 0 2px #fff!important}
+.market-card-grid .market-dogear:focus-visible{background:transparent!important;filter:none;transform:none;outline:0}
+.market-card-grid .market-dogear:hover::after{background:#6a8b98}
+.market-card-grid .market-dogear:focus-visible{outline:2px solid var(--blue,#8cc9e9);outline-offset:1px}
 .market-card-grid .node-card .price-row{grid-template-columns:minmax(0,1fr) max-content!important}
 .market-card-grid .node-card .row-commit-label,
 .market-card-grid .node-card .row-commit-value{justify-self:end;text-align:right}

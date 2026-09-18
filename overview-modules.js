@@ -137,7 +137,7 @@
     [...el.children].forEach(child=>{
       if(!child.matches('.ns-module-content,.ns-open-module,.ns-edit-module,.ov-summary,.canvas-move-handle,.canvas-resize-handle,.canvas-select-handle'))child.style.setProperty('display','none','important');
     });
-    const open=el.querySelector(':scope > .ns-open-module');if(open){if(open.textContent!=='↗')open.textContent='↗';open.setAttribute('aria-label','Open '+(p.title || m.title));open.title='Open full module';}
+    const open=el.querySelector(':scope > .ns-open-module');if(open){if(open.textContent)open.textContent='';open.setAttribute('aria-label','Open '+(p.title || m.title));open.title='Open full module';}
     const edit=el.querySelector(':scope > .ns-edit-module');if(edit){if(edit.textContent!=='✎')edit.textContent='✎';edit.setAttribute('aria-label','Edit '+(p.title || m.title));edit.title='Edit module';}
   }
   function refreshStatus(){

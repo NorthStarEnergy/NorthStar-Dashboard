@@ -28,8 +28,11 @@ body.overview-canvas main .ov-managed>.ov-summary[hidden]{display:none!important
 .ov-events time,.ov-events small,.ov-events b{font:11px/1.5 Arial,sans-serif;color:var(--muted)}
 .ov-events small{display:block}.ov-events>a>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.overview-canvas main [data-ov-size="compact"] .ov-secondary,body.overview-canvas main [data-ov-size]:not([data-ov-size="expanded"]) .ov-expanded{display:none!important}
-body.overview-canvas main .ov-managed>:is(.ns-open-module,.ns-edit-module){position:absolute!important;top:12px!important;right:12px!important;left:auto!important;bottom:auto!important;width:26px!important;height:26px!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;border-radius:5px!important;font:18px/26px Arial,sans-serif!important;color:var(--blue)!important;background:transparent!important;z-index:101!important}
-body.overview-canvas main .ov-managed>.ns-edit-module{right:44px!important;display:none!important}
+body.overview-canvas main .ov-managed>.ns-open-module{position:absolute!important;top:0!important;right:0!important;left:auto!important;bottom:auto!important;width:11px!important;height:11px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;font-size:0!important;line-height:0!important;color:transparent!important;background:transparent!important;overflow:hidden!important;cursor:pointer;z-index:101!important}
+body.overview-canvas main .ov-managed>.ns-open-module::after{content:''!important;position:absolute;inset:0;background:#527181;clip-path:polygon(100% 0,100% 100%,0 0);transition:background .12s ease}
+body.overview-canvas main .ov-managed>.ns-open-module:hover::after{background:#6a8b98}
+body.overview-canvas main .ov-managed>.ns-open-module:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+body.overview-canvas main .ov-managed>.ns-edit-module{position:absolute!important;top:12px!important;right:44px!important;left:auto!important;bottom:auto!important;width:26px!important;height:26px!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;border-radius:5px!important;font:18px/26px Arial,sans-serif!important;color:var(--blue)!important;background:transparent!important;z-index:101!important;display:none!important}
 body.overview-canvas.layout-edit main .ov-managed>.ns-edit-module{display:block!important}
 body.overview-canvas.layout-edit main .ov-managed>.canvas-move-handle{right:76px!important;top:12px!important}
 body.overview-canvas.layout-edit #overviewArrangementTools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;max-width:630px;font:12px/1.4 Arial,sans-serif}
