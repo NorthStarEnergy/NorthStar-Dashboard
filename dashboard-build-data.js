@@ -3,11 +3,16 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.45",
-    "published": "2026-09-17",
-    "summary": "Fit Overview weather card contents inside the saved module size."
+    "version": "v0.46",
+    "published": "2026-09-18",
+    "summary": "Theme the top status modules as dashboard cards with clearer metrics layout."
   },
   "history": [
+    {
+      "version": "v0.46",
+      "published": "2026-09-18",
+      "summary": "Theme the top status modules as dashboard cards with clearer metrics layout."
+    },
     {
       "version": "v0.45",
       "published": "2026-09-17",

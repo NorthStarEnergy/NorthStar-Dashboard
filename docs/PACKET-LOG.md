@@ -1,3 +1,9 @@
+# Status bar card theme — 2026-09-18
+
+Themed the top Event log / Dispatch / Market pricing / Crew status tiles as
+dashboard cards with metric layouts matching Overview modules. See
+[report](packets/2026-09-18-status-bar-card-theme.md).
+
 # Overview weather module fit — 2026-09-17
 
 Densified Overview weather card face content so title, icon, temperature,

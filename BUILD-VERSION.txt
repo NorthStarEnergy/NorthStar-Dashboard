@@ -1,3 +1,3 @@
-v0.45
-2026-09-17
-Fit Overview weather card contents inside the saved module size.
+v0.46
+2026-09-18
+Theme the top status modules as dashboard cards with clearer metrics layout.
