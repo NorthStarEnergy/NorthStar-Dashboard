@@ -1,3 +1,8 @@
+# Event log alarm listing — 2026-09-18
+
+Widened the top Event log into a filterable alarm listing with unacknowledged
+`×` markers. See [report](packets/2026-09-18-event-log-alarm-listing.md).
+
 # Status bar card theme — 2026-09-18
 
 Themed the top Event log / Dispatch / Market pricing / Crew status tiles as

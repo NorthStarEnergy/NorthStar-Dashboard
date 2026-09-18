@@ -122,11 +122,31 @@ html body.overview-canvas main #overviewModules>#overviewStaff,html body.overvie
 
 body.ns-has-status .app>main{margin-top:calc(var(--ns-status-height,88px) + 12px)!important}
 html body.ns-has-status main #dispatchClient,html body.ns-has-status main #marketTopTiles,html body.ns-has-status main #overviewEventsSummary,html body.ns-has-status main #overviewFieldTracker{display:none!important}
-#nsStatusBar{position:fixed;top:0;right:0;z-index:700;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:8px 12px;background:transparent;border-bottom:0;box-sizing:border-box;color:var(--text,#e3edf2);font:13px/1.4 Arial,sans-serif;align-items:stretch}
+#nsStatusBar{position:fixed;top:0;right:0;z-index:700;display:grid;grid-template-columns:minmax(420px,2.6fr) minmax(150px,.85fr) minmax(170px,1fr) minmax(150px,.85fr);gap:8px;padding:8px 12px;background:transparent;border-bottom:0;box-sizing:border-box;color:var(--text,#e3edf2);font:13px/1.4 Arial,sans-serif;align-items:stretch}
 #nsStatusBar .ns-status-module{position:relative;display:flex;min-width:0;min-height:0;padding:8px 28px 8px 10px;border:1px solid var(--line,#29404c);border-radius:10px;background:var(--panel,#0f1c25);box-sizing:border-box;overflow:hidden}
+#nsStatusBar .ns-status-events{padding:8px 28px 8px 10px;min-height:148px}
 #nsStatusBar .ns-status-content,#nsStatusBar button[data-preview]{display:flex;flex:1 1 auto;flex-direction:column;justify-content:space-between;gap:4px;min-width:0;width:100%}
+#nsStatusBar .ns-status-events>.ns-status-content{justify-content:flex-start;gap:6px;min-height:0}
 #nsStatusBar button[data-preview]{padding:0;border:0;background:none;color:inherit;text-align:left;font:inherit;cursor:pointer}
 #nsStatusBar .ns-status-title,#nsStatusBar b.ns-status-title{display:block;margin:0;padding:0;font:600 13px/1.3 Arial,sans-serif;letter-spacing:.1px;color:var(--text,#e3edf2);text-transform:none}
+#nsStatusBar .ns-status-events-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;padding-right:4px}
+#nsStatusBar .ns-status-filters{display:flex;flex-wrap:wrap;gap:4px;min-width:0}
+#nsStatusBar .ns-status-filters button{appearance:none;margin:0;padding:3px 7px;border:1px solid #3d5562;border-radius:4px;background:#132430;color:#c5d5de;font:600 10px/1.2 Arial,sans-serif;letter-spacing:.2px;cursor:pointer;white-space:nowrap}
+#nsStatusBar .ns-status-filters button:hover{border-color:#5d7d8e;color:#fff}
+#nsStatusBar .ns-status-filters button.is-active{border-color:#63b8df;background:#1a3646;color:#e7f5fc}
+#nsStatusBar .ns-status-alarms{display:flex;flex:1 1 auto;flex-direction:column;gap:0;min-height:0;max-height:118px;overflow:auto;overscroll-behavior:contain;margin:0 -2px 0 0;padding-right:2px}
+#nsStatusBar .ns-status-alarms-empty{margin:8px 0 0;color:#91a8b6;font:12px/1.4 Arial,sans-serif}
+#nsStatusBar .ns-status-alarm{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;align-items:center;gap:8px;min-height:26px;padding:4px 4px 4px 2px;border-top:1px solid #243642;color:inherit;text-decoration:none}
+#nsStatusBar .ns-status-alarm:first-child{border-top:0}
+#nsStatusBar .ns-status-alarm:hover{background:#162833}
+#nsStatusBar .ns-status-alarm time{font:11px/1.2 Consolas,monospace;color:#91a8b6;font-variant-numeric:tabular-nums}
+#nsStatusBar .ns-status-alarm-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 12px/1.3 Arial,sans-serif;color:#e8eef1}
+#nsStatusBar .ns-status-alarm-site{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px;font:11px/1.2 Arial,sans-serif;color:#91a8b6;text-align:right}
+#nsStatusBar .ns-status-alarm-mark{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:3px;font:700 12px/1 Arial,sans-serif;color:#ff8f9a;background:#3a2226}
+#nsStatusBar .ns-status-alarm-mark.is-quiet{background:transparent;color:transparent}
+#nsStatusBar .ns-status-alarm-critical .ns-status-alarm-text{color:#ffc2bc}
+#nsStatusBar .ns-status-alarm-warning .ns-status-alarm-text{color:#efd090}
+#nsStatusBar .ns-status-alarm.is-unacked{background:#1a1512}
 #nsStatusBar .ns-status-value,#nsStatusBar .ns-status-content>span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text,#e3edf2);font:500 13px/1.35 Arial,sans-serif}
 #nsStatusBar .ns-status-meta,#nsStatusBar small.ns-status-meta{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px/1.3 Arial,sans-serif;color:#a7bdc9}
 #nsStatusBar .ns-status-title>.ns-status-meta,#nsStatusBar b>.ns-status-meta{display:inline;margin-left:6px;font-weight:500;color:#a7bdc9}
@@ -152,12 +172,14 @@ html body.ns-has-status main #dispatchClient,html body.ns-has-status main #marke
 #nsStatusEvents .ns-status-log{max-height:min(440px,calc(100vh - 180px));overflow-y:auto;overscroll-behavior:contain;padding:0 14px}
 #nsStatusEvents article{padding:10px 0;border-top:1px solid #29404c}#nsStatusEvents article strong{display:block}#nsStatusEvents time,#nsStatusEvents small{display:block;color:#9db2bd;font-size:11px}#nsStatusEvents p{margin:4px 0}#nsStatusEvents a{color:#80c8ed;font-size:11px}
 html[data-ns-styles=loading] #nsStatusBar,html[data-ns-styles=failed] #nsStatusBar{visibility:hidden}
-@media(max-width:900px){#nsStatusBar{grid-template-columns:1fr 1fr;gap:6px;padding:6px 8px}}
+@media(max-width:1100px){#nsStatusBar{grid-template-columns:minmax(300px,2fr) 1fr 1fr; }#nsStatusBar [data-status=crew]{grid-column:2 / -1}}
+@media(max-width:900px){#nsStatusBar{grid-template-columns:1fr 1fr;gap:6px;padding:6px 8px}#nsStatusBar .ns-status-events{grid-column:1 / -1;min-height:132px}#nsStatusBar [data-status=crew]{grid-column:auto}}
 
 html body.ns-has-status.overview-canvas main .page-header>#marketTopTiles{display:none!important}
 
 #nsStatusBar{overflow:visible}
 #nsStatusBar .ns-status-module{overflow:hidden}
+#nsStatusBar .ns-status-events{overflow:hidden}
 
 /* Shared compact navigation and control rhythm across operator workspaces. */
 body{--ns-control-font:12px/1.35 var(--ns-section-font);--ns-control-radius:4px}

@@ -3,11 +3,16 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.46",
+    "version": "v0.47",
     "published": "2026-09-18",
-    "summary": "Theme the top status modules as dashboard cards with clearer metrics layout."
+    "summary": "Widen the top Event log into a filterable unacknowledged alarm listing."
   },
   "history": [
+    {
+      "version": "v0.47",
+      "published": "2026-09-18",
+      "summary": "Widen the top Event log into a filterable unacknowledged alarm listing."
+    },
     {
       "version": "v0.46",
       "published": "2026-09-18",

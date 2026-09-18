@@ -49,7 +49,7 @@ assert.ok(html.trimEnd().endsWith('</body>\n</html>'));
  try{
   await page.goto(origin+'/northstar-clean.html');await ready();
   const saved=await page.evaluate(()=>JSON.stringify(JSON.parse(localStorage.northstarOverviewProfilesV2).desktop));
-  await page.click('#nsStatusBar [data-preview]');await page.waitForSelector('#nsStatusEvents article a');await report('#nsStatusEvents article a');await page.goBack();await ready();
+  await page.click('#nsStatusBar .ns-status-alarm');await page.waitForSelector('#report:visible');assert.equal(await page.locator('#title').innerText(),event.summary);await page.goBack();await ready();
   assert.equal(await page.locator('#overview:visible').count(),1);
   assert.equal(await page.evaluate(()=>JSON.stringify(JSON.parse(localStorage.northstarOverviewProfilesV2).desktop)),saved);
   await page.click('#sideNav [data-tab="logbook"]');await checkEvents();
@@ -61,7 +61,7 @@ assert.ok(html.trimEnd().endsWith('</body>\n</html>'));
   mode='normal';await page.click('#sideNav [data-tab="overview"]');await page.waitForTimeout(250);
   assert.equal(await page.evaluate(()=>JSON.stringify(JSON.parse(localStorage.northstarOverviewProfilesV2).desktop)),saved);
   await page.screenshot({path:path.join(out,'overview-after-return.png'),fullPage:false});
-  await page.click('#nsStatusBar [data-preview]');await page.waitForSelector('#nsStatusEvents article a');await report('#nsStatusEvents article a');mode='persistent';await page.click('nav a');
+  await page.click('#nsStatusBar .ns-status-alarm');await page.waitForSelector('#report:visible');assert.equal(await page.locator('#title').innerText(),event.summary);mode='persistent';await page.click('nav a');
   await page.waitForFunction(()=>document.documentElement.dataset.nsStyles==='failed');
   assert.equal(await page.evaluate(()=>!!window.NorthstarModules),false,'Viewer must not initialize with missing styles');
   assert.equal(await page.locator('.app').evaluate(e=>getComputedStyle(e).visibility),'hidden');
