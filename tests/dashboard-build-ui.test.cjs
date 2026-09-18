@@ -16,7 +16,7 @@ const build = context.window.NORTHSTAR_BUILD_DATA;
 assert.ok(html.includes('dashboard-build-data.js?v=20260915-build-history-1'));
 assert.ok(html.includes('dashboard-build.js?v=20260916-ai-icon-1'));
 assert.ok(html.includes('dashboard-build.css?v=20260916-ai-icon-1'));
-assert.equal(build.current.version, 'v0.48');
+assert.equal(build.current.version, 'v0.49');
 assert.equal(build.history[0].version, build.current.version);
 assert.equal(build.history[0].published, build.current.published);
 assert.ok(build.history.length >= 2);

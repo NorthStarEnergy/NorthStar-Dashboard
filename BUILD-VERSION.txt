@@ -1,3 +1,3 @@
-v0.48
+v0.49
 2026-09-18
-Unify status, Overview, and market dogears to the weather clip-path triangle.
+Show IESO HE clock on Event log and use 24-hour Toronto times everywhere.

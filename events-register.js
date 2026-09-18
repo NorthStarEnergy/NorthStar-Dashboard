@@ -4,7 +4,11 @@
     const host=document.querySelector('#logbook');
     if(!host || document.querySelector('#eventRegister'))return;
     const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const date=value=>{const d=new Date(value);return value&&!Number.isNaN(d.valueOf())?d.toLocaleString([], {year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',timeZoneName:'short'}):'Time not supplied';};
+    const date=value=>{
+      if(!(value&&!Number.isNaN(new Date(value).valueOf())))return'Time not supplied';
+      if(window.NorthstarIesoTime)return`${NorthstarIesoTime.dateTime(value,true)} ET`;
+      return new Date(value).toLocaleString([], {year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23',timeZone:'America/Toronto',timeZoneName:'short'});
+    };
     const original=host.querySelector('.logbook-layout');if(original){original.hidden=true;const composer=original.querySelector('.logbook-card');if(composer){composer.dataset.moduleId='event-composer';composer.setAttribute('aria-label','Write log entry');}}
     const root=document.createElement('div');root.id='eventRegister';
     root.innerHTML=`<header class="er-heading"><div><h1>Events</h1><p>Operations history · ${esc(Intl.DateTimeFormat().resolvedOptions().timeZone)}</p></div><div class="er-actions"><button type="button" id="erWrite">Write log entry</button><button type="button" id="erRefresh">Refresh</button></div></header>

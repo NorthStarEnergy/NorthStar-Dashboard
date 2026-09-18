@@ -3,11 +3,16 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.48",
+    "version": "v0.49",
     "published": "2026-09-18",
-    "summary": "Unify status, Overview, and market dogears to the weather clip-path triangle."
+    "summary": "Show IESO HE clock on Event log and use 24-hour Toronto times everywhere."
   },
   "history": [
+    {
+      "version": "v0.49",
+      "published": "2026-09-18",
+      "summary": "Show IESO HE clock on Event log and use 24-hour Toronto times everywhere."
+    },
     {
       "version": "v0.48",
       "published": "2026-09-18",

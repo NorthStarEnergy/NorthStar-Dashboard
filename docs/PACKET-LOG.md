@@ -1,3 +1,8 @@
+# IESO HE clock and 24-hour times — 2026-09-18
+
+Event log shows live `[HE xx - HH:MM]` and operator clocks use Toronto 24-hour
+IESO system time (no AM/PM). See [report](packets/2026-09-18-ieso-he-times.md).
+
 # Unified dogear style — 2026-09-18
 
 Replaced status / Overview / market `↗` expand arrows with the weather-module

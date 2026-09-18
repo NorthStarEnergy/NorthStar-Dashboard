@@ -27,7 +27,9 @@
   function formatTime(iso) {
     if (!iso) return '';
     try {
-      return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      return window.NorthstarIesoTime
+        ? NorthstarIesoTime.clock(iso, true)
+        : new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZone: 'America/Toronto' });
     } catch {
       return iso;
     }

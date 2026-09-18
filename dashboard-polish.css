@@ -151,6 +151,7 @@ html body.ns-has-status main #dispatchClient,html body.ns-has-status main #marke
 #nsStatusBar .ns-status-value,#nsStatusBar .ns-status-content>span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text,#e3edf2);font:500 13px/1.35 Arial,sans-serif}
 #nsStatusBar .ns-status-meta,#nsStatusBar small.ns-status-meta{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px/1.3 Arial,sans-serif;color:#a7bdc9}
 #nsStatusBar .ns-status-title>.ns-status-meta,#nsStatusBar b>.ns-status-meta{display:inline;margin-left:6px;font-weight:500;color:#a7bdc9}
+#nsStatusBar .ns-status-he{display:inline;margin-left:6px;font:500 12px/1.3 Consolas,'Cascadia Mono',monospace;letter-spacing:.2px;color:#9eb6c4;white-space:nowrap}
 #nsStatusBar strong{font:600 18px/1.1 Arial,sans-serif;font-variant-numeric:tabular-nums;color:#fff}
 #nsStatusBar .ns-status-figure{display:inline-flex;align-items:baseline;gap:3px;min-width:0}
 #nsStatusBar .ns-status-unit{font:500 11px/1.2 Arial,sans-serif;color:#a7bdc9;margin:0;font-style:normal}

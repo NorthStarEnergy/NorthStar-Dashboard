@@ -21,7 +21,10 @@
     const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const num=(v,d=1)=>v!=null&&Number.isFinite(Number(v))?Number(v).toFixed(d):'—';
     const money=v=>v!=null&&Number.isFinite(Number(v))?'$'+Number(v).toFixed(2):'—';
-    const time=value=>{const d=value?new Date(value):null;return d&&!Number.isNaN(d.valueOf())?d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—';};
+    const ieso=()=>window.NorthstarIesoTime;
+    const time=value=>{const helper=ieso();if(helper)return helper.clock(value);const d=value?new Date(value):null;return d&&!Number.isNaN(d.valueOf())?d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hourCycle:'h23'}):'—';};
+    const stamp=value=>{const helper=ieso();if(helper)return helper.dateTime(value,true);const d=value?new Date(value):null;return d&&!Number.isNaN(d.valueOf())?d.toLocaleString([],{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}):'—';};
+    const heLabel=()=>{const helper=ieso();return helper?helper.heStamp():'';};
     const unacked=e=>{
       const status=String(e?.status||'').toLowerCase();
       if(['resolved','cleared','acknowledged','acked','closed'].includes(status))return false;
@@ -42,7 +45,7 @@
       bar.style.left=left+'px';document.body.style.setProperty('--ns-status-height',bar.offsetHeight+'px');
       popup.style.left=Math.max(8,left+8)+'px';popup.style.top=bar.getBoundingClientRect().bottom+'px';popup.style.maxWidth=Math.max(180,innerWidth-left-16)+'px';
     }
-    function paintRows(){popup.querySelector('.ns-status-log').innerHTML=rows.map(e=>`<article><time>${esc(new Date(e.occurredAt).toLocaleString())}</time><strong>${esc(e.summary||e.eventType||'Event')}</strong><p>${esc(e.description||e.message||e.payload?.details||e.payload?.description||'')}</p><small>${esc([e.site,e.source,e.actorId,e.severity,e.status].filter(Boolean).join(' · '))}</small><a href="event-detail.html?id=${encodeURIComponent(e.eventId)}">Open event report ↗</a></article>`).join('')||'<p>No recorded events.</p>';popup.querySelector('[data-more]').hidden=!cursor;}
+    function paintRows(){popup.querySelector('.ns-status-log').innerHTML=rows.map(e=>`<article><time>${esc(stamp(e.occurredAt))}</time><strong>${esc(e.summary||e.eventType||'Event')}</strong><p>${esc(e.description||e.message||e.payload?.details||e.payload?.description||'')}</p><small>${esc([e.site,e.source,e.actorId,e.severity,e.status].filter(Boolean).join(' · '))}</small><a href="event-detail.html?id=${encodeURIComponent(e.eventId)}">Open event report ↗</a></article>`).join('')||'<p>No recorded events.</p>';popup.querySelector('[data-more]').hidden=!cursor;}
     async function load(older=false){
       if(loading)return;loading=true;const message=popup.querySelector('footer span'),more=popup.querySelector('[data-more]');more.disabled=true;message.textContent='Loading…';
       try{const params=new URLSearchParams({limit:'50'});if(older&&cursor)params.set('cursor',cursor);
@@ -89,9 +92,17 @@
     }
     function paintEventShell(){
       const content=events.querySelector('.ns-status-content');
-      const markup=`<div class="ns-status-events-head"><b class="ns-status-title">Event log</b><div class="ns-status-filters" role="toolbar" aria-label="Alarm filters">${filters.map(([id,label])=>`<button type="button" data-filter="${id}"${id===alarmFilter?' class="is-active"':''}>${label}</button>`).join('')}</div></div><div class="ns-status-alarms" role="list" aria-live="polite"></div>`;
-      if(content.dataset.shell!==markup){content.innerHTML=markup;content.dataset.shell=markup;}
+      const shell=`<div class="ns-status-events-head"><b class="ns-status-title">Event log <span class="ns-status-he" data-he-clock></span></b><div class="ns-status-filters" role="toolbar" aria-label="Alarm filters">${filters.map(([id,label])=>`<button type="button" data-filter="${id}"${id===alarmFilter?' class="is-active"':''}>${label}</button>`).join('')}</div></div><div class="ns-status-alarms" role="list" aria-live="polite"></div>`;
+      if(content.dataset.shell!==shell){content.innerHTML=shell;content.dataset.shell=shell;}
+      tickHeClock();
       paintAlarms();
+    }
+    function tickHeClock(){
+      const label=heLabel();
+      const clock=events.querySelector('[data-he-clock]');
+      if(clock)clock.textContent=label;
+      const popupTitle=popup.querySelector('header strong');
+      if(popupTitle)popupTitle.textContent=label?`Event log ${label}`:'Event log';
     }
     events.addEventListener('click',event=>{
       const filter=event.target.closest('[data-filter]');
@@ -123,7 +134,9 @@
     }
     window.addEventListener('northstar:feed-update',render);window.addEventListener('resize',position);new ResizeObserver(position).observe(document.querySelector('.app>aside'));
     setInterval(()=>{if(!document.hidden)loadAlarms();},30000);
+    setInterval(()=>{if(!document.hidden)tickHeClock();},1000);
     render();
+    tickHeClock();
   }
   function init(){
     const nav=document.getElementById('sideNav');if(!nav)return;
