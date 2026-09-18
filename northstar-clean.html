@@ -82,9 +82,9 @@
   <script data-ns-required src="overview-modules.js?v=20260915-weather-header-1"></script>
   <link rel="stylesheet" href="lamination-dashboard.css">
   <link rel="stylesheet" href="switching-workspace.css?v=20260914-6">
-  <link rel="stylesheet" href="one-line-editor.css?v=20260903-4">
-  <link rel="stylesheet" href="one-line-scada.css?v=20260906-1">
-  <link rel="stylesheet" href="one-line-technical.css?v=20260915-1">
+  <link rel="stylesheet" href="one-line-editor.css?v=20260918-1">
+  <link rel="stylesheet" href="one-line-scada.css?v=20260918-1">
+  <link rel="stylesheet" href="one-line-technical.css?v=20260918-1">
   <link rel="stylesheet" href="engineering-sitemap.css?v=20260915-1">
   <link rel="stylesheet" href="generating-stations.css?v=20260911-1">
   <link rel="stylesheet" href="market-workspace.css?v=3">
@@ -618,30 +618,67 @@
           <span class="switching-safety-badge">NO EQUIPMENT COMMANDS</span>
         </div>
         <section class="panel one-line-editor" id="oneLineEditor" data-module-id="one-line-editor">
-          <div class="one-line-head"><div><label>PACKET 05 · GRAPHICAL ONE-LINE EDITOR</label><h2>Build a circuit diagram with symbols</h2><p>Draft, arrange, connect, label, and export a topology-aware one-line record.</p></div><span class="one-line-badge">DRAFTING ONLY · NOT RELEASE</span></div>
+          <div class="one-line-head">
+            <div>
+              <label>ENGINEERING · SCHEMATIC BUILDER</label>
+              <h2>One-line drawing board</h2>
+              <p>Draft, arrange, connect, and export a topology-aware one-line. Catalogue 2026.3 · Figure A-1 · Workplace line switch. This is a black drafting board, not a live mimic and not operational release.</p>
+            </div>
+            <span class="one-line-badge">DRAFTING ONLY · NOT RELEASE</span>
+          </div>
           <div class="one-line-server-bar">
-<button type="button" id="oneLineCircuitExample">LOAD CIRCUIT EXAMPLE</button>
             <label>DRAWING NAME<input id="oneLineName" placeholder="e.g. FDR-01 one-line"></label>
             <label>LINKED OUTAGE<select id="oneLineOutage"><option value="">No linked outage</option></select></label>
             <label>UTILITY SYMBOL PROFILE APPROVAL REF<input id="oneLineApprovalRef" placeholder="Controlled catalogue / revision"></label>
             <label>SERVER DRAWINGS<select id="oneLineServerSelect"><option value="">New server drawing</option></select></label>
             <button class="secondary-btn" type="button" id="oneLineLoadServer">LOAD</button>
           </div>
+          <div class="one-line-toolbar" aria-label="Schematic commands">
+            <div class="one-line-toolbar-group"><span>File</span>
+              <button type="button" id="oneLineImport">IMPORT JSON</button>
+              <input id="oneLineImportFile" type="file" accept="application/json,.json" hidden>
+              <button type="button" id="oneLineSave">SAVE LOCAL</button>
+              <button class="primary-btn" type="button" id="oneLineSaveServer">SAVE SERVER</button>
+              <button class="primary-btn" type="button" id="oneLineAttachPackage">ATTACH PACKAGE</button>
+            </div>
+            <div class="one-line-toolbar-group"><span>Examples</span>
+              <button type="button" id="oneLineDemo">LOAD EXAMPLE</button>
+              <button type="button" id="oneLineCircuitExample">LOAD CIRCUIT EXAMPLE</button>
+            </div>
+            <div class="one-line-toolbar-group"><span>Export</span>
+              <button type="button" id="oneLineExport">JSON</button>
+              <button type="button" id="oneLineExportSvg">SVG</button>
+              <button type="button" id="oneLineExportPng">PNG</button>
+              <button type="button" id="oneLinePrint">PRINT / PDF</button>
+            </div>
+            <div class="one-line-toolbar-group"><span>Edit</span>
+              <button type="button" id="oneLineClear">CLEAR BOARD</button>
+            </div>
+          </div>
           <div class="one-line-layout">
             <aside class="one-line-tools" aria-label="One-line editor tools">
-              <h3>IEEE COMPATIBILITY LIBRARY</h3>
+              <h3>SYMBOL LIBRARY</h3>
               <div class="symbol-palette">
                 <button class="symbol-tool active" type="button" data-symbol-type="select"><span class="symbol-glyph">↖</span>SELECT / MOVE</button>
                 <button class="symbol-tool" type="button" data-symbol-type="connect"><span class="symbol-glyph">⌁</span>CONNECT</button>
                 <label class="symbol-search-label">FILTER<input id="oneLineSymbolSearch" type="search" placeholder="Breaker, relay, CT…"></label>
-                <div id="oneLineSymbolLibrary"><span class="symbol-catalogue-version">Catalogue 2026.3 · Figure A-1 · Workplace line switch</span></div>
+                <span class="symbol-catalogue-version">Catalogue 2026.3 · Figure A-1 · Workplace line switch</span>
+                <div id="oneLineSymbolLibrary"></div>
               </div>
-              <div class="one-line-actions"><button type="button" id="oneLineDemo">LOAD EXAMPLE</button><button type="button" id="oneLineClear">CLEAR</button><button type="button" id="oneLineImport">IMPORT JSON</button><input id="oneLineImportFile" type="file" accept="application/json,.json" hidden><button type="button" id="oneLineExport">EXPORT JSON</button><button type="button" id="oneLineExportSvg">EXPORT SVG</button><button type="button" id="oneLineExportPng">EXPORT PNG</button><button type="button" id="oneLinePrint">PRINT / PDF</button><button type="button" id="oneLineSave">SAVE LOCAL REVISION</button><button class="primary-btn" type="button" id="oneLineSaveServer">SAVE SERVER REVISION</button><button class="primary-btn" type="button" id="oneLineAttachPackage">ATTACH TO CURRENT PACKAGE</button></div>
             </aside>
-            <div class="one-line-canvas-wrap"><svg class="one-line-canvas" id="oneLineCanvas" viewBox="0 0 1000 560" role="img" aria-label="Interactive electrical one-line diagram editor"></svg><div class="one-line-empty" id="oneLineEmpty" hidden>Choose a symbol, then click the canvas.<br>Use CONNECT to join two symbols.</div><div class="scada-status-legend"><span><i class="energized"></i>ENERGIZED</span><span><i class="offline"></i>OPEN / OFFLINE</span><span><i class="comms-loss"></i>COMMUNICATION LOSS</span><span><i class="maintenance"></i>MAINTENANCE / OUTAGE</span><span><i class="major-outage"></i>MAJOR OUTAGE</span></div></div>
-            <aside class="one-line-inspector"><h3>INSPECTOR</h3><div id="oneLineInspectorBody"><p class="hint">Select a symbol to edit its label, designation, rotation, or position. Use CONNECT to draw a conductor between two symbols.</p></div><div class="one-line-help"><b>Standards profile</b><br>Graphics: IEEE/ANSI 315-1975 convention (inactive-reserved).<br>Designations: IEEE C37.2-2022 (active).<br><br><b>Controls</b><br>Click a palette item to add a symbol.<br>Drag symbols to reposition.<br>CONNECT, then click two symbols.<br>Save creates a local numbered revision.</div></aside>
+            <div class="one-line-canvas-wrap">
+              <div class="one-line-titleblock"><span>NORTHSTAR</span><strong>ONE-LINE</strong><em>DRAFT BOARD</em></div>
+              <svg class="one-line-canvas" id="oneLineCanvas" viewBox="0 0 1000 560" role="img" aria-label="Interactive electrical one-line diagram editor"></svg>
+              <div class="one-line-empty" id="oneLineEmpty" hidden>Choose a symbol, then click the canvas.<br>Use CONNECT to join two symbols.</div>
+              <div class="scada-status-legend"><span><i class="energized"></i>ENERGIZED</span><span><i class="offline"></i>OPEN / OFFLINE</span><span><i class="comms-loss"></i>COMMUNICATION LOSS</span><span><i class="maintenance"></i>MAINTENANCE / OUTAGE</span><span><i class="major-outage"></i>MAJOR OUTAGE</span></div>
+            </div>
+            <aside class="one-line-inspector">
+              <h3>INSPECTOR</h3>
+              <div id="oneLineInspectorBody"><p class="hint">Select a symbol to edit its label, designation, rotation, or terminals. Use CONNECT to snap a conductor between two terminals.</p></div>
+              <div class="one-line-help"><b>Standards profile</b><br>Graphics: IEEE/ANSI 315-1975 convention (inactive-reserved).<br>Designations: IEEE C37.2-2022 (active).<br><br><b>Controls</b><br>Click a palette item to add a symbol.<br>Drag symbols to reposition.<br>CONNECT snaps to terminals.<br>Save creates a numbered revision. This board does not issue a permit.</div>
+            </aside>
           </div>
-          <div class="one-line-status" id="oneLineStatus"><span>LOCAL DRAFT READY</span><strong id="oneLineCount">0 SYMBOLS · 0 CONNECTIONS</strong></div>
+          <div class="one-line-status" id="oneLineStatus"><span>BLACK DRAFTING BOARD · LOCAL DRAFT READY</span><strong id="oneLineCount">0 SYMBOLS · 0 CONNECTIONS</strong></div>
         </section>
         <section class="panel engineering-sitemap" id="engineeringSitemap" data-module-id="engineering-sitemap" aria-labelledby="engineeringSitemapTitle">
           <div class="engineering-sitemap-head">

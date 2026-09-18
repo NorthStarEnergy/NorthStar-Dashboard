@@ -1,3 +1,7 @@
+# Black schematic builder — 2026-09-18
+
+The Engineering one-line board is a black drafting surface with a command toolbar. It is not a live mimic. See [report](packets/2026-09-18-black-schematic-builder.md).
+
 # Operations data catalog — 2026-09-17
 
 Added a private, auditable metadata catalog and operator-facing library view for the known operations data collections. See [report](packets/2026-09-17-operations-data-catalog.md).

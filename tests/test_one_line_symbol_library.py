@@ -35,8 +35,16 @@ def test_dashboard_loads_symbol_library_before_editor() -> None:
     assert "Catalogue 2026.3" in html
     assert "Figure A-1" in html
     assert "Workplace line switch" in html
-    assert 'href="one-line-editor.css?v=20260903-4"' in html
-    assert ".one-line-empty[hidden]{display:none!important}" in (ROOT / "one-line-editor.css").read_text(encoding="utf-8")
+    assert 'href="one-line-editor.css?v=20260918-1"' in html
+    assert 'href="one-line-scada.css?v=20260918-1"' in html
+    assert 'href="one-line-technical.css?v=20260918-1"' in html
+    assert 'class="one-line-toolbar"' in html
+    css = (ROOT / "one-line-editor.css").read_text(encoding="utf-8")
+    scada = (ROOT / "one-line-scada.css").read_text(encoding="utf-8")
+    assert ".one-line-empty[hidden]{display:none!important}" in css
+    assert "background:#000" in css
+    assert ".one-line-canvas-wrap{background:#000" in scada
+    assert "#d7d4cb" not in scada
 
 
 def test_profile_distinguishes_graphics_convention_from_active_designations() -> None:

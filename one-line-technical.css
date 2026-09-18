@@ -1,5 +1,5 @@
-/* FirstLight static single-line drawing convention: thin drafting lines,
-   unfilled device geometry, heavy bus bars, and square corners. */
+/* FirstLight static single-line convention on a black drafting board:
+   thin unfilled device geometry, heavy bus bars, and square corners. */
 .one-line-canvas .node-shape {
   fill: none;
   stroke: #d7e2e5;
@@ -24,6 +24,6 @@
 }
 @media print {
   .one-line-canvas .node-shape,
-  .one-line-canvas .wire { stroke-width: 1.1; }
+  .one-line-canvas .wire { stroke: #111; stroke-width: 1.1; }
   .one-line-canvas .node-shape.symbol-heavy { stroke-width: 4; }
 }
