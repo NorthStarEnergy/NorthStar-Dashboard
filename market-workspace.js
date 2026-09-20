@@ -5,7 +5,13 @@
   const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   const money = value => value == null || value === '' || !Number.isFinite(Number(value)) ? '—' : `$${Number(value).toFixed(2)}`;
   const mw = value => value == null || value === '' || !Number.isFinite(Number(value)) ? '— MW' : `${Number(value).toFixed(1)} MW`;
-  const time = value => { const date = new Date(value); return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+  const time = value => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return window.NorthstarIesoTime
+      ? NorthstarIesoTime.shortDateTime(value)
+      : date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Toronto' });
+  };
 
   const average = values => {
     const finite = values.filter(value => value != null && value !== '').map(Number).filter(Number.isFinite);

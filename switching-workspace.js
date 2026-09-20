@@ -110,7 +110,12 @@
     renderControl();
   };
   const fileSize = bytes => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  const displayTime = value => value ? new Date(value).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'NOT SAVED';
+  const displayTime = value => {
+    if (!value) return 'NOT SAVED';
+    return window.NorthstarIesoTime
+      ? NorthstarIesoTime.dateTime(value)
+      : new Date(value).toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Toronto' });
+  };
   const setNote = (message, tone = '') => { const node = $('wpReviewNote'); if (!node) return; node.textContent = message; node.className = `switching-review-note ${tone}`; };
 
   async function serverRequest(path, method = 'GET', payload) {

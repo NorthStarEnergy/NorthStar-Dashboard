@@ -205,7 +205,7 @@
       const value = Number(payload.nodes?.APIROQ?.rt);
       if (!Number.isFinite(value)) throw new Error('No current APIROQ price');
       query(fields.rt).value = clamp(value, -50, 500);
-      setLiveState(`LIVE APIROQ ${money(value)}/MWh · ${payload.updated ? new Date(payload.updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'CURRENT'}`, 'ok');
+      setLiveState(`LIVE APIROQ ${money(value)}/MWh · ${payload.updated ? (window.NorthstarIesoTime ? NorthstarIesoTime.clock(payload.updated) : new Date(payload.updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Toronto' })) : 'CURRENT'}`, 'ok');
       render();
     } catch {
       setLiveState('LIVE PRICE UNAVAILABLE · SIMULATED VALUE RETAINED', 'error');

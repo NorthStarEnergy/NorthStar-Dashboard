@@ -3,15 +3,35 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.45",
-    "published": "2026-09-19",
-    "summary": "Dashboard update"
+    "version": "v0.49",
+    "published": "2026-09-18",
+    "summary": "Show IESO HE clock on Event log and use 24-hour Toronto times everywhere."
   },
   "history": [
     {
+      "version": "v0.49",
+      "published": "2026-09-18",
+      "summary": "Show IESO HE clock on Event log and use 24-hour Toronto times everywhere."
+    },
+    {
+      "version": "v0.48",
+      "published": "2026-09-18",
+      "summary": "Unify status, Overview, and market dogears to the weather clip-path triangle."
+    },
+    {
+      "version": "v0.47",
+      "published": "2026-09-18",
+      "summary": "Widen the top Event log into a filterable unacknowledged alarm listing."
+    },
+    {
+      "version": "v0.46",
+      "published": "2026-09-18",
+      "summary": "Theme the top status modules as dashboard cards with clearer metrics layout."
+    },
+    {
       "version": "v0.45",
-      "published": "2026-09-19",
-      "summary": "Dashboard update"
+      "published": "2026-09-17",
+      "summary": "Fit Overview weather card contents inside the saved module size."
     },
     {
       "version": "v0.44",

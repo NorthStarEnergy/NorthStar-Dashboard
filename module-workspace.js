@@ -191,7 +191,8 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       edit.onclick = event => {event.stopPropagation();openEditor(m.id,variant);}; el.append(edit);
     }
     if (variant === 'compact' && !$(':scope > .ns-open-module',el)) {
-      const open = document.createElement('button'); open.type='button'; open.className='ns-open-module'; open.textContent='Open ↗';
+      const open = document.createElement('button'); open.type='button'; open.className='ns-open-module'; open.textContent='';
+      open.setAttribute('aria-label','Open full module'); open.title='Open full module';
       open.onclick = event => {event.stopPropagation();openModule(m.id);}; el.append(open);
     }
     if(p.customOnly){

@@ -50,9 +50,14 @@ body.ns-floating .ns-window-controls{display:contents}
 .ns-module-notes{white-space:pre-wrap;font:14px/1.45 system-ui!important;color:#ccd9e2}
 .ns-content-blocks{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
 .ns-content-block{display:grid;gap:4px;min-width:90px}.ns-content-block span{font:12px system-ui;color:#9cb5c6}.ns-content-block strong{font:600 17px system-ui}
-.ns-edit-module,.ns-open-module{position:relative;z-index:36;cursor:pointer;border:1px solid #3b657a;background:#153344;color:#d7effb;border-radius:5px;padding:7px 10px;min-height:30px;margin:4px;font:600 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;white-space:nowrap}
+.ns-edit-module{position:relative;z-index:36;cursor:pointer;border:1px solid #3b657a;background:#153344;color:#d7effb;border-radius:5px;padding:7px 10px;min-height:30px;margin:4px;font:600 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;white-space:nowrap}
+.ns-open-module{position:absolute;top:0;right:0;z-index:36;width:11px;height:11px;min-width:0;min-height:0;padding:0;margin:0;border:0;border-radius:0;background:transparent;color:transparent;font-size:0;line-height:0;overflow:hidden;cursor:pointer}
+.ns-open-module::after{content:'';position:absolute;inset:0;background:#527181;clip-path:polygon(100% 0,100% 100%,0 0);transition:background .12s ease}
+.ns-open-module:hover::after{background:#6a8b98}
+.ns-open-module:focus-visible{outline:2px solid var(--blue,#8cc9e9);outline-offset:1px}
 .ns-edit-module{display:none}body.layout-edit .ns-edit-module{display:inline-block}
 .ns-dense{font-size:90%}.ns-dense .ns-module-notes{font-size:12px!important}
+[data-ns-compact]{position:relative}
 [data-ns-compact]>.ns-module-content{padding-bottom:4px;margin-bottom:5px}
 [data-ns-compact] .ns-module-caption{font-size:12px}
 .ns-catalog{padding:16px;color:var(--text,#dbe7ef)}.ns-catalog h2{font:600 22px system-ui}.ns-catalog p{font:14px system-ui}

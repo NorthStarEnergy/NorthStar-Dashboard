@@ -36,10 +36,11 @@ body.overview-canvas.layout-edit .layout-toolbar>:is(#overviewArrangementTools,.
 body.overview-canvas.layout-edit .layout-toolbar>.overview-add-module{position:static!important;margin:0!important;box-shadow:none!important;background:transparent!important;color:var(--text);border-color:var(--line)}
 body.overview-canvas.layout-edit #overviewArrangementTools{gap:5px;align-items:center;flex-wrap:wrap;max-width:none!important}
 body.overview-canvas main [data-canvas-module].ov-managed{gap:10px!important;border-radius:10px!important;box-shadow:none!important;background:var(--panel)!important}
-body.overview-canvas main .ov-managed .ns-module-caption{font:600 14px/1.35 Arial,sans-serif!important;min-height:20px;padding-right:28px!important;letter-spacing:.1px!important}
+body.overview-canvas main .ov-managed .ns-module-caption{font:600 14px/1.35 Arial,sans-serif!important;min-height:20px;padding-right:16px!important;letter-spacing:.1px!important}
 body.overview-canvas main .ov-managed>.ov-summary{gap:8px}
-body.overview-canvas main .ov-managed>:is(.ns-open-module,.ns-edit-module){width:28px!important;height:28px!important;font-size:17px!important;color:#8aaabd!important}
-body.overview-canvas main .ov-managed>:is(.ns-open-module,.ns-edit-module):hover{background:#264354!important;color:#fff!important}
+body.overview-canvas main .ov-managed>.ns-edit-module{width:28px!important;height:28px!important;font-size:17px!important;color:#8aaabd!important}
+body.overview-canvas main .ov-managed>.ns-edit-module:hover{background:#264354!important;color:#fff!important}
+body.overview-canvas main .ov-managed>.ns-open-module{top:0!important;right:0!important;width:11px!important;height:11px!important;font-size:0!important;color:transparent!important;background:transparent!important;border-radius:0!important}
 .ov-metric>strong{font:600 28px/1.1 Arial,sans-serif;letter-spacing:-.6px}
 .ov-unit{font:500 12px/1.2 Arial,sans-serif;letter-spacing:0;color:var(--muted);margin-left:2px}
 .ov-managed .ov-metric>span{font:12px/1.4 Arial,sans-serif!important;letter-spacing:0!important;color:#a7bdc9}
@@ -63,7 +64,7 @@ body.overview-canvas [data-ov-size=standard] .ov-events>a:nth-child(n+4){display
 .ov-weather-value{font-size:27px;margin:0;letter-spacing:-.5px}
 .ov-weather-condition{font-size:11px;margin-top:4px;color:#aebfcb}
 body.overview-canvas main [data-ov-kind=weather] .ns-module-caption{font-size:12px!important;letter-spacing:0!important;padding-right:17px!important}
-body.overview-canvas main [data-ov-kind=weather]>.ns-open-module{width:20px!important;right:5px!important;top:9px!important;font-size:14px!important}
+body.overview-canvas main [data-ov-kind=weather]>.ns-open-module{top:0!important;right:0!important;width:11px!important;height:11px!important}
 body.overview-canvas main [data-ov-kind=weather] .ov-freshness{border:0;padding:0;font-size:9px;gap:4px;white-space:nowrap}
 body.overview-canvas main [data-ov-kind=weather].ov-managed{gap:8px!important}
 body.overview-canvas.layout-edit main .ov-managed>.ns-open-module{display:none!important}
@@ -95,7 +96,7 @@ body.overview-canvas main [data-ov-indicator=true] .ov-empty{min-height:0;gap:3p
 body.overview-canvas main [data-ov-indicator=true] .ov-empty-icon{display:none}
 body.overview-canvas main [data-ov-indicator=true] .ov-empty strong{font-size:12px}
 body.overview-canvas main [data-ov-indicator=true] .ov-empty small{font-size:10px}
-body.overview-canvas main [data-ov-indicator=true]>.ns-open-module{top:3px!important;right:8px!important}
+body.overview-canvas main [data-ov-indicator=true]>.ns-open-module{top:0!important;right:0!important}
 @media(max-width:1050px){
  body .app{grid-template-columns:68px minmax(0,1fr)!important}
  body .layout-toolbar{left:68px!important}
@@ -120,17 +121,54 @@ body #sideNav button,body .ns-module-tree h2,body .ns-module-tree button,body .n
 html body.overview-canvas main #eventsCard,html body.overview-canvas main .section:not(#overview){display:none!important}
 html body.overview-canvas main #overviewModules>#overviewStaff,html body.overview-canvas main #staffGroups{display:none!important}
 
-body.ns-has-status .app>main{margin-top:calc(var(--ns-status-height,72px) + 12px)!important}
+body.ns-has-status .app>main{margin-top:calc(var(--ns-status-height,88px) + 12px)!important}
 html body.ns-has-status main #dispatchClient,html body.ns-has-status main #marketTopTiles,html body.ns-has-status main #overviewEventsSummary,html body.ns-has-status main #overviewFieldTracker{display:none!important}
-#nsStatusBar{position:fixed;top:0;right:0;z-index:700;display:grid;grid-template-columns:1.2fr 1fr 1.3fr 1fr;gap:1px;padding:7px 12px;background:#081218;border-bottom:1px solid #34515f;box-sizing:border-box;color:#e3edf2;font:11px/1.35 Arial,sans-serif}
-#nsStatusBar .ns-status-module{position:relative;min-width:0;padding:3px 23px 3px 12px;border-right:1px solid #29404c;height:53px;box-sizing:border-box}
-#nsStatusBar .ns-status-module:last-child{border-right:0}
-#nsStatusBar b{display:block;font:700 10px/1.4 Consolas,monospace;letter-spacing:.5px;color:#8cc9e9}
-#nsStatusBar span,#nsStatusBar small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#nsStatusBar small{font-size:9px;color:#91a8b6}#nsStatusBar b small{display:inline;font-weight:400}
-#nsStatusBar strong{font-size:13px;color:#fff}
-#nsStatusBar button[data-preview]{display:block;width:100%;padding:0;border:0;background:none;color:inherit;text-align:left;font:inherit;cursor:pointer}
-#nsStatusBar .ns-status-dogear{position:absolute;bottom:0;right:0;width:21px;height:21px;min-height:0;padding:0;border:0;background:linear-gradient(135deg,transparent 49%,#63b8df 50%);cursor:pointer;border-radius:0}
+#nsStatusBar{position:fixed;top:0;right:0;z-index:700;display:grid;grid-template-columns:minmax(420px,2.6fr) minmax(150px,.85fr) minmax(170px,1fr) minmax(150px,.85fr);gap:8px;padding:8px 12px;background:transparent;border-bottom:0;box-sizing:border-box;color:var(--text,#e3edf2);font:13px/1.4 Arial,sans-serif;align-items:stretch}
+#nsStatusBar .ns-status-module{position:relative;display:flex;min-width:0;min-height:0;padding:8px 16px 8px 10px;border:1px solid var(--line,#29404c);border-radius:10px;background:var(--panel,#0f1c25);box-sizing:border-box;overflow:hidden}
+#nsStatusBar .ns-status-events{padding:8px 16px 8px 10px;min-height:148px}
+#nsStatusBar .ns-status-content,#nsStatusBar button[data-preview]{display:flex;flex:1 1 auto;flex-direction:column;justify-content:space-between;gap:4px;min-width:0;width:100%}
+#nsStatusBar .ns-status-events>.ns-status-content{justify-content:flex-start;gap:6px;min-height:0}
+#nsStatusBar button[data-preview]{padding:0;border:0;background:none;color:inherit;text-align:left;font:inherit;cursor:pointer}
+#nsStatusBar .ns-status-title,#nsStatusBar b.ns-status-title{display:block;margin:0;padding:0;font:600 13px/1.3 Arial,sans-serif;letter-spacing:.1px;color:var(--text,#e3edf2);text-transform:none}
+#nsStatusBar .ns-status-events-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;padding-right:4px}
+#nsStatusBar .ns-status-filters{display:flex;flex-wrap:wrap;gap:4px;min-width:0}
+#nsStatusBar .ns-status-filters button{appearance:none;margin:0;padding:3px 7px;border:1px solid #3d5562;border-radius:4px;background:#132430;color:#c5d5de;font:600 10px/1.2 Arial,sans-serif;letter-spacing:.2px;cursor:pointer;white-space:nowrap}
+#nsStatusBar .ns-status-filters button:hover{border-color:#5d7d8e;color:#fff}
+#nsStatusBar .ns-status-filters button.is-active{border-color:#63b8df;background:#1a3646;color:#e7f5fc}
+#nsStatusBar .ns-status-alarms{display:flex;flex:1 1 auto;flex-direction:column;gap:0;min-height:0;max-height:118px;overflow:auto;overscroll-behavior:contain;margin:0 -2px 0 0;padding-right:2px}
+#nsStatusBar .ns-status-alarms-empty{margin:8px 0 0;color:#91a8b6;font:12px/1.4 Arial,sans-serif}
+#nsStatusBar .ns-status-alarm{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;align-items:center;gap:8px;min-height:26px;padding:4px 4px 4px 2px;border-top:1px solid #243642;color:inherit;text-decoration:none}
+#nsStatusBar .ns-status-alarm:first-child{border-top:0}
+#nsStatusBar .ns-status-alarm:hover{background:#162833}
+#nsStatusBar .ns-status-alarm time{font:11px/1.2 Consolas,monospace;color:#91a8b6;font-variant-numeric:tabular-nums}
+#nsStatusBar .ns-status-alarm-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 12px/1.3 Arial,sans-serif;color:#e8eef1}
+#nsStatusBar .ns-status-alarm-site{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px;font:11px/1.2 Arial,sans-serif;color:#91a8b6;text-align:right}
+#nsStatusBar .ns-status-alarm-mark{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:3px;font:700 12px/1 Arial,sans-serif;color:#ff8f9a;background:#3a2226}
+#nsStatusBar .ns-status-alarm-mark.is-quiet{background:transparent;color:transparent}
+#nsStatusBar .ns-status-alarm-critical .ns-status-alarm-text{color:#ffc2bc}
+#nsStatusBar .ns-status-alarm-warning .ns-status-alarm-text{color:#efd090}
+#nsStatusBar .ns-status-alarm.is-unacked{background:#1a1512}
+#nsStatusBar .ns-status-value,#nsStatusBar .ns-status-content>span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text,#e3edf2);font:500 13px/1.35 Arial,sans-serif}
+#nsStatusBar .ns-status-meta,#nsStatusBar small.ns-status-meta{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px/1.3 Arial,sans-serif;color:#a7bdc9}
+#nsStatusBar .ns-status-title>.ns-status-meta,#nsStatusBar b>.ns-status-meta{display:inline;margin-left:6px;font-weight:500;color:#a7bdc9}
+#nsStatusBar .ns-status-he{display:inline;margin-left:6px;font:500 12px/1.3 Consolas,'Cascadia Mono',monospace;letter-spacing:.2px;color:#9eb6c4;white-space:nowrap}
+#nsStatusBar strong{font:600 18px/1.1 Arial,sans-serif;font-variant-numeric:tabular-nums;color:#fff}
+#nsStatusBar .ns-status-figure{display:inline-flex;align-items:baseline;gap:3px;min-width:0}
+#nsStatusBar .ns-status-unit{font:500 11px/1.2 Arial,sans-serif;color:#a7bdc9;margin:0;font-style:normal}
+#nsStatusBar .ns-status-pair{display:block;margin-top:1px;font:500 11px/1.25 Arial,sans-serif;color:#a7bdc9;font-style:normal}
+#nsStatusBar .ns-status-sep{color:#6f8794;font-weight:500}
+#nsStatusBar .ns-status-metrics{display:grid;gap:6px;min-width:0;margin:2px 0 auto}
+#nsStatusBar .ns-status-metrics>span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 12px/1.35 Arial,sans-serif;color:var(--text,#e3edf2)}
+#nsStatusBar .ns-status-metrics-two,#nsStatusBar .ns-status-metrics-three{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:end}
+#nsStatusBar .ns-status-metrics-three{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#nsStatusBar .ns-status-metrics-two>span,#nsStatusBar .ns-status-metrics-three>span{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;white-space:normal}
+#nsStatusBar .ns-status-metrics-two small,#nsStatusBar .ns-status-metrics-three small{display:block;font:11px/1.25 Arial,sans-serif;color:#a7bdc9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#nsStatusBar .ns-status-metrics-two strong,#nsStatusBar .ns-status-metrics-three strong{font-size:18px}
+#nsStatusBar .ns-status-dogear{position:absolute;top:0;right:0;bottom:auto;width:11px;height:11px;min-width:0;min-height:0;padding:0;margin:0;border:0;border-radius:0;background:transparent;cursor:pointer;color:transparent;font-size:0;line-height:0;overflow:hidden;z-index:5}
+#nsStatusBar .ns-status-dogear::after{content:'';position:absolute;inset:0;background:#527181;clip-path:polygon(100% 0,100% 100%,0 0);transition:background .12s ease}
+#nsStatusBar .ns-status-dogear:hover{background:transparent;color:transparent}
+#nsStatusBar .ns-status-dogear:hover::after{background:#6a8b98}
+#nsStatusBar .ns-status-dogear:focus-visible{outline:2px solid var(--blue,#8cc9e9);outline-offset:1px}
 #nsStatusBar button:focus-visible{outline:2px solid #e7c364;outline-offset:2px}
 #nsStatusEvents{position:fixed;z-index:710;width:640px;box-sizing:border-box;color:#e3edf2;background:#101d25;border:1px solid #547587;border-radius:0 0 8px 8px;box-shadow:0 12px 28px #0009;font:12px/1.5 Arial,sans-serif}
 #nsStatusEvents[hidden]{display:none!important}#nsStatusEvents header,#nsStatusEvents footer{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px}
@@ -138,11 +176,14 @@ html body.ns-has-status main #dispatchClient,html body.ns-has-status main #marke
 #nsStatusEvents .ns-status-log{max-height:min(440px,calc(100vh - 180px));overflow-y:auto;overscroll-behavior:contain;padding:0 14px}
 #nsStatusEvents article{padding:10px 0;border-top:1px solid #29404c}#nsStatusEvents article strong{display:block}#nsStatusEvents time,#nsStatusEvents small{display:block;color:#9db2bd;font-size:11px}#nsStatusEvents p{margin:4px 0}#nsStatusEvents a{color:#80c8ed;font-size:11px}
 html[data-ns-styles=loading] #nsStatusBar,html[data-ns-styles=failed] #nsStatusBar{visibility:hidden}
-@media(max-width:900px){#nsStatusBar{grid-template-columns:1fr 1fr;padding:5px}#nsStatusBar .ns-status-module{height:51px}#nsStatusBar .ns-status-module:nth-child(2){border-right:0}}
+@media(max-width:1100px){#nsStatusBar{grid-template-columns:minmax(300px,2fr) 1fr 1fr; }#nsStatusBar [data-status=crew]{grid-column:2 / -1}}
+@media(max-width:900px){#nsStatusBar{grid-template-columns:1fr 1fr;gap:6px;padding:6px 8px}#nsStatusBar .ns-status-events{grid-column:1 / -1;min-height:132px}#nsStatusBar [data-status=crew]{grid-column:auto}}
 
 html body.ns-has-status.overview-canvas main .page-header>#marketTopTiles{display:none!important}
 
-#nsStatusBar,#nsStatusBar .ns-status-module{overflow:clip}
+#nsStatusBar{overflow:visible}
+#nsStatusBar .ns-status-module{overflow:hidden}
+#nsStatusBar .ns-status-events{overflow:hidden}
 
 /* Shared compact navigation and control rhythm across operator workspaces. */
 body{--ns-control-font:12px/1.35 var(--ns-section-font);--ns-control-radius:4px}

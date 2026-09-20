@@ -137,7 +137,7 @@
     if (!container) return null;
     const storageKey = 'northstarCanvasLayoutV1';
     const WEATHER_HEADER_LAYOUT_VERSION = 2;
-    const WEATHER_DENSITY_VERSION = 1;
+    const WEATHER_DENSITY_VERSION = 2;
     const WEATHER_CARD = { width: 88, height: 118, left: 16, top: 12, gap: 16, scale: .75 };
     const groups = [
       ['weather', '#weatherStrip > .weather-card', [WEATHER_CARD.width, WEATHER_CARD.height], [1, 1]],

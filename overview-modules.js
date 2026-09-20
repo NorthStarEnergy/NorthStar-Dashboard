@@ -5,7 +5,12 @@
   const number = v => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
   const fmt = (v,suffix='',digits=0) => number(v) ? Number(v).toLocaleString(undefined,{maximumFractionDigits:digits,minimumFractionDigits:digits})+suffix : '—';
   const money = v => number(v) ? '$'+fmt(v,'',2) : '—';
-  const time = value => value && !Number.isNaN(new Date(value).valueOf()) ? new Date(value).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+  const time = value => {
+    if (!(value && !Number.isNaN(new Date(value).valueOf()))) return '';
+    return window.NorthstarIesoTime
+      ? NorthstarIesoTime.clock(value)
+      : new Date(value).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+  };
   const metric = (label,value) => `<div class="ov-metric"><span>${escape(label)}</span><strong>${String(value).endsWith(' MW')?escape(String(value).slice(0,-3))+' <em class="ov-unit">MW</em>':escape(value)}</strong></div>`;
   const rows = value => Array.isArray(value)?value:[];
   const empty = (message,detail) => `<div class="ov-empty"><span class="ov-empty-icon" aria-hidden="true">–</span><strong>${escape(message)}</strong><small>${escape(detail)}</small></div>`;
@@ -137,7 +142,7 @@
     [...el.children].forEach(child=>{
       if(!child.matches('.ns-module-content,.ns-open-module,.ns-edit-module,.ov-summary,.canvas-move-handle,.canvas-resize-handle,.canvas-select-handle'))child.style.setProperty('display','none','important');
     });
-    const open=el.querySelector(':scope > .ns-open-module');if(open){if(open.textContent!=='↗')open.textContent='↗';open.setAttribute('aria-label','Open '+(p.title || m.title));open.title='Open full module';}
+    const open=el.querySelector(':scope > .ns-open-module');if(open){if(open.textContent)open.textContent='';open.setAttribute('aria-label','Open '+(p.title || m.title));open.title='Open full module';}
     const edit=el.querySelector(':scope > .ns-edit-module');if(edit){if(edit.textContent!=='✎')edit.textContent='✎';edit.setAttribute('aria-label','Edit '+(p.title || m.title));edit.title='Edit module';}
   }
   function refreshStatus(){

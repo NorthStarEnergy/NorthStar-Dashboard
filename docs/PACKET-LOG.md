@@ -1,3 +1,30 @@
+# IESO HE clock and 24-hour times — 2026-09-18
+
+Event log shows live `[HE xx - HH:MM]` and operator clocks use Toronto 24-hour
+IESO system time (no AM/PM). See [report](packets/2026-09-18-ieso-he-times.md).
+
+# Unified dogear style — 2026-09-18
+
+Replaced status / Overview / market `↗` expand arrows with the weather-module
+clip-path triangle dogear. See [report](packets/2026-09-18-dogear-unify.md).
+
+# Event log alarm listing — 2026-09-18
+
+Widened the top Event log into a filterable alarm listing with unacknowledged
+`×` markers. See [report](packets/2026-09-18-event-log-alarm-listing.md).
+
+# Status bar card theme — 2026-09-18
+
+Themed the top Event log / Dispatch / Market pricing / Crew status tiles as
+dashboard cards with metric layouts matching Overview modules. See
+[report](packets/2026-09-18-status-bar-card-theme.md).
+
+# Overview weather module fit — 2026-09-17
+
+Densified Overview weather card face content so title, icon, temperature,
+condition, and precip fit inside the saved module size. See
+[report](packets/2026-09-17-weather-module-fit.md).
+
 # Operations data catalog — 2026-09-17
 
 Added a private, auditable metadata catalog and operator-facing library view for the known operations data collections. See [report](packets/2026-09-17-operations-data-catalog.md).
