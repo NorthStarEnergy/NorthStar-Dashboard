@@ -5,13 +5,13 @@ window.NORTHSTAR_BUILD_DATA = {
   "current": {
     "version": "v0.50",
     "published": "2026-09-19",
-    "summary": "Dashboard update"
+    "summary": "Merged Cursor dashboard UI, schematic builder, and one-line catalogue updates."
   },
   "history": [
     {
       "version": "v0.50",
       "published": "2026-09-19",
-      "summary": "Dashboard update"
+      "summary": "Merged Cursor dashboard UI, schematic builder, and one-line catalogue updates."
     },
     {
       "version": "v0.49",
