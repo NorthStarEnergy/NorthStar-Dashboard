@@ -331,7 +331,7 @@
   .graph-card .legend{order:2;text-align:center!important;margin-top:2px!important}
   .graph-card canvas{margin-top:0!important}
   .layout-toolbar{position:fixed;right:12px;bottom:12px;z-index:60;display:flex;gap:5px;padding:5px;background:#101a22;border:1px solid #355567;border-radius:5px;box-shadow:0 8px 22px #0008}
-  .layout-toolbar button{background:#17252e;border:1px solid #39505b;color:var(--muted);border-radius:3px;padding:5px 7px;font:7px monospace;cursor:pointer}
+  .layout-toolbar button{background:#17252e;border:1px solid #39505b;color:var(--muted);border-radius:4px;padding:7px 10px;min-height:30px;font:600 11px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.02em;white-space:nowrap;cursor:pointer}
   .layout-toolbar button:hover,.layout-toolbar button.active{border-color:var(--gold);color:#fff}
   .layout-toolbar .layout-save,.layout-toolbar .layout-reset{display:none}
   .layout-toolbar.editing .layout-save,.layout-toolbar.editing .layout-reset{display:block}
@@ -522,7 +522,7 @@
   .weather-daily-window .day-rain,.weather-daily-window .day-amount{font-size:10px!important}
   .ontario-metric span,.price-row>span,.ops-metric span,.or-line,.weather-card header em,
   .details-btn,.contractor-heading,.ops-label,.unit-col strong,.events-head small,
-  .events-stream .event-item header,.layout-toolbar button,.overview-tracker-summary span,
+  .events-stream .event-item header,.overview-tracker-summary span,
   .overview-tracker-worker em{font-size:8px!important}
   .period span,.period small,.weather-strip .weather-current span,.weather-extra-line,
   .staff-time small,.staff-row small,.staff-empty,.logbook-attachment,.logbook-toolbar button,
@@ -1015,7 +1015,7 @@ document.querySelector('#quickLogForm').onsubmit=async e=>{e.preventDefault();co
 <script>document.addEventListener("DOMContentLoaded",function(){var b=document.querySelector(".build-label");if(b)b.textContent="v0.40"});</script>
 
 <link rel="stylesheet" href="flows-workspace.css?v=20260915-water-log-3"><script data-ns-required src="flows-workspace.js?v=20260915-water-log-3" defer></script>
-<link rel="stylesheet" href="module-workspace.css?v=20260916-compact-module-shell-1"><script data-ns-required src="module-workspace.js?v=20260916-compact-module-shell-1" defer></script>
+<link rel="stylesheet" href="module-workspace.css?v=20260919-edit-button-1"><script data-ns-required src="module-workspace.js?v=20260916-compact-module-shell-1" defer></script>
 
 <link rel="stylesheet" href="overview-modules.css?v=20260915-weather-header-1">
 

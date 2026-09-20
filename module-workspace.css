@@ -50,7 +50,7 @@ body.ns-floating .ns-window-controls{display:contents}
 .ns-module-notes{white-space:pre-wrap;font:14px/1.45 system-ui!important;color:#ccd9e2}
 .ns-content-blocks{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
 .ns-content-block{display:grid;gap:4px;min-width:90px}.ns-content-block span{font:12px system-ui;color:#9cb5c6}.ns-content-block strong{font:600 17px system-ui}
-.ns-edit-module,.ns-open-module{position:relative;z-index:36;cursor:pointer;border:1px solid #3b657a;background:#153344;color:#d7effb;border-radius:4px;padding:4px 7px;margin:4px;font:12px system-ui}
+.ns-edit-module,.ns-open-module{position:relative;z-index:36;cursor:pointer;border:1px solid #3b657a;background:#153344;color:#d7effb;border-radius:5px;padding:7px 10px;min-height:30px;margin:4px;font:600 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;white-space:nowrap}
 .ns-edit-module{display:none}body.layout-edit .ns-edit-module{display:inline-block}
 .ns-dense{font-size:90%}.ns-dense .ns-module-notes{font-size:12px!important}
 [data-ns-compact]>.ns-module-content{padding-bottom:4px;margin-bottom:5px}

@@ -3,11 +3,16 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.44",
-    "published": "2026-09-17",
+    "version": "v0.45",
+    "published": "2026-09-19",
     "summary": "Dashboard update"
   },
   "history": [
+    {
+      "version": "v0.45",
+      "published": "2026-09-19",
+      "summary": "Dashboard update"
+    },
     {
       "version": "v0.44",
       "published": "2026-09-17",
