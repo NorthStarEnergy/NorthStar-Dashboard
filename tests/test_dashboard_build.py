@@ -25,7 +25,7 @@ def test_dashboard_build_sources_are_wired() -> None:
     assert "dashboard-build.css?v=20260916-ai-icon-1" in html
     data = load_data(ROOT / "dashboard-build-data.js")
     assert data["current"] == data["history"][0]
-    assert data["current"]["version"] == "v0.49"
+    assert data["current"]["version"] == "v0.50"
 
 
 def test_bump_script_increments_and_records_a_single_line_summary(tmp_path: Path) -> None:
@@ -46,14 +46,14 @@ def test_bump_script_increments_and_records_a_single_line_summary(tmp_path: Path
         check=True,
         text=True,
     )
-    assert result.stdout.startswith("v0.50 — 2026-09-16 — Automated test build")
+    assert result.stdout.startswith("v0.51 — 2026-09-16 — Automated test build")
     data = load_data(tmp_path / "dashboard-build-data.js")
     assert data["current"] == {
-        "version": "v0.50",
+        "version": "v0.51",
         "published": "2026-09-16",
         "summary": "Automated test build",
     }
     assert data["history"][0] == data["current"]
     assert (tmp_path / "BUILD-VERSION.txt").read_text(encoding="utf-8") == (
-        "v0.50\n2026-09-16\nAutomated test build\n"
+        "v0.51\n2026-09-16\nAutomated test build\n"
     )
