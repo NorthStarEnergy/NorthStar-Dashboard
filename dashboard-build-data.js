@@ -3,11 +3,16 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.49",
-    "published": "2026-09-18",
-    "summary": "Show IESO HE clock on Event log and use 24-hour Toronto times everywhere."
+    "version": "v0.50",
+    "published": "2026-09-19",
+    "summary": "Dashboard update"
   },
   "history": [
+    {
+      "version": "v0.50",
+      "published": "2026-09-19",
+      "summary": "Dashboard update"
+    },
     {
       "version": "v0.49",
       "published": "2026-09-18",

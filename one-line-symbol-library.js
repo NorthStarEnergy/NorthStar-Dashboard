@@ -38,6 +38,8 @@
     }
     return leads+dots+path(`M${x-20} ${y}h40`)+`<rect class="node-shape" x="${x-12}" y="${y-7}" width="24" height="14" rx="2"/>`;
   };
+  const meterFace = (x, y, label) => path(`M${x-38} ${y}h13M${x+25} ${y}h13`)+circle(x,y,25)+text(x,y+5,label);
+  const xfmrPair = (x, y, config = '') => path(`M${x-42} ${y}h15m54 0h15`)+circle(x-10,y,18)+circle(x+10,y,18)+windingMark(x-10,y-30,windingKind(config,0))+windingMark(x+10,y-30,windingKind(config,1));
   const staticLoad = (x, y) => path(`M${x-38} ${y}h10`)+`<rect class="node-shape" x="${x-28}" y="${y-18}" width="56" height="36"/>`+path(`M${x+28} ${y}h10`)+text(x,y+4,'LOAD');
   const aliases = {
     ldr: 'light-sensor',
@@ -46,6 +48,23 @@
     'line-switch': 'disconnect',
     'circuit-switching': 'circuit-switcher',
     'circuit-switch': 'circuit-switcher',
+    hvi: 'hv-interrupter',
+    'high-voltage-interrupter': 'hv-interrupter',
+    'vacuum-breaker': 'breaker-vacuum',
+    'sf6-breaker': 'breaker-sf6',
+    ccvt: 'cvt',
+    cutout: 'fuse-dropout',
+    'dropout-fuse': 'fuse-dropout',
+    'fuse-cutout': 'fuse-dropout',
+    mod: 'disconnect-mod',
+    'motor-operated-disconnect': 'disconnect-mod',
+    gsu: 'transformer-gsu',
+    ammeter: 'meter-ammeter',
+    voltmeter: 'meter-voltmeter',
+    kwh: 'meter-kwh',
+    'energy-meter': 'meter-kwh',
+    multifunction: 'meter-multifunction',
+    'pq-meter': 'meter-multifunction',
   };
   const canonicalType = id => aliases[String(id || '')] || String(id || '');
 
@@ -105,6 +124,41 @@
       },
     },
     {
+      id:'breaker-vacuum', name:'Vacuum circuit breaker', category:'Primary equipment', glyph:'V', prefix:'VCB',
+      functionNumber:'52', standard:'Workplace one-line convention', switching:true,
+      terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
+      draw:symbol => {
+        const {x,y} = symbol;
+        const open = isOpen(symbol);
+        return path(`M${x-38} ${y}h10M${x+28} ${y}h10`)+
+          `<ellipse class="node-shape${open ? ' device-open' : ''}" cx="${x}" cy="${y}" rx="12" ry="22"/>`+
+          path(open ? `M${x-6} ${y-6}L${x+8} ${y-14}` : `M${x-8} ${y}h16`)+
+          text(x,y+36,'V');
+      },
+    },
+    {
+      id:'breaker-sf6', name:'SF₆ circuit breaker', category:'Primary equipment', glyph:'SF', prefix:'SF6',
+      functionNumber:'52', standard:'Workplace one-line convention', switching:true,
+      terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
+      draw:symbol => {
+        const {x,y} = symbol;
+        return path(`M${x-38} ${y}h16M${x+22} ${y}h16`)+boxedRotary(x,y,isOpen(symbol),false)+text(x,y+36,'SF6');
+      },
+    },
+    {
+      id:'hv-interrupter', name:'HV interrupter', category:'Primary equipment', glyph:'⬡', prefix:'HVI',
+      functionNumber:'89', standard:'Workplace one-line convention', switching:true,
+      terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
+      draw:symbol => {
+        const {x,y} = symbol;
+        const open = isOpen(symbol);
+        return path(`M${x-38} ${y}h12M${x+26} ${y}h12`)+
+          `<ellipse class="node-shape${open ? ' device-open' : ''}" cx="${x-2}" cy="${y}" rx="14" ry="20"/>`+
+          (open ? path(`M${x+12} ${y}L${x+22} ${y-16}`)+circle(x+12,y,3) : path(`M${x+12} ${y}h14`)+circle(x+12,y,3)+circle(x+26,y,3))+
+          text(x,y+36,'HVI');
+      },
+    },
+    {
       id:'circuit-switcher', name:'Circuit switcher', category:'Primary equipment', glyph:'⊞', prefix:'CS',
       functionNumber:'52', standard:'Workplace one-line convention', switching:true,
       terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
@@ -118,6 +172,32 @@
       standard:'Workplace one-line convention', switching:true,
       terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
       draw:symbol => fuseArm(symbol.x, symbol.y, isOpen(symbol)),
+    },
+    {
+      id:'fuse-dropout', name:'Dropout fuse / cutout', category:'Primary equipment', glyph:'ꜜ', prefix:'CUT',
+      standard:'Workplace one-line convention', switching:true,
+      terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
+      draw:symbol => {
+        const {x,y} = symbol;
+        const open = isOpen(symbol);
+        const hinge = circle(x-18, y, 3)+path(`M${x-38} ${y}h20`);
+        if (open) {
+          return hinge+path(`M${x+20} ${y}h18`)+circle(x+20,y,3)+
+            `<g transform="rotate(70 ${x-18} ${y})"><rect class="node-shape device-open" x="${x-14}" y="${y-7}" width="28" height="14" rx="2"/>`+
+            path(`M${x+14} ${y}h8`)+`</g>`+text(x,y+36,'DO');
+        }
+        return hinge+path(`M${x-18} ${y}h38`)+circle(x+20,y,3)+path(`M${x+20} ${y}h18`)+
+          `<rect class="node-shape" x="${x-10}" y="${y-8}" width="28" height="16" rx="2"/>`+text(x,y+36,'DO');
+      },
+    },
+    {
+      id:'disconnect-mod', name:'Motor-operated disconnect', category:'Primary equipment', glyph:'M⊕', prefix:'MOD',
+      functionNumber:'89', standard:'Workplace one-line convention', switching:true,
+      terminals:[{id:'L', dx:-34, dy:0}, {id:'R', dx:34, dy:0}],
+      draw:symbol => {
+        const {x,y} = symbol;
+        return fuseArm(x,y,isOpen(symbol))+circle(x,y+28,12)+text(x,y+32,'M');
+      },
     },
     {
       id:'load-break', name:'Load-break switch', category:'Primary equipment', glyph:'⊗', prefix:'LBS',
@@ -201,6 +281,15 @@
       },
     },
     {
+      id:'transformer-gsu', name:'GSU transformer', category:'Primary equipment', glyph:'G↑', prefix:'GSU',
+      standard:'IEEE/ANSI 315 convention', winding:true,
+      terminals:[{id:'L', dx:-42, dy:0}, {id:'R', dx:42, dy:0}],
+      draw:symbol => {
+        const {x,y} = symbol;
+        return xfmrPair(x, y, symbol.windingConfig || '')+text(x,y+4,'GSU');
+      },
+    },
+    {
       id:'generator', name:'Generator', category:'Primary equipment', glyph:'G', prefix:'GEN',
       standard:'FirstLight static single-line convention',
       terminals:[{id:'T', dx:0, dy:-25}],
@@ -261,6 +350,13 @@
       draw:({x,y}) => path(`M${x-42} ${y}h15m54 0h15`)+circle(x-10,y,18)+circle(x+10,y,18)+text(x,y+4,'PT'),
     },
     {
+      id:'cvt', name:'Capacitive voltage transformer', category:'Measurement & protection', glyph:'CV', prefix:'CVT',
+      standard:'IEEE/ANSI 315 convention',
+      terminals:[{id:'L', dx:-42, dy:0}, {id:'R', dx:42, dy:0}],
+      draw:({x,y}) => path(`M${x-42} ${y}h14M${x-28} ${y-16}v32M${x-18} ${y-16}v32M${x-18} ${y}h8`)+
+        circle(x+4,y,16)+circle(x+22,y,16)+path(`M${x+38} ${y}h4`)+text(x+12,y+4,'CVT'),
+    },
+    {
       id:'relay', name:'Protective relay', category:'Measurement & protection', glyph:'51', prefix:'RLY',
       functionNumber:'51', standard:'IEEE C37.2-2022 designation',
       terminals:[{id:'C', dx:0, dy:0}],
@@ -271,6 +367,31 @@
       functionNumber:'86', standard:'IEEE C37.2-2022 designation',
       terminals:[{id:'C', dx:0, dy:0}],
       draw:({x,y}) => circle(x,y,25)+text(x,y+5,'86'),
+    },
+    {
+      id:'meter-ammeter', name:'Ammeter', category:'Metering', glyph:'A', prefix:'AM',
+      standard:'IEEE/ANSI 315 convention',
+      terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
+      draw:({x,y}) => meterFace(x,y,'A'),
+    },
+    {
+      id:'meter-voltmeter', name:'Voltmeter', category:'Metering', glyph:'V', prefix:'VM',
+      standard:'IEEE/ANSI 315 convention',
+      terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
+      draw:({x,y}) => meterFace(x,y,'V'),
+    },
+    {
+      id:'meter-kwh', name:'Kilowatt-hour meter', category:'Metering', glyph:'Wh', prefix:'KWH',
+      standard:'IEEE/ANSI 315 convention',
+      terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
+      draw:({x,y}) => meterFace(x,y,'Wh'),
+    },
+    {
+      id:'meter-multifunction', name:'Multifunction meter', category:'Metering', glyph:'M', prefix:'MFM',
+      standard:'IEEE/ANSI 315 convention',
+      terminals:[{id:'L', dx:-38, dy:0}, {id:'R', dx:38, dy:0}],
+      draw:({x,y}) => path(`M${x-38} ${y}h10M${x+28} ${y}h10`)+
+        `<rect class="node-shape" x="${x-28}" y="${y-22}" width="56" height="44" rx="2"/>`+text(x,y+5,'M'),
     },
     {
       id:'capacitor-element', name:'Capacitor', category:'Circuit notation', glyph:'||', prefix:'CEL',
@@ -434,8 +555,8 @@
   }
 
   window.NorthStarOneLineSymbols = Object.freeze({
-    profile: 'northstar-ieee-compat-2026.3',
-    catalogueVersion: '2026.3',
+    profile: 'northstar-ieee-compat-2026.4',
+    catalogueVersion: '2026.4',
     notationSource: 'Workplace Figure A-1 circuit notation',
     graphicalStandard: 'IEEE/ANSI 315-1975 (inactive-reserved)',
     designationStandard: 'IEEE C37.2-2022 (active)',

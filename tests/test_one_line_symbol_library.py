@@ -24,7 +24,7 @@ def _eval_library() -> dict:
 def test_dashboard_loads_symbol_library_before_editor() -> None:
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
 
-    library = 'src="one-line-symbol-library.js?v=20260903-4"'
+    library = 'src="one-line-symbol-library.js?v=20260918-4"'
     editor = 'src="one-line-editor-ui.js?v=20260903-4"'
     assert library in html
     assert editor in html
@@ -32,19 +32,29 @@ def test_dashboard_loads_symbol_library_before_editor() -> None:
     assert 'id="oneLineSymbolLibrary"' in html
     assert 'id="oneLineSymbolSearch"' in html
     assert 'id="oneLineCircuitExample"' in html
-    assert "Catalogue 2026.3" in html
+    assert "Catalogue 2026.4" in html
     assert "Figure A-1" in html
     assert "Workplace line switch" in html
-    assert 'href="one-line-editor.css?v=20260903-4"' in html
-    assert ".one-line-empty[hidden]{display:none!important}" in (ROOT / "one-line-editor.css").read_text(encoding="utf-8")
+    assert 'href="one-line-editor.css?v=20260918-3"' in html
+    assert 'href="one-line-scada.css?v=20260918-1"' in html
+    assert 'href="one-line-technical.css?v=20260918-1"' in html
+    assert 'class="one-line-toolbar"' in html
+    assert 'id="one-line-black-board"' in html
+    css = (ROOT / "one-line-editor.css").read_text(encoding="utf-8")
+    scada = (ROOT / "one-line-scada.css").read_text(encoding="utf-8")
+    assert ".one-line-empty[hidden]{display:none!important}" in css
+    assert "background:#000!important" in css
+    assert "body.ns-in-section #oneLineEditor.ns-module-window" in css
+    assert ".one-line-canvas-wrap{background:#000" in scada
+    assert "#d7d4cb" not in scada
 
 
 def test_profile_distinguishes_graphics_convention_from_active_designations() -> None:
     script = (ROOT / "one-line-symbol-library.js").read_text(encoding="utf-8")
     catalogue = _catalogue()
 
-    assert catalogue["profile"] == "northstar-ieee-compat-2026.3"
-    assert catalogue["catalogueVersion"] == "2026.3"
+    assert catalogue["profile"] == "northstar-ieee-compat-2026.4"
+    assert catalogue["catalogueVersion"] == "2026.4"
     assert "IEEE/ANSI 315-1975 (inactive-reserved)" in script
     assert "IEEE C37.2-2022 (active)" in script
     assert catalogue["profile"] in script
@@ -54,11 +64,14 @@ def test_profile_distinguishes_graphics_convention_from_active_designations() ->
 def test_library_covers_core_one_line_equipment_and_protection() -> None:
     expected = {
         "source", "bus", "line", "junction", "terminal", "ground",
-        "disconnect", "breaker", "circuit-switcher", "fuse", "load-break",
+        "disconnect", "breaker", "breaker-vacuum", "breaker-sf6", "hv-interrupter",
+        "circuit-switcher", "fuse", "fuse-dropout", "disconnect-mod", "load-break",
         "recloser", "sectionalizer", "grounding-switch", "ats", "transformer",
-        "transformer-3winding", "autotransformer", "generator", "motor",
+        "transformer-3winding", "autotransformer", "transformer-gsu", "generator", "motor",
         "capacitor", "reactor", "battery", "surge-arrester", "load",
-        "ct", "vt", "pt", "relay", "lockout", "capacitor-element", "resistor",
+        "ct", "vt", "pt", "cvt", "relay", "lockout",
+        "meter-ammeter", "meter-voltmeter", "meter-kwh", "meter-multifunction",
+        "capacitor-element", "resistor",
         "light-sensor", "diode", "transistor", "inductor", "switch", "lamp",
         "power", "potentiometer", "led",
     }
@@ -188,8 +201,8 @@ def test_store_stamps_catalogue_identity_and_drops_unknown_types() -> None:
         ],
     })
     types = {item["id"]: item for item in record["symbols"]}
-    assert record["symbolLibraryProfile"] == "northstar-ieee-compat-2026.3"
-    assert record["catalogueVersion"] == "2026.3"
+    assert record["symbolLibraryProfile"] == "northstar-ieee-compat-2026.4"
+    assert record["catalogueVersion"] == "2026.4"
     assert record["version"] == 3
     assert "DROP-01" not in types
     assert types["CBR-01"]["operatingState"] == "open"

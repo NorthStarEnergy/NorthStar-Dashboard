@@ -1,20 +1,36 @@
-/* SCADA mimic: sparse, line-based symbols with restrained annotation. */
-.one-line-canvas-wrap{background:#d7d4cb;border-color:#8b8b84}
-.one-line-canvas .grid{stroke:#b8b5ad;stroke-dasharray:none;opacity:.35}
-.one-line-canvas .wire{stroke:#171717;stroke-width:2;stroke-linecap:square}
+/* Dark-board annotations. Geometry weights live in one-line-technical.css. */
+.one-line-canvas-wrap{background:#000;border-color:#2a2a2a}
+.one-line-canvas{background:#000}
+.one-line-canvas .grid{stroke:#1a1a1a;stroke-dasharray:none;opacity:.95}
 .one-line-canvas .wire.selected{stroke:#f2b84b;stroke-width:3}
-.one-line-canvas .node-shape{fill:none;stroke:#ed16d5;stroke-width:2}
-.one-line-canvas .node-shape.symbol-heavy{fill:none;stroke-width:5}
-.one-line-canvas .node.selected .node-shape{stroke:#f2b84b;filter:none}
-.one-line-canvas .node text{fill:#111;font-size:10px;font-weight:600}
-.one-line-canvas .node .device-function{fill:#1749b5;font-size:9px}
-.one-line-canvas .node .scada-tag{fill:#1749b5;font-size:9px;font-weight:700}
-.one-line-canvas .node .scada-value{fill:#080808;stroke:none}
+.one-line-canvas .node.selected .node-shape{stroke:#f2b84b;filter:drop-shadow(0 0 4px #f2b84b55)}
+.one-line-canvas .node text{fill:#eef3f5;font-size:10px;font-weight:600}
+.one-line-canvas .node .device-function{fill:#f2b84b;font-size:9px}
+.one-line-canvas .node .scada-tag{fill:#7ec8e8;font-size:9px;font-weight:700}
+.one-line-canvas .node .scada-value{fill:#050505;stroke:#3a3a3a}
 .one-line-canvas .node .scada-value-text{fill:#e21b23;font-size:8px;font-weight:700}
 .one-line-canvas .node .node-type{display:none}
-.one-line-canvas .terminal-dot{fill:#ed16d5;stroke:#ed16d5}
-.scada-status-legend{position:absolute;left:10px;right:10px;bottom:8px;display:flex;flex-wrap:wrap;gap:5px 12px;color:#222;font:8px monospace;background:#d7d4cbdd;padding:5px 7px;border-top:1px solid #99968e}
+.one-line-canvas .terminal-dot{fill:#f2b84b;stroke:#000}
+.scada-status-legend{
+  position:absolute;
+  left:10px;
+  right:10px;
+  bottom:8px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px 12px;
+  color:#c5d0d5;
+  font:8px monospace;
+  background:#000c;
+  padding:6px 8px;
+  border:1px solid #2a2a2a;
+  border-radius:3px;
+}
 .one-line-empty[hidden]{display:none!important}
 .scada-status-legend span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
-.scada-status-legend i{width:8px;height:8px;display:inline-block;border:1px solid #333}
-.scada-status-legend .energized{background:#21b34b}.scada-status-legend .offline{background:#e21b23}.scada-status-legend .comms-loss{background:#ed16d5}.scada-status-legend .maintenance{background:#f28c18}.scada-status-legend .major-outage{background:#f28c18;border:2px solid #a33b00}
+.scada-status-legend i{width:8px;height:8px;display:inline-block;border:1px solid #8d979d}
+.scada-status-legend .energized{background:#21b34b}
+.scada-status-legend .offline{background:#e21b23}
+.scada-status-legend .comms-loss{background:#ed16d5}
+.scada-status-legend .maintenance{background:#f28c18}
+.scada-status-legend .major-outage{background:#f28c18;border:2px solid #a33b00}
