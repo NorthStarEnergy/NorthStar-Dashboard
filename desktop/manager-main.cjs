@@ -64,6 +64,7 @@ async function control(action, target) {
       localDashboardWindow.focus();
       return { ok: true, message: "Focused local dashboard window." };
     }
+    await waitForLocalDashboard();
     await openLocalDashboard();
     return { ok: true, message: "Opened local dashboard in NorthStar Manager." };
   }
@@ -94,7 +95,7 @@ function openLocalDashboard() {
   return localDashboardWindow.loadURL(LOCAL_DASHBOARD_URL).catch(error => {
     if (localDashboardWindow && !localDashboardWindow.isDestroyed()) localDashboardWindow.close();
     localDashboardWindow = undefined;
-    throw error;
+    throw new Error(`Could not load local dashboard at ${LOCAL_DASHBOARD_URL}: ${error.message}`);
   });
 }
 async function waitForLocalDashboard() {

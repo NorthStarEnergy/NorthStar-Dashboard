@@ -52,7 +52,8 @@ def test_bump_script_increments_and_records_a_single_line_summary(tmp_path: Path
         text=True,
     )
     data_before = load_data(ROOT / "dashboard-build-data.js")
-    expected_version = f"v{data_before['current']['version'][1:].rsplit('.', 1)[0]}.{int(data_before['current']['version'].rsplit('.', 1)[1]) + 1:02d}"
+    base_version = data_before['current']['version'].split()[0]
+    expected_version = f"v{base_version[1:].rsplit('.', 1)[0]}.{int(base_version.rsplit('.', 1)[1]) + 1:02d}"
     assert result.stdout.startswith(f"{expected_version} — 2026-09-16 — Automated test build")
     data = load_data(tmp_path / "dashboard-build-data.js")
     assert data["current"] == {

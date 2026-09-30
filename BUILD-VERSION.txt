@@ -1,4 +1,4 @@
-v0.155
+v0.156
 2026-09-30
-2026-09-30T01:58:47-04:00
-Overview weather: show rolling 24-hour rainfall collector and remove Wind label
+2026-09-30T03:18:01-04:00
+Event Log alarm controls, custom module deletion, and Manager startup readiness

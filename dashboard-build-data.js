@@ -3,14 +3,20 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.155",
+    "version": "v0.156",
     "published": "2026-09-30",
-    "publishedAt": "2026-09-30T01:58:47-04:00",
-    "summary": "Overview weather: show rolling 24-hour rainfall collector and remove Wind label"
+    "publishedAt": "2026-09-30T03:18:01-04:00",
+    "summary": "Event Log alarm controls, custom module deletion, and Manager startup readiness"
   },
   "history": [
     {
-      "version": "v0.155",
+      "version": "v0.156",
+      "published": "2026-09-30",
+      "publishedAt": "2026-09-30T03:18:01-04:00",
+      "summary": "Event Log alarm controls, custom module deletion, and Manager startup readiness"
+    },
+    {
+      "version": "v0.155 2609300241",
       "published": "2026-09-30",
       "publishedAt": "2026-09-30T01:58:47-04:00",
       "summary": "Overview weather: show rolling 24-hour rainfall collector and remove Wind label"

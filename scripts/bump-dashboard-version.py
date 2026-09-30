@@ -38,7 +38,9 @@ def parse_data(path: Path) -> dict[str, object]:
 
 
 def next_version(value: object) -> str:
-    match = re.fullmatch(r"v(\d+)\.(\d+)", str(value))
+    # A release may append a timestamp to the visible version (for example
+    # `v0.155 2609300241`). Increment the semantic version portion only.
+    match = re.fullmatch(r"v(\d+)\.(\d+)(?:\s+\d{10})?", str(value))
     if not match:
         raise ValueError(f"current version {value!r} must look like v0.41")
     return f"v{match.group(1)}.{int(match.group(2)) + 1:02d}"

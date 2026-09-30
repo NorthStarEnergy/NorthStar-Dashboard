@@ -1,3 +1,5 @@
+- 2026-09-30: NorthStar v0.156 — large-area Event Log with dashboard-only alarm controls, custom-module deletion, Manager readiness improvements, and timestamp-tolerant versioning. See [report](packets/2026-09-30-event-log-v0156.md).
+
 - 2026-09-28: Station schematic builder foundation — equipment metadata, durable SCADA bindings, read-only display, dynamic measurements, reusable templates and editing tools. See [report](packets/2026-09-28-station-schematic-builder.md).
 
 - 2026-09-28: Advanced module asset editor v0.126 — individual geometry and styling, custom module builder, live bindings, undo/redo and saved reset. See [report](packets/2026-09-28-module-asset-editor.md). Local implementation; Git publication pending separation from concurrent changes.

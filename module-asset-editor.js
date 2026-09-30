@@ -344,6 +344,8 @@
     $('[name="image"]',panel).value=rec.src || '';
     $('[data-action="duplicate"]',panel).disabled=!selected.custom;
     $('[data-action="delete"]',panel).disabled=!selected.custom;
+    const moduleId=selected.root.dataset.nsModule;
+    $('[data-action="delete-module"]',panel).hidden=!moduleId || !window.NorthstarModules?.state?.modules?.[moduleId]?.custom;
     $('[data-action="parent"]',panel).disabled=selected.custom || node.parentElement===selected.root;
     if(selected.custom && rec.kind==='data')sources(rec.source);
     $('[data-live-note]',panel).textContent=selected.custom?'Custom content. Layout applies to this presentation.':'Source content stays live. Change its appearance here; use module settings to edit built-in labels.';
@@ -427,7 +429,7 @@
       <div class="ns-designer-grid">${[['x','X offset'],['y','Y offset'],['w','Width'],['h','Height']].map(([k,label])=>`<label>${label}<input type="number" name="${k}" step="1" min="${NUMBERS[k][0]}" max="${NUMBERS[k][1]}"></label>`).join('')}</div>
       <div data-custom-fields><label>Text / label<textarea name="content" rows="2" maxlength="4000"></textarea></label><label data-source-field>Live source<select name="source"></select></label><label data-image-field>Image URL<input name="image" placeholder="https://… or /image.png"></label></div>
       <div class="ns-designer-grid"><label>Text size<input name="fontSize" type="number" min="6" max="200"></label><label>Weight<select name="fontWeight"><option value="400">Regular</option><option value="700">Bold</option></select></label><label>Text color<span class="ns-color-row"><input type="color" data-color-picker="color" aria-label="Choose text color"><input name="color" placeholder="#ffffff"></span></label><label>Background<span class="ns-color-row"><input type="color" data-color-picker="background" aria-label="Choose background color"><input name="background" placeholder="transparent"></span></label><label>Font<select name="fontFamily"><option value="system-ui">System</option><option value="Arial">Arial</option><option value="Georgia">Georgia</option><option value="monospace">Monospace</option></select></label><label>Style<select name="fontStyle"><option value="normal">Normal</option><option value="italic">Italic</option></select></label><label>Align<select name="textAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label><label>Line spacing<input name="lineHeight" type="number" min="0.5" max="5" step="0.1"></label><label>Corner radius<input name="radius" type="number" min="0" max="500"></label><label>Opacity<input name="opacity" type="number" min="0" max="1" step="0.1"></label><label>Layer<input name="z" type="number" min="-1" max="1000"></label><label class="ns-designer-check"><input name="hidden" type="checkbox">Hidden</label></div>
-      <div class="ns-designer-actions"><button type="button" data-action="duplicate">Duplicate</button><button type="button" data-action="delete">Delete custom asset</button></div><p data-live-note></p></section>
+      <div class="ns-designer-actions"><button type="button" data-action="duplicate">Duplicate</button><button type="button" data-action="delete">Delete asset</button><button type="button" data-action="delete-module" hidden>Delete custom module</button></div><p data-live-note></p></section>
       <p class="ns-designer-help">Click and drag an asset. In asset mode, drag empty module space to box-select assets; drag an asset to move it. Drag its corner handles to resize. Escape deselects.</p><p data-designer-status role="status"></p></div>`;
     document.body.append(panel);
     bindDesignerDrag();
@@ -464,6 +466,7 @@
       }
       if(action==='duplicate' && selected?.custom){remember();const a={...copy(current()),id:crypto.randomUUID()};a.x+=12;a.y+=12;record(selected.root,true).custom.push(a);apply();select(selected.root,selected.root.querySelector('[data-ns-asset="'+a.id+'"]'));persist();}
       if(action==='delete' && selected?.custom){remember();const rec=record(selected.root,true);rec.custom=rec.custom.filter(a=>a.id!==selected.key);selected=null;restoreStyles();apply();inspect();persist();}
+      if(action==='delete-module' && selected?.root?.dataset.nsModule){const id=selected.root.dataset.nsModule;if(window.NorthstarModules?.deleteCanvas(id)){selected=null;selectedMany=[];selectedModule=null;panel.dataset.root='';restoreStyles();lastRoots='';lastLayers='';apply();inspect();status('Custom module deleted.');}}
     });
     window.addEventListener('pointerdown',e=>{
       if(!active() || e.button!==0 || e.target.closest(EXCLUDE))return;
@@ -512,6 +515,10 @@
       }
       if((e.ctrlKey || e.metaKey) && ['z','y'].includes(e.key.toLowerCase())){e.preventDefault();history(e.key.toLowerCase()==='z'&&!e.shiftKey);return;}
       if(e.key==='Escape'){selected=null;selectedMany=[];selectedModule=null;inspect();draw();return;}
+      if(e.key==='Delete' || e.key==='Backspace'){
+        if(selectedMany.length){e.preventDefault();e.stopImmediatePropagation();const root=selectedMany[0].node.closest(ROOTS),rec=record(root,true);remember();selectedMany.forEach(item=>{const node=item.node,key=node.dataset.nsAsset||selector(root,node);if(node.dataset.nsAsset)rec.custom=rec.custom.filter(asset=>asset.id!==key);else{rec.assets[key] ||= {};rec.assets[key].hidden=true;}});selectedMany=[];selected=null;restoreStyles();apply();inspect();persist();status('Selected assets deleted or hidden.');return;}
+        if(selected){e.preventDefault();e.stopImmediatePropagation();const rec=record(selected.root,true);remember();if(selected.custom)rec.custom=rec.custom.filter(asset=>asset.id!==selected.key);else{rec.assets[selected.key] ||= {};rec.assets[selected.key].hidden=true;}selected=null;restoreStyles();apply();inspect();persist();status('Asset deleted or hidden.');return;}
+      }
       if(selectedModule && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
         e.preventDefault();e.stopImmediatePropagation();
         let target=selectedModule,handle=moduleHandle(target);

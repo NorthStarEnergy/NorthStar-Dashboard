@@ -697,6 +697,15 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
         full:{customOnly:true,assetCanvas:true},compact:{customOnly:true,assetCanvas:true}};
       save();discover();renderCatalog();openModule(id);return registry.get(id);
     };
+    const deleteCanvas = id => {
+      const meta=state.modules[id];if(!meta?.custom || !registry.has(id))return false;
+      const module=registry.get(id),owner=ownerSection(meta.section),section=sectionState(owner);
+      const assetKey='northstarAssetEditorV1';let assets={};try{assets=JSON.parse(localStorage.getItem(assetKey)||'{}')||{};}catch{}
+      if(assets.roots){delete assets.roots['full:'+id+':'];delete assets.roots['compact:'+id+':'];try{localStorage.setItem(assetKey,JSON.stringify(assets));}catch{}}
+      delete state.modules[id];
+      section.detached=(section.detached||[]).filter(value=>value!==id);if(section.boxes)delete section.boxes[id];
+      module.el.remove();registry.delete(id);save();discover();renderCatalog();return true;
+    };
     const movementHandle = el => {
       const m=registry.get(el.dataset.nsModule);
       if(!m || m.el!==el || !el.classList.contains('ns-module-window'))return null;
@@ -721,7 +730,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
       }
       save();return true;
     };
-    window.NorthstarModules={open:openModule,popOut:popOutModule,edit:openEditor,refresh:schedule,registry,state,createCanvas,movementHandle,fitSize};
+    window.NorthstarModules={open:openModule,popOut:popOutModule,edit:openEditor,refresh:schedule,registry,state,createCanvas,deleteCanvas,movementHandle,fitSize};
     const restoreSection=()=>{
       const id=location.hash.slice(1);
       const button=$$('#sideNav [data-tab]').find(b=>b.dataset.tab===ownerSection(id));
