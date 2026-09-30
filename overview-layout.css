@@ -28,6 +28,13 @@ body main #weatherStrip .station-title strong {font-size:calc(14px * var(--ns-fo
 body main #weatherStrip .weather-current b {font-size:calc(28px * var(--ns-font-scale, 1))!important;}
 body main #weatherStrip :is(.weather-extra-line,.weather-current span) {font-size:calc(12px * var(--ns-font-scale, 1))!important; line-height:1.4!important;}
 body main #weatherStrip .details-btn {width:24px!important;height:24px!important;font-size:calc(14px * var(--ns-font-scale, 1))!important;}
+body main #weatherStrip>.weather-card>.weather-wind{font-size:0!important}
+body main #weatherStrip>.weather-card>.weather-rain-collector{position:relative;display:grid;justify-items:center;align-content:end;gap:1px;width:38px;height:27px;margin:3px auto 0;overflow:hidden;color:#a9dcff}
+body main #weatherStrip>.weather-card>.weather-rain-collector:before{content:"";position:absolute;inset:8px 1px 0;border-radius:50% 50% 2px 2px;background:linear-gradient(180deg,#7ac8ff42,#60b9f333);box-shadow:0 0 9px #60b9f366}
+body main #weatherStrip .weather-rain-gauge{position:relative;display:grid;place-items:center;width:18px;height:15px;border:1px solid #83caff;border-top:0;border-radius:0 0 7px 7px;background:#82c9ff20;box-shadow:0 0 6px #62b7ef66}
+body main #weatherStrip .weather-rain-gauge i{position:absolute;inset:auto 1px 1px;height:35%;border-radius:0 0 5px 5px;background:#75caff88}
+body main #weatherStrip .weather-rain-gauge b{z-index:1;font:9px/1 Arial,sans-serif}
+body main #weatherStrip .weather-rain-collector>strong{z-index:1;font:700 8px/1 Arial,sans-serif;white-space:nowrap}
 body main #weatherStrip .weather-card:focus-within .periods {display:grid!important;}
 body main .page-header > #dispatchClient {order:0!important;flex:0 1 360px!important;min-height:0!important;padding:12px!important;align-self:flex-start!important;}
 body main .page-header > #marketTopTiles {

@@ -106,6 +106,7 @@
     return {key,body,footer:freshness(key)};
   }
   function present(m,el,p){
+    if(window.NORTHSTAR_DEMO_HOME && el.id==='overviewFieldTracker')return;
     if(el.id==='overviewGeneratingStations'){
       el.classList.remove('ov-managed');
       el.querySelector(':scope > .ov-summary')?.remove();

@@ -195,7 +195,7 @@
     }
     function paintAlarms(){
       const list=events.querySelector('.ns-status-alarms');if(!list)return;
-      const visible=alarmRows.filter(matchesFilter).slice(0,12);
+      const visible=alarmRows.filter(matchesFilter).slice(0,window.NORTHSTAR_DEMO_HOME?3:12);
       list.innerHTML=visible.map(e=>{
         const open=unacked(e);
         const href=`event-detail.html?id=${encodeURIComponent(e.eventId)}`;
@@ -343,7 +343,7 @@
       const content={
         dispatch:`<div class="ns-status-title-row"><b class="ns-status-title">Dispatch · APIROQ</b>${activeOr?`<strong class="ns-dispatch-alert" aria-live="polite">OR ACTIVE · ${activeOr.product}</strong>`:''}</div><div class="ns-status-metrics ns-status-metrics-two ns-dispatch-metrics"><span><small>Dispatch</small><strong>${num(d.dispatchMw)}</strong></span><span><small>Output</small><strong>${num(d.outputMw)}</strong></span></div><div class="ns-or-grid" aria-label="Operating reserve status">${orItems.map(item=>`<span class="ns-or-item ns-or-${item.state}"><small>${item.product}</small><strong>${item.text}</strong></span>`).join('')}</div>`,
         markets:`<div class="ns-market-grid">${['IESO','APIROQ'].map(code=>marketNode(code,market.nodes?.[code],market)).join('')}</div>`,
-        crew:`<div class="ns-status-title-row"><b class="ns-status-title">Active Workers - ${active===null?'—/—':`${staffCheckedIn}/${active.length}`}</b><small role="status">${esc(crewSaveState)}</small></div><div class="ns-crew-sites${crewEditing()?' is-editing':''}" style="height:${Math.max(192,...Object.values(crewPositions).map(p=>p.y+32))}px" aria-label="WORKERS ON-SITE check-in status">${crewMarkup(active)}</div>`
+        crew:window.NORTHSTAR_DEMO_HOME?`<button type="button" class="demo-worker-status" data-demo-field-status><span>Worker Status</span><strong>${active===null?'— / —':`${staffCheckedIn} / ${active.length}`}</strong><small>Open full field status →</small></button>`:`<div class="ns-status-title-row"><b class="ns-status-title">Active Workers - ${active===null?'—/—':`${staffCheckedIn}/${active.length}`}</b><small role="status">${esc(crewSaveState)}</small></div><div class="ns-crew-sites${crewEditing()?' is-editing':''}" style="height:${Math.max(192,...Object.values(crewPositions).map(p=>p.y+32))}px" aria-label="WORKERS ON-SITE check-in status">${crewMarkup(active)}</div>`
       };
       for(const [key,value] of Object.entries(content)){const el=bar.querySelector(`[data-status=${key}] .ns-status-content`);if(el.dataset.markup!==value){el.innerHTML=value;el.dataset.markup=value;}}
       dispatchEl.classList.toggle('ns-or-active',Boolean(activeOr));

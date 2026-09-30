@@ -2,7 +2,7 @@
   'use strict';
   document.addEventListener('DOMContentLoaded',function(){
     const obsolete=document.querySelector('#eventsCard');
-    if(obsolete)obsolete.remove();
+    if(obsolete&&!window.NORTHSTAR_DEMO_HOME)obsolete.remove();
     const bar=document.querySelector('#alarmBar');
     if(!bar)return;
     bar.className='alarm-bar alarm-indicator-bar';

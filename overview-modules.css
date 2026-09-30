@@ -76,6 +76,13 @@ html body.overview-canvas main #weatherStrip>.ns-weather-original>.weather-curre
 html body.overview-canvas main #weatherStrip>.ns-weather-original>.weather-current span{display:block!important;margin:0!important;padding:0!important;font:600 calc(9px * var(--ns-font-scale, 1))/1.1 Arial,sans-serif!important;letter-spacing:.2px!important;text-transform:uppercase!important;color:var(--muted,#82929d)!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:100%!important}
 html body.overview-canvas main #weatherStrip>.ns-weather-original>:is(.weather-extra-line){display:block!important;margin:2px 0 0!important;padding:0!important;font:600 calc(9px * var(--ns-font-scale, 1))/1.1 Arial,sans-serif!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:100%!important}
 html body.overview-canvas main #weatherStrip>.ns-weather-original>.weather-extra-line.weather-wind{display:block!important;white-space:normal!important;overflow:visible!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original>.weather-wind{font-size:0!important}
+html body.overview-canvas main #weatherStrip>.ns-weather-original>.weather-rain-collector{position:relative;display:grid;justify-items:center;align-content:end;gap:1px;width:38px;height:27px;margin:3px auto 0;overflow:hidden;color:#a9dcff}
+html body.overview-canvas main #weatherStrip>.ns-weather-original>.weather-rain-collector:before{content:"";position:absolute;inset:8px 1px 0;border-radius:50% 50% 2px 2px;background:linear-gradient(180deg,#7ac8ff42,#60b9f333);box-shadow:0 0 9px #60b9f366}
+html body.overview-canvas main #weatherStrip .weather-rain-gauge{position:relative;display:grid;place-items:center;width:18px;height:15px;border:1px solid #83caff;border-top:0;border-radius:0 0 7px 7px;background:#82c9ff20;box-shadow:0 0 6px #62b7ef66}
+html body.overview-canvas main #weatherStrip .weather-rain-gauge i{position:absolute;inset:auto 1px 1px;height:35%;border-radius:0 0 5px 5px;background:#75caff88}
+html body.overview-canvas main #weatherStrip .weather-rain-gauge b{z-index:1;font:9px/1 Arial,sans-serif}
+html body.overview-canvas main #weatherStrip .weather-rain-collector>strong{z-index:1;font:700 8px/1 Arial,sans-serif;white-space:nowrap}
 html body.overview-canvas main #weatherStrip>.ns-weather-original>:is(.weather-extra-line):has(.precip-dot){display:block!important}
 
 html body.overview-canvas main #weatherStrip>.ns-weather-original>.periods{display:none!important}

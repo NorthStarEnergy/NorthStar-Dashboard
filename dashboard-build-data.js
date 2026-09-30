@@ -3,12 +3,36 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.151",
-    "published": "2026-09-29",
-    "publishedAt": "2026-09-29T01:58:22-04:00",
-    "summary": "Add Games: chess, checkers, Go, poker, pool practice and Euchre"
+    "version": "v0.155",
+    "published": "2026-09-30",
+    "publishedAt": "2026-09-30T01:58:47-04:00",
+    "summary": "Overview weather: show rolling 24-hour rainfall collector and remove Wind label"
   },
   "history": [
+    {
+      "version": "v0.155",
+      "published": "2026-09-30",
+      "publishedAt": "2026-09-30T01:58:47-04:00",
+      "summary": "Overview weather: show rolling 24-hour rainfall collector and remove Wind label"
+    },
+    {
+      "version": "v0.154",
+      "published": "2026-09-30",
+      "publishedAt": "2026-09-30T01:48:59-04:00",
+      "summary": "Restore original Overview and fixed dashboard as main; move new demo design into Development"
+    },
+    {
+      "version": "v0.153",
+      "published": "2026-09-30",
+      "publishedAt": "2026-09-30T01:46:11-04:00",
+      "summary": "Build demo Overview with compact fixed status bar, field tracker, weather, stations, operator log and market trends"
+    },
+    {
+      "version": "v0.152",
+      "published": "2026-09-30",
+      "publishedAt": "2026-09-30T01:11:52-04:00",
+      "summary": "Preserve Overview and fixed dashboard under Development; prepare a blank demo Overview"
+    },
     {
       "version": "v0.151",
       "published": "2026-09-29",

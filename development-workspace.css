@@ -1,0 +1,15 @@
+#nsDevelopmentFolder { margin:8px 0; color:var(--text,#dce8ed); }
+#nsDevelopmentFolder summary { padding:10px 12px; cursor:pointer; font-weight:600; }
+#nsDevelopmentFolder a,#nsDevelopmentFolder button { display:block; box-sizing:border-box; width:100%; padding:9px 12px 9px 28px; color:inherit; text-align:left; text-decoration:none; font:inherit; border:0; background:transparent; cursor:pointer; }
+#nsDevelopmentFolder a:hover,#nsDevelopmentFolder a[aria-current=page] { background:#23404e; }
+#nsDevelopmentFolder [data-development-export] { font-size:11px; opacity:.8; }
+#nsDemoOverview { display:none; padding:24px; }
+html[data-ns-development=demo] .page-header,
+html[data-ns-development=demo] #weatherStrip,
+html[data-ns-development=demo] #marketTopTiles,
+html[data-ns-development-fixed=true] .page-header,
+html[data-ns-development-fixed=true] #weatherStrip,
+html[data-ns-development-fixed=true] #marketTopTiles,
+html[data-ns-development-fixed=true] #overview { display:none!important; }
+
+html[data-ns-development=demo][data-ns-development-fixed=true] body main #overview.active{display:none!important}

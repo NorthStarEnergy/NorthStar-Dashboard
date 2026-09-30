@@ -74,6 +74,8 @@ def refresh_release_asset_urls(root: Path, version: str) -> None:
         "module-workspace.js", "module-workspace.css", "dashboard-polish.css",
         "module-asset-editor.js", "module-asset-editor.css",
         "dashboard-chrome.js", "web-toolbar.js",
+        "development-workspace.js", "development-workspace.css",
+        "demo-overview.js", "demo-overview.css", "alarm-indicator.js",
     )
     for asset in assets:
         pattern = rf"({re.escape(asset)}\?v=)[^\"'\s<>]+"

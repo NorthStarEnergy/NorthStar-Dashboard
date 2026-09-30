@@ -73,11 +73,11 @@
     return '\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\r\n');
   }
   const states = new Map(), controllers = new WeakMap();
-  function mount(host, data, primary, refresh) {
+  function mount(host, data, primary, refresh, options = {}) {
     const existing = controllers.get(host);
     if (existing) {existing.update(data,primary);return;}
     const identity = host.closest('[id]')?.id || primary;
-    let state = states.get(identity) || {primary,compare:[],mode:'price',kinds:['rt','da','forward'],range:'all',from:'',to:'',interval:'raw',rolling:'0'};
+    let state = states.get(identity) || {primary,compare:options.compare || [],mode:'price',kinds:['rt','da','forward'],range:'all',from:'',to:'',interval:'raw',rolling:'0'};
     state.primary = primary; states.set(identity,state);
     let model, cursor = null, pinned = false, points = [], plot;
     host.classList.add('market-trends');
@@ -122,7 +122,7 @@
     function paint() {
       const width = Math.floor(canvas.getBoundingClientRect().width);
       if (width<1) return;
-      const height = width<500?280:350, dpr = window.devicePixelRatio||1;
+      const height = options.compact?190:width<500?280:350, dpr = window.devicePixelRatio||1;
       canvas.width=width*dpr;canvas.height=height*dpr;canvas.style.height=height+'px';
       const c=canvas.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);
       const theme=getComputedStyle(host), muted=theme.getPropertyValue('--muted').trim()||'#9eafb9';
@@ -147,6 +147,11 @@
         s.points.forEach(p=>{c.beginPath();c.arc(x(p.time),y(p.value),2,0,Math.PI*2);c.fill();});
       });
       if(cursor!=null){const cx=x(points[cursor]);c.strokeStyle=muted;c.setLineDash([3,3]);c.beginPath();c.moveTo(cx,top);c.lineTo(cx,bottom);c.stroke();c.setLineDash([]);}
+      const rtTimes=model.series.filter(s=>s.id.endsWith(':rt')).flatMap(s=>s.points.map(p=>p.time));
+      const boundary = rtTimes.length?Math.max(...rtTimes):NaN;
+      if(options.showBoundary && Number.isFinite(boundary) && boundary>=start && boundary<=end){
+        const bx=x(boundary);c.strokeStyle=muted;c.setLineDash([5,4]);c.beginPath();c.moveTo(bx,top);c.lineTo(bx,bottom);c.stroke();c.setLineDash([]);c.textAlign=bx>(left+right)/2?'right':'left';c.fillStyle=muted;c.fillText('Latest RT | Forward DA',bx,top-7);
+      }
       canvas.setAttribute('aria-label',`Market trends: ${model.series.length} series, ${points.length} timestamps. ${number(minV)} to ${number(maxV)} ${state.mode==='demand'?'megawatts':'dollars per MWh'}. Arrow keys inspect, Enter pins, Escape releases.`);
     }
     function render() {

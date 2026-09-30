@@ -1016,14 +1016,14 @@
   function init() {
     injectStyle();
     seedSavedLayout();
-    const active = ZONES.filter(zone => zone.canvas || zone.id === 'staff' || !window.NORTHSTAR_MODULE_WORKSPACE).map(zone => zone.canvas ? setupCanvas() : setupZone(zone)).filter(Boolean);
+    const active = ZONES.filter(zone => !(zone.canvas && (window.NORTHSTAR_DEMO_HOME || window.NORTHSTAR_DEVELOPMENT_VIEW === 'fixed')) && (zone.canvas || zone.id === 'staff' || !window.NORTHSTAR_MODULE_WORKSPACE)).map(zone => zone.canvas ? setupCanvas() : setupZone(zone)).filter(Boolean);
     window.NorthstarModuleGeometry={fit(root,box){
       const owner=active.find(layout=>layout.fit && (layout.container===root.parentElement || layout.zone?.id==='overview' && root.dataset.canvasModule));
       return owner?.fit(root,box) || false;
     }};
     let statusAttached = false;
     const attachStatusCanvas = () => {
-      if (statusAttached) return;
+      if (statusAttached || window.NORTHSTAR_DEMO_HOME) return;
       const status = setupStatusCanvas();
       if (status) { active.push(status); statusAttached = true; }
     };

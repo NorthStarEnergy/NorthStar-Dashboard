@@ -17,7 +17,7 @@
     if (!overviewSummary || !overviewWorkers) return;
     overviewSummary.innerHTML = `<div><span>ACTIVE</span><b>${active.length}</b></div><div><span>GPS</span><b>${gps}/${active.length || 0}</b></div><div><span>HELP</span><b class="${help ? 'alert' : ''}">${help}</b></div><div><span>OVERDUE</span><b class="${overdue ? 'alert' : ''}">${overdue}</b></div>`;
     const ordered = [...active].sort((a, b) => Number(Boolean(b.needsHelp)) - Number(Boolean(a.needsHelp)) || Number(Boolean(b.overdue)) - Number(Boolean(a.overdue)));
-    overviewWorkers.innerHTML = ordered.length ? ordered.slice(0, 6).map(row => {
+    overviewWorkers.innerHTML = ordered.length ? (window.NORTHSTAR_DEMO_HOME ? ordered : ordered.slice(0, 6)).map(row => {
       const alert = row.needsHelp || row.overdue;
       const state = row.needsHelp ? 'NEEDS HELP' : row.overdue ? 'OVERDUE' : String(row.status || 'ACTIVE').toUpperCase();
       return `<article class="overview-tracker-worker ${alert ? 'alert' : ''}"><strong>${esc(row.name)}</strong><em>${state}</em><small>${esc(row.site)} · LAST ${time(row.lastHeard)} · ${location(row)}</small></article>`;
