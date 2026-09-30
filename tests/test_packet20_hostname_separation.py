@@ -164,6 +164,11 @@ class HostnameSeparationTest(unittest.TestCase):
                 "/northstar-clean.html",
                 "/index.html",
                 "/operator-login.html",
+                "/operator-mobile.html",
+                "/operator-mobile.js",
+                "/operator-mobile.css",
+                "/operator-mobile.webmanifest",
+                "/operator-mobile-sw.js",
                 "/event-detail.html",
                 "/event-detail.js",
                 "/event-detail.css",
@@ -239,6 +244,11 @@ class HostnameSeparationTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(self.status("GET", path), 200)
 
+    def test_the_operator_companion_never_intercepts_network_requests(self) -> None:
+        """The operator PWA has no offline cache or queued API behavior."""
+        service_worker = (ROOT / "operator-mobile-sw.js").read_text(encoding="utf-8")
+        self.assertNotRegex(service_worker, r"addEventListener\(\s*['\"]fetch")
+
     # ------------------------------------------ §3 operator routes are refused
 
     def test_operator_routes_are_refused_on_the_check_in_hostname(self) -> None:
@@ -302,13 +312,23 @@ class HostnameSeparationTest(unittest.TestCase):
         outage on screen.
         """
         cookie = self.session_cookie()
-        for path in ("/northstar-clean.html", "/module-layout.js", "/api/weather", "/api/checkins"):
+        for path in (
+            "/northstar-clean.html",
+            "/module-layout.js",
+            "/operator-mobile.html",
+            "/operator-mobile.js",
+            "/operator-mobile.css",
+            "/operator-mobile.webmanifest",
+            "/operator-mobile-sw.js",
+            "/api/weather",
+            "/api/checkins",
+        ):
             with self.subTest(path=path):
                 self.assertEqual(self.status("GET", path, host=OPS_HOST, cookie=cookie), 200)
 
         # With the gate in Access mode the same paths answer to the edge header.
         self.use_gate("access")
-        for path in ("/northstar-clean.html", "/api/weather", "/api/checkins"):
+        for path in ("/northstar-clean.html", "/operator-mobile.html", "/api/weather", "/api/checkins"):
             with self.subTest(mode="access", path=path):
                 self.assertEqual(self.status("GET", path, host=OPS_HOST, identity="jwt"), 200)
 

@@ -46,20 +46,20 @@
 
 .logbook-format-note {
   color: var(--muted);
-  font: 8px/1.4 monospace;
+  font: calc(8px * var(--ns-font-scale, 1))/1.4 monospace;
   margin-top: 5px;
 }
 
 .event-rich-details {
   color: #b4c1c8;
-  font: 10px/1.45 Arial, sans-serif;
+  font: calc(10px * var(--ns-font-scale, 1))/1.45 Arial, sans-serif;
   margin-top: 4px;
 }
 
 .event-rich-meta,
 .event-rich-attachments {
   color: var(--muted);
-  font: 8px/1.45 monospace;
+  font: calc(8px * var(--ns-font-scale, 1))/1.45 monospace;
   margin-bottom: 7px;
   white-space: pre-line;
 }

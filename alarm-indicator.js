@@ -18,6 +18,7 @@
       const marketOpen=market.filter(function(item){return item&&item.state!=='cleared'});
       const staffOpen=staff.filter(function(item){return item&&item.needsHelp&&item.helpState!=='resolved'});
       const total=marketOpen.length+staffOpen.length;
+      window.dispatchEvent(new CustomEvent('northstar:alarms-updated',{detail:{count:total}}));
       const feeds=window.NorthstarOverview?.feeds;
       const known=!feeds || ['alarms','staff'].every(k=>feeds[k]?.checked && !feeds[k].error && Date.now()-feeds[k].checked<120000);
       const unacknowledged=marketOpen.filter(function(item){return item.state==='active'}).length+

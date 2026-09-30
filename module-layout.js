@@ -11,12 +11,16 @@
  * appearance. Reordering achieves the same guarantees on top of what is there.
  */
 (() => {
+  const moduleNudges = new WeakMap();
   // Section windows and Overview share this file as their geometry owner.
   window.NorthstarWindowLayout = {
+    nudge(handle, dx, dy) {
+      return moduleNudges.get(handle)?.(dx, dy) || false;
+    },
     resize(box, corner, dx, dy, min = [1, 1]) {
       const next = {...box}, west = corner.includes('w'), north = corner.includes('n');
-      next.w = Math.max(min[0], Math.min(west ? box.x + box.w : Infinity, box.w + (west ? -dx : dx)));
-      next.h = Math.max(min[1], Math.min(north ? box.y + box.h : Infinity, box.h + (north ? -dy : dy)));
+      if (/[ew]/.test(corner)) next.w = Math.max(min[0], Math.min(west ? box.x + box.w : Infinity, box.w + (west ? -dx : dx)));
+      if (/[ns]/.test(corner)) next.h = Math.max(min[1], Math.min(north ? box.y + box.h : Infinity, box.h + (north ? -dy : dy)));
       if (west) next.x += box.w - next.w;
       if (north) next.y += box.h - next.h;
       return next;
@@ -25,6 +29,10 @@
       const change = (box, dx, dy) => corner === 'move'
         ? {...box, x: Math.max(0, box.x + dx), y: Math.max(0, box.y + dy)}
         : window.NorthstarWindowLayout.resize(box, corner, dx, dy);
+      if (corner === 'move') moduleNudges.set(handle, (dx, dy) => {
+        if (!enabled()) return false;
+        set(change(get(), dx, dy)); commit(); return true;
+      });
       handle.addEventListener('keydown', event => {
         if (!enabled() || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
         event.preventDefault(); event.stopPropagation();
@@ -44,22 +52,47 @@
           ['pointerup','pointercancel','lostpointercapture'].forEach(type => handle.removeEventListener(type, finish));
           handle.removeEventListener('pointermove', move);
           if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
-          commit();
+          commit(e);
         };
         handle.addEventListener('pointermove', move);
         ['pointerup','pointercancel','lostpointercapture'].forEach(type => handle.addEventListener(type, finish));
       });
     }
   };
+  // Asset geometry shares this owner with module geometry. Built-in assets keep
+  // their feed-owned DOM and flow position; custom assets use a module canvas.
+  window.NorthstarAssetLayout = {
+    box(node, record = {}) {
+      const css = getComputedStyle(node);
+      return {x: Number(record.x) || 0, y: Number(record.y) || 0,
+        w: Number(record.w) || parseFloat(css.width) || node.getBoundingClientRect().width,
+        h: Number(record.h) || parseFloat(css.height) || node.getBoundingClientRect().height};
+    },
+    change(box, corner, dx, dy, snap = 1) {
+      const round = value => Math.round(value / snap) * snap;
+      if (corner === 'move') return {...box, x: round(box.x + dx), y: round(box.y + dy)};
+      const next = window.NorthstarWindowLayout.resize(box, corner, round(dx), round(dy), [8, 8]);
+      return {...next, w: Math.max(8, next.w), h: Math.max(8, next.h)};
+    },
+    styles(record, custom = false, node) {
+      const styles = {};
+      if (custom) Object.assign(styles, {position:'absolute', left:(record.x || 0)+'px', top:(record.y || 0)+'px', margin:'0'});
+      else if ('x' in record || 'y' in record) styles.translate = `${record.x || 0}px ${record.y || 0}px`;
+      if ('w' in record) Object.assign(styles, {width:record.w+'px', 'min-width':'0', 'max-width':'none', 'box-sizing':'border-box', 'flex-shrink':'0'});
+      if ('h' in record) Object.assign(styles, {height:record.h+'px', 'min-height':'0', 'max-height':'none', 'box-sizing':'border-box'});
+      if (node && ('w' in record || 'h' in record || 'x' in record || 'y' in record) && getComputedStyle(node).display === 'inline') styles.display = 'inline-block';
+      return styles;
+    }
+  };
   const ZONES = [
     { id: 'overview', canvas: true },
-    { id: 'staff', container: '#staffGroups', item: '.staff-group', step: [20, 20], min: [1, 1] },
-    { id: 'market',  container: '#nodeCards',       item: '.node-card',    step: [20, 20], min: [1, 1] },
+    { id: 'staff', container: '#staffGroups', item: '.staff-group', step: [5, 5], min: [240, 100], resizeOnly: true },
+    { id: 'market',  container: '#nodeCards',       item: '.node-card',    step: [5, 5], min: [1, 1] },
     // Weather-tab station tiles can be resized independently.
-    { id: 'weather', container: '#weatherGridFull', item: '.weather-card', step: [10, 10], min: [1, 1], resize: true, sizesInEditOnly: true },
+    { id: 'weather', container: '#weatherGridFull', item: '.weather-card', step: [5, 5], min: [180, 180], resize: true, sizesInEditOnly: true },
     // The header strip renders the same station cards as the Weather tab, so it
     // keeps its own zone id — reordering the strip must not reorder the tab.
-    { id: 'switching', container: '#switchingGrid', item: '.switching-module', step: [20, 20], min: [1, 1] },
+    { id: 'switching', container: '#switchingGrid', item: '.switching-module', step: [5, 5], min: [1, 1] },
   ];
 
   const STORE = 'northstarModuleLayout';
@@ -67,6 +100,7 @@
   const SNAPSHOT_KEYS = [
     ['northstarOverviewProfilesV2', 'northstarOverviewProfilesV2Saved'],
     ['northstarCanvasLayoutV1', 'northstarCanvasLayoutV1Saved'],
+    ['northstarStatusLayoutV1', 'northstarStatusLayoutV1Saved'],
     [STORE, SAVED_STORE],
     ['northstarTabOrder', 'northstarTabOrderSaved'],
     ['northstarClosedOverviewModules', 'northstarClosedOverviewModulesSaved'],
@@ -127,7 +161,7 @@
   // no natural key, in which case its saved size follows the slot, not the card.
   const keyOf = (el, index) => el.dataset.moduleId || el.dataset.site || `#${index}`;
   const itemsOf = (zone, container) => [...container.querySelectorAll(`:scope > ${zone.item}`)];
-  const snap = (value, step, min) => Math.max(min, Math.round(value / step) * step);
+  const snap = (value, step, min) => Math.max(min, window.northstarLayoutSnapToGrid === false ? value : Math.round(value / step) * step);
   const overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
   // Overview has ONE coordinate system. Keep nodes in their source containers
@@ -136,20 +170,22 @@
     const container = document.querySelector('main');
     if (!container) return null;
     const storageKey = 'northstarCanvasLayoutV1';
-    const WEATHER_HEADER_LAYOUT_VERSION = 2;
-    const WEATHER_DENSITY_VERSION = 2;
-    const WEATHER_CARD = { width: 88, height: 118, left: 16, top: 12, gap: 16, scale: .75 };
+    const WEATHER_HEADER_LAYOUT_VERSION = 3;
+    const WEATHER_DENSITY_VERSION = 3;
+    const WEATHER_CARD = { width: 88, height: 165, left: 16, top: 12, gap: 16, scale: 1 };
     const groups = [
       ['weather', '#weatherStrip > .weather-card', [WEATHER_CARD.width, WEATHER_CARD.height], [1, 1]],
       ['dispatch', '#dispatchClient', [360, 96], [200, 88]],
       ['market', '#marketTopTiles > .node-card, #marketTopTiles > .ontario-market', [340, 230], [200, 88]],
-      ['overview', '#overviewModules > [data-overview-module]:not(#overviewStaff):not(#eventsCard)', [480, 300], [240, 150]],
+      ['stations', '#overviewGeneratingStations .gs-card', [150, 200], [130, 180]],
+      ['overview', '#overviewModules > [data-overview-module]:not(#eventsCard):not(#overviewGeneratingStations)', [480, 300], [240, 150]],
     ];
     const originals = new WeakMap(), bound = new WeakSet();
     let positions = {}, frame = 0, gesture = false, topLayer = 30, restoring = false, activeSignature = '';
     let statusReady = !window.NORTHSTAR_PERSISTENT_STATUS || document.body.classList.contains('ns-has-status');
     const profileKey = 'northstarOverviewProfilesV2';
-    let profiles = {}, profile = '', lastWidth = 0, automatic = true, snapping = false, editSnapshot = null, weatherSizeApplied = false, weatherDensityApplied = false;
+    let profiles = {}, profile = '', lastWidth = 0, automatic = true, snapping = window.northstarLayoutSnapToGrid !== false, editSnapshot = null, weatherSizeApplied = false, weatherDensityApplied = false;
+    window.addEventListener('northstar:layout-snap-change', event => { snapping = event.detail?.enabled !== false; renderGuides(); });
     const guideLayer = document.createElement('div');
     guideLayer.className = 'canvas-alignment-guides';
     guideLayer.setAttribute('aria-hidden', 'true');
@@ -163,9 +199,18 @@
     positions = Object.fromEntries(Object.entries(positions).filter(([key,p]) => key.startsWith('canvas:') && valid(p)));
     // Keep the old canvas intact as a selectable arrangement, never delete it.
     if (!profiles.previous && Object.keys(positions).length) profiles.previous = JSON.parse(JSON.stringify(positions));
-    const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].filter(el=>!document.body.classList.contains('ns-has-status') || !el.matches('#dispatchClient,#marketTopTiles>*,#overviewEventsSummary,#overviewFieldTracker')).map(el => ({
-      el, size, min:[1,1], key: 'canvas:' + group + ':' + (el.id || el.dataset.moduleId || el.dataset.site || group)
-    })));
+    const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].filter(el=>!document.body.classList.contains('ns-has-status') || !el.matches('#dispatchClient,#marketTopTiles>*,#overviewEventsSummary,#overviewFieldTracker')).map(el => {
+      const staffPanel = el.id === 'overviewStaff';
+      const fieldTracker = el.id === 'overviewFieldTracker';
+      return {el, size: staffPanel ? [560, 320] : fieldTracker ? [280, 180] : size, min: fieldTracker ? [220, 140] : staffPanel ? [300, 180] : [1, 1], key: 'canvas:' + group + ':' + (el.id || el.dataset.moduleId || el.dataset.site || group)};
+    }));
+    const overviewModuleId = el => el.id || el.dataset.moduleId || el.dataset.site;
+    const closedOverview = () => readPreference('northstarClosedOverviewModules');
+    const restoreRemoved = document.createElement('button');
+    restoreRemoved.type = 'button';
+    restoreRemoved.textContent = 'Restore removed';
+    restoreRemoved.hidden = true;
+    function updateRestoreRemoved() { restoreRemoved.hidden = !closedOverview().length; }
     const enabled = () => document.querySelector('#overview')?.classList.contains('active');
     function persist() {
       if(restoring || document.documentElement.dataset.nsStyles === 'loading' || document.documentElement.dataset.nsStyles === 'failed')return;
@@ -210,7 +255,7 @@
       });
       return { x, y };
     }
-    function closest(value, targets, threshold = 8) {
+    function closest(value, targets, threshold = 4) {
       let best = value, distance = threshold + 1;
       targets.forEach(target => { const next = Math.abs(value - target); if (next < distance) { best = target; distance = next; } });
       return best;
@@ -272,6 +317,18 @@
       const el = entry.el;
       if (bound.has(el)) return;
       bound.add(el);
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'canvas-remove-module'; remove.textContent = '×';
+      remove.setAttribute('aria-label', 'Remove ' + entry.key.split(':').slice(1).join(' ') + ' from Overview');
+      remove.title = 'Remove from Overview';
+      remove.addEventListener('click', event => {
+        event.preventDefault(); event.stopPropagation();
+        const id = overviewModuleId(el); if (!id) return;
+        const closed = closedOverview(); if (!closed.includes(id)) closed.push(id);
+        try { localStorage.setItem('northstarClosedOverviewModules', JSON.stringify(closed)); } catch {}
+        el.dataset.canvasRemoved = '1'; el.hidden = true; updateRestoreRemoved(); schedule();
+      });
+      el.append(remove);
       for (const corner of ['move','se','sw','ne','nw']) {
         const resize = corner !== 'move';
         const handle = document.createElement('button');
@@ -282,7 +339,7 @@
         handle.setAttribute('aria-label', (resize ? 'Resize ' : 'Move ') + entry.key.split(':').slice(1).join(' '));
         handle.title = resize ? 'Resize · Arrow keys resize' : 'Move anywhere · Arrow keys move';
         el.append(handle);
-        const change = (dx,dy) => {
+        const change = (dx,dy,precise=false) => {
           automatic = false;
           const p = positions[entry.key];
           if (resize) {
@@ -294,7 +351,7 @@
             p.w = w; p.h = h;
           }
           else { p.x = Math.max(0,p.x + dx); p.y = Math.max(0,p.y + dy); }
-          if(snapping){
+          if(snapping && !precise){
             if(resize){
               const right=p.x+p.w,bottom=p.y+p.h;
               p.w=Math.max(entry.min[0],Math.min(corner.includes('w')?right:Infinity,p.w));p.h=Math.max(entry.min[1],Math.min(corner.includes('n')?bottom:Infinity,p.h));
@@ -309,6 +366,10 @@
           p.y=Math.max(0,p.y);
           paint(entry); bounds(); renderGuides();
         };
+        if (!resize) moduleNudges.set(handle, (dx, dy) => {
+          if (!editing() || !enabled()) return false;
+          change(dx, dy, true); persist(); return true;
+        });
         handle.addEventListener('keydown', event => {
           if (!editing() || !enabled() || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
           event.preventDefault(); event.stopPropagation();
@@ -352,26 +413,49 @@
       const weather=all.filter(e=>e.key.startsWith('canvas:weather:'));
       let y=placeWeatherHeader(next,weather,width)+gap;
       weather.forEach(entry=>used.add(entry.key));
-      const row=(list,height,weights=[],minimum=260)=>{
+      const row=(list,height,weights=[],minimum=260,maximum=Infinity)=>{
         list=list.filter(Boolean);if(!list.length)return;
         const columns=Math.max(1,Math.min(list.length,Math.floor((width+gap)/(minimum+gap))));
         for(let start=0;start<list.length;start+=columns){
           const batch=list.slice(start,start+columns),total=batch.reduce((n,e,i)=>n+(weights[i]||1),0);let x=16;
-          batch.forEach((e,i)=>{const w=Math.floor((width-gap*(batch.length-1))*(weights[i]||1)/total);next[e.key]={x,y,w,h:height};used.add(e.key);x+=w+gap;});y+=height+gap;
+          batch.forEach((e,i)=>{const w=Math.min(maximum,Math.floor((width-gap*(batch.length-1))*(weights[i]||1)/total));next[e.key]={x,y,w,h:height};used.add(e.key);x+=w+gap;});y+=height+gap;
         }
       };
       const find=id=>all.find(e=>e.el.id===id || e.el.dataset.moduleId===id);
-      row([find('overviewEventsSummary'),find('dispatchClient'),find('overviewFieldTracker'),find('IESO') || all.find(e=>e.el.classList?.contains('ontario-market')),find('APIROQ')],96,[],200);
-      row([find('overviewStaffSummary'),find('overviewGeneratingStations'),find('overviewChatSummary')],160);
+      row(all.filter(e=>e.key.startsWith('canvas:stations:')),200,[],150,150);
+      const staff=find('overviewStaff'), companions=[find('overviewGeneratingStations')].filter(Boolean);
+      const fieldTracker=find('overviewFieldTracker');
+      if(fieldTracker){next[fieldTracker.key]={x:16,y,w:280,h:180};used.add(fieldTracker.key);y+=180+gap;}
+      if(staff){
+      const staffH=320,staffW=width>=900?Math.min(width,Math.max(300,Math.round(width*.48))):width;
+        next[staff.key]={x:16,y,w:staffW,h:staffH};used.add(staff.key);
+        if(width>=900&&companions.length){
+          const sideW=Math.max(0,width-staffW-gap),sideH=Math.max(150,Math.floor((staffH-gap*(companions.length-1))/companions.length));
+          companions.forEach((entry,index)=>{next[entry.key]={x:16+staffW+gap,y:y+index*(sideH+gap),w:sideW,h:sideH};used.add(entry.key);});
+          y+=staffH+gap;
+        }else{
+          y+=staffH+gap;
+          row(companions,260);
+        }
+      }else row(companions,260);
       const rest=all.filter(e=>!used.has(e.key));
       for(let i=0;i<rest.length;i+=width<900?2:3)row(rest.slice(i,i+(width<900?2:3)),260);
       return next;
     }
     const tools=document.createElement('div');tools.id='overviewArrangementTools';
-    tools.innerHTML='<span class="ov-profile-label"></span><label><input type="checkbox" data-ov-snap aria-label="Toggle alignment guide snapping"> Alignment guides + snap</label><button type="button" data-ov-arrange>Arrange default</button><button type="button" data-ov-previous>Previous arrangement</button><button type="button" data-ov-fit>Bring into view</button><button type="button" data-ov-cancel>Cancel</button>';
+    tools.innerHTML='<span class="ov-profile-label"></span><label><input type="checkbox" data-ov-snap aria-label="Toggle alignment guide snapping"> Alignment guides + snap</label><button type="button" data-ov-grid-toggle aria-pressed="false">Hide grid lines</button><button type="button" data-ov-arrange>Arrange default</button><button type="button" data-ov-previous>Previous arrangement</button><button type="button" data-ov-fit>Bring into view</button><button type="button" data-ov-cancel>Cancel</button>';
+    tools.append(restoreRemoved);
+    restoreRemoved.addEventListener('click', () => {
+      const closed = new Set(closedOverview());
+      try { localStorage.setItem('northstarClosedOverviewModules', '[]'); } catch {}
+      document.querySelectorAll('main [data-overview-module], main [data-canvas-module]').forEach(el => {
+        if (closed.has(overviewModuleId(el))) { el.hidden = false; delete el.dataset.canvasRemoved; }
+      });
+      updateRestoreRemoved(); automatic = true; schedule();
+    });
     document.querySelector('.layout-toolbar')?.prepend(tools);
     document.querySelector('.layout-edit-toggle')?.addEventListener('click',()=>{
-      if(!editing())editSnapshot=['northstarModuleWorkspaceV1',profileKey,storageKey,STORE,'northstarTabOrder','northstarClosedOverviewModules'].map(key=>[key,localStorage.getItem(key)]);
+      if(!editing())editSnapshot=['northstarModuleWorkspaceV1',profileKey,storageKey,'northstarStatusLayoutV1',STORE,'northstarTabOrder','northstarClosedOverviewModules'].map(key=>[key,localStorage.getItem(key)]);
       setTimeout(renderGuides, 0);
     },true);
     tools.querySelector('[data-ov-cancel]')?.addEventListener('click',()=>{
@@ -380,6 +464,11 @@
       editSnapshot.forEach(([key,value])=>value===null?localStorage.removeItem(key):localStorage.setItem(key,value));location.reload();
     });
     tools.querySelector('[data-ov-snap]')?.addEventListener('change',e=>{snapping=e.target.checked;renderGuides();});
+    tools.querySelector('[data-ov-grid-toggle]')?.addEventListener('click',e=>{
+      const hidden=document.body.classList.toggle('overview-grid-hidden');
+      e.currentTarget.textContent=hidden?'Show grid lines':'Hide grid lines';
+      e.currentTarget.setAttribute('aria-pressed',String(hidden));
+    });
     tools.querySelector('[data-ov-arrange]')?.addEventListener('click',()=>{automatic=true;positions={};sync();});
     tools.querySelector('[data-ov-previous]')?.addEventListener('click',()=>{if(profiles.previous){positions=JSON.parse(JSON.stringify(profiles.previous));Object.values(positions).forEach(p=>p.y=Math.max(88,p.y));automatic=false;sync();}});
     tools.querySelector('[data-ov-fit]')?.addEventListener('click',()=>{Object.values(positions).forEach(p=>{p.w=Math.min(p.w,lastWidth);p.x=Math.max(16,Math.min(p.x,lastWidth+16-p.w));});automatic=false;sync();});
@@ -395,6 +484,12 @@
         return;
       }
       const all = entries();
+      const removed = new Set(closedOverview());
+      all.forEach(({el}) => {
+        if (removed.has(overviewModuleId(el))) { el.dataset.canvasRemoved = '1'; el.hidden = true; }
+        else if (el.dataset.canvasRemoved === '1') { el.hidden = false; delete el.dataset.canvasRemoved; }
+      });
+      updateRestoreRemoved();
       // Measure the viewport, not the canvas's manual overflow extent.
       container.style.removeProperty('min-width');
       const width = Math.max(260,container.clientWidth-48);
@@ -437,13 +532,20 @@
           const w = Math.min(entry.size[0],width), h = entry.size[1];
           let candidate;
           // Pack NEW cards once. Saved/manual placements are never pushed into a group.
-          outer: for (let y=88;;y+=20) for(let x=16;x+w<=width+16;x+=20) {
+          const startY = entry.el.id === 'overviewFieldTracker' ? Math.max(88, ...occupied.map(p=>p.y+p.h+16)) : 88;
+          outer: for (let y=startY;;y+=20) for(let x=16;x+w<=width+16;x+=20) {
             const test={x,y,w,h};
             if(!occupied.some(p=>overlaps(test,{x:p.x-8,y:p.y-8,w:p.w+16,h:p.h+16}))) {candidate=test;break outer;}
           }
           positions[entry.key]=candidate;occupied.push(candidate);
         }
         if((missing || !weatherSizeApplied || !weatherDensityApplied || reflow) && entry.key.startsWith('canvas:weather:')){positions[entry.key].w=WEATHER_CARD.width;positions[entry.key].h=WEATHER_CARD.height;}
+        if(entry.key.startsWith('canvas:stations:') && positions[entry.key].stationFormatVersion!==2){
+          const reference=positions['canvas:stations:site:calm-lake'];
+          positions[entry.key].w=Number.isFinite(reference?.w)?reference.w:100;
+          positions[entry.key].h=Number.isFinite(reference?.h)?reference.h:78;
+          positions[entry.key].stationFormatVersion=2;
+        }
         paint(entry);bind(entry);
       });
       if(!weatherSizeApplied && all.some(entry=>entry.key.startsWith('canvas:weather:'))){weatherSizeApplied=true;}
@@ -458,7 +560,181 @@
     const startAfterStatus=()=>{statusReady=true;sync();};
     if(statusReady)startAfterStatus();
     else window.addEventListener('northstar:status-ready',startAfterStatus,{once:true});
-    return {zone:{id:'overview',canvas:true},container,sync,save:persist};
+    return {zone:{id:'overview',canvas:true},container,sync,save:persist,fit(el,box){
+      const entry=entries().find(item=>item.el===el);if(!entry)return false;
+      const rect=container.getBoundingClientRect();
+      positions[entry.key]={...(positions[entry.key]||{}),...box,x:Math.max(0,box.x-rect.left),y:Math.max(0,box.y-rect.top)};persist();sync();return true;
+    }};
+  }
+
+  // The fixed top dashboard is a separate canvas: it remains pinned, but its
+  // cards and lower boundary become editable alongside the Overview.
+  function setupStatusCanvas() {
+    const bar = document.getElementById('nsStatusBar');
+    if (!bar || bar.dataset.statusCanvasReady) return null;
+    bar.dataset.statusCanvasReady = '1';
+    const storageKey = 'northstarStatusLayoutV1', MIN_HEIGHT = 1, GRID = 5;
+    const snapStatus = value => Math.round(Number(value || 0) / GRID) * GRID;
+    const profileFor = width => width >= 1500 ? 'wide' : width >= 1100 ? 'desktop' : width >= 900 ? 'laptop' : 'narrow';
+    const modules = () => [...bar.querySelectorAll(':scope > .ns-status-module')];
+    const moduleKey = el => el.dataset.status;
+    const copy = value => JSON.parse(JSON.stringify(value));
+    let state = { profiles: {} }, profile = '', draft = null, frame = 0, snapToGrid = window.northstarLayoutSnapToGrid !== false;
+    window.addEventListener('northstar:layout-snap-change', event => { snapToGrid = event.detail?.enabled !== false; });
+    try { state = JSON.parse(localStorage.getItem(storageKey) || '{}') || state; } catch {}
+    if (!state || typeof state !== 'object' || Array.isArray(state)) state = { profiles: {} };
+    if (!state.profiles || typeof state.profiles !== 'object' || Array.isArray(state.profiles)) state.profiles = {};
+
+    const valid = layout => layout && Number.isFinite(layout.height) && layout.height >= MIN_HEIGHT && layout.modules && typeof layout.modules === 'object';
+    const heightFor = value => {
+      const max = Math.max(MIN_HEIGHT, Math.round(window.innerHeight - 48));
+      return Math.max(MIN_HEIGHT, Math.min(max, Math.round(Number(value) || MIN_HEIGHT)));
+    };
+    const constrain = (key, next, height) => {
+      const width = Math.max(1, bar.clientWidth);
+      const [baseW] = key === 'events' ? [260] : [130];
+      const minW = Math.min(baseW, width), minH = Math.min(1, height);
+      const w = Math.max(minW, Math.min(width, Math.round(Number(next?.w) || minW)));
+      const h = Math.max(minH, Math.min(height, Math.round(Number(next?.h) || minH)));
+      return {
+        x: Math.max(0, Math.min(width - w, Math.round(Number(next?.x) || 0))),
+        y: Math.max(0, Math.min(height - h, Math.round(Number(next?.y) || 0))),
+        w, h,
+      };
+    };
+    const measure = () => {
+      const rect = bar.getBoundingClientRect(), height = heightFor(rect.height);
+      const layout = { height, modules: {} };
+      modules().forEach(el => {
+        const card = el.getBoundingClientRect();
+        layout.modules[moduleKey(el)] = constrain(moduleKey(el), {
+          x: card.left - rect.left,
+          y: card.top - rect.top,
+          w: card.width,
+          h: card.height,
+        }, height);
+      });
+      return layout;
+    };
+    const current = () => state.profiles[profile] || draft;
+    const ensureLayout = () => current() || (draft = measure());
+    const fit = (el,box) => {
+      const layout=ensureLayout(),rect=el.getBoundingClientRect(),barRect=bar.getBoundingClientRect(),key=moduleKey(el);
+      if(!modules().includes(el))return false;
+      layout.modules[key]=constrain(key,{...(layout.modules[key]||{x:rect.left-barRect.left,y:rect.top-barRect.top,w:rect.width,h:rect.height}),...box,x:box.x-barRect.left,y:box.y-barRect.top},layout.height);
+      draft=layout;apply(layout);return true;
+    };
+    const persist = () => { try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch {} };
+    const notify = () => window.dispatchEvent(new Event('northstar:status-layout-change'));
+    const apply = layout => {
+      if (!layout) return;
+      layout.height = heightFor(layout.height);
+      modules().forEach(el => { layout.modules[moduleKey(el)] = constrain(moduleKey(el), layout.modules[moduleKey(el)], layout.height); });
+      bar.classList.add('ns-status-layout-custom');
+      bar.style.setProperty('height', layout.height + 'px', 'important');
+      bar.style.setProperty('min-height', layout.height + 'px', 'important');
+      modules().forEach(el => {
+        const box = layout.modules[moduleKey(el)];
+        [['position', 'absolute'], ['left', box.x + 'px'], ['top', box.y + 'px'], ['width', box.w + 'px'], ['height', box.h + 'px'], ['min-width', '0'], ['min-height', '0'], ['margin', '0']]
+          .forEach(([name, value]) => el.style.setProperty(name, value, 'important'));
+      });
+      document.body.style.setProperty('--ns-status-height', layout.height + 'px');
+      notify();
+    };
+    const clear = () => {
+      bar.classList.remove('ns-status-layout-custom');
+      ['height', 'min-height'].forEach(name => bar.style.removeProperty(name));
+      modules().forEach(el => ['position', 'left', 'top', 'width', 'height', 'min-width', 'min-height', 'margin'].forEach(name => el.style.removeProperty(name)));
+      document.body.style.removeProperty('--ns-status-height');
+      notify();
+    };
+    const commit = () => {
+      const layout = current();
+      if (!layout) return;
+      state.profiles[profile] = copy(layout);
+      draft = null;
+      persist();
+      try { localStorage.setItem(storageKey + "Saved", JSON.stringify(state)); } catch {}
+      apply(state.profiles[profile]);
+    };
+    const setModule = (key, next) => {
+      const layout = ensureLayout();
+      const box = snapToGrid ? { ...next, x: snapStatus(next.x), y: snapStatus(next.y), w: snapStatus(next.w), h: snapStatus(next.h) } : next;
+      layout.modules[key] = constrain(key, box, layout.height);
+      draft = layout;
+      apply(layout);
+    };
+    const setHeight = next => {
+      const layout = ensureLayout();
+      layout.height = heightFor(snapToGrid ? snapStatus(next.h) : next.h);
+      modules().forEach(el => { layout.modules[moduleKey(el)] = constrain(moduleKey(el), layout.modules[moduleKey(el)], layout.height); });
+      draft = layout;
+      apply(layout);
+    };
+    function controls() {
+      let toolbar = document.getElementById('statusCanvasTools');
+      if (!toolbar) {
+        toolbar = document.createElement('div');
+        toolbar.id = 'statusCanvasTools';
+        toolbar.innerHTML = '<label><input type="checkbox" data-status-snap checked> Fixed dashboard snap to grid</label><span>Uncheck for free flow</span>';
+        document.querySelector('.layout-toolbar')?.prepend(toolbar);
+        toolbar.querySelector('[data-status-snap]')?.addEventListener('change', event => { snapToGrid = event.target.checked; });
+      }
+      if (!bar.querySelector(':scope > .status-canvas-resize-handle')) {
+        const handle = document.createElement('button');
+        handle.type = 'button'; handle.className = 'status-canvas-resize-handle'; handle.dataset.statusLayoutHandle = 'height';
+        handle.textContent = '↕'; handle.title = 'Resize fixed dashboard height'; handle.setAttribute('aria-label', 'Resize fixed dashboard height');
+        bar.append(handle);
+        window.NorthstarWindowLayout.bind(bar, handle, 's',
+          () => ({ x: 0, y: 0, w: bar.clientWidth, h: ensureLayout().height }),
+          setHeight, editing, () => {});
+      }
+      modules().forEach(el => {
+        if (el.dataset.statusCanvasControls) return;
+        el.dataset.statusCanvasControls = '1';
+        const key = moduleKey(el);
+        const move = document.createElement('button');
+        move.type = 'button'; move.className = 'status-layout-move-handle'; move.dataset.statusLayoutHandle = 'move';
+        move.textContent = '⠿'; move.title = 'Move ' + key + ' in fixed dashboard'; move.setAttribute('aria-label', move.title);
+        const resizes = ['se','sw','ne','nw'].map(corner => {
+          const resize = document.createElement('button');
+          resize.type = 'button'; resize.className = 'status-layout-resize-handle'; resize.dataset.statusLayoutHandle = 'resize'; resize.dataset.corner = corner;
+          resize.title = 'Resize ' + key + ' from ' + corner.toUpperCase() + ' corner'; resize.setAttribute('aria-label', resize.title);
+          el.append(resize);
+          return [corner, resize];
+        });
+        el.append(move);
+        window.NorthstarWindowLayout.bind(el, move, 'move',
+          () => ({ ...ensureLayout().modules[key] }), next => setModule(key, next), editing, () => {});
+        resizes.forEach(([corner, resize]) => window.NorthstarWindowLayout.bind(el, resize, corner,
+          () => ({ ...ensureLayout().modules[key] }), next => setModule(key, next), editing, () => {}));
+      });
+    }
+    function sync() {
+      frame = 0;
+      const nextProfile = profileFor(bar.clientWidth || window.innerWidth);
+      if (nextProfile !== profile) {
+        profile = nextProfile; draft = null;
+        try { state = JSON.parse(localStorage.getItem(storageKey) || '{"profiles":{}}') || {profiles:{}}; } catch { state = {profiles:{}}; }
+        if (!state.profiles || typeof state.profiles !== 'object' || Array.isArray(state.profiles)) state.profiles = {};
+      }
+      const saved = valid(state.profiles[profile]) ? state.profiles[profile] : null;
+      if (saved) { controls(); apply(saved); return; }
+      if (bar.classList.contains('ns-status-layout-custom')) clear();
+      if (!editing()) return;
+      controls();
+      draft ||= measure();
+      apply(draft);
+    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(sync); };
+    window.addEventListener('resize', schedule);
+    window.addEventListener('northstar:layout-cancel', () => {
+      try { state = JSON.parse(localStorage.getItem(storageKey + 'Saved') || '{"profiles":{}}') || {profiles:{}}; } catch { state = {profiles:{}}; }
+      if (!state.profiles || typeof state.profiles !== 'object' || Array.isArray(state.profiles)) state.profiles = {};
+      draft = null; schedule();
+    });
+    sync();
+    return { zone: { id: 'status', canvas: true }, container: bar, sync, save: commit, fit };
   }
 
   function applyFreeform(zone, container) {
@@ -624,22 +900,29 @@
 
   function addHandle(zone, container, el) {
     if (el.querySelector(':scope > .module-resize-handle')) return;
-    const handle = document.createElement('span');
-    handle.className = 'module-resize-handle';
-    handle.title = 'Resize module';
-    handle.setAttribute('aria-label', 'Resize module');
-    el.append(handle);
-    handle.addEventListener('pointerdown', event => {
+    ['se','sw','ne','nw'].forEach(corner => {
+      const handle = document.createElement('span');
+      handle.className = 'module-resize-handle';
+      handle.dataset.corner = corner;
+      handle.title = `Resize module · ${corner.toUpperCase()} corner`;
+      handle.setAttribute('aria-label', handle.title);
+      el.append(handle);
+      handle.addEventListener('pointerdown', event => {
       if (!editing()) return;
       event.preventDefault();
       event.stopPropagation();
       const rect = el.getBoundingClientRect(), startX = event.clientX, startY = event.clientY;
       const minimum = zone.minimums?.[keyOf(el, itemsOf(zone, container).indexOf(el))] || zone.min;
       const autoHeight = zone.autoHeight?.includes(keyOf(el, itemsOf(zone, container).indexOf(el)));
-      const move = e => setSize(el,
-        snap(rect.width + e.clientX - startX, zone.step[0], minimum[0]),
-        snap(rect.height + e.clientY - startY, zone.step[1], minimum[1]),
-        autoHeight);
+      const west = corner.includes('w'), north = corner.includes('n');
+      const move = e => {
+        const dx = e.clientX - startX, dy = e.clientY - startY;
+        const width = snap(rect.width + (west ? -dx : dx), zone.step[0], minimum[0]);
+        const height = snap(rect.height + (north ? -dy : dy), zone.step[1], minimum[1]);
+        if (zone.freeform && west) el.style.left = `${Math.max(0, (parseFloat(el.style.left) || 0) + rect.width - width)}px`;
+        if (zone.freeform && north) el.style.top = `${Math.max(0, (parseFloat(el.style.top) || 0) + rect.height - height)}px`;
+        setSize(el, width, height, autoHeight);
+      };
       const up = () => {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
@@ -648,6 +931,7 @@
       };
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
+      });
     });
   }
 
@@ -732,7 +1016,21 @@
   function init() {
     injectStyle();
     seedSavedLayout();
-    const active = ZONES.filter(zone => zone.canvas || !window.NORTHSTAR_MODULE_WORKSPACE).map(zone => zone.canvas ? setupCanvas() : setupZone(zone)).filter(Boolean);
+    const active = ZONES.filter(zone => zone.canvas || zone.id === 'staff' || !window.NORTHSTAR_MODULE_WORKSPACE).map(zone => zone.canvas ? setupCanvas() : setupZone(zone)).filter(Boolean);
+    window.NorthstarModuleGeometry={fit(root,box){
+      const owner=active.find(layout=>layout.fit && (layout.container===root.parentElement || layout.zone?.id==='overview' && root.dataset.canvasModule));
+      return owner?.fit(root,box) || false;
+    }};
+    let statusAttached = false;
+    const attachStatusCanvas = () => {
+      if (statusAttached) return;
+      const status = setupStatusCanvas();
+      if (status) { active.push(status); statusAttached = true; }
+    };
+    if (new URLSearchParams(location.search).get('nsStatusWindow') !== '1') {
+      if (document.getElementById('nsStatusBar')) attachStatusCanvas();
+      else window.addEventListener('northstar:status-ready', attachStatusCanvas, { once: true });
+    }
     if (!active.length) return;
     window.addEventListener('northstar:styles-ready',()=>active.forEach(z=>z.sync()));
     seedSavedLayout();
@@ -749,7 +1047,13 @@
         });
       });
       snapshotSavedLayout();
+      try { localStorage.setItem('northstarStatusLayoutV1Saved', localStorage.getItem('northstarStatusLayoutV1') || ''); } catch {}
       publishDefault();
+    }));
+    document.querySelectorAll('.layout-reset').forEach(button => button.addEventListener('click', event => {
+      event.preventDefault();
+      restoreSavedLayout();
+      window.dispatchEvent(new Event('northstar:layout-cancel'));
     }));
     // The toolbar owns the confirmed reset and reload. A second listener here
     // would restore preferences even when the user cancels its confirmation.

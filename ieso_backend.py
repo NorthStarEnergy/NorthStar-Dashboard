@@ -11,6 +11,7 @@ import os
 import posixpath
 import re
 import socket
+import sys
 import threading
 import time
 import zipfile
@@ -29,22 +30,31 @@ import northstar_store as store
 import northstar_phase1 as phase1
 import northstar_voice as voice
 import northstar_auth as auth
+import northstar_client_release as client_release
 import northstar_events as events
 import northstar_event_register as event_register
+import northstar_operator_knowledge as operator_knowledge
 import northstar_ai as ai
+import northstar_ai_history as ai_history
+import northstar_crew_profile as crew_profile
 import northstar_chat as chat
+import northstar_microsoft as microsoft
+import northstar_graph as graph
 import northstar_dispatch as dispatch
 import northstar_device_library as device_library
 import northstar_sop_library as sop_library
 import northstar_flows as flows
+import northstar_water_elevations as water_elevations
 import northstar_incident_library as incident_library
 import northstar_maximo as maximo
 import northstar_service_requests as service_requests
 import northstar_sites as sites
 import northstar_uwpc as uwpc
+import northstar_uwpc_desk as uwpc_desk
 import northstar_data_catalog as data_catalog
+from northstar_paths import app_root
 
-ROOT = Path(__file__).resolve().parent
+ROOT = app_root(__file__)
 
 def _load_local_env() -> None:
     env_path = ROOT / ".env.local"
@@ -68,6 +78,30 @@ DISPATCH_TICK_SECONDS = max(3, int(os.environ.get("NORTHSTAR_DISPATCH_TICK_SECON
 VOICE_POLL_SECONDS = max(15, int(os.environ.get("NORTHSTAR_VOICE_POLL_SECONDS", "45")))
 MAX_JSON_BODY = 64 * 1024
 MAX_SWITCHING_BUNDLE_BYTES = 100 * 1024 * 1024
+
+
+def _setup_demo_auth_from_stdin(username: str) -> int:
+    """Create the local demo verifier for the packaged desktop first run."""
+    username = username.strip()
+    if not username or len(username) > 80 or any(char in username for char in "\r\n"):
+        print("Username must be between 1 and 80 characters.", file=sys.stderr)
+        return 1
+    target = auth.config_path()
+    if target.exists():
+        print("A demo operator credential is already configured.", file=sys.stderr)
+        return 1
+    password = sys.stdin.readline().rstrip("\r\n")
+    if len(password) < 8 or len(password) > 256:
+        print("Password must be between 8 and 256 characters.", file=sys.stderr)
+        return 1
+    try:
+        auth.save_config(auth.build_config(username, password))
+    except (OSError, auth.AuthConfigError, ValueError) as exc:
+        print(f"Could not save the demo operator credential: {exc}", file=sys.stderr)
+        return 1
+    finally:
+        password = ""
+    return 0
 
 
 def build_switching_bundle(snapshot: dict[str, Any]) -> tuple[bytes, str]:
@@ -141,11 +175,14 @@ ALLOWED_ORIGINS = {
 # worker checking themselves in. Anything not listed here, including the
 # /api/checkins/<id>/... device routes and token resolution, stays open.
 OPERATOR_ROUTES = {
+    "/api/control-center/status": ("GET",),
     "/api/dashboard-layout-default": ("POST",),
+    "/api/profile/crew-layout": ("GET", "POST"),
     "/api/checkins": ("GET",),
     "/api/checkins/history": ("GET",),
     "/api/checkin-tokens": ("GET", "POST"),
     "/api/logbook": ("GET", "POST"),
+    "/api/client-release": ("GET",),
     "/api/events": ("GET",),
     "/api/events/register": ("GET",),
     "/api/events/detail": ("GET",),
@@ -161,9 +198,16 @@ OPERATOR_ROUTES = {
     "/api/scada/readings": ("GET",),
     "/api/scada/import": ("POST",),
     "/api/flows": ("GET",),
+    "/api/water-elevations": ("GET",),
+    "/api/water-elevations/catalog": ("GET",),
     "/api/water-management/catalog": ("GET",),
     "/api/data-catalog": ("GET",),
     "/api/data-catalog/refresh": ("POST",),
+    "/api/water-management/rows": ("GET",),
+    "/api/water-management/files": ("GET",),
+    "/api/water-management/ingest": ("POST",),
+    "/api/water-management/rows": ("GET",),
+    "/api/water-management/ingest": ("POST",),
     "/api/daily-operations": ("GET", "POST"),
     "/api/daily-operations/catalog": ("GET",),
     "/api/daily-operations/history": ("GET",),
@@ -180,6 +224,7 @@ OPERATOR_ROUTES = {
     "/api/retention": ("GET", "POST"),
     "/api/site-policies": ("GET", "POST"),
     "/api/switching/drafts": ("GET", "POST"),
+    "/api/uwpc/requests": ("GET", "POST"),
     "/api/field-reports": ("GET", "POST"),
     "/api/field-reports/history": ("GET",),
     "/api/action-items": ("GET", "POST"),
@@ -193,6 +238,7 @@ OPERATOR_ROUTES = {
     "/api/voice": ("GET",),
     "/api/voice/recordings": ("GET",),
     "/api/voice/scan": ("POST",),
+    "/api/voice/upload": ("POST",),
     "/api/library": ("GET",),
     "/api/library/item": ("GET",),
     "/api/library/notes": ("POST",),
@@ -205,11 +251,22 @@ OPERATOR_ROUTES = {
     "/api/uwpc/book": ("GET",),
     "/api/ai": ("POST",),
     "/api/ai/query": ("POST",),
+    "/api/ai/knowledge": ("GET",),
+    "/api/ai/knowledge/search": ("GET",),
+    "/api/ai/knowledge/upload": ("POST",),
     "/api/ai/status": ("GET",),
+    "/api/ai/workspace": ("GET",),
+    "/api/ai/conversations": ("POST",),
+    "/api/ai/projects": ("POST",),
     "/api/chat/rooms": ("GET",),
     "/api/chat/messages": ("GET", "POST"),
     "/api/chat/status": ("GET",),
     "/api/chat/teams/pull": ("POST",),
+    "/api/microsoft/outlook/status": ("GET",),
+    "/api/microsoft/graph/status": ("GET",),
+    "/api/microsoft/graph/connect": ("POST",),
+    "/api/microsoft/graph/profile": ("GET",),
+    "/api/microsoft/graph/messages": ("GET",),
     "/api/dispatch/apiroq": ("GET",),
 }
 
@@ -224,9 +281,14 @@ OPERATOR_ROUTES = {
 # heartbeat, its DELETE checkout, and POST /api/checkins/<id>/help (the worker
 # raising the alarm) all stay open by design.
 OPERATOR_ROUTE_PATTERNS = (
+    ("GET", re.compile(r"^/api/ai/knowledge/records/(?:device_library_notes|logbook|outages)/[^/]+$")),
+    ("GET", re.compile(r"^/api/ai/knowledge/sources/[^/]+(?:/file)?$")),
+    ("POST", re.compile(r"^/api/ai/knowledge/sources/[^/]+/review$")),
     ("POST", re.compile(r"^/api/checkins/[^/]+/(time|provisional|help/acknowledge|help/resolve)$")),
     ("POST", re.compile(r"^/api/outages/[^/]+/close$")),
     ("GET", re.compile(r"^/api/switching/drafts/.+$")),
+    ("GET", re.compile(r"^/api/uwpc/requests/.+$")),
+    ("POST", re.compile(r"^/api/uwpc/requests/.+$")),
     ("POST", re.compile(r"^/api/switching/drafts/.+$")),
     ("DELETE", re.compile(r"^/api/switching/drafts/[^/]+/attachments/[^/]+$")),
     ("GET", re.compile(r"^/api/schematics/.+$")),
@@ -245,7 +307,31 @@ OPERATOR_ROUTE_PATTERNS = (
     ("POST", re.compile(r"^/api/governance-decisions/[^/]+$")),
     ("GET", re.compile(r"^/api/voice/recordings/.+$")),
     ("POST", re.compile(r"^/api/voice/segments/[^/]+/review$")),
+    ("GET", re.compile(r"^/api/ai/conversations/[^/]+$")),
+    ("POST", re.compile(r"^/api/ai/conversations/[^/]+/project$")),
+    ("POST", re.compile(r"^/api/ai/conversations/[^/]+/archive$")),
+    ("POST", re.compile(r"^/api/ai/conversations/[^/]+/settings$")),
+    ("POST", re.compile(r"^/api/ai/messages/[^/]+/feedback$")),
 )
+
+# A site viewer is intentionally not a reduced operator.  Once that account is
+# signed in, every API is denied by default except its session controls and the
+# deliberately minimal site-name directory below.  This protects routes added
+# in the future without relying on a UI to remember to hide them.
+DEMO_VIEWER_API_ROUTES = {
+    ("GET", "/api/auth/session"),
+    ("POST", "/api/auth/login"),
+    ("POST", "/api/auth/logout"),
+    ("GET", "/api/sites"),
+}
+DEMO_VIEWER_ENTRYPOINTS = {
+    "/",
+    "/index.html",
+    "/northstar-clean.html",
+    "/operator-login.html",
+    "/operator-mobile.html",
+    "/demo-sites.html",
+}
 
 # QR placards are printed once and mounted at a site gate, so the link they
 # carry must be the public check-in hostname — never whichever origin the
@@ -316,7 +402,7 @@ OPERATOR_GATE = os.environ.get("NORTHSTAR_OPERATOR_GATE", "off").strip().lower()
 # The hostname the operator dashboard is published on. The demo login endpoint
 # and the demo session exist only here; the check-in hostname must not offer a
 # second way to create an operator session.
-OPERATOR_HOST = os.environ.get("NORTHSTAR_OPERATOR_HOST", "ops.northstarenergy.ca").strip().lower()
+OPERATOR_HOST = os.environ.get("NORTHSTAR_OPERATOR_HOST", "northstarenergy.ca").strip().lower()
 
 # Demo credentials are local runtime configuration, not source: see
 # northstar_auth.config_path() and scripts/setup-demo-auth.py. Loading is
@@ -662,6 +748,15 @@ class MarketStore:
             rt_total_rows = reports["rt_totals"].rows
             predisp_rows = reports["predisp_totals"].rows
             rt_total = rt_total_rows[-1] if rt_total_rows else None
+            demand_history = []
+            for row in rt_total_rows[-72:]:
+                value = number(row, "TOTAL LOAD")
+                try:
+                    timestamp = row_timestamp(reports["rt_totals"], row)
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if value is not None:
+                    demand_history.append({"time": timestamp.isoformat(), "value": value})
             forecast_hour = now.hour + 2
             forecast_total = next(
                 (
@@ -671,6 +766,16 @@ class MarketStore:
                 ),
                 predisp_rows[-1] if predisp_rows else None,
             )
+            demand_forecast = []
+            for row in predisp_rows:
+                value = number(row, "TOTAL LOAD")
+                try:
+                    hour = max(1, int(float(row.get("HOUR") or 0)))
+                    timestamp = reports["predisp_totals"].operating_date + timedelta(hours=hour - 1)
+                except (TypeError, ValueError):
+                    continue
+                if value is not None and timestamp >= now.replace(minute=0, second=0, microsecond=0):
+                    demand_forecast.append({"time": timestamp.isoformat(), "value": value})
             snapshot = {
                 "source": "IESO Public Reports",
                 "updated": now.isoformat(),
@@ -679,6 +784,8 @@ class MarketStore:
                     "demand": number(rt_total, "TOTAL LOAD"),
                     "forecastDemand": number(forecast_total, "TOTAL LOAD"),
                     "forecastHour": forecast_hour,
+                    "history": demand_history,
+                    "forecastSeries": demand_forecast,
                 },
                 "nodes": nodes,
             }
@@ -701,6 +808,7 @@ class MarketStore:
 
 STORE = MarketStore()
 FLOWS = flows.FlowStore()
+WATER_ELEVATIONS = water_elevations.ElevationStore()
 
 
 class NorthstarHTTPServer(ThreadingHTTPServer):
@@ -1159,6 +1267,24 @@ class Handler(SimpleHTTPRequestHandler):
             return None
         return DEMO_SESSIONS.actor(auth.cookie_token(self.headers.get("Cookie", "")))
 
+    def _demo_role(self) -> str | None:
+        """The server-stored role for this request's live demo session."""
+        if OPERATOR_GATE != "demo" or not self._is_operator_host():
+            return None
+        return DEMO_SESSIONS.role(auth.cookie_token(self.headers.get("Cookie", "")))
+
+    def _is_demo_site_viewer(self) -> bool:
+        return self._demo_role() == auth.ROLE_SITE_VIEWER
+
+    def _demo_viewer_denial(self) -> tuple[int, str] | None:
+        """Deny every data API a site-viewer account was not given explicitly."""
+        if not self._is_demo_site_viewer():
+            return None
+        route = self.path.split("?", 1)[0]
+        if route.startswith("/api/") and (self.command, route) not in DEMO_VIEWER_API_ROUTES:
+            return 403, "demo access is limited to site names"
+        return None
+
     def _cross_origin_write(self) -> bool:
         """True when a mutating request claims an origin that is not ours.
 
@@ -1237,6 +1363,11 @@ class Handler(SimpleHTTPRequestHandler):
             payload["loginRequired"] = True
         self._send_json(payload, status)
 
+    def _refuse_demo_viewer_request(self, denial: tuple[int, str]) -> None:
+        """Refuse a site-viewer request without treating its session as expired."""
+        status, message = denial
+        self._send_json({"error": message}, status)
+
     def _operator_actor(self) -> str:
         """Return an authenticated operator identity for audit records."""
         if OPERATOR_GATE == "demo":
@@ -1275,10 +1406,76 @@ class Handler(SimpleHTTPRequestHandler):
         if denial:
             self._refuse_operator_request(denial)
             return True
+        denial = self._demo_viewer_denial()
+        if denial:
+            self._refuse_demo_viewer_request(denial)
+            return True
         if self._checkin_host_forbidden():
             self.send_error(404)
             return True
         return False
+
+    def _uwpc_request_route(self, route: str) -> bool:
+        prefix = "/api/uwpc/requests"
+        if route != prefix and not route.startswith(prefix + "/"):
+            return False
+        actor = self._operator_actor()
+        accounts = (DEMO_AUTH or {}).get("accounts", [DEMO_AUTH or {}]) if OPERATOR_GATE == "demo" else []
+        operators = sorted({str(a.get("username")) for a in accounts
+                            if a.get("username") and a.get("role", "operator") == "operator" and not a.get("disabled")})
+        # A separately configured Access directory is needed before assigning external identities.
+        if OPERATOR_GATE == "access":
+            operators = [name.strip() for name in os.environ.get("NORTHSTAR_UWPC_OPERATORS", "").split(",") if name.strip()]
+        parts = route[len(prefix):].strip("/").split("/") if route != prefix else []
+        try:
+            if self.command == "GET":
+                if not parts:
+                    self._send_json({"requests": uwpc_desk.listing(), "operators": operators,
+                                     "actor": actor, "identityMode": OPERATOR_GATE,
+                                     "correspondence": uwpc_desk.correspondence()})
+                elif len(parts) == 1:
+                    self._send_json(uwpc_desk.get(parts[0]))
+                elif len(parts) == 3 and parts[1] == "sources":
+                    source = uwpc_desk.source_bytes(parts[0], parts[2])
+                    self._send_binary(source["content"], source["mime"], source["name"], source["sha256"])
+                else:
+                    self._send_json({"error": "UWPC route not found"}, 404)
+            elif self.command == "POST":
+                if self._cross_origin_write():
+                    raise PermissionError("Cross-origin UWPC write refused")
+                if len(parts) == 2 and parts[1] == "sources":
+                    query = parse_qs(urlparse(self.path).query)
+                    version = int(query.get("version", ["0"])[0])
+                    result = uwpc_desk.add_source(parts[0], version,
+                        unquote(self.headers.get("X-Northstar-Filename", "")),
+                        query.get("kind", [""])[0], self._binary_body(uwpc_desk.MAX_SOURCE), actor)
+                else:
+                    payload = self._json_body(64 * 1024)
+                    if not isinstance(payload, dict):
+                        raise ValueError("A JSON object is required")
+                    if not parts:
+                        result = uwpc_desk.create(payload, actor)
+                    elif len(parts) == 2:
+                        if parts[1] == "generate":
+                            result = uwpc_desk.generate(parts[0], payload, actor)
+                        else:
+                            result = uwpc_desk.change(parts[0], parts[1], payload, actor, operators)
+                    else:
+                        raise LookupError("UWPC route not found")
+                self._send_json(result, 201 if not parts else 200)
+            else:
+                self._send_json({"error": "Method not allowed"}, 405)
+        except uwpc_desk.Conflict as exc:
+            self._send_json({"error": str(exc)}, 409)
+        except PermissionError as exc:
+            self._send_json({"error": str(exc)}, 403)
+        except LookupError as exc:
+            self._send_json({"error": str(exc)}, 404)
+        except ValueError as exc:
+            self._send_json({"error": str(exc)}, 400)
+        except uwpc_desk.ai.AssistantUnavailable as exc:
+            self._send_json({"error": str(exc)}, 503)
+        return True
 
     def do_OPTIONS(self) -> None:
         if self._refused_before_dispatch():
@@ -1290,14 +1487,36 @@ class Handler(SimpleHTTPRequestHandler):
         if self._refused_before_dispatch():
             return
         route = self.path.split("?", 1)[0]
+        if route == "/api/profile/crew-layout":
+            try:
+                positions = self._json_body().get("positions") if self.command == "POST" else None
+                if self.command == "POST" and positions is None:
+                    raise ValueError("Positions required")
+                actor = self._demo_actor() if OPERATOR_GATE == "demo" else self.headers.get("Cf-Access-Authenticated-User-Email", "") if OPERATOR_GATE == "access" else ""
+                self._send_json(crew_profile.layout(actor, positions))
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+            return
+        if self._uwpc_request_route(route):
+            return
         if route == "/api/auth/session":
             self._demo_session_state()
             return
+        if self._is_demo_site_viewer():
+            # Never load the operator shell for the restricted account.  It
+            # has one purpose-built page, and direct requests for other static
+            # assets are refused rather than revealing UI labels or paths.
+            if route in DEMO_VIEWER_ENTRYPOINTS:
+                self.path = "/demo-sites.html"
+                route = "/demo-sites.html"
+            elif not route.startswith("/api/"):
+                self.send_error(403)
+                return
         # The dashboard must not boot into a signed-out session and then fill
         # with failed API calls. Serve the login screen instead of the console.
         if (
             OPERATOR_GATE == "demo"
-            and route in {"/", "/northstar-clean.html", "/index.html"}
+            and route in {"/", "/northstar-clean.html", "/index.html", "/operator-mobile.html", "/knowledge-library.html"}
             and self._is_operator_host()
             and not self._demo_actor()
         ):
@@ -1432,6 +1651,24 @@ class Handler(SimpleHTTPRequestHandler):
             except ValueError as exc:
                 raise APIError(400, str(exc)) from exc
             self._send_json(snapshot)
+            return
+        if route == "/api/control-center/status":
+            snapshot = health_snapshot()
+            self._send_json({
+                "apiVersion": "control-center.v1",
+                "target": "local",
+                "service": "northstar",
+                "health": public_health(snapshot),
+                "capabilities": {
+                    "status": True,
+                    "launch": False,
+                    "restart": False,
+                    "update": False,
+                    "backup": False,
+                    "rollback": False,
+                },
+                "managementAgent": {"configured": False, "state": "not-installed"},
+            })
             return
         if route == "/api/incident-library/catalog":
             self._send_json(incident_library.catalog())
@@ -1591,10 +1828,21 @@ class Handler(SimpleHTTPRequestHandler):
                 limit = int(query.get("limit", ["100"])[0])
             except ValueError:
                 limit = 100
-            self._send_json(phase1.latest_scada_readings(limit, query.get("feed", [None])[0]))
+            self._send_json(phase1.latest_scada_readings(limit, query.get("feed", [None])[0], query.get("tag")))
             return
         if self.path.split("?", 1)[0] == "/api/flows":
             self._send_json(FLOWS.get())
+            return
+        if route == "/api/water-elevations/catalog":
+            self._send_json(WATER_ELEVATIONS.catalog())
+            return
+        if route == "/api/water-elevations":
+            try:
+                self._send_json(WATER_ELEVATIONS.get(parse_qs(urlparse(self.path).query)))
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+            except water_elevations.ProviderError as exc:
+                self._send_json({"error": str(exc)}, 503)
             return
         if self.path.split("?", 1)[0] == "/api/water-management/catalog":
             catalog_path = ROOT / "data" / "water-management" / "catalog.json"
@@ -1611,7 +1859,31 @@ class Handler(SimpleHTTPRequestHandler):
                 query=query.get("q", [""])[0],
                 collection_id=query.get("collectionId", [""])[0],
                 limit=query.get("limit", [100])[0],
+                cursor=query.get("cursor", [""])[0],
             ))
+            return
+        if route == "/api/water-management/rows":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                self._send_json(data_catalog.query_water_rows(
+                    file_id=query.get("fileId", [""])[0],
+                    query=query.get("q", [""])[0],
+                    cursor=query.get("cursor", [0])[0],
+                    limit=query.get("limit", [100])[0],
+                ))
+            except (TypeError, ValueError) as exc:
+                self._send_json({"error": str(exc)}, 400)
+            return
+        if route == "/api/water-management/files":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                self._send_json(data_catalog.list_water_files(
+                    query=query.get("q", [""])[0],
+                    cursor=query.get("cursor", [""])[0],
+                    limit=query.get("limit", [100])[0],
+                ))
+            except (TypeError, ValueError) as exc:
+                self._send_json({"error": str(exc)}, 400)
             return
         if self.path.split("?", 1)[0] == "/api/market-prices":
             body = json.dumps(STORE.get(), separators=(",", ":")).encode()
@@ -1666,6 +1938,11 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json(record or {"error": "recording not found"}, 200 if record else 404)
             return
         if route == "/api/sites":
+            if self._is_demo_site_viewer():
+                self._send_json({
+                    "sites": [{"name": row["name"]} for row in sites.stations()]
+                })
+                return
             self._send_json(sites.payload())
             return
         if route == "/api/uwpc":
@@ -1777,11 +2054,46 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             self._send_json(result)
             return
+        if self.path.split("?", 1)[0].startswith("/api/ai/knowledge"):
+            self._knowledge_request()
+            return
         if self.path.split("?", 1)[0] == "/api/ai/status":
-            self._send_json(ai.status())
+            result = ai.status()
+            result["knowledge"] = operator_knowledge.status(self._operator_actor())
+            self._send_json(result)
+            return
+        if self.path.split("?", 1)[0] == "/api/ai/workspace":
+            self._send_json(ai_history.list_workspace(self._operator_actor()))
+            return
+        conversation_match = re.fullmatch(r"/api/ai/conversations/([^/]+)", self.path.split("?", 1)[0])
+        if conversation_match:
+            try:
+                self._send_json(ai_history.get_conversation(self._operator_actor(), conversation_match.group(1)))
+            except ai_history.AIHistoryError as exc:
+                self._send_json({"error": str(exc)}, 404)
             return
         if self.path.split("?", 1)[0] == "/api/chat/status":
             self._send_json(chat.status())
+            return
+        if self.path.split("?", 1)[0] == "/api/microsoft/outlook/status":
+            self._send_json(microsoft.outlook_status())
+            return
+        if route == "/api/microsoft/graph/status":
+            self._send_json(graph.status())
+            return
+        if route == "/api/microsoft/graph/profile":
+            try:
+                self._send_json(graph.profile())
+            except graph.GraphError as exc:
+                self._send_json({"error": str(exc)}, 503)
+            return
+        if route == "/api/microsoft/graph/messages":
+            try:
+                query = parse_qs(urlparse(self.path).query)
+                limit = int(query.get("limit", ["25"])[0])
+                self._send_json(graph.messages(limit))
+            except (graph.GraphError, ValueError) as exc:
+                self._send_json({"error": str(exc)}, 503 if isinstance(exc, graph.GraphError) else 400)
             return
         if self.path.split("?", 1)[0] == "/api/chat/rooms":
             self._send_json({"rooms": chat.list_rooms()})
@@ -1804,6 +2116,12 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path.split("?", 1)[0] == "/api/dispatch/apiroq":
             self._send_json(dispatch.snapshot())
+            return
+        if self.path.split("?", 1)[0] == "/api/client-release":
+            try:
+                self._send_json(client_release.observe_current_release())
+            except ValueError:
+                self._send_json({"error": "client release metadata is unavailable"}, 503)
             return
         if self.path.split("?", 1)[0] == "/api/events":
             query = parse_qs(urlparse(self.path).query)
@@ -1928,6 +2246,12 @@ class Handler(SimpleHTTPRequestHandler):
                 print(f"API POST {route} failed: {type(exc).__name__}")
                 self._send_json({"error": "internal server error"}, 500)
             return
+        if route == "/api/microsoft/graph/connect":
+            try:
+                self._send_json(graph.begin_device_sign_in(), 202)
+            except graph.GraphError as exc:
+                self._send_json({"error": str(exc)}, 409 if "already" in str(exc) else 503)
+            return
         try:
             self._do_POST()
         except APIError as exc:
@@ -1959,12 +2283,15 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json({"error": "not found"}, 404)
             return
         actor = self._demo_actor()
+        role = self._demo_role()
         self._send_json(
             {
                 "mode": "demo",
                 "required": True,
                 "authenticated": bool(actor),
                 "username": actor,
+                "role": role,
+                "landingUrl": "/demo-sites.html" if role == auth.ROLE_SITE_VIEWER else "/northstar-clean.html",
                 "loginUrl": "/operator-login.html",
             },
             200 if actor else 401,
@@ -2025,18 +2352,33 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json({"error": "invalid credentials"}, 401)
             return
         lifetime = demo_session_seconds()
-        actor = username.strip()
-        token, _ = DEMO_SESSIONS.create(actor, lifetime)
+        actor = auth.account(DEMO_AUTH, username)["username"]
+        role = auth.account_role(DEMO_AUTH, actor)
+        token, _ = DEMO_SESSIONS.create(actor, lifetime, role)
         DEMO_LOGIN_THROTTLE.reset(self._throttle_key())
-        log_event(
-            "Operator sign-in",
-            f"Demo operator {actor} signed in",
-            "Demo authentication session opened on the operator hostname."
-            " This is the single shared demo credential, not an employee identity.",
-            actor,
-        )
+        if role == auth.ROLE_SITE_VIEWER:
+            log_event(
+                "Demo site-viewer sign-in",
+                f"Demo site viewer {actor} signed in",
+                "Site-name-only demo session opened on the operator hostname.",
+                actor,
+            )
+        else:
+            log_event(
+                "Operator sign-in",
+                f"Demo operator {actor} signed in",
+                "Demo authentication session opened on the operator hostname."
+                " This is the single shared demo credential, not an employee identity.",
+                actor,
+            )
         body = json.dumps(
-            {"authenticated": True, "username": actor, "expiresIn": lifetime},
+            {
+                "authenticated": True,
+                "username": actor,
+                "role": role,
+                "landingUrl": "/demo-sites.html" if role == auth.ROLE_SITE_VIEWER else "/northstar-clean.html",
+                "expiresIn": lifetime,
+            },
             separators=(",", ":"),
         ).encode()
         self.send_response(200)
@@ -2052,13 +2394,14 @@ class Handler(SimpleHTTPRequestHandler):
             return
         token = auth.cookie_token(self.headers.get("Cookie", ""))
         actor = DEMO_SESSIONS.actor(token)
+        role = DEMO_SESSIONS.role(token)
         # The server-side session goes first: clearing the cookie alone would
         # leave a token that still works if it were ever replayed.
         DEMO_SESSIONS.destroy(token)
         if actor:
             log_event(
-                "Operator sign-out",
-                f"Demo operator {actor} signed out",
+                "Demo site-viewer sign-out" if role == auth.ROLE_SITE_VIEWER else "Operator sign-out",
+                f"Demo {'site viewer' if role == auth.ROLE_SITE_VIEWER else 'operator'} {actor} signed out",
                 "Demo authentication session invalidated on the server.",
                 actor,
             )
@@ -2072,9 +2415,25 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _do_POST(self) -> None:
         route = self.path.split("?", 1)[0]
+        if route == "/api/profile/crew-layout":
+            try:
+                positions = self._json_body().get("positions") if self.command == "POST" else None
+                if self.command == "POST" and positions is None:
+                    raise ValueError("Positions required")
+                actor = self._demo_actor() if OPERATOR_GATE == "demo" else self.headers.get("Cf-Access-Authenticated-User-Email", "") if OPERATOR_GATE == "access" else ""
+                self._send_json(crew_profile.layout(actor, positions))
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+            return
+        if self._uwpc_request_route(route):
+            return
         if route == "/api/data-catalog/refresh":
             self._json_body(4 * 1024)
             self._send_json(data_catalog.refresh_known_sources(self._operator_actor()))
+            return
+        if route == "/api/water-management/ingest":
+            self._json_body(4 * 1024)
+            self._send_json(data_catalog.ingest_water_csvs(self._operator_actor()))
             return
         if route == "/api/events/notes":
             payload = self._json_body(40 * 1024)
@@ -2157,8 +2516,91 @@ class Handler(SimpleHTTPRequestHandler):
                 print(f"AI request failed: {type(exc).__name__}")
                 self._send_json({"error": "ai service unavailable"}, 503)
             return
+        if route.startswith("/api/ai/knowledge"):
+            self._knowledge_request(write=True)
+            return
         if route in {"/api/ai", "/api/ai/query"}:
             self._ai_query()
+            return
+        if route == "/api/ai/projects":
+            try:
+                self._send_json(ai_history.create_project(self._operator_actor(), self._json_body().get("name")), 201)
+            except ai_history.AIHistoryError as exc:
+                raise APIError(400, str(exc)) from exc
+            return
+        if route == "/api/ai/conversations":
+            payload = self._json_body()
+            try:
+                self._send_json(
+                    ai_history.create_conversation(
+                        self._operator_actor(),
+                        title=payload.get("title"),
+                        project_id=payload.get("projectId"),
+                        scope=payload.get("scope"),
+                    ),
+                    201,
+                )
+            except ai_history.AIHistoryError as exc:
+                raise APIError(400, str(exc)) from exc
+            return
+        project_match = re.fullmatch(r"/api/ai/conversations/([^/]+)/project", route)
+        if project_match:
+            try:
+                payload = self._json_body()
+                self._send_json(
+                    ai_history.assign_project(
+                        self._operator_actor(), project_match.group(1), payload.get("projectId")
+                    )
+                )
+            except ai_history.AIHistoryError as exc:
+                raise APIError(400, str(exc)) from exc
+            return
+        archive_match = re.fullmatch(r"/api/ai/conversations/([^/]+)/archive", route)
+        if archive_match:
+            try:
+                payload = self._json_body()
+                self._send_json(
+                    ai_history.set_conversation_archived(
+                        self._operator_actor(), archive_match.group(1), payload.get("archived", True)
+                    )
+                )
+            except ai_history.AIHistoryError as exc:
+                raise APIError(400, str(exc)) from exc
+            return
+        settings_match = re.fullmatch(r"/api/ai/conversations/([^/]+)/settings", route)
+        if settings_match:
+            payload = self._json_body()
+            try:
+                model, reasoning_effort = ai.validate_model_settings(
+                    str(payload.get("model") or ""),
+                    str(payload.get("reasoningEffort") or payload.get("reasoning_effort") or ""),
+                )
+                settings = ai_history.set_conversation_settings(
+                    self._operator_actor(),
+                    settings_match.group(1),
+                    model=model,
+                    reasoning_effort=reasoning_effort,
+                )
+                self._send_json(settings)
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            except ai_history.AIHistoryError as exc:
+                raise APIError(404, str(exc)) from exc
+            return
+        feedback_match = re.fullmatch(r"/api/ai/messages/([^/]+)/feedback", route)
+        if feedback_match:
+            payload = self._json_body()
+            try:
+                self._send_json(
+                    ai_history.set_message_feedback(
+                        self._operator_actor(),
+                        feedback_match.group(1),
+                        rating=payload.get("rating"),
+                        correction=payload.get("correction"),
+                    )
+                )
+            except ai_history.AIHistoryError as exc:
+                raise APIError(400, str(exc)) from exc
             return
         if route == "/api/chat/messages":
             payload = self._json_body()
@@ -2693,6 +3135,18 @@ class Handler(SimpleHTTPRequestHandler):
                 )
             self._send_json(checkin_response(record) or {"error": "check-in not found"}, 200 if record else 404)
             return
+        if self.path.split("?", 1)[0] == "/api/voice/upload":
+            query = parse_qs(urlparse(self.path).query)
+            content = self._binary_body(voice.MAX_UPLOAD_BYTES)
+            try:
+                record = voice.receive_upload(
+                    query.get("name", [""])[0], content,
+                    query.get("source", ["audio-upload"])[0], self._operator_actor(),
+                )
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            self._send_json(record, 200 if record.get("duplicate") else 201)
+            return
         if self.path == "/api/voice/scan":
             results = voice.scan_inbox_once()
             transcribed = voice.transcribe_pending()
@@ -2776,14 +3230,100 @@ class Handler(SimpleHTTPRequestHandler):
             return
         self.send_error(404)
 
+    def _knowledge_request(self, write: bool = False) -> None:
+        route = urlparse(self.path).path
+        actor = self._operator_actor()
+        query = parse_qs(urlparse(self.path).query)
+        try:
+            match = re.fullmatch(r"/api/ai/knowledge/sources/([^/]+)(/file|/review)?", route)
+            if write and route == "/api/ai/knowledge/upload":
+                result = operator_knowledge.upload(self._json_body(maximum=8 * 1024 * 1024), actor)
+            elif write and match and match.group(2) == "/review":
+                result = operator_knowledge.review(match.group(1), self._json_body(), actor)
+            elif not write and route == "/api/ai/knowledge":
+                result = operator_knowledge.catalog(actor, query.get("siteId", [""])[0])
+            elif not write and re.fullmatch(r"/api/ai/knowledge/records/[^/]+/[^/]+", route):
+                table, record_id = route.rsplit("/", 2)[1:]
+                result = operator_knowledge.get_record(table, unquote(record_id), actor)
+            elif not write and route == "/api/ai/knowledge/search":
+                result = {"results": operator_knowledge.search(query.get("q", [""])[0][:2000], site_id=query.get("siteId", [""])[0], actor=actor, reference_mode=query.get("reference", [""])[0] == "true")}
+            elif not write and match and match.group(2) == "/file":
+                source, raw, mime = operator_knowledge.read_file(match.group(1), actor)
+                self._send_binary(raw, mime, source["filename"], source["sha256"], inline=False)
+                return
+            elif not write and match and not match.group(2):
+                result = operator_knowledge.get_source(match.group(1), actor)
+            else:
+                self._send_json({"error": "Knowledge route not found"}, 404)
+                return
+            self._send_json(result)
+        except operator_knowledge.KnowledgeDenied as exc:
+            self._send_json({"error": str(exc)}, 403)
+        except LookupError as exc:
+            self._send_json({"error": str(exc)}, 404)
+        except (ValueError, OSError) as exc:
+            self._send_json({"error": str(exc)}, 400)
+
     def _ai_query(self) -> None:
         payload = self._json_body()
         question = str(payload.get("question") or payload.get("message") or "").strip()
         scope = str(payload.get("context_scope") or payload.get("scope") or "general").strip().lower()
         actor = self._operator_actor()
+        try:
+            site_id, _ = operator_knowledge.access(actor, payload.get("siteId"))
+            if not isinstance(payload.get("referenceMode", False), bool):
+                raise ValueError("referenceMode must be a boolean")
+        except operator_knowledge.KnowledgeDenied as exc:
+            self._send_json({"error": str(exc)}, 403)
+            return
+        except ValueError as exc:
+            self._send_json({"error": str(exc)}, 400)
+            return
+        model = str(payload.get("model") or "").strip()
+        reasoning_effort = str(payload.get("reasoning_effort") or "").strip().lower()
+        response_profile = str(payload.get("response_profile") or "balanced").strip()
+        if ai.engine_name() == "openai":
+            try:
+                model, reasoning_effort = ai.validate_model_settings(
+                    model, reasoning_effort, response_profile
+                )
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+                return
         conversation_id = question_id = None
+        conversation_history: list[dict[str, str]] = []
         if question:
-            conversation_id, question_id = event_register.record_chat(question, actor)
+            try:
+                conversation_id = str(payload.get("conversationId") or "").strip() or None
+                if conversation_id:
+                    existing_conversation = ai_history.get_conversation(actor, conversation_id)
+                    conversation_history = [
+                        {"role": item.get("role", ""), "content": item.get("content", "")}
+                        for item in existing_conversation.get("messages", [])[-12:]
+                        if item.get("role") in {"user", "assistant"}
+                    ]
+                else:
+                    conversation = ai_history.create_conversation(
+                        actor,
+                        title=question,
+                        project_id=payload.get("projectId"),
+                        scope=scope,
+                    )
+                    conversation_id = conversation["id"]
+                if ai.engine_name() == "openai":
+                    ai_history.set_conversation_settings(
+                        actor,
+                        conversation_id,
+                        model=model,
+                        reasoning_effort=reasoning_effort,
+                    )
+                ai_history.append_message(actor, conversation_id, "user", question)
+            except ai_history.AIHistoryError as exc:
+                self._send_json({"error": str(exc)}, 404)
+                return
+            conversation_id, question_id = event_register.record_chat(
+                question, actor, conversation_id=conversation_id
+            )
         try:
             response = ai.query(
                 question,
@@ -2792,40 +3332,72 @@ class Handler(SimpleHTTPRequestHandler):
                 market_snapshot=STORE.get(),
                 event_filter=str(payload.get("event_filter") or "").strip(),
                 section=str(payload.get("section") or "").strip(),
-                model=str(payload.get("model") or "").strip(),
-                response_profile=str(payload.get("response_profile") or "balanced").strip(),
+                model=model,
+                response_profile=response_profile,
+                reasoning_effort=reasoning_effort,
+                site_id=site_id,
+                reference_mode=payload.get("referenceMode", False),
+                conversation_history=conversation_history,
             )
         except ai.AssistantUnavailable as exc:
             if conversation_id:
+                ai_history.append_message(actor, conversation_id, "system", "AI surface is not configured")
                 event_register.record_chat("AI surface is not configured", "system", conversation_id, outcome="failed", causation_id=question_id)
             self._send_json(
                 {
                     "error": "ai surface not configured",
                     "detail": str(exc),
                     "disclaimer": ai.DISCLAIMER,
+                    **({"conversationId": conversation_id} if conversation_id else {}),
                 },
                 501,
             )
             return
         except ai.ScopeDenied as exc:
             if conversation_id:
+                ai_history.append_message(actor, conversation_id, "system", "AI scope was denied")
                 event_register.record_chat("AI scope was denied", "system", conversation_id, outcome="failed", causation_id=question_id)
-            self._send_json({"error": str(exc)}, 403)
+            self._send_json(
+                {"error": str(exc), **({"conversationId": conversation_id} if conversation_id else {})},
+                403,
+            )
             return
         except ValueError as exc:
             if conversation_id:
+                ai_history.append_message(actor, conversation_id, "system", "AI query was rejected")
                 event_register.record_chat("AI query was rejected", "system", conversation_id, outcome="failed", causation_id=question_id)
-            self._send_json({"error": str(exc)}, 400)
+            self._send_json(
+                {"error": str(exc), **({"conversationId": conversation_id} if conversation_id else {})},
+                400,
+            )
             return
         except Exception as exc:
             print(f"AI query failed: {exc}")
             if conversation_id:
+                ai_history.append_message(actor, conversation_id, "system", "AI query failed")
                 event_register.record_chat("AI query failed", "system", conversation_id, outcome="failed", causation_id=question_id)
-            self._send_json({"error": "ai query failed"}, 500)
+            self._send_json(
+                {"error": "ai query failed", **({"conversationId": conversation_id} if conversation_id else {})},
+                500,
+            )
             return
         if conversation_id:
+            assistant_message = ai_history.append_message(
+                actor,
+                conversation_id,
+                "assistant",
+                str(response.get("answer") or "No answer was returned."),
+                metadata={
+                    "citations": response.get("citations", []),
+                    "label": response.get("label", "Assistant"),
+                    "uncertainty": response.get("uncertainty", "unknown"),
+                    "model_version": response.get("model_version", "engine"),
+                    "model": response.get("model_version", "engine"),
+                    "reasoning_effort": response.get("reasoning_effort", ""),
+                },
+            )
             event_register.record_chat(str(response.get("answer") or "No answer was returned."), "Operations AI", conversation_id, outcome="answer", causation_id=question_id)
-            response = {**response, "conversationId": conversation_id}
+            response = {**response, "conversationId": conversation_id, "messageId": assistant_message["id"]}
         self._send_json(response)
 
     def _send_json(self, value: Any, status: int = 200) -> None:
@@ -2865,6 +3437,8 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "--setup-demo-auth":
+        raise SystemExit(_setup_demo_auth_from_stdin(sys.argv[2]))
     # Fail closed. A public NORTHSTAR_CHECKIN_ORIGIN means this process is behind
     # the tunnel and the check-in hostname is reachable from the internet; with
     # the gate off, GET /api/checkins would serve the operator roster there. That
@@ -2894,6 +3468,14 @@ if __name__ == "__main__":
             "NORTHSTAR_CHECKIN_ORIGIN for local-only work."
         )
     store.init_db()
+    operator_knowledge.bootstrap()
+    # Write one idempotent, backend-owned record when this operator client is
+    # started on a new dashboard/package build. It must never prevent the
+    # control room from starting if release metadata is unavailable.
+    try:
+        client_release.observe_current_release()
+    except Exception:
+        print("Northstar client release tracking unavailable.", flush=True)
     # Bind and serve before the first external downloads. On a cold start the
     # IESO reports can take tens of seconds; check-ins, help requests, health,
     # and static pages must be available while those feeds warm up.

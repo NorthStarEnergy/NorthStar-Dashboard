@@ -31,7 +31,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parent
+from northstar_paths import app_root
+
+ROOT = app_root(__file__)
 
 # Host-only cookie name. No Domain attribute is ever set on it, so the browser
 # scopes it to the operator hostname and never sends it to the check-in host.
@@ -45,6 +47,13 @@ SCRYPT_N = 16384
 SCRYPT_R = 8
 SCRYPT_P = 1
 PBKDF2_ITERATIONS = 600_000
+
+# A role is deliberately stored with the account and the server-side session.
+# It is never a browser-supplied claim.  Legacy configurations had no role and
+# therefore retain their original full-operator behaviour.
+ROLE_OPERATOR = "operator"
+ROLE_SITE_VIEWER = "site_viewer"
+VALID_ROLES = frozenset({ROLE_OPERATOR, ROLE_SITE_VIEWER})
 
 
 class AuthConfigError(Exception):
@@ -99,8 +108,19 @@ def password_matches(verifier: str, password: str) -> bool:
     return hmac.compare_digest(actual, expected)
 
 
+def normalise_role(value: Any) -> str:
+    """Return a supported server-enforced account role, or fail closed."""
+    role = str(value or ROLE_OPERATOR).strip().lower()
+    if role not in VALID_ROLES:
+        raise AuthConfigError("Demo account role is not supported.")
+    return role
+
+
 def build_config(
-    username: str, password: str, session_seconds: int = DEFAULT_SESSION_SECONDS
+    username: str,
+    password: str,
+    session_seconds: int = DEFAULT_SESSION_SECONDS,
+    role: str = ROLE_OPERATOR,
 ) -> dict[str, Any]:
     """Build a complete runtime configuration from a plaintext password.
 
@@ -116,6 +136,7 @@ def build_config(
         "mode": "demo",
         "username": username,
         "verifier": hash_password(password),
+        "role": normalise_role(role),
         "sessionSeconds": max(900, int(session_seconds)),
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "note": (
@@ -136,9 +157,11 @@ def normalise_config(raw: dict[str, Any]) -> dict[str, Any]:
             verifier = str(item.get("verifier") or item.get("passwordHash") or "").strip()
             if not username or len(verifier.split("$")) != 3:
                 continue
+            role = normalise_role(item.get("role"))
             normalised_accounts.append({
                 "username": username,
                 "verifier": verifier,
+                "role": role,
                 "disabled": bool(item.get("disabled", False)),
                 "message": str(item.get("message", "")).strip(),
             })
@@ -165,7 +188,13 @@ def normalise_config(raw: dict[str, Any]) -> dict[str, Any]:
         session_seconds = DEFAULT_SESSION_SECONDS
     return {
         "mode": "demo",
-        "accounts": [{"username": username, "verifier": verifier, "disabled": False, "message": ""}],
+        "accounts": [{
+            "username": username,
+            "verifier": verifier,
+            "role": normalise_role(raw.get("role")),
+            "disabled": False,
+            "message": "",
+        }],
         "username": username,
         "verifier": verifier,
         "sessionSeconds": max(900, session_seconds),
@@ -213,34 +242,55 @@ def load_config(path: Path | None = None) -> dict[str, Any] | None:
     })
 
 
-def authenticates(config: dict[str, Any] | None, username: str, password: str) -> bool:
-    """True when this username/password pair matches the configured credential."""
+def account(config: dict[str, Any] | None, username: str) -> dict[str, Any] | None:
+    """Find an account without exposing its verifier to a caller."""
     if not config:
-        return False
-    candidate = str(username or "").strip()
-    if not candidate or not password:
-        return False
-    # compare_digest on bytes: a non-ASCII username must fail, not raise.
-    # build_config and older credential files use the original single-account shape.
+        return None
+    candidate = str(username or "").strip().casefold()
+    if not candidate:
+        return None
+    # compare_digest on bytes: a non-ASCII username must fail, not raise.  Both
+    # build_config and older credential files use the single-account shape.
     accounts = config.get("accounts")
     if accounts is None:
         accounts = [config] if config.get("username") and config.get("verifier") else []
-    account = next((item for item in accounts if hmac.compare_digest(candidate.encode("utf-8"), str(item["username"]).encode("utf-8"))), None)
-    if account is None or account.get("disabled"):
+    return next(
+        (
+            item
+            for item in accounts
+            if hmac.compare_digest(
+                candidate.encode("utf-8"), str(item["username"]).casefold().encode("utf-8")
+            )
+        ),
+        None,
+    )
+
+
+def account_role(config: dict[str, Any] | None, username: str) -> str:
+    """Return the configured role for an authenticated account."""
+    found = account(config, username)
+    return normalise_role(found.get("role") if found else None)
+
+
+def authenticates(config: dict[str, Any] | None, username: str, password: str) -> bool:
+    """True when this username/password pair matches the configured credential."""
+    if not password:
         return False
-    return password_matches(account["verifier"], password)
+    found = account(config, username)
+    if found is None or found.get("disabled"):
+        return False
+    return password_matches(str(found["verifier"]), password)
 
 
 def account_message(config: dict[str, Any] | None, username: str) -> str | None:
     """Return a configured account-specific denial message, if applicable."""
     if not config:
         return None
-    candidate = str(username or "").strip()
-    for account in config.get("accounts", []):
-        if hmac.compare_digest(candidate.encode("utf-8"), str(account["username"]).encode("utf-8")):
-            if account.get("disabled"):
-                return account.get("message") or "This account is disabled."
-            return None
+    found = account(config, username)
+    if found:
+        if found.get("disabled"):
+            return found.get("message") or "This account is disabled."
+        return None
     return None
 
 
@@ -251,14 +301,23 @@ class SessionStore:
         self._lock = threading.Lock()
         self._sessions: dict[str, dict[str, Any]] = {}
 
-    def create(self, username: str, lifetime_seconds: int) -> tuple[str, float]:
+    def create(
+        self,
+        username: str,
+        lifetime_seconds: int,
+        role: str = ROLE_OPERATOR,
+    ) -> tuple[str, float]:
         # The lifetime floor lives in normalise_config, not here: the tests need
         # to be able to mint an already-expired session and see it refused.
         token = secrets.token_urlsafe(32)
         expires = time.time() + int(lifetime_seconds)
         with self._lock:
             self._purge_locked()
-            self._sessions[token] = {"username": username, "expires": expires}
+            self._sessions[token] = {
+                "username": username,
+                "role": normalise_role(role),
+                "expires": expires,
+            }
         return token, expires
 
     def actor(self, token: str) -> str | None:
@@ -273,6 +332,19 @@ class SessionStore:
                 self._sessions.pop(token, None)
                 return None
             return str(session["username"])
+
+    def role(self, token: str) -> str | None:
+        """Return the server-stored role for a live session."""
+        if not token:
+            return None
+        with self._lock:
+            session = self._sessions.get(token)
+            if not session:
+                return None
+            if session["expires"] <= time.time():
+                self._sessions.pop(token, None)
+                return None
+            return normalise_role(session.get("role"))
 
     def destroy(self, token: str) -> bool:
         if not token:

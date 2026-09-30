@@ -80,7 +80,7 @@ def test_operator_markup_uses_the_canonical_list_and_keeps_sites_off_checkin():
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
     js = (ROOT / "northstar-sites.js").read_text(encoding="utf-8")
     assert "northstar-sites.js?v=20260914-2" in html
-    assert "outages-workspace.js?v=8" in html
+    assert "outages-workspace.js?v=20260920-1" in html
     assert 'id="outageSite"' in html
     assert 'id="crewSite"' in html
     for row in sites.stations():

@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm');
+const context={module:{exports:{}},URLSearchParams};
+vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../water-elevations.js'),'utf8'),context);
+const {buildQuery,csv}=context.module.exports;
+assert.equal(buildQuery({mode:'current',station:'all',start:'2020-01-01'}),'station=all');
+assert.throws(()=>buildQuery({mode:'range',station:'all',start:'2026-01-01',end:'2026-01-02'}),/one gauge/);
+assert.throws(()=>buildQuery({mode:'range',station:'05PE006',start:'2020-01-01',end:'2026-01-02'}),/366/);
+assert.equal(buildQuery({mode:'range',station:'05PE006',start:'2026-09-01',end:'2026-09-02'}),'station=05PE006&start=2026-09-01&end=2026-09-02');
+const data={stations:[{name:'Kenora',id:'05PE006',datum:'Local datum',readings:[{observedAt:'2026-01-01',waterLevelM:0,rawValue:0,rawUnit:'m',quality:'=unsafe'},{observedAt:'2026-01-02',waterLevelM:null}]}]};
+const result=csv(data);
+assert.equal(result.split('\r\n').length,3);
+assert.ok(result.includes('"0","0","m"'));
+assert.ok(result.includes('"\'=unsafe"'));
+assert.ok(result.includes('"2026-01-02","",""'));
+console.log('Water elevation query and complete CSV checks passed');

@@ -49,19 +49,19 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
 .one-line-head label{
   color:var(--ol-cyan);
   letter-spacing:.16em;
-  font:800 8px/1 monospace;
+  font:800 calc(8px * var(--ns-font-scale, 1))/1 monospace;
 }
 #oneLineEditor h2,
 .one-line-head h2{
   margin:4px 0 0;
-  font:700 18px/1.15 Arial,sans-serif;
+  font:700 calc(18px * var(--ns-font-scale, 1))/1.15 Arial,sans-serif;
   color:#fff;
   letter-spacing:.02em;
 }
 .one-line-head p{
   margin:5px 0 0;
   color:var(--ol-muted);
-  font:10px/1.4 monospace;
+  font:calc(10px * var(--ns-font-scale, 1))/1.4 monospace;
   max-width:760px;
 }
 .one-line-badge{
@@ -70,7 +70,7 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   background:#120e06;
   border-radius:2px;
   padding:8px 10px;
-  font:800 8px/1.2 monospace;
+  font:800 calc(8px * var(--ns-font-scale, 1))/1.2 monospace;
   letter-spacing:.1em;
   white-space:nowrap;
 }
@@ -90,7 +90,7 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   display:grid;
   gap:4px;
   color:var(--ol-muted);
-  font:8px monospace;
+  font:calc(8px * var(--ns-font-scale, 1)) monospace;
   letter-spacing:.1em;
 }
 .one-line-server-bar input,
@@ -102,7 +102,7 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   border-radius:2px;
   color:#fff;
   padding:7px 8px;
-  font:10px monospace;
+  font:calc(10px * var(--ns-font-scale, 1)) monospace;
 }
 .one-line-server-bar button{height:32px}
 .one-line-toolbar{
@@ -128,7 +128,7 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
 .one-line-toolbar-group:last-child{border-right:0;padding-right:0}
 .one-line-toolbar-group>span{
   color:var(--ol-muted);
-  font:800 8px/1 monospace;
+  font:800 calc(8px * var(--ns-font-scale, 1))/1 monospace;
   letter-spacing:.16em;
   text-transform:uppercase;
   margin-right:2px;
@@ -144,7 +144,7 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   background:#141414;
   color:#dce4e8;
   border-radius:2px;
-  font:800 8px/1 monospace;
+  font:800 calc(8px * var(--ns-font-scale, 1))/1 monospace;
   letter-spacing:.05em;
   cursor:pointer;
   min-height:0;
@@ -187,11 +187,11 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
 .one-line-inspector h3{
   margin:0 0 8px;
   color:#c5d0d5;
-  font:800 10px/1 monospace;
+  font:800 calc(10px * var(--ns-font-scale, 1))/1 monospace;
   letter-spacing:.14em;
 }
 .symbol-palette{display:grid;gap:6px}
-.symbol-search-label{color:var(--ol-muted);font:8px monospace;letter-spacing:.1em}
+.symbol-search-label{color:var(--ol-muted);font:calc(8px * var(--ns-font-scale, 1)) monospace;letter-spacing:.1em}
 .symbol-search-label input{
   box-sizing:border-box;
   width:100%;
@@ -201,19 +201,19 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   border:1px solid #333;
   color:#edf3f5;
   border-radius:2px;
-  font:10px monospace;
+  font:calc(10px * var(--ns-font-scale, 1)) monospace;
 }
 .symbol-catalogue-version{
   display:block;
   color:var(--ol-cyan);
-  font:8px/1.4 monospace;
+  font:calc(8px * var(--ns-font-scale, 1))/1.4 monospace;
   letter-spacing:.04em;
   margin:2px 0 6px;
 }
 .symbol-group{display:grid;gap:5px;margin-top:8px}
 .symbol-group h4{
   color:#6f7c82;
-  font:8px monospace;
+  font:calc(8px * var(--ns-font-scale, 1)) monospace;
   letter-spacing:.14em;
   margin:3px 0 0;
   text-transform:uppercase;
@@ -229,7 +229,7 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   color:var(--ol-text);
   border-radius:2px;
   text-align:left;
-  font:11px monospace;
+  font:calc(11px * var(--ns-font-scale, 1)) monospace;
   cursor:pointer;
 }
 .symbol-tool:hover,
@@ -238,14 +238,14 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   background:#15120b;
   box-shadow:inset 3px 0 var(--ol-gold);
 }
-.symbol-tool small{display:block;color:#7d8a90;font:8px monospace;margin-top:2px}
+.symbol-tool small{display:block;color:#7d8a90;font:calc(8px * var(--ns-font-scale, 1)) monospace;margin-top:2px}
 .symbol-glyph{
   width:28px;
   height:20px;
   display:grid;
   place-items:center;
   color:var(--ol-cyan);
-  font-size:17px;
+  font-size:calc(17px * var(--ns-font-scale, 1));
   font-weight:700;
   flex:0 0 28px;
 }
@@ -272,11 +272,11 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   background:#000c;
   border:1px solid #2f2f2f;
   color:#9aa4a9;
-  font:8px/1.35 monospace;
+  font:calc(8px * var(--ns-font-scale, 1))/1.35 monospace;
   letter-spacing:.1em;
   pointer-events:none;
 }
-.one-line-titleblock strong{color:#fff;font:800 10px/1.2 Arial,sans-serif;letter-spacing:.14em}
+.one-line-titleblock strong{color:#fff;font:800 calc(10px * var(--ns-font-scale, 1))/1.2 Arial,sans-serif;letter-spacing:.14em}
 .one-line-titleblock em{color:var(--ol-gold);font-style:normal}
 .one-line-canvas{
   display:block;
@@ -298,18 +298,18 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
 .one-line-canvas .node.selected .node-shape.symbol-heavy{stroke-width:7}
 .one-line-canvas .node text{
   fill:#eef3f5;
-  font:12px Arial,sans-serif;
+  font:calc(12px * var(--ns-font-scale, 1)) Arial,sans-serif;
   text-anchor:middle;
   pointer-events:none;
 }
-.one-line-canvas .node .node-type{fill:#8b969c;font-size:8px;letter-spacing:.04em}
+.one-line-canvas .node .node-type{fill:#8b969c;font-size:calc(8px * var(--ns-font-scale, 1));letter-spacing:.04em}
 .one-line-canvas .node .symbol-letter{font-weight:700;dominant-baseline:middle}
-.one-line-canvas .node .device-function{fill:var(--ol-gold);font-size:10px;font-weight:700}
+.one-line-canvas .node .device-function{fill:var(--ol-gold);font-size:calc(10px * var(--ns-font-scale, 1));font-weight:700}
 .one-line-canvas .terminal-dot{fill:var(--ol-gold);stroke:#000;stroke-width:2}
 .one-line-canvas .node-shape.device-open,
 .one-line-canvas .node-shape.device-unknown{stroke-dasharray:5 4;fill:none}
 .one-line-canvas .operating-state,
-.one-line-canvas .winding-config{fill:var(--ol-gold);font-size:9px;font-weight:700}
+.one-line-canvas .winding-config{fill:var(--ol-gold);font-size:calc(9px * var(--ns-font-scale, 1));font-weight:700}
 .one-line-canvas .snap-port{fill:var(--ol-gold);stroke:#000;stroke-width:1;opacity:.95}
 .one-line-canvas .snap-span{fill:none;stroke:var(--ol-gold);stroke-width:10;stroke-opacity:.28;opacity:1}
 .one-line-canvas .winding-mark{stroke:#c6e6f2}
@@ -319,7 +319,7 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   display:grid;
   place-items:center;
   color:#6d777c;
-  font:11px/1.55 monospace;
+  font:calc(11px * var(--ns-font-scale, 1))/1.55 monospace;
   pointer-events:none;
   text-align:center;
   padding:20px;
@@ -329,7 +329,7 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
 .one-line-inspector label{
   display:block;
   color:var(--ol-muted);
-  font:8px monospace;
+  font:calc(8px * var(--ns-font-scale, 1)) monospace;
   letter-spacing:.1em;
   margin-top:10px;
 }
@@ -343,10 +343,10 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   border:1px solid #333;
   color:#edf3f5;
   border-radius:2px;
-  font:10px monospace;
+  font:calc(10px * var(--ns-font-scale, 1)) monospace;
 }
-.one-line-inspector .hint{color:#7b868c;font-size:11px;line-height:1.45;margin:10px 0}
-.symbol-standard-ref{color:var(--ol-cyan);font:9px/1.45 monospace;margin:9px 0}
+.one-line-inspector .hint{color:#7b868c;font-size:calc(11px * var(--ns-font-scale, 1));line-height:1.45;margin:10px 0}
+.symbol-standard-ref{color:var(--ol-cyan);font:calc(9px * var(--ns-font-scale, 1))/1.45 monospace;margin:9px 0}
 .one-line-status{
   display:flex;
   align-items:center;
@@ -359,7 +359,7 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   border:1px solid var(--ol-line);
   border-radius:4px;
   color:var(--ol-muted);
-  font:10px monospace;
+  font:calc(10px * var(--ns-font-scale, 1)) monospace;
 }
 .one-line-status strong{color:#7dcea0}
 .one-line-help{
@@ -368,7 +368,7 @@ html body.ns-in-section #oneLineEditor.ns-module-window{
   background:#0a0a0a;
   border-left:2px solid #3d6f84;
   color:#8d979d;
-  font-size:11px;
+  font-size:calc(11px * var(--ns-font-scale, 1));
   line-height:1.45;
 }
 .one-line-help b{color:#dcecf1}

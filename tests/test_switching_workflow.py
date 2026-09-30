@@ -495,7 +495,7 @@ class SwitchingWorkflowTest(unittest.TestCase):
                 "record": {
                     "symbols": [
                         {"id": "BUS-01", "type": "bus", "x": 200, "y": 200},
-                        {"id": "RCL-01", "type": "recloser", "x": 360, "y": 200, "operatingState": "open"},
+                        {"id": "RCL-01", "type": "recloser", "x": 360, "y": 200, "operatingState": "open", "assetTag": "52-A", "siteCode": "TEST", "scada": {"feedCode": "default", "tagName": "RCL.POS"}, "measurements": [{"tagName": "RCL.MW", "feedCode": "default", "label": "Power"}]},
                         {"id": "XF3-01", "type": "transformer-3winding", "x": 520, "y": 200, "windingConfig": "dy"},
                         {"id": "DROP-01", "type": "mystery-device", "x": 10, "y": 10},
                     ],
@@ -513,6 +513,12 @@ class SwitchingWorkflowTest(unittest.TestCase):
         self.assertEqual(record["symbolLibraryProfile"], "northstar-ieee-compat-2026.4")
         self.assertNotIn("mystery-device", types)
         self.assertEqual(by_id["RCL-01"]["operatingState"], "open")
+        self.assertEqual(by_id["RCL-01"]["assetTag"], "52-A")
+        status, loaded = self.request("GET", f"/api/schematics/{created['id']}")
+        self.assertEqual(status, 200)
+        loaded_symbol = next(item for item in loaded["record"]["symbols"] if item["id"] == "RCL-01")
+        self.assertEqual(loaded_symbol["scada"]["tagName"], "RCL.POS")
+        self.assertEqual(loaded_symbol["measurements"][0]["tagName"], "RCL.MW")
         self.assertEqual(by_id["XF3-01"]["windingConfig"], "dy")
         self.assertEqual(record["edges"][0]["fromTerminal"], "span")
         self.assertEqual(record["edges"][0]["toTerminal"], "L")

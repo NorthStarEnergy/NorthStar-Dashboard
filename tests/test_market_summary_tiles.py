@@ -11,7 +11,7 @@ class MarketSummaryTileTests(unittest.TestCase):
         self.assertIn("moveCompactPrimaryMarketTiles", script)
         self.assertIn('tile.className = \'node-card featured ieso-tile\'', script)
         self.assertIn("REAL-TIME DEMAND", script)
-        self.assertIn("DAY-AHEAD DEMAND", script)
+        self.assertIn("DEMAND FORECAST", script)
 
     def test_primary_tiles_use_the_compact_width(self):
         script = (ROOT / "market-workspace.js").read_text(encoding="utf-8")

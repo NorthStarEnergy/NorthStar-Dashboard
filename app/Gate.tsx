@@ -10,7 +10,7 @@ function formatSystemTime(date: Date) {
   return `${time} [HE ${sign} ${hours}]`;
 }
 
-const OPERATOR_CONSOLE_URL = 'https://ops.northstarenergy.ca/';
+const OPERATOR_CONSOLE_URL = 'https://northstarenergy.ca/';
 
 export default function Gate() {
   const [systemTime, setSystemTime] = useState(() => formatSystemTime(new Date()));

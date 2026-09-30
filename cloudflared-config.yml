@@ -46,7 +46,7 @@ ingress:
 
   # ---- Operator surface ------------------------------------------------------
   # Access policy required on this hostname before it is reachable.
-  - hostname: ops.northstarenergy.ca
+  - hostname: northstarenergy.ca
     service: http://localhost:4180
 
   - service: http_status:404

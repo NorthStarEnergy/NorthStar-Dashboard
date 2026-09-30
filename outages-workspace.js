@@ -43,9 +43,18 @@
   });
   void renderUwpcSource();
 
-  switchingPane.querySelector('[data-open-engineering]')?.addEventListener('click', () => {
+  document.querySelectorAll('[data-open-engineering]').forEach(button => button.addEventListener('click', () => {
     document.querySelector('[data-tab="switching"]')?.click();
-  });
+  }));
+  document.querySelectorAll('[data-open-uwpc-module]').forEach(button => button.addEventListener('click', () => {
+    const moduleId = `outages:${button.dataset.openUwpcModule}`;
+    if (window.NorthstarModules?.open) {
+      window.NorthstarModules.open(moduleId);
+      return;
+    }
+    document.querySelector('[data-tab="switching"]')?.click();
+    setTimeout(() => window.NorthstarModules?.open(moduleId), 50);
+  }));
 
   const outageList = document.querySelector('#outageList');
   const outageSummary = document.querySelector('#outageSummary');
@@ -172,8 +181,11 @@
         code = null;
       }
     }
+    const codeTitle = String(code?.title || '').trim();
+    const codeEdition = String(code?.edition || '').trim();
+    const governingCode = codeTitle && codeEdition ? `${codeTitle} ${codeEdition}` : 'UWPC 2024';
     const fields = [
-      ['GOVERNING CODE', code ? `${code.title} ${code.edition}` : 'UWPC 2024'],
+      ['GOVERNING CODE', governingCode],
       ['PROCEDURE ID', draft?.authorityProcedureId || code?.procedureId || 'uwpc-2024'],
       ['PACKAGE', draft?.packageName || 'No switching package open'],
       ['INSTRUMENT', draft?.workProtectionName || 'Not selected'],

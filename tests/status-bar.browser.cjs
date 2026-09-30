@@ -15,10 +15,13 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','persistent
  page.on('pageerror',e=>errors.push(e.message));
  const now=new Date().toISOString();
  const fixture={
-  '/api/auth/session':{required:false},'/api/checkins':[], '/api/alerts':[],
+  '/api/auth/session':{required:false},'/api/checkins':[
+    {id:'crew-island',name:'Alex M.',site:'Island Falls',kind:'Northstar',company:'',status:'on-site',overdue:false,needsHelp:false,helpState:'none',checkedIn:now,lastHeard:now},
+    {id:'crew-iroquois',name:'Sam R.',site:'Iroquois Falls',kind:'Contractor',company:'Field Services',status:'overdue',overdue:true,needsHelp:false,helpState:'none',checkedIn:now,lastHeard:now}
+  ], '/api/checkins/history':[], '/api/alerts':[],
   '/api/weather':{stations:['Iroquois Falls','Atikokan','Kapuskasing','Oshawa','Toronto','Fort Frances','Dokis FN','Kenora'].map(name=>({name,current:{temperature_2m:18,weather_code:2,precipitation_probability:20},hourly:{time:Array.from({length:48},(_,i)=>new Date(Date.now()+i*3600000).toISOString()),temperature_2m:Array(48).fill(18),apparent_temperature:Array(48).fill(19),weather_code:Array(48).fill(2),precipitation_probability:Array(48).fill(20)}}))},
-  '/api/dispatch/apiroq':{outputMw:24.5,dispatchMw:25,deltaMw:-0.5,healthy:true,simulated:true,updatedAt:now,history:[],reserveStandby:{tenS:1,tenN:2,thirtyR:3}},
-  '/api/market-prices':{updated:now,nodes:{APIROQ:{rt:42,da:37,history:[{time:now,value:35},{time:new Date(Date.now()+60000).toISOString(),value:42}],operations:{rtTransfer:12,dayAhead:10}},IESO:{rt:40,da:36,history:[],operations:{rtTransfer:15000,dayAhead:15500}}},ontario:{demand:15000,forecastDemand:15500}},
+  '/api/dispatch/apiroq':{outputMw:24.5,dispatchMw:25,deltaMw:-0.5,healthy:true,simulated:true,updatedAt:now,history:[],orActivation:'10S',orActivationMw:8,reserveStandby:{tenS:8,tenN:2,thirtyR:0}},
+  '/api/market-prices':{updated:now,nodes:{APIROQ:{rt:42,da:37,history:[{time:now,value:35},{time:new Date(Date.now()+60000).toISOString(),value:42}],operations:{rtTransfer:12,dayAhead:10}},IESO:{rt:40,da:36,history:[],operations:{rtTransfer:15000,dayAhead:15500}},M1S:{rt:30,da:31,history:[],operations:{}},F2B:{rt:20,da:20.2,history:[],operations:{}},'K2M CCTS':{rt:63,da:60,history:[],operations:{}}},ontario:{demand:15000,forecastDemand:15500}},
   '/api/scada':{feeds:[],readings:[]},'/api/chat/messages':{messages:[{id:'fixture-1',body:'Test message for layout verification.',senderName:'Fixture operator',createdAt:now}]},
   '/api/events/register':{items:[
     {eventId:'fixture-crit',occurredAt:now,summary:'Critical breaker trip',site:'Iroquois Falls',severity:'critical',source:'SCADA',category:'alarm',status:'active'},
@@ -36,6 +39,19 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','persistent
 
   const bar=page.locator('#nsStatusBar'),events=bar.locator('[data-status=events]');
   assert.equal(await bar.locator('.ns-status-module').count(),4);
+  assert.equal(await bar.locator('[data-status=markets] .ns-status-node').count(),5,'All requested market nodes are visible');
+  const marketText=await bar.locator('[data-status=markets]').innerText();
+  assert.ok(!marketText.includes('Market Pricing'),'Marked market heading is removed');
+  assert.ok(marketText.includes('RT $40.00')&&marketText.includes('DA $36.00'),'Market RT and DA values are shown');
+  assert.ok(marketText.includes('RT $42.00')&&marketText.includes('DA $37.00'),'APIROQ RT and DA values are shown');
+  assert.ok(!marketText.includes('LEADS'),'Price lead badge is removed');
+  const dispatchText=await bar.locator('[data-status=dispatch]').innerText();
+  assert.ok(!dispatchText.includes('Current dispatch')&&!dispatchText.includes('Current output at node'),'Marked dispatch captions are removed');
+  assert.ok(!dispatchText.includes('Simulated')&&!dispatchText.includes('Latest telemetry'),'Marked dispatch metadata is removed');
+  assert.ok((await bar.locator('[data-status=dispatch]').innerText()).includes('OR ACTIVE · 10S'));
+  const crewText=await bar.locator('[data-status=crew]').innerText();
+  assert.ok(crewText.includes('Active Field Staff')&&!crewText.includes('Island Falls'),'Crew heading remains without the marked site list');
+  assert.equal(await bar.locator('[data-status=crew] .ns-status-site').count(),0,'Marked crew site buttons are removed');
   assert.equal(await page.locator('#overviewEventsSummary:visible,#dispatchClient:visible,#marketTopTiles:visible,#overviewFieldTracker:visible').count(),0);
   await page.waitForSelector('#nsStatusBar .ns-status-alarm');
   assert.ok((await events.boundingBox()).width>(await bar.locator('[data-status=dispatch]').boundingBox()).width,'Event log is wider than sibling tiles');
@@ -68,3 +84,4 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','persistent
   console.log('Persistent bar: wide event alarm listing, filters, unacked marks, dogears and six viewports passed.');
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
+

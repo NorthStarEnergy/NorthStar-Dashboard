@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b161d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NorthStar Ops">
+  <link rel="icon" type="image/png" href="/favicon.png?v=20260926-2">
+  <link rel="shortcut icon" href="/favicon.ico?v=20260926-2">
+  <link rel="manifest" href="/operator-mobile.webmanifest">
+  <link rel="stylesheet" href="/operator-mobile.css?v=20260926-4">
+  <!-- This must run before operator-mobile.js so all API reads remain behind the server gate. -->
+  <script src="/operator-session.js"></script>
+  <script src="/operator-mobile.js?v=20260926-4" defer></script>
+  <title>NorthStar Operator Companion</title>
+</head>
+<body>
+  <main class="operator-mobile-app">
+    <header class="app-header">
+      <div class="brand">
+        <p class="eyebrow">NORTHSTAR</p>
+        <h1>Operator Companion</h1>
+      </div>
+      <div class="header-actions" aria-label="Operator account">
+        <span data-operator-signout-slot></span>
+      </div>
+    </header>
+
+    <section class="live-status" aria-live="polite" aria-atomic="true">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="mobileStatus">LOADING LIVE DATA…</span>
+      <button id="refreshMobile" type="button">REFRESH</button>
+    </section>
+
+    <div class="module-toolbar">
+      <button id="openModules" class="module-menu-button" type="button" aria-haspopup="dialog" aria-controls="modulePicker">
+        MODULES <span id="moduleCount">1 / 3</span>
+      </button>
+      <span class="module-hint">Choose up to three views</span>
+    </div>
+
+    <div class="module-workspace" id="moduleWorkspace">
+    <section class="summary-section module-panel" data-module-panel="overview" aria-labelledby="summary-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">OVERVIEW</p>
+          <h2 id="summary-heading">Control-room status</h2>
+        </div>
+        <button class="close-module" data-close-module="overview" type="button" aria-label="Remove overview module">×</button>
+      </div>
+      <div class="summary-grid" id="mobileSummary" aria-live="polite"></div>
+    </section>
+
+    <section class="feed-section module-panel" data-module-panel="workers" aria-labelledby="workers-heading" hidden>
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">FIELD STATUS</p>
+          <h2 id="workers-heading">Field workers</h2>
+        </div>
+        <button class="close-module" data-close-module="workers" type="button" aria-label="Remove field workers module">×</button>
+      </div>
+      <div class="module-subheading"><span class="feed-state" id="workersState">LOADING</span></div>
+      <div class="worker-list" id="mobileWorkers" aria-live="polite"></div>
+    </section>
+
+    <section class="feed-section module-panel" data-module-panel="alerts" aria-labelledby="alerts-heading" hidden>
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">MARKET</p>
+          <h2 id="alerts-heading">Market alerts</h2>
+        </div>
+        <button class="close-module" data-close-module="alerts" type="button" aria-label="Remove market alerts module">×</button>
+      </div>
+      <div class="module-subheading"><span class="feed-state" id="alertsState">LOADING</span></div>
+      <div class="compact-list" id="mobileAlerts" aria-live="polite"></div>
+    </section>
+
+    <section class="feed-section module-panel" data-module-panel="outages" aria-labelledby="outages-heading" hidden>
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">OPERATIONS</p>
+          <h2 id="outages-heading">Open outages</h2>
+        </div>
+        <button class="close-module" data-close-module="outages" type="button" aria-label="Remove open outages module">×</button>
+      </div>
+      <div class="module-subheading"><span class="feed-state" id="outagesState">LOADING</span></div>
+      <div class="compact-list" id="mobileOutages" aria-live="polite"></div>
+    </section>
+    </div>
+
+    <aside class="safety-note" aria-label="Mobile companion limits">
+      <strong>READ-ONLY COMPANION</strong>
+      <span>It does not control equipment, issue switching releases, acknowledge alarms, or report an offline action as successful. Use the full dashboard and established control-room procedures for those actions.</span>
+    </aside>
+    <a class="dashboard-link" href="/northstar-clean.html">OPEN FULL DASHBOARD</a>
+
+    <dialog id="modulePicker" class="module-picker" aria-labelledby="modulePickerTitle">
+      <div class="picker-header">
+        <div>
+          <p class="eyebrow">PERSONAL VIEW</p>
+          <h2 id="modulePickerTitle">Choose modules</h2>
+        </div>
+        <button id="closeModules" class="close-module" type="button" aria-label="Close module menu">×</button>
+      </div>
+      <p class="picker-instructions">Show one to three modules at a time.</p>
+      <div class="module-options">
+        <label class="module-option"><input type="checkbox" value="overview"><span><strong>Overview</strong><small>Worker and alert counts</small></span></label>
+        <label class="module-option"><input type="checkbox" value="workers"><span><strong>Field workers</strong><small>Check-ins and help status</small></span></label>
+        <label class="module-option"><input type="checkbox" value="alerts"><span><strong>Market alerts</strong><small>Open price alerts</small></span></label>
+        <label class="module-option"><input type="checkbox" value="outages"><span><strong>Open outages</strong><small>Current outage records</small></span></label>
+      </div>
+      <p id="modulePickerCount" class="picker-count" aria-live="polite">1 of 3 modules shown</p>
+      <button id="doneModules" class="picker-done" type="button">DONE</button>
+    </dialog>
+  </main>
+</body>
+</html>

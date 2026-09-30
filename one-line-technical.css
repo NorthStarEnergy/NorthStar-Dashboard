@@ -19,7 +19,7 @@
   letter-spacing: .02em;
 }
 .one-line-canvas .node .node-type {
-  font-size: 8px;
+  font-size: calc(8px * var(--ns-font-scale, 1));
   letter-spacing: .04em;
 }
 @media print {

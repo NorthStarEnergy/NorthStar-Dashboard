@@ -1,8 +1,9 @@
-"""NorthStar-owned work-protection draft templates.
+"""NorthStar work-protection draft templates.
 
-These sheets belong to the control room. They cite the 2024 Utility Work
-Protection Code by form code, section, and article only. They do not copy
-Hydro One form artwork, rule text, or glossary definitions.
+These sheets cite the 2024 Utility Work Protection Code by form code,
+section, and article only. The PC1 application also mirrors the field layout
+of the company form workbook supplied for this project. No sheet issues a
+permit or operational release.
 
 Applying a template never issues a Work Permit, Supporting Guarantee, tag,
 or operational release.
@@ -14,7 +15,7 @@ from typing import Any
 
 NOTICE = (
     "NorthStar draft sheet. Cites UWPC 2024. "
-    "This is not a Hydro One form, not a Work Permit, and not operational release."
+    "This is not a Work Permit and does not authorize work or operational release."
 )
 
 
@@ -30,6 +31,7 @@ def _template(
     *,
     template_id: str,
     form: str,
+    form_revision: str = "",
     title: str,
     kind: str,
     section: str,
@@ -37,6 +39,7 @@ def _template(
     instrument_id: str,
     standalone: bool,
     purpose: str,
+    notice: str = NOTICE,
     roles: tuple[str, ...],
     related: tuple[str, ...],
     fields: tuple[dict[str, str], ...],
@@ -49,6 +52,7 @@ def _template(
     return {
         "id": template_id,
         "form": form,
+        "formRevision": form_revision,
         "title": title,
         "kind": kind,
         "section": section,
@@ -58,7 +62,7 @@ def _template(
         "purpose": purpose,
         "roles": list(roles),
         "related": list(related),
-        "notice": NOTICE,
+        "notice": notice,
         "fields": list(fields),
         "reviewRows": {
             "isolation": _rows(*isolation),
@@ -364,6 +368,7 @@ TEMPLATES: tuple[dict[str, Any], ...] = (
     _template(
         template_id="pc1",
         form="PC1",
+        form_revision="rev.2014-05",
         title="PC1 application draft",
         kind="application",
         section="5",
@@ -371,15 +376,37 @@ TEMPLATES: tuple[dict[str, Any], ...] = (
         instrument_id="",
         standalone=False,
         purpose="NorthStar application sheet used to request an issued permit, guarantee, hold-off, or out-of-service condition.",
+        notice=(
+            "NorthStar draft following the supplied company PC1 application layout "
+            "(FL.On rev.2014-05). This record is not a Work Permit or authority to work."
+        ),
         roles=("Applicant", "Controlling Authority", "Issuing Authority"),
         related=("pc2", "pc2-sg", "hold-off"),
         fields=(
-            _field("applicant", "Applicant"),
+            _field("serialNumber", "Serial #", "YYYY-MM-DD-XX"),
             _field("controllingAuthority", "Controlling Authority"),
-            _field("requestType", "Request type", "Issued permit, supporting guarantee, hold-off, or out of service"),
-            _field("workDescription", "Work / test requested"),
-            _field("isolationRequested", "Isolation requested"),
-            _field("relatedPermit", "Related draft / serial"),
+            _field("station", "Station"),
+            _field("requestType", "Request"),
+            _field("recall", "Recall"),
+            _field("deferralCost", "Deferral Cost"),
+            _field("cancellationCosts", "Cancellations Costs"),
+            _field("startDate", "Start Date"),
+            _field("startTime", "Start Time"),
+            _field("endDate", "End Date"),
+            _field("endTime", "End Time"),
+            _field("workProtectionDescription", "Work Protection"),
+            _field("equipmentOutageDescription", "Equipment Outage"),
+            _field("workDescription", "Description of Work"),
+            _field("tests", "Identification of tests"),
+            _field("holdOffDescription", "Describe Hold-off"),
+            _field("relayProtectionInformation", "Relay Protection Information: Changes, test, etc."),
+            _field("applicantName", "Applicant Name"),
+            _field("applicantWorkGroup", "Work Group"),
+            _field("applicantTelephone", "Telephone #"),
+            _field("receivedBy", "Controlling Authority Received by"),
+            _field("receivedDate", "Received Date"),
+            _field("receivedTime", "Received Time"),
+            _field("notes", "Notes"),
         ),
         isolation=("Isolation requested from the authority", "Equipment / boundary on the application"),
         sequence=("Submit / refer the application", "Issuing Authority review"),

@@ -1,3 +1,4 @@
-v0.50
-2026-09-19
-Merged Cursor dashboard UI, schematic builder, and one-line catalogue updates.
+v0.151
+2026-09-29
+2026-09-29T01:58:22-04:00
+Add Games: chess, checkers, Go, poker, pool practice and Euchre

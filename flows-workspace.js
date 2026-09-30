@@ -96,7 +96,7 @@
   const localDateTimeValue = value => String(value || '').replace('Z', '').slice(0, 16);
 
   let refreshTimer = 0;
-  let currentView = 'sources';
+  let currentView = 'elevations';
   let flowPayload = clone(EMPTY_FLOW_SNAPSHOT);
   let catalog = clone(FALLBACK_CATALOG);
   let archiveCatalog = null;
@@ -188,6 +188,7 @@
 
   function viewNav() {
     return `<nav class="flows-view-nav" aria-label="Flows workspace views">
+      <button type="button" data-flows-view="elevations" class="${currentView === 'elevations' ? 'active' : ''}">WEST ELEVATIONS</button>
       <button type="button" data-flows-view="sources" class="${currentView === 'sources' ? 'active' : ''}">LIVE SOURCES</button>
       <button type="button" data-flows-view="water" class="${currentView === 'water' ? 'active' : ''}">WATER LOG</button>
       <button type="button" data-flows-view="daily" class="${currentView === 'daily' ? 'active' : ''}">DAILY OPERATIONS</button>
@@ -452,7 +453,12 @@
   }
 
   function render(root) {
-    if (currentView === 'daily') renderDaily(root);
+    if (currentView === 'elevations') {
+      root.innerHTML = `<section class="panel"><label>WATER MANAGEMENT / FLOWS</label><h2>West water elevations</h2>${viewNav()}</section><div data-west-elevations></div>`;
+      window.NorthstarWaterElevations?.mount(root.querySelector('[data-west-elevations]'));
+      window.NorthstarModules?.refresh?.();
+    }
+    else if (currentView === 'daily') renderDaily(root);
     else if (currentView === 'water') renderWater(root);
     else if (currentView === 'archive') renderArchive(root);
     else renderSources(root);

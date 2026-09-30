@@ -25,7 +25,9 @@ from pathlib import Path
 from typing import Any, Iterator
 from zoneinfo import ZoneInfo
 
-ROOT = Path(__file__).resolve().parent
+from northstar_paths import app_root
+
+ROOT = app_root(__file__)
 TZ = ZoneInfo("America/Toronto")
 
 DEFAULT_SITES = (
@@ -1120,7 +1122,7 @@ def scan_scada_once() -> list[dict[str, Any]]:
     return results
 
 
-def latest_scada_readings(limit: int = 100, feed_code: str | None = None) -> list[dict[str, Any]]:
+def latest_scada_readings(limit: int = 100, feed_code: str | None = None, tag_names: list[str] | None = None) -> list[dict[str, Any]]:
     limit = max(1, min(int(limit), 500))
     with _db() as connection:
         query = (
@@ -1131,9 +1133,16 @@ def latest_scada_readings(limit: int = 100, feed_code: str | None = None) -> lis
             " JOIN scada_feeds f ON f.feed_id=b.feed_id"
         )
         params: list[Any] = []
+        filters: list[str] = []
         if feed_code:
-            query += " WHERE f.feed_code=?"
+            filters.append("f.feed_code=?")
             params.append(feed_code)
+        if tag_names:
+            names = list(dict.fromkeys(str(name)[:160] for name in tag_names[:500]))
+            filters.append("t.tag_name IN (" + ",".join("?" for _ in names) + ")")
+            params.extend(names)
+        if filters:
+            query += " WHERE " + " AND ".join(filters)
         query += " ORDER BY t.tag_name, r.observed_at DESC"
         rows = connection.execute(query, params).fetchall()
     seen: set[str] = set()

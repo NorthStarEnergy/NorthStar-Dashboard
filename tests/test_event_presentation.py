@@ -57,6 +57,24 @@ class EventPresentationTest(unittest.TestCase):
         self.assertIn(row["display"]["channel"], {"alarm", "market"})
         self.assertEqual(row["display"]["filterGroup"], "alarms")
 
+    def test_client_update_is_classified_as_a_system_event(self) -> None:
+        with self.store._LOCK, self.store._session() as connection:
+            self.events.append_event(
+                connection,
+                event_type="system.client_update.applied",
+                occurred_at="2026-09-22T10:00:00-04:00",
+                actor_id="NorthStar desktop update service",
+                aggregate_type="system",
+                aggregate_id="dashboard-client",
+                source="system",
+                summary="CLIENT UPDATED · v0.59",
+                payload={"recordKind": "client_release"},
+            )
+        row = self.store.list_audit_events(limit=1)[0]
+        self.assertEqual(row["display"]["channel"], "system")
+        self.assertEqual(row["display"]["logClass"], "SYSTEM")
+        self.assertEqual(row["display"]["filterGroup"], "system")
+
     def test_workforce_help_request_is_classified_as_safety(self) -> None:
         with self.store._LOCK, self.store._session() as connection:
             self.events.append_event(

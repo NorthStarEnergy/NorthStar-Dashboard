@@ -12,6 +12,7 @@
   'use strict';
 
   var LOGIN_PAGE = '/operator-login.html';
+  var REMOTE_DASHBOARD = 'https://ops.northstarenergy.ca/northstar-clean.html';
   var nativeFetch = window.fetch.bind(window);
   var redirecting = false;
 
@@ -22,12 +23,29 @@
     window.location.replace(LOGIN_PAGE);
   }
 
+  function isLoopback() {
+    return /^(localhost|127(?:\.\d{1,3}){3}|\[::1\])$/i.test(window.location.hostname);
+  }
+
+  // A production demo session is deliberately host-bound to ops.  A browser
+  // left on localhost cannot sign in or load protected records there, so send
+  // it to the operator hostname instead of leaving every panel in a retry loop.
+  function toOperatorDashboard() {
+    if (redirecting) return;
+    redirecting = true;
+    window.location.replace(REMOTE_DASHBOARD);
+  }
+
   // One request, asked once, before anything else touches /api/.
   var state = nativeFetch('/api/auth/session', {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
   }).then(function (response) {
     return response.json().catch(function () { return {}; }).then(function (body) {
+      if (isLoopback() && (response.status === 404 || body.mode === 'access')) {
+        toOperatorDashboard();
+        return { required: false, authenticated: false, username: null };
+      }
       return {
         // A 404 means this deployment has no demo gate (localhost development,
         // or Cloudflare Access in front). Leave the dashboard alone.
@@ -91,10 +109,18 @@
       };
       modal.onclick = function (event) { if (event.target === modal) modal.remove(); };
     });
-    var host = document.querySelector('.app > aside') || document.body;
-    var linkState = host.querySelector ? host.querySelector('.link-state') : null;
-    if (linkState) host.insertBefore(button, linkState);
-    else host.appendChild(button);
+    var placeInMenu = function () {
+      var host = document.querySelector('#nsWebToolbar .ns-web-toolbar-dropdown');
+      if (!host) return false;
+      host.insertBefore(button, host.children[1] || null);
+      button.hidden = false;
+      return true;
+    };
+    if (!placeInMenu()) {
+      button.hidden = true;
+      var observer = new MutationObserver(function () { if (placeInMenu()) observer.disconnect(); });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    }
   }
 
   function ready(run) {

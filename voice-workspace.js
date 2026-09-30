@@ -33,12 +33,29 @@
   section.innerHTML = `
     <div class="voice-banner">
       <div>
-        <label>VOICE OPERATIONS · AUDIO FILE INTAKE</label>
+        <label>VOICE OPERATIONS · PC AUDIO &amp; FILE INTAKE</label>
         <h2>Radio &amp; Call Log</h2>
       </div>
       <span class="voice-engine-badge off" id="voiceEngineBadge">ENGINE —</span>
     </div>
     <div class="voice-notice" id="voiceNotice"></div>
+    <div class="voice-input">
+      <h3>PC AUDIO INPUT</h3>
+      <p>Record a test conversation with your microphone or headset, or upload an audio file. Transcription runs after saving. PBX connection pending.</p>
+      <div class="voice-input-controls">
+        <label>Recording name <input id="voiceInputName" maxlength="140" placeholder="Test conversation"></label>
+        <button type="button" id="voiceRecord">START MICROPHONE</button>
+        <button type="button" id="voiceStop" disabled>STOP</button>
+        <label>Audio file <input type="file" id="voiceFile" accept=".wav,.mp3,.m4a,.ogg,.oga,.flac,.amr,.aac,.wma,.opus,.webm"></label>
+      </div>
+      <p id="voiceInputStatus" role="status" aria-live="polite">Ready. Uses your default PC microphone. Maximum 10 minutes per recording / 32 MB per upload.</p>
+      <div id="voicePending" hidden>
+        <audio id="voicePreview" controls></audio>
+        <button type="button" id="voiceSave">SAVE TO CALL LOG</button>
+        <a id="voiceDownload">DOWNLOAD AUDIO</a>
+        <button type="button" id="voiceDiscard">DISCARD</button>
+      </div>
+    </div>
     <div class="voice-summary" id="voiceSummary"></div>
     <div class="voice-layout">
       <div class="voice-list">
@@ -67,6 +84,123 @@
     showAll: section.querySelector('#voiceShowAll'),
     showOperational: section.querySelector('#voiceShowOperational'),
   };
+
+  const input = Object.fromEntries(['Record', 'Stop', 'File', 'InputName', 'InputStatus',
+    'Pending', 'Preview', 'Save', 'Download', 'Discard'].map(key => [key, section.querySelector('#voice' + key)]));
+  const maxBytes = 32 * 1024 * 1024;
+  let recorder, stream, timer, pending, previewUrl, starting = false, saving = false;
+  const say = message => { input.InputStatus.textContent = message; };
+  function controls() {
+    const busy = starting || !!stream || saving || !!pending;
+    input.Record.disabled = busy;
+    input.File.disabled = busy;
+    input.Stop.disabled = !recorder || recorder.state !== 'recording';
+    input.Save.disabled = saving;
+    input.Discard.disabled = saving;
+  }
+  function release() {
+    clearInterval(timer);
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+  function clearPending() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null;
+    pending = null;
+    input.Preview.removeAttribute('src');
+    input.Preview.load();
+    input.Pending.hidden = true;
+    input.File.value = '';
+    controls();
+  }
+  function ready(blob, name, source) {
+    if (!blob.size || blob.size > maxBytes) {
+      say('Audio is empty or exceeds 32 MB. Choose a smaller recording.');
+      controls();
+      return;
+    }
+    pending = { blob, name, source };
+    previewUrl = URL.createObjectURL(blob);
+    input.Preview.src = previewUrl;
+    input.Download.href = previewUrl;
+    input.Download.download = name;
+    input.Pending.hidden = false;
+    say('Audio ready. Listen, then save to the call log.');
+    controls();
+  }
+  input.Record.onclick = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      say('Microphone recording requires a supported browser on HTTPS or localhost. Audio uploads are available.');
+      return;
+    }
+    starting = true;
+    controls();
+    say('Waiting for microphone permission…');
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4'].find(type => MediaRecorder.isTypeSupported(type));
+      if (!mime) throw new Error('No supported recording format. Use an audio file instead.');
+      recorder = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 64000 });
+      const chunks = [];
+      let bytes = 0, failed = false;
+      const started = Date.now();
+      recorder.ondataavailable = event => {
+        if (event.data.size) { chunks.push(event.data); bytes += event.data.size; }
+        if (bytes >= maxBytes - 128 * 1024 && recorder.state === 'recording') recorder.stop();
+      };
+      recorder.onerror = () => { failed = true; say('Recording failed. Try again or upload an audio file.'); release(); controls(); };
+      recorder.onstop = () => {
+        release();
+        if (!failed) {
+          const extension = mime.includes('webm') ? 'webm' : mime.includes('ogg') ? 'ogg' : 'm4a';
+          const label = input.InputName.value.trim().replace(/[\\/:*?"<>|\x00-\x1f]/g, '-') || 'PC test';
+          ready(new Blob(chunks, { type: mime }), `${label}-${new Date(started).toISOString().replace(/[:.]/g, '-')}.${extension}`, 'pc-microphone');
+        }
+        controls();
+      };
+      stream.getAudioTracks().forEach(track => track.addEventListener('ended', () => {
+        if (recorder.state === 'recording') recorder.stop();
+      }));
+      recorder.start(1000);
+      timer = setInterval(() => {
+        const seconds = Math.floor((Date.now() - started) / 1000);
+        say(`Recording microphone · ${clock(seconds)} · Stop to review and save.`);
+        if (seconds >= 600 && recorder.state === 'recording') recorder.stop();
+      }, 1000);
+      say('Recording microphone · 00:00 · Stop to review and save.');
+    } catch (error) {
+      release();
+      say(`Microphone unavailable: ${error.message}. You can upload an audio file.`);
+    } finally { starting = false; controls(); }
+  };
+  input.Stop.onclick = () => { if (recorder?.state === 'recording') recorder.stop(); };
+  input.File.onchange = () => {
+    const file = input.File.files[0];
+    if (file) ready(file, file.name, 'audio-upload');
+  };
+  input.Discard.onclick = () => { clearPending(); say('Discarded. Ready for another recording.'); };
+  input.Save.onclick = async () => {
+    if (!pending || saving) return;
+    saving = true; controls(); say('Saving audio to the call log…');
+    try {
+      const query = new URLSearchParams({ name: pending.name, source: pending.source });
+      const response = await fetch('/api/voice/upload?' + query, {
+        method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: pending.blob,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `Upload failed (${response.status})`);
+      selectedId = result.recordingId;
+      clearPending();
+      say(result.duplicate ? 'This audio is already in the call log.' : 'Saved. Transcription status appears in the recording log.');
+      await load();
+    } catch (error) {
+      say(`Not saved: ${error.message}. Your audio is still available to retry or download.`);
+    } finally { saving = false; controls(); }
+  };
+  window.addEventListener('beforeunload', event => {
+    if (stream || pending || saving) { event.preventDefault(); event.returnValue = ''; }
+  });
+  window.addEventListener('pagehide', release);
 
   function renderSnapshot(snapshot) {
     nodes.badge.textContent = snapshot.engineConfigured

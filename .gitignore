@@ -10,6 +10,8 @@ __pycache__/
 # Generated build/runtime output and handoff staging.
 .wrangler/
 dist/
+desktop-build/
+desktop-dist/
 tmp/
 output/
 outputs/
@@ -57,3 +59,9 @@ weather-demo.html
 start-ieso-backend.bat
 start-northstar-v2.*
 start-northstar-v3.*
+# Local tool build outputs and Android build caches.
+tools/bin/
+tools/obj/
+mobile-android/.gradle/
+mobile-android/build/
+mobile-android/app/build/

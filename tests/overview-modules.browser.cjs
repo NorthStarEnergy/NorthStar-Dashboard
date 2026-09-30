@@ -113,8 +113,8 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
   await page.click('[data-ov-arrange]');
   await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),page.click('[data-ov-cancel]')]);await page.waitForSelector('#nsStatusBar');
   assert.deepEqual(await tile.boundingBox(),saved,'Cancel restores the layout from before editing');
-  await page.evaluate(()=>NorthstarOverview.update('staff',{}));await page.waitForTimeout(100);
-  assert.ok((await page.locator('#overviewStaffSummary').innerText()).includes('Stale'),'Malformed success cannot reset staff to zero');
+  assert.equal(await page.locator('#overviewStaffSummary').count(),0,'The compact Field staff proxy is retired');
+  assert.equal(await page.locator('#overviewStaff:visible').count(),1,'The full Field Staff Status panel is rendered on Overview');
   await page.evaluate(()=>{NorthstarOverview.feeds.market.checked=Date.now()-240000;NorthstarOverview.update('scada',{feeds:[{status:'Stale'}],readings:[{siteCode:'fixture'}]});});
   await page.waitForTimeout(100);
   assert.ok(!(await page.locator('#marketTopTiles [data-module-id="IESO"] .ov-freshness').innerText()).includes('Stale'),'Five-minute market polling is not prematurely stale');
@@ -130,7 +130,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'outputs','overview-p
    await page.reload();await page.waitForFunction(()=>!!NorthstarModules && NorthstarOverview.feeds.staff?.checked);
    await page.waitForTimeout(700);
    assert.deepEqual(await page.evaluate(geometry),stable,'Reload '+pass+' must preserve visible module geometry despite changing crew data');
-   assert.equal(await page.locator('#staffGroups .staff-group:visible').count(),0);
+   assert.ok(await page.locator('#staffGroups .staff-group:visible').count()>0,'Full Field Staff cards remain visible across roster reloads');
   }
   await page.click('.layout-edit-toggle');
   await tile.locator('[data-corner="se"]').evaluate(el=>{

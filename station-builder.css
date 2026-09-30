@@ -1,0 +1,62 @@
+#oneLineEditor .one-line-view-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px;border:1px solid #333}
+#oneLineEditor .one-line-view-bar span{color:#a6bbc5;font-size:12px}
+#oneLineEditor .one-line-view-bar strong{font:600 14px Arial;color:#e3edf2}
+#oneLineEditor:not(.one-line-display) :is(#oneLineSnapshot,#oneLineDrawingTitle){display:none}
+#oneLineEditor :is(.one-line-view-bar,.one-line-binding,.one-line-extra,.one-line-inspector h4){font-family:Arial,sans-serif}
+#oneLineEditor .one-line-layout{grid-template-columns:175px minmax(0,1fr) 260px;min-height:560px}
+#oneLineEditor .one-line-inspector{max-height:660px;overflow:auto}
+#oneLineEditor .one-line-binding{border-top:1px solid #33434a;margin-top:12px;padding-top:10px}
+#oneLineEditor .one-line-binding fieldset{margin:12px 0;padding:8px;border:1px solid #33434a}
+#oneLineEditor summary{cursor:pointer;font-size:12px;padding:5px 0;color:#c6dbe5}
+#oneLineEditor .one-line-extra{padding:0 10px}
+#oneLineEditor .one-line-extra .one-line-toolbar-group{display:inline-flex;margin:8px 12px 8px 0}
+#oneLineEditor .one-line-help{display:none}
+#oneLineEditor .one-line-canvas .dynamic-value{fill:#90d4ed!important;font-size:11px}
+#oneLineEditor .one-line-canvas .feedback-open .node-shape{stroke:#f2b84b!important}
+#oneLineEditor .one-line-canvas .feedback-closed .node-shape{stroke:#72d7aa!important}
+#oneLineEditor .one-line-canvas :is(.feedback-unknown,.feedback-unbound) .node-shape{stroke:#a8afb7!important;stroke-dasharray:4 3}
+#oneLineEditor .one-line-canvas :is(.feedback-unknown,.feedback-unbound) .operating-state{fill:#a8afb7!important}
+#oneLineEditor .one-line-canvas .wire{fill:none;pointer-events:stroke;cursor:pointer}
+#oneLineEditor .one-line-tools label:has(input[type=checkbox]){display:flex;gap:7px;font-size:11px;align-items:center}
+#oneLineEditor .one-line-tools input[type=checkbox]{width:auto}
+#oneLineEditor .scada-status-legend{gap:14px;font-size:10px;display:flex;padding:8px;color:#acbac2}
+#oneLineEditor:not(.one-line-display) #oneLineRefresh{display:none}
+#oneLineEditor.one-line-display :is(.one-line-tools,.one-line-inspector,.one-line-toolbar,.one-line-server-bar,.one-line-extra){display:none!important}
+#oneLineEditor.one-line-display .one-line-layout{grid-template-columns:minmax(0,1fr);min-height:0}
+#oneLineEditor.one-line-display .one-line-canvas{cursor:default}
+@media(max-width:1000px){#oneLineEditor .one-line-layout{grid-template-columns:130px minmax(0,1fr)}#oneLineEditor .one-line-inspector{grid-column:1/-1;max-height:400px}}
+@media(max-width:650px){#oneLineEditor .one-line-layout{grid-template-columns:minmax(0,1fr)}#oneLineEditor .one-line-tools{max-height:190px}#oneLineEditor .one-line-canvas-wrap{min-height:300px}}
+
+/* Station drafting workspace: restrained chrome and a high contrast drawing surface. */
+html body #oneLineEditor{--ol-cyan:#9bbcd0;--ol-line:#29343c;font-family:Arial,sans-serif}
+#oneLineEditor .one-line-head{padding:12px 6px}
+#oneLineEditor .one-line-head p{font:12px/1.5 Arial;color:#a5b5bf;max-width:760px}
+#oneLineEditor .one-line-badge{font-size:10px;padding:8px;border-color:#355264;color:#b7d5e6;background:#10202a}
+#oneLineEditor :is(button,.primary-btn,.secondary-btn){font:600 11px/1.2 Arial!important;letter-spacing:.02em;padding:9px 11px;min-height:32px}
+#oneLineEditor button:disabled{opacity:.35;cursor:default}
+#oneLineEditor :is(button,input,select,summary):focus-visible{outline:2px solid #8dc8ee;outline-offset:2px}
+#oneLineEditor :is(.one-line-server-bar label,.one-line-inspector label){font:600 10px/1.4 Arial;letter-spacing:.06em;color:#a8bac5}
+#oneLineEditor :is(.one-line-server-bar input,.one-line-server-bar select,.one-line-inspector input,.one-line-inspector select){font:13px/1.4 Arial;min-height:34px;padding:7px 9px;border-radius:4px}
+#oneLineEditor .one-line-inspector label{margin:0 0 11px}
+#oneLineEditor .one-line-inspector h4{font-size:13px;margin:2px 0 12px}
+#oneLineEditor .one-line-inspector :is(.hint,.symbol-standard-ref){font:11px/1.5 Arial;color:#98aebc}
+#oneLineEditor .one-line-layout{grid-template-columns:190px minmax(0,1fr) 290px}
+#oneLineEditor .one-line-tools,#oneLineEditor .one-line-inspector{background:#0c1115;border-color:#28343d;padding:12px}
+#oneLineEditor .symbol-tool{min-height:38px;text-align:left;background:#111a20;border-color:#263740}
+#oneLineEditor .symbol-tool small{font-size:9px;color:#90a5b2}
+#oneLineEditor .symbol-glyph{font-size:18px;width:25px}
+#oneLineEditor .symbol-catalogue-version{font:9px/1.5 Arial;color:#7995a6}
+#oneLineEditor .one-line-canvas-wrap{overflow:auto}
+#oneLineEditor .one-line-canvas{display:block;min-width:100%;height:auto!important;aspect-ratio:auto}
+#oneLineEditor .one-line-coordinate-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+#oneLineEditor .one-line-zoom-label{display:flex;align-items:center;gap:6px;font:10px Arial;color:#a7b9c5}
+#oneLineEditor .one-line-zoom-label select{padding:5px}
+#oneLineValidation{border:1px solid #42586a;background:#101e28;padding:12px;font:12px/1.6 Arial;color:#cedce5;max-height:240px;overflow:auto}
+#oneLineValidation[hidden]{display:none!important}
+#oneLineValidation>div{display:flex;align-items:center;justify-content:space-between}
+#oneLineEditor .one-line-view-bar{background:#0c151b;border-color:#293a46;border-radius:4px}
+#oneLineEditor .one-line-toolbar{background:#0c1115;border-color:#28343d}
+#oneLineEditor .one-line-titleblock{background:#0c1115;border-color:#28343d}
+@media(max-width:1100px){#oneLineEditor .one-line-layout{grid-template-columns:160px minmax(0,1fr)}#oneLineEditor .one-line-inspector{grid-column:1/-1;max-height:420px}}
+@media(max-width:650px){#oneLineEditor .one-line-layout{grid-template-columns:minmax(0,1fr)}}
+#oneLineEditor.one-line-display .one-line-layout{grid-template-columns:minmax(0,1fr)}

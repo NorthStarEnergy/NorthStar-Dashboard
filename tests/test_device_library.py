@@ -38,11 +38,14 @@ def test_tools_module_is_wired_and_not_published_on_checkin():
     assert backend.OPERATOR_ROUTES["/api/maximo"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/data-catalog"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/data-catalog/refresh"] == ("POST",)
+    assert backend.OPERATOR_ROUTES["/api/water-management/rows"] == ("GET",)
+    assert backend.OPERATOR_ROUTES["/api/water-management/files"] == ("GET",)
+    assert backend.OPERATOR_ROUTES["/api/water-management/ingest"] == ("POST",)
     assert backend.OPERATOR_ROUTES["/api/maximo/equipment"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/maximo/station"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/sites"] == ("GET",)
     assert "northstar-sites.js?v=20260914-2" in html
-    assert "outages-workspace.js?v=8" in html
+    assert "outages-workspace.js?v=20260920-1" in html
     assert "/northstar-sites.js" not in backend.CHECKIN_PUBLIC_ROUTES
     assert "/device-library.js" not in backend.CHECKIN_PUBLIC_ROUTES
     assert "/device-library.css" not in backend.CHECKIN_PUBLIC_ROUTES
@@ -467,6 +470,8 @@ def test_operations_data_catalog_routes_are_operator_only(service):
     assert code == 200
     assert snapshot["summary"]["catalogReady"] is False
     assert "Raw source files" in snapshot["note"]
+    assert service("/api/water-management/rows?fileId=missing", public=True, authorized=True)[0] == 403
+    assert service("/api/water-management/ingest", public=True, authorized=True, payload={})[0] == 403
 
 
 def test_library_tree_and_notes_use_the_server_actor(service):

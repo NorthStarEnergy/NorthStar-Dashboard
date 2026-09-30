@@ -4,11 +4,11 @@
 .one-line-canvas .grid{stroke:#1a1a1a;stroke-dasharray:none;opacity:.95}
 .one-line-canvas .wire.selected{stroke:#f2b84b;stroke-width:3}
 .one-line-canvas .node.selected .node-shape{stroke:#f2b84b;filter:drop-shadow(0 0 4px #f2b84b55)}
-.one-line-canvas .node text{fill:#eef3f5;font-size:10px;font-weight:600}
-.one-line-canvas .node .device-function{fill:#f2b84b;font-size:9px}
-.one-line-canvas .node .scada-tag{fill:#7ec8e8;font-size:9px;font-weight:700}
+.one-line-canvas .node text{fill:#eef3f5;font-size:calc(10px * var(--ns-font-scale, 1));font-weight:600}
+.one-line-canvas .node .device-function{fill:#f2b84b;font-size:calc(9px * var(--ns-font-scale, 1))}
+.one-line-canvas .node .scada-tag{fill:#7ec8e8;font-size:calc(9px * var(--ns-font-scale, 1));font-weight:700}
 .one-line-canvas .node .scada-value{fill:#050505;stroke:#3a3a3a}
-.one-line-canvas .node .scada-value-text{fill:#e21b23;font-size:8px;font-weight:700}
+.one-line-canvas .node .scada-value-text{fill:#e21b23;font-size:calc(8px * var(--ns-font-scale, 1));font-weight:700}
 .one-line-canvas .node .node-type{display:none}
 .one-line-canvas .terminal-dot{fill:#f2b84b;stroke:#000}
 .scada-status-legend{
@@ -20,7 +20,7 @@
   flex-wrap:wrap;
   gap:5px 12px;
   color:#c5d0d5;
-  font:8px monospace;
+  font:calc(8px * var(--ns-font-scale, 1)) monospace;
   background:#000c;
   padding:6px 8px;
   border:1px solid #2a2a2a;

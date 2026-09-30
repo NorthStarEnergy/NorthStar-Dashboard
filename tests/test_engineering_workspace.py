@@ -14,22 +14,19 @@ class EngineeringWorkspaceTests(unittest.TestCase):
         self.assertNotIn("switchingPane.append(switching)", outages)
         self.assertNotIn("document.querySelector('[data-tab=\"outages\"]')?.click()", outages)
 
-    def test_engineering_has_workspace_navigation_and_outage_cross_link(self):
-        switching = (ROOT / "switching-workspace.js").read_text(encoding="utf-8")
-        outages = (ROOT / "outages-workspace.js").read_text(encoding="utf-8")
-        self.assertIn("engineering-hub", switching)
-        self.assertIn("Engineering Drawings & Work Protection", switching)
-        self.assertIn("/api/uwpc", switching)
-        self.assertIn("UWPC 2024", switching)
-        self.assertIn("data-open-engineering", outages)
+    def test_uwpc_is_one_module_with_inbox_and_preserved_legacy_tools(self):
         html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
-        self.assertIn('id="uwpcInstrumentList"', html)
-        self.assertIn('<select id="wpSite">', html)
-        self.assertIn("outages-workspace.js?v=8", html)
+        desk = (ROOT / "uwpc-desk.js").read_text(encoding="utf-8")
+        modules = (ROOT / "module-workspace.js").read_text(encoding="utf-8")
+        self.assertIn("uwpc-desk.js", html)
+        self.assertIn("uwpc-desk.css", html)
+        self.assertIn("register('outages:uwpc', 'UWPC'", modules)
+        for element in ("uwpcOperatorInbox", "uwpcActivePlans", "uwpcPastPlans", "uwpcAuthorityRecords", "uwpcLegacyTools"):
+            self.assertIn(element, desk)
+        self.assertIn("Send to operator inbox", desk)
+        self.assertIn("Sign off as", desk)
         self.assertIn('id="wpTemplateGallery"', html)
-        self.assertIn("Work-protection sheets", switching)
-        self.assertIn("SEED REVIEW PROMPTS", switching)
-        self.assertIn("uwpc-sheet-reviews", switching)
+        self.assertIn('id="wpLibraryList"', html)
 
     def test_outages_can_prefill_a_server_backed_switching_package(self):
         html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")

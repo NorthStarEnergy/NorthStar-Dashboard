@@ -53,32 +53,71 @@
   function buildEngineeringHub() {
     const workspace = document.querySelector('#switching .switching-workspace');
     const banner = workspace?.querySelector('.switching-banner');
-    if (!workspace || !banner || workspace.querySelector('.engineering-hub')) return;
+    if (!workspace || !banner || workspace.querySelector('.uwpc-request-desk')) return;
 
     const label = banner.querySelector('label');
     const title = banner.querySelector('h2');
-    if (label) label.textContent = 'ENGINEERING WORKSPACE · DRAWINGS / WORK PACKAGES / REVIEW';
-    if (title) title.textContent = 'Engineering Drawings & Work Protection';
+    if (label) label.textContent = 'UWPC · WORK PROTECTION REQUEST DESK';
+    if (title) title.textContent = 'Requests and Forms';
     const intro = document.createElement('p');
     intro.className = 'engineering-banner-copy';
-    intro.textContent = 'Build one-line diagrams, assemble controlled source packages, document review checks, and retain a local or server-backed audit trail.';
+    intro.textContent = 'Process saved requests, start a familiar PC1 application, or open the UWPC form library.';
     title?.after(intro);
 
-    const hub = document.createElement('nav');
-    hub.className = 'engineering-hub';
-    hub.setAttribute('aria-label', 'Engineering workspace tools');
-    hub.innerHTML = `
-      <button type="button" data-engineering-target="#oneLineEditor"><span>DRAWING</span><strong>One-line editor</strong><small>Symbols, connections, labels, import and export</small><em>OPEN EDITOR →</em></button>
-      <button type="button" data-engineering-target="[data-module-id='switching-templates']"><span>TEMPLATES</span><strong>Work-protection sheets</strong><small id="engineeringTemplateStatus">15 NorthStar sheets</small><em>OPEN TEMPLATES →</em></button>
-      <button type="button" data-engineering-target="[data-module-id='switching-intake']"><span>SOURCE CONTROL</span><strong>Diagram intake</strong><small id="engineeringSourceStatus">No source package loaded</small><em>OPEN INTAKE →</em></button>
-      <button type="button" data-engineering-target="[data-module-id='switching-form']"><span>WORK PACKAGE</span><strong>Draft package</strong><small id="engineeringDraftStatus">Draft not started</small><em>OPEN PACKAGE →</em></button>
-      <button type="button" data-engineering-target="[data-module-id='switching-approval']"><span>REVIEW</span><strong>Qualified-person gate</strong><small id="engineeringReviewStatus">Not ready for review</small><em>OPEN REVIEW →</em></button>`;
-    hub.querySelectorAll('[data-engineering-target]').forEach(button => {
+    const desk = document.createElement('nav');
+    desk.className = 'uwpc-request-desk';
+    desk.setAttribute('aria-label', 'UWPC request desk');
+    desk.innerHTML = `
+      <button type="button" class="uwpc-desk-action" data-uwpc-target="#switchingLibrary"><span>PROCESS EXTERNAL REQUESTS</span><strong>Open the request inbox</strong><small>Continue a saved PC1 application through its draft and review record.</small><em>OPEN REQUESTS →</em></button>
+      <button type="button" class="uwpc-desk-action" data-uwpc-target="#uwpcQuickStart"><span>CREATE A REQUEST</span><strong>Start a PC1 application</strong><small>Use the company form layout and save a NorthStar draft.</small><em>CREATE REQUEST →</em></button>
+      <button type="button" class="uwpc-desk-action" data-uwpc-target="#switchingTemplates"><span>VIEW UWPC FORMS</span><strong>Open the form library</strong><small id="uwpcFormsSummary">PC1, permits, tags, and companion forms</small><em>VIEW FORMS →</em></button>`;
+    desk.querySelectorAll('[data-uwpc-target]').forEach(button => {
       button.addEventListener('click', () => {
-        document.querySelector(button.dataset.engineeringTarget)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const target = document.querySelector(button.dataset.uwpcTarget);
+        target?.closest('details.uwpc-workflow-group')?.setAttribute('open', '');
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
-    banner.after(hub);
+    const quickForm = workspace.querySelector('#uwpcQuickStart .switching-quick-form');
+    const requestFiles = workspace.querySelector('#wpSourceFiles');
+    if (quickForm && requestFiles) quickForm.append(requestFiles);
+
+    const wrapWorkflow = (selector, id, heading, hint) => {
+      const panel = workspace.querySelector(selector);
+      if (!panel) return null;
+      const group = document.createElement('details');
+      group.className = 'uwpc-workflow-group';
+      group.id = id;
+      group.innerHTML = `<summary><span>${heading}</span><small>${hint}</small></summary><div class="uwpc-workflow-body"></div>`;
+      panel.before(group);
+      group.querySelector('.uwpc-workflow-body').append(panel);
+      return group;
+    };
+    wrapWorkflow('#uwpcQuickStart', 'uwpc-workflow-create', 'Create a request', 'Start a company-layout PC1 application');
+    wrapWorkflow('#switchingLibrary', 'uwpc-workflow-process', 'Process external requests', 'Open saved PC1 applications');
+    const formsWorkflow = wrapWorkflow('#switchingTemplates', 'uwpc-workflow-forms', 'View UWPC forms', 'Browse PC1 and the form library');
+
+    const development = document.createElement('details');
+    development.className = 'uwpc-future-tools';
+    development.innerHTML = '<summary><span>Other UWPC tools</span><small>Grouped for future development</small></summary><div class="uwpc-future-tools-body"></div>';
+    const body = development.querySelector('.uwpc-future-tools-body');
+    ['#oneLineEditor', '#engineeringSitemap', '#wpReadinessGuide', '#switchingGrid'].forEach(selector => {
+      const module = workspace.querySelector(selector);
+      if (module) body.append(module);
+    });
+    const notice = workspace.querySelector('.switching-notice');
+    if (notice) notice.after(desk);
+    else banner.after(desk);
+    formsWorkflow?.after(development);
+    if (!development.isConnected) workspace.append(development);
+
+    document.addEventListener('click', event => {
+      const trigger = event.target.closest('[data-open-module], [data-module-tab]');
+      const moduleId = trigger?.dataset.openModule || trigger?.dataset.moduleTab;
+      if (!moduleId) return;
+      document.querySelector(`[data-ns-module="${CSS.escape(moduleId)}"]`)
+        ?.closest('details.uwpc-future-tools, details.uwpc-workflow-group')?.setAttribute('open', '');
+    }, true);
   }
 
   function renderEngineeringHub() {
@@ -87,9 +126,11 @@
     const sourceStatus = document.querySelector('#engineeringSourceStatus');
     const draftStatus = document.querySelector('#engineeringDraftStatus');
     const reviewStatus = document.querySelector('#engineeringReviewStatus');
+    const formsSummary = document.querySelector('#uwpcFormsSummary');
     if (sourceStatus) sourceStatus.textContent = `${diagrams} diagram${diagrams === 1 ? '' : 's'} · ${sources} procedure source${sources === 1 ? '' : 's'}`;
     if (draftStatus) draftStatus.textContent = state.packageName ? `${state.packageName} · ${state.status}` : 'Draft not started';
     if (reviewStatus) reviewStatus.textContent = state.status === 'REVIEW RECORDED · NOT RELEASE' ? 'Review recorded · not release' : state.status === 'READY FOR QUALIFIED REVIEW' ? 'Ready for qualified review' : 'Not ready for review';
+    if (formsSummary) formsSummary.textContent = `${uwpcTemplates().length || 15} UWPC draft forms`;
   }
 
   const $ = id => document.getElementById(id);
@@ -346,6 +387,8 @@
     try {
       const record = await serverRequest(`/api/switching/drafts/${encodeURIComponent(draftId)}`);
       applyServerRecord(record); write(false); renderFields();
+      document.querySelector('#switchingTemplates')?.closest('details.uwpc-workflow-group')?.setAttribute('open', '');
+      window.NorthstarModules?.open('outages:switching-templates');
       setNote(`Server draft ${record.id} loaded. Stored sources are available on any signed-in operator browser.`);
     } catch (error) {
       setNote(`Draft could not be loaded: ${error.message}.`, 'error');
@@ -355,7 +398,7 @@
   async function loadDraftLibrary() {
     const list = $('wpLibraryList');
     if (!list) return;
-    list.innerHTML = '<div class="switching-empty">Loading server drafts…</div>';
+    list.innerHTML = '<div class="switching-empty">Loading PC1 request records…</div>';
     const params = new URLSearchParams();
     const query = $('wpLibrarySearch')?.value.trim();
     const status = $('wpLibraryStatus')?.value;
@@ -363,9 +406,12 @@
     if (status) params.set('status', status);
     try {
       const records = await serverRequest('/api/switching/drafts' + (params.size ? `?${params}` : ''));
+      const requests = (Array.isArray(records) ? records : []).filter(record => (
+        record.workProtectionTemplateId === 'pc1' || /^PC1\b/i.test(record.packageName || '')
+      ));
       list.replaceChildren();
-      if (!records.length) { list.innerHTML = '<div class="switching-empty">No matching server drafts.</div>'; return; }
-      records.forEach(record => {
+      if (!requests.length) { list.innerHTML = '<div class="switching-empty">No saved PC1 requests match this filter. Create a request to start a record.</div>'; return; }
+      requests.forEach(record => {
         const row = document.createElement('div'); row.className = 'switching-library-row';
         const name = document.createElement('strong'); name.textContent = record.packageName || record.id;
         const asset = document.createElement('span'); asset.textContent = `${record.site || '—'} · ${record.asset || '—'}`;
@@ -374,7 +420,7 @@
         row.append(name, asset, stateLabel, open); list.append(row);
       });
     } catch (error) {
-      list.innerHTML = `<div class="switching-empty">Server library unavailable: ${String(error.message || error).replace(/[<>&]/g, '')}</div>`;
+      list.innerHTML = `<div class="switching-empty">PC1 request records unavailable: ${String(error.message || error).replace(/[<>&]/g, '')}</div>`;
     }
   }
 
@@ -408,6 +454,7 @@
   }
 
   window.NorthStarSwitching = {
+    loadDraft: loadDraftRecord,
     attachSchematic,
     prefillOutage,
     currentDraft: () => ({ id:state.id, status:state.status, schematicId:state.schematicId })
@@ -544,12 +591,14 @@
     $('wpReviewPill').textContent = state.status === 'REVIEW RECORDED · NOT RELEASE' ? 'RECORDED' : state.status === 'READY FOR QUALIFIED REVIEW' ? 'READY' : 'NOT READY';
     $('wpReviewPill').className = `switching-state-pill ${state.status === 'REVIEW RECORDED · NOT RELEASE' ? 'reviewed' : state.status === 'READY FOR QUALIFIED REVIEW' ? 'ready' : ''}`;
     const instrumentNote = state.workProtectionName ? ` · ${state.workProtectionName} (${state.workProtectionSection || 'UWPC'})` : '';
-    $('wpFormStatus').textContent = state.packageName ? `${state.diagrams.length} uploaded diagram(s) · ${state.schematicId ? `server schematic rev ${state.schematicRevision} · ` : ''}${state.ruleSources.length} governing source(s)${instrumentNote} · source-derived fields remain subject to qualified review.` : 'Create a package after attaching the current source diagrams. Select the UWPC 2024 instrument. The fields below stay blank until a qualified reviewer verifies the source.';
+    $('wpFormStatus').textContent = state.packageName ? `${state.diagrams.length} uploaded diagram(s) · ${state.schematicId ? `server schematic rev ${state.schematicRevision} · ` : ''}${state.ruleSources.length} supporting/source file(s)${instrumentNote} · source-derived fields remain subject to qualified review.` : 'Create a draft first, then attach source material as available. Select the applicable instrument before qualified review.';
     const immutable = state.status === 'REVIEW RECORDED · NOT RELEASE';
     document.querySelectorAll("[data-module-id='switching-intake'] input,[data-module-id='switching-intake'] textarea,[data-module-id='switching-intake'] select,[data-module-id='switching-intake'] button,[data-module-id='switching-form'] input,[data-module-id='switching-form'] textarea,[data-module-id='switching-form'] button,[data-module-id='switching-approval'] input,[data-module-id='switching-approval'] textarea,[data-module-id='switching-approval'] button").forEach(control => { control.disabled = immutable; });
     $('wpRecordReview').disabled = state.status !== 'READY FOR QUALIFIED REVIEW';
     $('wpDownloadBundle').disabled = !state.id || state.storage !== 'SERVER';
     $('wpCloneRevision').disabled = !state.id || state.storage !== 'SERVER';
+    renderQuickStart();
+    renderReadinessGuide();
     renderEngineeringHub();
     renderAudit();
   }
@@ -570,6 +619,7 @@
       storage.textContent = label;
       storage.className = `switching-module-state ${state.storage === 'SERVER' ? 'synced' : state.storage === 'UNSYNCED' ? 'unsynced' : ''}`;
     }
+    renderReadinessGuide();
     renderEngineeringHub();
     renderAudit();
   }
@@ -715,12 +765,8 @@
 
   function newDraft() {
     if (!confirm('Start a new local draft? The current local draft will be cleared.')) return;
-    selectedFiles.forEach(file => file.url && URL.revokeObjectURL(file.url));
-    Object.keys(state).forEach(key => { if (Array.isArray(state[key])) state[key] = []; else if (typeof state[key] === 'object' && state[key] !== null) state[key] = {}; else state[key] = ''; });
-    state.schema = 1; state.version = 0; state.schematicRevision = 0; state.status = 'DRAFT'; state.storage = 'LOCAL'; state.serverUpdatedAt = '';
-    state.ruleSet = 'UWPC 2024'; state.authorityProcedureId = 'uwpc-2024'; state.authorityProcedureRevision = '2024';
-    try { localStorage.removeItem(KEY); } catch { /* optional */ }
-    selectedFiles = []; selectedRuleFiles = []; renderFields(); setNote('New local draft ready.'); $('wpIntakeStatus').textContent = '';
+    resetDraftState();
+    renderFields(); setNote('New local draft ready.'); $('wpIntakeStatus').textContent = '';
   }
 
   async function hydrateServer() {
@@ -801,7 +847,60 @@
       if (!rows.length) return '';
       return `<div class="uwpc-sheet-review"><strong>${kind.toUpperCase()} PROMPTS</strong><ol>${rows.map(row => `<li>${String(row.first || '').replace(/[<>&]/g, '')}</li>`).join('')}</ol></div>`;
     }).join('');
-    sheet.innerHTML = `
+    if (selected.id === 'pc1') {
+      const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[character]);
+      const companyField = (id, kind = 'text', className = '') => {
+        const field = fields.find(item => item.id === id);
+        if (!field) return '';
+        const value = String(state.templateFields[id] || '');
+        const common = `data-template-field="${escape(id)}"`;
+        let control;
+        if (kind === 'textarea') control = `<textarea ${common} rows="3">${escape(value)}</textarea>`;
+        else if (kind === 'request') {
+          const choices = ['PC2 Work Permit', 'Supporting Guarantee', 'Hold-off', 'Equipment Outage (Self Administered)', 'Equipment outage only (no Work Protection required)'];
+          const selectedChoices = new Set(value.split(/\s*\|\s*/).filter(Boolean));
+          control = `<input type="hidden" ${common} value="${escape(value)}"><div class="uwpc-company-request-options">${choices.map(choice => `<label><input type="checkbox" data-template-field-option="${escape(id)}" value="${escape(choice)}"${selectedChoices.has(choice) ? ' checked' : ''}><span>${escape(choice)}</span></label>`).join('')}</div>`;
+        } else control = `<input type="${kind}" ${common} value="${escape(value)}" placeholder="${escape(field.hint || '')}">`;
+        if (kind === 'request') return `<div class="uwpc-company-field ${className}"><span>${escape(field.label)}</span>${control}</div>`;
+        return `<label class="uwpc-company-field ${className}"><span>${escape(field.label)}</span>${control}</label>`;
+      };
+      sheet.innerHTML = `
+        <header class="uwpc-company-form-head"><div><label>FL.On COMPANY FORM LAYOUT · ${escape(selected.formRevision || '')}</label><h3>APPLICATION TO A CONTROLLING AUTHORITY</h3></div><b>PC1</b></header>
+        <p class="uwpc-sheet-notice">${escape(selected.notice || '')}</p>
+        <p class="muted-note">UWPC 2024 · section ${escape(selected.section)} · article ${escape(selected.article)}</p>
+        <div class="uwpc-company-form" aria-label="PC1 company form layout">
+          <div class="uwpc-company-row uwpc-company-identifiers">${companyField('serialNumber')}${companyField('station')}</div>
+          <div class="uwpc-company-row uwpc-company-request">${companyField('controllingAuthority')}${companyField('requestType', 'request')}<div class="uwpc-company-costs">${companyField('recall')}${companyField('deferralCost')}${companyField('cancellationCosts')}</div></div>
+          <div class="uwpc-company-row uwpc-company-dates">${companyField('startDate', 'date')}${companyField('startTime', 'time')}${companyField('endDate', 'date')}${companyField('endTime', 'time')}</div>
+          <div class="uwpc-company-row uwpc-company-two-up">${companyField('workProtectionDescription', 'textarea')}${companyField('equipmentOutageDescription', 'textarea')}</div>
+          <div class="uwpc-company-sections">${companyField('workDescription', 'textarea')}${companyField('tests', 'textarea')}${companyField('holdOffDescription', 'textarea')}${companyField('relayProtectionInformation', 'textarea')}</div>
+          <div class="uwpc-company-row uwpc-company-applicant">${companyField('applicantName')}${companyField('applicantWorkGroup')}${companyField('applicantTelephone')}</div>
+        <div class="uwpc-company-row uwpc-company-received">${companyField('receivedBy')}${companyField('receivedDate', 'date')}${companyField('receivedTime', 'time')}</div>
+        <div class="uwpc-company-sections">${companyField('notes', 'textarea')}</div>
+        </div>
+        <div class="uwpc-company-attachments"><strong>RECEIVED / SUPPORTING DOCUMENTS</strong><div id="uwpcCompanyAttachments"></div></div>
+        ${relatedButtons ? `<div class="uwpc-sheet-related"><span>Related UWPC forms</span>${relatedButtons}</div>` : ''}
+        <div class="switching-actions"><button class="secondary-btn" type="button" id="wpPrintTemplate">PRINT THIS SHEET</button></div>`;
+      const attachments = selectedRuleFiles.length ? selectedRuleFiles : state.ruleSources;
+      const attachmentList = sheet.querySelector('#uwpcCompanyAttachments');
+      if (!attachments.length) attachmentList.textContent = 'No supporting documents attached.';
+      else attachments.forEach(file => {
+        const row = document.createElement('div');
+        row.className = 'uwpc-company-attachment';
+        const name = document.createElement('span');
+        name.textContent = file.name || 'Supporting document';
+        row.append(name);
+        const href = file.url || (file.attachmentId && state.id ? `/api/switching/drafts/${encodeURIComponent(state.id)}/attachments/${encodeURIComponent(file.attachmentId)}` : '');
+        if (href) {
+          const open = document.createElement('a');
+          open.href = href; open.target = '_blank'; open.rel = 'noopener'; open.textContent = 'OPEN';
+          row.append(open);
+        } else {
+          const stateLabel = document.createElement('small'); stateLabel.textContent = 'LOCAL ONLY'; row.append(stateLabel);
+        }
+        attachmentList.append(row);
+      });
+    } else sheet.innerHTML = `
       <header class="uwpc-sheet-head">
         <div><label>${selected.standalone ? 'STANDALONE NORTHSTAR SHEET' : 'COMPANION NORTHSTAR SHEET'}</label><h3>${String(selected.title).replace(/[<>&]/g, '')}</h3></div>
         <b>${String(selected.form).replace(/[<>&]/g, '')}</b>
@@ -818,11 +917,219 @@
       state.templateFields[input.dataset.templateField] = input.value;
       write();
     }));
+    sheet.querySelectorAll('[data-template-field-option]').forEach(input => input.addEventListener('change', () => {
+      const fieldId = input.dataset.templateFieldOption;
+      const values = [...sheet.querySelectorAll(`[data-template-field-option="${CSS.escape(fieldId)}"]:checked`)].map(option => option.value);
+      const stored = sheet.querySelector(`[data-template-field="${CSS.escape(fieldId)}"]`);
+      if (stored) { stored.value = values.join(' | '); stored.dispatchEvent(new Event('input', { bubbles: true })); }
+    }));
     sheet.querySelectorAll('[data-apply-template]').forEach(button => {
       button.addEventListener('click', () => applyTemplate(button.dataset.applyTemplate));
     });
     $('wpSeedTemplateRows')?.addEventListener('click', () => applyTemplate(selected.id, { seedRows: true, force: true }));
     $('wpPrintTemplate')?.addEventListener('click', printPacket);
+  }
+
+  function quickTemplateHint() {
+    const hint = $('wpQuickTemplateHint');
+    const selected = uwpcTemplates().find(row => row.id === $('wpQuickTemplate')?.value);
+    if (!hint) return;
+    const related = (selected?.related || [])
+      .map(id => uwpcTemplates().find(row => row.id === id)?.form)
+      .filter(Boolean);
+    hint.textContent = selected
+      ? `${selected.form} · ${selected.title}. This opens a NorthStar draft sheet; it does not issue a permit or operating order.${selected.id === 'pc1' ? ' The PC1 page follows the supplied company form layout.' : ''}${selected.standalone ? '' : ' Select the applicable UWPC work-protection instrument before qualified review.'}${related.length ? ` Related draft sheets: ${related.join(', ')}.` : ''}`
+      : 'Select a NorthStar sheet to begin.';
+  }
+
+  function readinessItems() {
+    const incomplete = kind => !state[kind].length || state[kind].some(row => !String(row.first || '').trim() || !String(row.second || '').trim());
+    const template = uwpcTemplates().find(row => row.id === state.workProtectionTemplateId);
+    const contextMissing = [];
+    if (!template) contextMissing.push('NorthStar sheet');
+    if (!state.site) contextMissing.push('station / site');
+    if (!state.asset) contextMissing.push('circuit / asset');
+    if (!state.scope) contextMissing.push('brief purpose');
+
+    const sourceMissing = [];
+    const hasSource = selectedFiles.some(file => file.attachmentId) || state.diagrams.some(file => file.attachmentId) || Boolean(state.schematicId);
+    if (!hasSource) sourceMissing.push('server-stored diagram or schematic');
+    if (!state.canonicalAssetId) sourceMissing.push('canonical asset ID');
+    if (!state.topologySnapshotId) sourceMissing.push('topology snapshot');
+    if (!state.topologyRevision) sourceMissing.push('topology revision');
+    if (!state.revision) sourceMissing.push('diagram revision');
+    if (!state.sourceManifestDigest) sourceMissing.push('source manifest');
+
+    const authorityMissing = [];
+    const hasInstalledUwpcBook = state.ruleSet === 'UWPC 2024' && state.authorityProcedureId === 'uwpc-2024' && Boolean(window.NorthStarUwpc?.bookAvailable);
+    const hasRuleSource = selectedRuleFiles.some(file => file.attachmentId) || state.ruleSources.some(file => file.attachmentId);
+    if (!state.ruleSet) authorityMissing.push('rule set');
+    if (!state.authorityProcedureId || !state.authorityProcedureRevision) authorityMissing.push('authority procedure');
+    if (!hasRuleSource && !hasInstalledUwpcBook) authorityMissing.push('governing procedure source');
+    if (state.ruleSet === 'UWPC 2024' && !state.workProtectionId) authorityMissing.push('UWPC work-protection instrument');
+
+    const promptMissing = [
+      ['isolation', 'isolation'],
+      ['sequence', 'sequence / checkback'],
+      ['verification', 'verification'],
+      ['permission', 'permission'],
+      ['restoration', 'restoration']
+    ].filter(([kind]) => incomplete(kind)).map(([, label]) => label);
+
+    return [
+      { label: 'Draft context', ready: !contextMissing.length, detail: contextMissing.length ? `Add ${contextMissing.join(', ')}.` : `${template.form} · ${state.site} · ${state.asset}.`, target: 'draft form' },
+      { label: 'Source identity', ready: !sourceMissing.length, detail: sourceMissing.length ? `Add ${sourceMissing.join(', ')}.` : 'Source package and traceable identity are recorded.', target: 'source package' },
+      { label: 'UWPC authority', ready: !authorityMissing.length, detail: authorityMissing.length ? `Add ${authorityMissing.join(', ')}.` : 'Governing source and work-protection instrument are recorded.', target: 'source package' },
+      { label: 'Source-derived review', ready: !promptMissing.length, detail: promptMissing.length ? `Complete ${promptMissing.join(', ')} review prompts from approved source.` : 'All five review areas have complete draft entries.', target: 'draft form' }
+    ];
+  }
+
+  function renderReadinessGuide() {
+    const list = $('wpReadinessList');
+    const statePill = $('wpReadinessState');
+    const lead = $('wpReadinessLead');
+    if (!list || !statePill || !lead) return;
+    const items = readinessItems();
+    const complete = items.filter(item => item.ready).length;
+    const readyForReview = complete === items.length;
+    const reviewRecorded = state.status === 'REVIEW RECORDED · NOT RELEASE';
+    const reviewReady = state.status === 'READY FOR QUALIFIED REVIEW';
+    list.replaceChildren();
+    items.forEach(item => {
+      const row = document.createElement('li');
+      row.className = `switching-readiness-item ${item.ready ? 'complete' : 'pending'}`;
+      const badge = document.createElement('span');
+      badge.textContent = item.ready ? 'DONE' : 'NEXT';
+      const copy = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = item.label;
+      const detail = document.createElement('small');
+      detail.textContent = item.detail;
+      copy.append(title, detail);
+      const destination = document.createElement('em');
+      destination.textContent = item.target.toUpperCase();
+      row.append(badge, copy, destination);
+      list.append(row);
+    });
+    if (reviewRecorded) {
+      statePill.textContent = 'REVIEW RECORDED';
+      statePill.className = 'switching-state-pill reviewed';
+      lead.textContent = 'Review is recorded, not released. Utility release and final field confirmation remain outside this workspace.';
+    } else if (reviewReady) {
+      statePill.textContent = 'READY FOR REVIEW';
+      statePill.className = 'switching-state-pill ready';
+      lead.textContent = 'The existing qualified-person gate is open for review. This still does not release work or authorize an operation.';
+    } else if (readyForReview) {
+      statePill.textContent = 'READY TO MARK';
+      statePill.className = 'switching-state-pill ready';
+      lead.textContent = 'The draft has the visible prerequisites for the existing ready-for-review check. Use that gate only after verifying the current source and field condition.';
+    } else {
+      statePill.textContent = `DRAFT · ${complete}/${items.length}`;
+      statePill.className = 'switching-state-pill';
+      lead.textContent = 'Complete the next highlighted item from approved source material. This guide does not change the qualified-review gate.';
+    }
+  }
+
+  function renderQuickStart() {
+    const formSelect = $('wpQuickTemplate');
+    const siteSelect = $('wpQuickSite');
+    if (!formSelect || !siteSelect) return;
+    const rows = uwpcTemplates();
+    const currentTemplateId = formSelect.value || state.workProtectionTemplateId || 'pc1';
+    const kindLabels = {
+      'order-to-operate': 'Switching orders',
+      'work-permit': 'Work permits',
+      'supporting-guarantee': 'Supporting guarantees',
+      application: 'Applications',
+      test: 'Test records',
+      'de-energizing': 'De-energizing',
+      'isolation-tag': 'Isolation tags',
+      'equipment-protection': 'Equipment protection'
+    };
+    const groups = new Map();
+    rows.forEach(row => {
+      const label = kindLabels[row.kind] || 'Other NorthStar sheets';
+      if (!groups.has(label)) groups.set(label, []);
+      groups.get(label).push(row);
+    });
+    formSelect.innerHTML = rows.length
+      ? [...groups.entries()].map(([label, templates]) => `<optgroup label="${label}">${templates.map(row => `<option value="${String(row.id).replace(/"/g, '')}">${String(row.form).replace(/[<>&]/g, '')} · ${String(row.title).replace(/[<>&]/g, '')}</option>`).join('')}</optgroup>`).join('')
+      : '<option value="">Loading NorthStar sheets…</option>';
+    const preferredTemplate = rows.some(row => row.id === currentTemplateId)
+      ? currentTemplateId
+      : rows.find(row => row.id === 'pc1')?.id || rows.find(row => row.id === 'pc17a')?.id || '';
+    formSelect.value = preferredTemplate;
+    formSelect.disabled = !rows.length;
+    if ($('wpQuickCreate')) $('wpQuickCreate').disabled = !rows.length;
+
+    const currentSite = siteSelect.value || state.site;
+    const intakeSite = $('wpSite');
+    if (intakeSite) {
+      siteSelect.innerHTML = intakeSite.innerHTML;
+      if (state.site && ![...siteSelect.options].some(option => option.value === state.site)) {
+        siteSelect.add(new Option(state.site, state.site));
+      }
+      siteSelect.value = currentSite || state.site;
+    }
+    const asset = $('wpQuickAsset');
+    const purpose = $('wpQuickPurpose');
+    const attachmentStatus = $('wpQuickAttachmentStatus');
+    if (asset) asset.value = state.asset || asset.value;
+    if (purpose) purpose.value = state.scope || purpose.value;
+    if (attachmentStatus) {
+      const attachmentCount = selectedRuleFiles.length || state.ruleSources.length;
+      attachmentStatus.textContent = attachmentCount
+        ? `${attachmentCount} supporting document(s) selected · included when the request draft is saved`
+        : 'Optional · PDF, Word, Excel, or text · stored with the request draft';
+    }
+    quickTemplateHint();
+  }
+
+  function hasDraftContent() {
+    return Boolean(state.id || state.packageName || state.asset || state.scope || state.workProtectionTemplateId || state.diagrams.length || state.ruleSources.length || hasFilledReviewRows());
+  }
+
+  function resetDraftState() {
+    selectedFiles.forEach(file => file.url && URL.revokeObjectURL(file.url));
+    Object.keys(state).forEach(key => { if (Array.isArray(state[key])) state[key] = []; else if (typeof state[key] === 'object' && state[key] !== null) state[key] = {}; else state[key] = ''; });
+    state.schema = 1; state.version = 0; state.schematicRevision = 0; state.status = 'DRAFT'; state.storage = 'LOCAL'; state.serverUpdatedAt = '';
+    state.ruleSet = 'UWPC 2024'; state.authorityProcedureId = 'uwpc-2024'; state.authorityProcedureRevision = '2024';
+    selectedFiles = []; selectedRuleFiles = [];
+    try { localStorage.removeItem(KEY); } catch { /* optional */ }
+  }
+
+  async function createQuickDraft() {
+    const templateId = $('wpQuickTemplate')?.value;
+    const siteSelect = $('wpQuickSite');
+    const asset = $('wpQuickAsset')?.value.trim() || '';
+    const purpose = $('wpQuickPurpose')?.value.trim() || '';
+    const status = $('wpQuickStatus');
+    const template = uwpcTemplates().find(row => row.id === templateId);
+    if (!template || !siteSelect?.value || !asset || !purpose) {
+      if (status) { status.textContent = 'Select a form and station, then enter the asset and a brief purpose.'; status.className = 'switching-quick-status warn'; }
+      return;
+    }
+    if (hasDraftContent() && !confirm('Start a separate UWPC draft? Existing server records remain in the library, but unsaved browser edits in the current draft will be cleared.')) return;
+    if (hasDraftContent()) resetDraftState();
+    const picked = window.NorthStarSites
+      ? NorthStarSites.selected(siteSelect)
+      : { site: siteSelect.value.trim(), siteId: siteSelect.selectedOptions[0]?.dataset.siteId || '' };
+    state.site = picked.site;
+    state.siteId = picked.siteId || (window.NorthStarSites && NorthStarSites.resolve(picked.site)?.id) || '';
+    state.asset = asset;
+    state.scope = purpose;
+    state.packageName = `${template.form} ${asset} draft`;
+    if (!applyTemplate(templateId, { seedRows: true, force: true })) return;
+    await saveDraft(`${template.form} draft created.`);
+    if (status) {
+      status.textContent = state.storage === 'SERVER'
+        ? `${template.form} request draft saved. Complete the sheet below; any selected documents are stored with the request.`
+        : `${template.form} draft is local only until the operator record can be reached.`;
+      status.className = `switching-quick-status ${state.storage === 'SERVER' ? 'ok' : 'warn'}`;
+    }
+    document.querySelector('#wpTemplateSheet')?.closest('details.uwpc-workflow-group')?.setAttribute('open', '');
+    window.NorthstarModules?.open('outages:switching-templates');
+    document.querySelector('#wpTemplateSheet')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function applyTemplate(templateId, options = {}) {
@@ -858,6 +1165,8 @@
     state.templateFields = Object.fromEntries(Object.entries(state.templateFields || {}).filter(([key]) => allowed.has(key)));
     if (state.site && !state.templateFields.station) state.templateFields.station = state.site;
     if (state.asset && !state.templateFields.asset) state.templateFields.asset = state.asset;
+    if (selected.id === 'pc1' && state.asset && !state.templateFields.workProtectionDescription) state.templateFields.workProtectionDescription = state.asset;
+    if (selected.id === 'pc1' && state.scope && !state.templateFields.workDescription) state.templateFields.workDescription = state.scope;
     addAudit(`NorthStar ${selected.form} template applied. Drafting only.`);
     write();
     renderFields();
@@ -908,9 +1217,22 @@
         if (file.size > MAX_FILE_BYTES) { rejected.push(`${file.name} exceeds 25 MB`); return; }
         selectedRuleFiles.push({ name: file.name, size: file.size, type: file.type, lastModified: file.lastModified, url: URL.createObjectURL(file), file });
       });
-      renderRuleFiles(); $('wpIntakeStatus').textContent = rejected.length ? rejected.join(' · ') : `${selectedRuleFiles.length} governing source(s) selected locally.`; event.target.value = '';
+      renderRuleFiles(); renderTemplates(); renderQuickStart(); $('wpIntakeStatus').textContent = rejected.length ? rejected.join(' · ') : `${selectedRuleFiles.length} supporting source(s) selected locally.`; event.target.value = '';
     };
+    $('wpQuickAttachRequest')?.addEventListener('click', () => $('wpSourceFiles')?.click());
     $('wpCreateDraft').onclick = createDraft; $('wpSaveDraft').onclick = () => saveDraft(); $('wpApplyTemplate').onclick = () => applyTemplate($('wpTemplate').value || state.workProtectionTemplateId, { seedRows: true }); $('wpReadyReview').onclick = readyForReview; $('wpRecordReview').onclick = recordReview; $('wpDownloadBundle').onclick = downloadControlledBundle; $('wpCloneRevision').onclick = cloneServerRevision; $('wpPrintPacket').onclick = printPacket; $('wpExportDraft').onclick = exportLocalRecord; $('wpNewDraft').onclick = newDraft;
+    $('wpQuickCreate')?.addEventListener('click', () => { void createQuickDraft(); });
+    $('wpQuickTemplate')?.addEventListener('change', quickTemplateHint);
+    document.querySelectorAll('[data-quick-template]').forEach(button => button.addEventListener('click', () => {
+      const select = $('wpQuickTemplate');
+      if (!select) return;
+      select.value = button.dataset.quickTemplate;
+      quickTemplateHint();
+      $('wpQuickAsset')?.focus();
+    }));
+    document.querySelectorAll('[data-readiness-target]').forEach(button => button.addEventListener('click', () => {
+      document.querySelector(button.dataset.readinessTarget)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
     $('wpTemplateKind')?.addEventListener('change', () => { renderTemplateOptions(); renderTemplates(); });
     $('wpTemplate')?.addEventListener('change', () => {
       if ($('wpTemplate').value) applyTemplate($('wpTemplate').value, { seedRows: !hasFilledReviewRows() });

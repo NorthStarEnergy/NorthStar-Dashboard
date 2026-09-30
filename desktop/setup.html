@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Set up NorthStar Control Room</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #091319; color: #e8f5f6; }
+    body { display: grid; min-height: 100vh; margin: 0; place-items: center; }
+    main { width: min(420px, calc(100vw - 48px)); padding: 36px; border: 1px solid #2e555b; border-radius: 14px; background: #102129; box-shadow: 0 18px 50px #0008; }
+    h1 { margin: 0 0 8px; font-size: 1.45rem; } p { color: #b6cbd0; line-height: 1.5; } label { display: grid; gap: 6px; margin: 18px 0; font-size: .9rem; color: #cfe3e5; }
+    input { box-sizing: border-box; width: 100%; padding: 11px; border: 1px solid #52747a; border-radius: 7px; background: #071116; color: inherit; font: inherit; }
+    button { width: 100%; padding: 12px; border: 0; border-radius: 7px; background: #1c9a9c; color: #041012; font: 700 1rem system-ui, sans-serif; cursor: pointer; }
+    button:disabled { cursor: wait; opacity: .6; } #notice { min-height: 1.4em; color: #ffb5a9; } .quiet { font-size: .82rem; color: #88a5ab; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>NorthStar Control Room</h1>
+    <p>Create the local operator sign-in. Its salted verifier and operational records stay in this Windows user profile; the password is not stored or sent anywhere.</p>
+    <form id="setup-form">
+      <label>Operator name<input id="username" name="username" autocomplete="username" maxlength="80" required autofocus></label>
+      <label>Password<input id="password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="256" required></label>
+      <label>Confirm password<input id="confirmation" name="confirmation" type="password" autocomplete="new-password" minlength="8" maxlength="256" required></label>
+      <p id="notice" role="alert"></p>
+      <button id="submit" type="submit">Set up and launch</button>
+    </form>
+    <p class="quiet">This desktop app listens only on this computer.</p>
+  </main>
+  <script>
+    const form = document.getElementById('setup-form');
+    const submit = document.getElementById('submit');
+    const notice = document.getElementById('notice');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      submit.disabled = true;
+      notice.textContent = '';
+      const result = await window.northstarDesktop.configureOperator({
+        username: form.username.value,
+        password: form.password.value,
+        confirmation: form.confirmation.value,
+      });
+      form.password.value = '';
+      form.confirmation.value = '';
+      if (!result.ok) { notice.textContent = result.error; submit.disabled = false; }
+    });
+  </script>
+</body>
+</html>

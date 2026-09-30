@@ -110,6 +110,28 @@ class DemoAuthTest(unittest.TestCase):
         self.assertEqual(status, 200)
         return headers["Set-Cookie"].split(";", 1)[0]
 
+    def site_viewer_cookie(self) -> str:
+        self.backend.DEMO_AUTH = self.auth.normalise_config({
+            "accounts": [self.auth.build_config(
+                "demo", TEST_PASSWORD, role=self.auth.ROLE_SITE_VIEWER
+            )]
+        })
+        status, body, headers = self.sign_in("demo")
+        self.assertEqual(status, 200)
+        self.assertEqual(body["role"], self.auth.ROLE_SITE_VIEWER)
+        return headers["Set-Cookie"].split(";", 1)[0]
+
+    def page(self, path: str, *, cookie: str = "") -> tuple[int, str]:
+        headers = {"Host": OPS_HOST}
+        if cookie:
+            headers["Cookie"] = cookie
+        request = Request(self.base + path, method="GET", headers=headers)
+        try:
+            response = urlopen(request, timeout=5)
+        except HTTPError as error:
+            response = error
+        return response.status, response.read().decode("utf-8", "replace")
+
     def create_checkin(self) -> dict:
         """A worker checks themselves in — an open route on the public host."""
         status, record, _ = self.call(
@@ -155,14 +177,20 @@ class DemoAuthTest(unittest.TestCase):
             "accounts": [self.auth.build_config(name, TEST_PASSWORD)
                          for name in ("Ron", "Ryan")]
         })
-        for name in ("Ron", "Ryan"):
-            status, body, headers = self.sign_in(name)
+        for name, entered in (("Ron", "ron"), ("Ryan", "RYAN"), ("Ryan", "rYaN")):
+            status, body, headers = self.sign_in(entered)
             self.assertEqual(status, 200)
             self.assertEqual(body["username"], name)
             cookie = headers["Set-Cookie"].split(";", 1)[0]
             status, session, _ = self.call("GET", "/api/auth/session", cookie=cookie)
             self.assertEqual(status, 200)
             self.assertEqual(session["username"], name)
+
+    def test_unknown_account_role_fails_closed(self) -> None:
+        account = self.auth.build_config("demo", TEST_PASSWORD)
+        account["role"] = "anything-else"
+        with self.assertRaises(self.auth.AuthConfigError):
+            self.auth.normalise_config({"accounts": [account]})
 
     def test_wrong_username_wrong_password_and_blank_password_all_fail(self) -> None:
         for label, username, password in (
@@ -171,7 +199,7 @@ class DemoAuthTest(unittest.TestCase):
             ("blank password", "ron", ""),
             ("blank username", "", TEST_PASSWORD),
             ("both blank", "", ""),
-            ("case-shifted username", "RON", TEST_PASSWORD),
+            ("case-shifted password", "RON", TEST_PASSWORD.upper()),
         ):
             with self.subTest(label):
                 status, body, headers = self.sign_in(username, password)
@@ -307,6 +335,53 @@ class DemoAuthTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(self.call("GET", path, cookie=cookie)[0], 200)
 
+    def test_site_viewer_receives_only_names_and_no_operator_surface(self) -> None:
+        cookie = self.site_viewer_cookie()
+
+        status, session, _ = self.call("GET", "/api/auth/session", cookie=cookie)
+        self.assertEqual(status, 200)
+        self.assertEqual(session["role"], self.auth.ROLE_SITE_VIEWER)
+        self.assertEqual(session["landingUrl"], "/demo-sites.html")
+
+        status, directory, _ = self.call("GET", "/api/sites", cookie=cookie)
+        self.assertEqual(status, 200)
+        self.assertEqual(set(directory), {"sites"})
+        self.assertTrue(directory["sites"])
+        self.assertTrue(all(set(site) == {"name"} for site in directory["sites"]))
+        self.assertIn("Kenora", [site["name"] for site in directory["sites"]])
+        self.assertNotIn("area", json.dumps(directory))
+        self.assertNotIn("voltage", json.dumps(directory))
+
+        for path in (
+            "/api/flows",
+            "/api/field-reports/history",
+            "/api/incident-library",
+            "/api/uwpc",
+            "/api/data-catalog",
+            "/api/library/procedures",
+            "/api/logbook",
+            "/api/weather",
+            "/api/market-prices",
+        ):
+            with self.subTest(path=path):
+                status, body, _ = self.call("GET", path, cookie=cookie)
+                self.assertEqual(status, 403)
+                self.assertEqual(body["error"], "demo access is limited to site names")
+
+        status, body, _ = self.call(
+            "POST", "/api/logbook", {"subject": "viewer write"}, cookie=cookie
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(body["error"], "demo access is limited to site names")
+
+        status, page = self.page("/northstar-clean.html", cookie=cookie)
+        self.assertEqual(status, 200)
+        self.assertIn("Site directory", page)
+        self.assertNotIn("EDIT LAYOUT", page)
+
+        status, _ = self.page("/flows-workspace.js", cookie=cookie)
+        self.assertEqual(status, 403)
+
     def test_the_session_state_endpoint_answers_the_dashboard_boot_sequence(self) -> None:
         status, body, _ = self.call("GET", "/api/auth/session")
         self.assertEqual(status, 401)
@@ -319,10 +394,12 @@ class DemoAuthTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(body["authenticated"])
         self.assertEqual(body["username"], "ron")
+        self.assertEqual(body["role"], self.auth.ROLE_OPERATOR)
+        self.assertEqual(body["landingUrl"], "/northstar-clean.html")
 
-    def test_the_console_page_serves_the_login_screen_when_signed_out(self) -> None:
-        """A signed-out browser must not get a dashboard that then 401s."""
-        for path in ("/", "/northstar-clean.html"):
+    def test_the_operator_pages_serve_the_login_screen_when_signed_out(self) -> None:
+        """A signed-out browser must not get an operator surface that then 401s."""
+        for path in ("/", "/northstar-clean.html", "/operator-mobile.html"):
             with self.subTest(path=path):
                 request = Request(self.base + path, method="GET", headers={"Host": OPS_HOST})
                 page = urlopen(request, timeout=5).read().decode("utf-8", "replace")
@@ -474,8 +551,10 @@ class DemoAuthTest(unittest.TestCase):
 
     def test_no_password_value_exists_in_html_javascript_or_source(self) -> None:
         """Requirement 2: no password in HTML, JavaScript, Git, Drive, or logs."""
-        for name in ("operator-login.html", "northstar-clean.html", "auth.js",
-                     "ieso_backend.py", "northstar_auth.py", "operator-session.js"):
+        for name in ("operator-login.html", "demo-sites.html", "northstar-clean.html", "auth.js",
+                     "ieso_backend.py", "northstar_auth.py", "operator-session.js",
+                     "operator-mobile.html", "operator-mobile.js", "operator-mobile-sw.js",
+                     "operator-mobile.webmanifest"):
             path = ROOT / name
             with self.subTest(name=name):
                 self.assertTrue(path.exists(), f"{name} is missing")

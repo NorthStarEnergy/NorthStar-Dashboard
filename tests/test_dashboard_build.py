@@ -20,25 +20,30 @@ def load_data(path: Path) -> dict[str, object]:
 
 def test_dashboard_build_sources_are_wired() -> None:
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
-    assert "dashboard-build-data.js?v=20260915-build-history-1" in html
-    assert "dashboard-build.js?v=20260916-ai-icon-1" in html
-    assert "dashboard-build.css?v=20260916-ai-icon-1" in html
     data = load_data(ROOT / "dashboard-build-data.js")
     assert data["current"] == data["history"][0]
-    assert data["current"]["version"] == "v0.50"
+    version = data["current"]["version"]
+    assert f"dashboard-build-data.js?v=build-{version}" in html
+    assert f"dashboard-build.js?v=build-{version}" in html
+    assert f"dashboard-build.css?v=build-{version}" in html
+    assert f"market-workspace.js?v=build-{version}" in html
+    assert f"market-workspace.css?v=build-{version}" in html
 
 
 def test_bump_script_increments_and_records_a_single_line_summary(tmp_path: Path) -> None:
     shutil.copy2(ROOT / "dashboard-build-data.js", tmp_path / "dashboard-build-data.js")
     shutil.copy2(ROOT / "BUILD-VERSION.txt", tmp_path / "BUILD-VERSION.txt")
+    shutil.copy2(ROOT / "northstar-clean.html", tmp_path / "northstar-clean.html")
     result = subprocess.run(
         [
             sys.executable,
             str(SCRIPT),
             "--root",
             str(tmp_path),
-            "--date",
-            "2026-09-16",
+        "--date",
+        "2026-09-16",
+        "--timestamp",
+        "2026-09-16T14:30:00-04:00",
             "--summary",
             "Automated test build",
         ],
@@ -46,14 +51,21 @@ def test_bump_script_increments_and_records_a_single_line_summary(tmp_path: Path
         check=True,
         text=True,
     )
-    assert result.stdout.startswith("v0.51 — 2026-09-16 — Automated test build")
+    data_before = load_data(ROOT / "dashboard-build-data.js")
+    expected_version = f"v{data_before['current']['version'][1:].rsplit('.', 1)[0]}.{int(data_before['current']['version'].rsplit('.', 1)[1]) + 1:02d}"
+    assert result.stdout.startswith(f"{expected_version} — 2026-09-16 — Automated test build")
     data = load_data(tmp_path / "dashboard-build-data.js")
     assert data["current"] == {
-        "version": "v0.51",
+        "version": expected_version,
         "published": "2026-09-16",
+        "publishedAt": "2026-09-16T14:30:00-04:00",
         "summary": "Automated test build",
     }
     assert data["history"][0] == data["current"]
     assert (tmp_path / "BUILD-VERSION.txt").read_text(encoding="utf-8") == (
-        "v0.51\n2026-09-16\nAutomated test build\n"
+        f"{expected_version}\n2026-09-16\n2026-09-16T14:30:00-04:00\nAutomated test build\n"
     )
+    html = (tmp_path / "northstar-clean.html").read_text(encoding="utf-8")
+    assert f"dashboard-build-data.js?v=build-{expected_version}" in html
+    assert f"market-workspace.js?v=build-{expected_version}" in html
+    assert f"market-workspace.css?v=build-{expected_version}" in html

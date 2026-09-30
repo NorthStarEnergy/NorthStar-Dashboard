@@ -101,3 +101,45 @@ def test_snapshot_searches_collection_metadata(catalog_sources):
     result = catalog.snapshot(query="maximo")
     assert [row["id"] for row in result["collections"]] == ["maximo-equipment-master"]
     assert result["artifacts"] == []
+
+
+def test_water_csv_ingestion_is_idempotent_and_paged(catalog_sources):
+    source_root = catalog.DATA / "water-management" / "source"
+    source_root.mkdir(parents=True)
+    (source_root / "series.csv").write_text(
+        "Timestamp,Value,Units\n2025-01-01T00:00:00Z,1.2,m\n2025-01-02T00:00:00Z,1.3,m\n",
+        encoding="utf-8",
+    )
+    first = catalog.ingest_water_csvs(batch_size=100)
+    second = catalog.ingest_water_csvs(batch_size=100)
+    assert first["importedFileCount"] == 1 and first["rowCount"] == 2
+    assert second["unchangedFileCount"] == 1
+
+    with store._session() as connection:
+        record = connection.execute("SELECT id FROM water_source_files").fetchone()
+    inventory = catalog.list_water_files(limit=1)
+    assert len(inventory["files"]) == 1 and inventory["nextCursor"] is None
+    page = catalog.query_water_rows(file_id=record["id"], limit=1)
+    assert page["file"]["headers"] == ["Timestamp", "Value", "Units"]
+    assert page["rows"][0]["values"] == ["2025-01-01T00:00:00Z", "1.2", "m"]
+    assert page["nextCursor"] == 1
+    next_page = catalog.query_water_rows(file_id=record["id"], cursor=page["nextCursor"], limit=1)
+    assert next_page["rows"][0]["rowNumber"] == 2
+    assert next_page["nextCursor"] is None
+
+
+def test_catalog_artifacts_use_continuation_cursor(catalog_sources):
+    catalog.refresh_known_sources("test operator")
+    with store._session() as connection:
+        for name in ("a.csv", "b.csv", "c.csv"):
+            connection.execute(
+                "INSERT INTO data_catalog_artifacts "
+                "(id,collection_id,relative_path,filename,extension,byte_count,sha256,modified_at,origin,status,details_json,first_cataloged_at,last_cataloged_at,last_run_id,active) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
+                ("id-" + name, "water-management", name, name, ".csv", 1, "", None, "fixture", "CATALOGED", "{}", "now", "now", "run"),
+            )
+    first = catalog.snapshot(collection_id="water-management", limit=2)
+    assert [item["filename"] for item in first["artifacts"]] == ["Water_Management.zip", "a.csv"]
+    assert first["nextCursor"].startswith("a.csv\0")
+    second = catalog.snapshot(collection_id="water-management", limit=2, cursor=first["nextCursor"])
+    assert [item["filename"] for item in second["artifacts"]] == ["b.csv", "c.csv"]

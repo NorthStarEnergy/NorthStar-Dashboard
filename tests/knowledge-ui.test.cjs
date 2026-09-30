@@ -1,0 +1,10 @@
+const fs=require('node:fs');const vm=require('node:vm');const assert=require('node:assert/strict');
+const source=fs.readFileSync('ai-assistant-workspace.js','utf8').replace(/\}\)\(\);\s*$/, 'window.__Panel = AssistantPanel; window.__citation = citationMarkup;})();');
+const calls=[];const window={dispatchEvent(){},localStorage:{getItem(){return ''}},NorthstarModules:{open(id){calls.push(id)}}};
+const context={window,document:{addEventListener(){}},CustomEvent:class{},URL,location:{href:'https://ops.northstarenergy.ca/northstar-clean.html',origin:'https://ops.northstarenergy.ca'},setTimeout,AbortController,console};vm.runInNewContext(source,context);
+const panel=Object.create(window.__Panel.prototype);let click;
+panel.root={querySelector(){return null}};panel.menuNode={addEventListener(type,handler){click=handler},contains(){return true}};panel.requestGeneration=0;panel.options={};panel.aiStatus={};panel.logNode={innerHTML:''};panel.renderWorkspace=()=>{};
+panel.bind();assert.equal(typeof click,'function');click({target:{closest(){return {}}},preventDefault(){}});assert.equal(calls[0],'assistant:assistant');assert.equal(panel.conversationId,null);assert.match(panel.logNode.innerHTML,/New chat ready/);
+const safe=window.__citation({title:'Guide <script>',href:'knowledge-library.html?source=oks_test',revision:'1',authorityStatus:'CURRENT_CONTROLLED'});assert.match(safe,/href="\/knowledge-library.html/);assert.doesNotMatch(safe,/<script>/);
+const unsafe=window.__citation({title:'Bad link',href:'javascript:alert(1)'});assert.doesNotMatch(unsafe,/href=/);
+console.log('3 AI menu/citation regression checks passed.');

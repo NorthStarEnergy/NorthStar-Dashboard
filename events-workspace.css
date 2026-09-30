@@ -17,7 +17,7 @@
 #eventsCard .events-head h2 {
   margin: 0;
   color: #f4fbff !important;
-  font: 800 16px/1.1 Arial, sans-serif !important;
+  font: 800 calc(16px * var(--ns-font-scale, 1))/1.1 Arial, sans-serif !important;
   letter-spacing: 1.2px;
 }
 
@@ -25,13 +25,13 @@
   display: block;
   margin-top: 4px;
   color: #69b7e8 !important;
-  font: 800 9px/1.2 monospace !important;
+  font: 800 calc(9px * var(--ns-font-scale, 1))/1.2 monospace !important;
   letter-spacing: .8px;
 }
 
 #eventsCard .events-live {
   color: #65d5a2 !important;
-  font: 800 10px/1 monospace !important;
+  font: 800 calc(10px * var(--ns-font-scale, 1))/1 monospace !important;
   white-space: nowrap;
 }
 
@@ -49,7 +49,7 @@
   border: 1px solid #39505b;
   border-radius: 3px;
   color: var(--muted);
-  font: 800 9px/1 monospace !important;
+  font: 800 calc(9px * var(--ns-font-scale, 1))/1 monospace !important;
   cursor: pointer;
 }
 
@@ -68,7 +68,7 @@
   border: 1px solid var(--line);
   border-radius: 4px;
   color: #fff;
-  font: 700 11px monospace !important;
+  font: 700 calc(11px * var(--ns-font-scale, 1)) monospace !important;
 }
 
 #eventsCard .events-log-entry {
@@ -81,7 +81,7 @@
 
 #eventsCard .events-log-entry label,
 #eventsCard .quick-log-status {
-  font-size: 10px !important;
+  font-size: calc(10px * var(--ns-font-scale, 1)) !important;
   font-weight: 800 !important;
 }
 
@@ -117,7 +117,7 @@
   border-radius: 5px;
   background: #132936;
   color: #79c8f3;
-  font: 800 23px/1 Arial, sans-serif;
+  font: 800 calc(23px * var(--ns-font-scale, 1))/1 Arial, sans-serif;
   cursor: pointer;
 }
 
@@ -147,15 +147,15 @@
   background: #102029;
   border-bottom: 1px solid #355567;
   color: #7f99a8;
-  font: 800 8px/1 monospace;
+  font: 800 calc(8px * var(--ns-font-scale, 1))/1 monospace;
   letter-spacing: .7px;
 }
 
 .cip-log-row {
-  padding: 8px 10px;
+  padding: 4px 8px;
   border-bottom: 1px solid #1b2b35;
   border-left: 3px solid #2f4d5d;
-  font: 600 10px/1.35 monospace;
+  font: 600 calc(10px * var(--ns-font-scale, 1))/1.35 monospace;
 }
 
 a.cip-log-row,
@@ -176,7 +176,7 @@ a.cip-log-row:hover,
   color: #fff;
   border-radius: 4px;
   padding: 6px 8px;
-  font: 700 9px monospace;
+  font: 700 calc(9px * var(--ns-font-scale, 1)) monospace;
   text-decoration: none;
 }
 
@@ -190,7 +190,7 @@ a.cip-log-row:hover,
 .cip-log-actor,
 .cip-log-ref {
   color: #8eacbb;
-  font: 800 9px/1.2 monospace;
+  font: 800 calc(9px * var(--ns-font-scale, 1))/1.2 monospace;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -224,14 +224,14 @@ a.cip-log-row:hover,
 .cip-log-body strong {
   display: block;
   color: #f4f8fa;
-  font: 800 11px/1.25 Arial, sans-serif;
+  font: 800 calc(11px * var(--ns-font-scale, 1))/1.25 Arial, sans-serif;
 }
 
 .cip-log-body p {
   margin: 3px 0 0;
   overflow: hidden;
   color: #becbd1;
-  font: 600 10px/1.35 monospace;
+  font: 600 calc(10px * var(--ns-font-scale, 1))/1.35 monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -243,7 +243,7 @@ a.cip-log-row:hover,
   border: 1px solid #39505b;
   border-radius: 3px;
   color: #8eacbb;
-  font: 800 8px/1 monospace;
+  font: 800 calc(8px * var(--ns-font-scale, 1))/1 monospace;
 }
 
 .cip-log-ref {

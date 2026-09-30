@@ -1,0 +1,12 @@
+.ns-hover-window-bar{display:none;align-items:center;justify-content:space-between;gap:12px;margin:-10px -10px 10px;padding:7px 10px;background:#203b4b;border-bottom:1px solid #64869a;color:#e8f4fa;font:700 12px Arial,sans-serif;cursor:move;touch-action:none;user-select:none}
+.ns-hover-window-pinned{resize:both!important;overflow:auto!important;min-width:260px;min-height:150px;max-width:calc(100vw - 8px)!important;max-height:calc(100dvh - 8px)!important}
+.ns-hover-window-pinned>.ns-hover-window-bar{display:flex;position:sticky;top:0;z-index:2}
+.ns-hover-window-bar button{width:27px;height:27px;border:1px solid #7894a4;border-radius:4px;background:#142c39;color:#fff;font-size:20px;line-height:1;cursor:pointer}
+/* Retire folded-corner controls, including older saved custom presentations. */
+html body .dogear,html body .market-dogear,html body #nsStatusBar .ns-status-dogear,html body main .ns-open-module,html body .builder-dogear,html body [data-builder-add="dogear"]{display:none!important}
+.ns-module-preview{position:fixed;z-index:2147483000;box-sizing:border-box;width:min(560px,calc(100vw - 16px));max-height:min(620px,calc(100dvh - 16px));overflow:auto;padding:14px;border:1px solid #638391;border-radius:8px;background:var(--panel,#142129);color:var(--text,#e5edf2);box-shadow:0 8px 28px #0009;font:13px/1.5 Arial,sans-serif}
+.ns-module-preview[hidden]{display:none!important}
+.ns-module-preview h3{margin:0 0 10px}.ns-module-preview-body{display:block;overflow-wrap:anywhere}.ns-module-preview-body table{width:100%;border-collapse:collapse}.ns-module-preview-body td,.ns-module-preview-body th{padding:5px;text-align:left}.ns-preview-hint{color:var(--muted,#adc0cb);margin:12px 0 0;font-size:12px}
+.ns-module-preview-body>.period{display:inline-grid;gap:5px;padding:10px}
+[data-ns-compact],#nsStatusBar .ns-status-module{cursor:pointer}
+.gs-full-detail{padding:20px;overflow:auto}.gs-full-detail>.gs-close{display:none}

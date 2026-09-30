@@ -151,10 +151,21 @@ def service(database,monkeypatch):
 
 
 def test_new_routes_remain_operator_only_even_with_forged_public_header(service):
-    for path in ['/api/events/register','/api/events/detail?id=x','/api/events/sources']:
+    for path in ['/api/client-release','/api/events/register','/api/events/detail?id=x','/api/events/sources']:
         assert service(path)[0]==403
         assert service(path,public=True,authorized=True)[0]==403
     assert service('/api/events/notes',public=True,authorized=True,payload={})[0]==403
+
+
+def test_client_release_endpoint_records_one_operator_visible_update(service):
+    code,first=service('/api/client-release',authorized=True)
+    assert code==200 and first['recorded'] is True
+    assert first['dashboard']['version'].startswith('v')
+    code,second=service('/api/client-release',authorized=True)
+    assert code==200 and second['recorded'] is False
+    assert second['releaseId']==first['releaseId']
+    events=service('/api/events?aggregateType=system',authorized=True)[1]
+    assert events[0]['eventType']=='system.client_update.applied'
 
 
 def test_register_and_notes_roundtrip_with_server_actor(service):

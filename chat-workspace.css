@@ -38,13 +38,13 @@
 .chat-head label {
   display: block;
   color: var(--chat-muted);
-  font: 800 9px monospace;
+  font: 800 calc(9px * var(--ns-font-scale, 1)) monospace;
   letter-spacing: .7px;
 }
 
 .chat-head h2 {
   margin: 4px 0 0;
-  font-size: 16px;
+  font-size: calc(16px * var(--ns-font-scale, 1));
   color: #edf3f5;
 }
 
@@ -56,7 +56,7 @@
 
 .chat-bridge-status {
   color: var(--chat-muted);
-  font: 800 9px monospace;
+  font: 800 calc(9px * var(--ns-font-scale, 1)) monospace;
   letter-spacing: .5px;
   white-space: nowrap;
 }
@@ -85,7 +85,7 @@
   color: var(--chat-muted);
   border-radius: 4px;
   padding: 7px 10px;
-  font: 800 9px monospace;
+  font: 800 calc(9px * var(--ns-font-scale, 1)) monospace;
   letter-spacing: .4px;
   cursor: pointer;
 }
@@ -110,7 +110,7 @@
 
 .chat-empty {
   color: var(--chat-muted);
-  font: 10px monospace;
+  font: calc(10px * var(--ns-font-scale, 1)) monospace;
   letter-spacing: .4px;
   padding: 18px 4px;
 }
@@ -130,7 +130,7 @@
   gap: 8px;
   align-items: center;
   color: var(--chat-muted);
-  font: 9px monospace;
+  font: calc(9px * var(--ns-font-scale, 1)) monospace;
   letter-spacing: .4px;
 }
 
@@ -141,7 +141,7 @@
   padding: 2px 6px;
   border-radius: 3px;
   border: 1px solid #39505b;
-  font: 800 8px monospace;
+  font: 800 calc(8px * var(--ns-font-scale, 1)) monospace;
   letter-spacing: .5px;
   text-transform: uppercase;
 }
@@ -171,7 +171,7 @@
 
 .chat-body {
   color: #edf3f5;
-  font: 12px/1.45 Arial, sans-serif;
+  font: calc(12px * var(--ns-font-scale, 1))/1.45 Arial, sans-serif;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -195,7 +195,7 @@
   border-radius: 6px;
   color: #fff;
   padding: 10px;
-  font: 12px/1.4 Arial, sans-serif;
+  font: calc(12px * var(--ns-font-scale, 1))/1.4 Arial, sans-serif;
 }
 
 .chat-compose-actions {
@@ -211,7 +211,7 @@
   color: #dce5e7;
   border-radius: 4px;
   padding: 8px 10px;
-  font: 800 9px monospace;
+  font: 800 calc(9px * var(--ns-font-scale, 1)) monospace;
   letter-spacing: .4px;
   cursor: pointer;
   white-space: nowrap;
@@ -228,7 +228,7 @@
   align-items: center;
   gap: 6px;
   color: var(--chat-muted);
-  font: 9px monospace;
+  font: calc(9px * var(--ns-font-scale, 1)) monospace;
   letter-spacing: .3px;
 }
 

@@ -11,9 +11,13 @@ from datetime import datetime
 from hashlib import sha256
 from html.parser import HTMLParser
 import json
+import os
 from urllib.parse import urlparse
 
 import northstar_events as events
+
+
+OUTLOOK_MODES = frozenset({"off", "shadow", "live"})
 
 
 @dataclass(frozen=True)
@@ -34,6 +38,46 @@ class MicrosoftSource:
         return {"provider": self.provider, "label": self.label,
                 "state": "awaiting_connection" if self.enabled else "not_configured",
                 "connected": False, "lastSuccessfulSync": None}
+
+
+def outlook_mode() -> str:
+    """Return the explicit Outlook connector mode without reading credentials."""
+    mode = os.environ.get("NORTHSTAR_OUTLOOK_MODE", "off").strip().lower() or "off"
+    return mode if mode in OUTLOOK_MODES else "off"
+
+
+def outlook_status() -> dict[str, object]:
+    """Expose an honest, credential-free connection state to operators.
+
+    A dashboard draft can hand off to the operator's mail client, but this code
+    intentionally never represents that as mailbox access or a sent message.
+    """
+    mode = outlook_mode()
+    states = {
+        "off": (
+            "not_configured",
+            "No Microsoft Graph authorization or approved mailbox source is configured.",
+        ),
+        "shadow": (
+            "draft_only",
+            "Outlook drafts can be prepared locally; mailbox synchronization remains disabled.",
+        ),
+        "live": (
+            "awaiting_authorization",
+            "Live mailbox access requires explicit Microsoft authorization and an approved source.",
+        ),
+    }
+    state, detail = states[mode]
+    return {
+        "provider": "outlook",
+        "mode": mode,
+        "state": state,
+        "connected": False,
+        "canPrepareDraft": True,
+        "canSync": False,
+        "lastSuccessfulSync": None,
+        "detail": detail,
+    }
 
 
 class _Text(HTMLParser):

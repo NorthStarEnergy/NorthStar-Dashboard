@@ -10,7 +10,7 @@ assert.ok(html.includes('id="openDeviceLibrary"'));
 assert.ok(html.includes('device-library.js?v=20260915-operations-plant-folders-1'));
 assert.ok(html.includes('device-library.css?v=20260915-operations-plant-folders-1'));
 assert.ok(html.includes('northstar-sites.js?v=20260914-2'));
-assert.ok(html.includes('outages-workspace.js?v=8'));
+assert.ok(html.includes('outages-workspace.js?v=20260920-1'));
 const libraryJs = fs.readFileSync(path.join(root, 'device-library.js'), 'utf8');
 assert.ok(libraryJs.includes('/api/maximo/station'));
 assert.ok(libraryJs.includes('/api/maximo/equipment'));

@@ -12,12 +12,15 @@
   const targetNode = client.querySelector('#dispatchTarget');
   const activationNode = client.querySelector('#dispatchActivation');
   const reserveNode = client.querySelector('#dispatchReserve');
+  const activationBanner = client.querySelector('#dispatchActivationBanner');
+  const iesoIndicator = client.querySelector('#dispatchIesoIndicator');
+  const heartbeatIndicator = client.querySelector('#dispatchHeartbeatIndicator');
   const detailNode = client.querySelector('#dispatchHealthDetail');
   const sparkline = client.querySelector('#dispatchSparkline');
   const overview = document.querySelector('#overview');
 
   const numeric = value => value != null && value !== '' && Number.isFinite(Number(value));
-  const mw = value => (numeric(value) ? `${Number(value).toFixed(1)} MW` : '— MW');
+  const mw = value => (numeric(value) ? Number(value).toFixed(1) : '—');
   const reserveMw = value => (numeric(value) ? Number(value).toFixed(0) : '—');
 
   function setHealthState(kind) {
@@ -79,9 +82,7 @@
     const tracking = payload?.tracking || 'unknown';
 
     if (headline) {
-      headline.innerHTML = `<span class="dispatch-output-value">${numeric(output) ? Number(output).toFixed(1) : '—'}</span>`
-        + ' / '
-        + `<span class="dispatch-target-value">${numeric(target) ? Number(target).toFixed(1) : '—'}</span> MW`;
+      headline.textContent = `${numeric(output) ? Number(output).toFixed(1) : '—'} / ${numeric(target) ? Number(target).toFixed(1) : '—'}`;
     }
     if (deltaNode) {
       deltaNode.textContent = formatDelta(delta, tracking);
@@ -93,26 +94,39 @@
     const activation = payload?.orActivation;
     if (activationNode) {
       const active = Boolean(activation);
-      activationNode.textContent = active ? `${activation} ACTIVE` : 'NOT ACTIVE';
+      activationNode.textContent = active ? `${activation} ACTIVE` : '';
       activationNode.closest('.dispatch-field')?.classList.toggle('active', active);
+      client.classList.toggle('or-active', active);
+      const activatedAt = payload?.orActivationAt || payload?.orActivatedAt || payload?.orActivationTimestamp;
+      const stamp = activatedAt ? new Date(activatedAt) : new Date(payload?.updated || Date.now());
+      if (activationBanner) activationBanner.textContent = active
+        ? `OR ACTIVATED (${stamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })})`
+        : '';
     }
 
     const reserve = payload?.reserveStandby || {};
     if (reserveNode) {
-      reserveNode.textContent = `${reserveMw(reserve.tenS)}S / ${reserveMw(reserve.tenN)}N / ${reserveMw(reserve.thirtyR)}R MW`;
+      reserveNode.innerHTML = `<span><b>10N</b> ${reserveMw(reserve.tenN)}</span><span><b>10S</b> ${reserveMw(reserve.tenS)}</span><span><b>30R</b> ${reserveMw(reserve.thirtyR)}</span>`;
     }
 
     if (detailNode) {
       const stamp = payload?.updated
         ? new Date(payload.updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
         : 'awaiting telemetry';
-      const source = payload?.simulated ? 'IESO-style simulated feed' : (payload?.source || 'telemetry');
       const intervalEnd = payload?.dispatchInterval?.end
         ? new Date(payload.dispatchInterval.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
         : null;
-      detailNode.textContent = `Last telemetry: ${stamp} · ${source}`
+      detailNode.textContent = `Last heartbeat: ${stamp}`
         + (intervalEnd ? ` · dispatch valid to ${intervalEnd}` : '');
     }
+
+    const healthy = payload?.healthy !== false && !payload?.stale;
+    [iesoIndicator, heartbeatIndicator].forEach(node => {
+      if (!node) return;
+      node.classList.toggle('online', healthy);
+      node.classList.toggle('offline', !healthy);
+      node.setAttribute('aria-pressed', String(healthy));
+    });
 
     drawSparkline(payload?.history);
 

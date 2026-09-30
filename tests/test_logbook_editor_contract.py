@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_dashboard_loads_the_recovered_editor_assets_after_existing_behavior() -> None:
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
 
-    assert 'href="logbook-editor.css?v=20260826-1"' in html
-    assert 'src="logbook-editor.js?v=20260826-1"' in html
+    assert 'href="logbook-editor.css?v=20260826-1' in html
+    assert 'src="logbook-editor.js?v=20260826-1' in html
     assert html.index('id="logbook-email-behavior"') < html.index('src="logbook-editor.js')
     assert 'id="logDetails"' in html
 

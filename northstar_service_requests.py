@@ -10,7 +10,9 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 
-ROOT = Path(__file__).resolve().parent
+from northstar_paths import app_root
+
+ROOT = app_root(__file__)
 TZ = ZoneInfo("America/Toronto")
 SNAPSHOT_NAME = "service-requests.json"
 PAGE_SIZE = 75

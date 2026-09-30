@@ -49,6 +49,15 @@ $port = 4180
 
 Set-Location -LiteralPath $projectRoot
 
+# Serialize Manager clicks so overlapping launchers cannot kill one another
+# (or interrupt the same database recovery) during process cleanup.
+$startupMutex = New-Object System.Threading.Mutex($false, 'Local\NorthStarStartup4180')
+$startupLockHeld = $false
+try {
+    try { $startupLockHeld = $startupMutex.WaitOne(360000) }
+    catch [System.Threading.AbandonedMutexException] { $startupLockHeld = $true }
+    if (-not $startupLockHeld) { throw 'Another NorthStar launch is still in progress. Try again after it finishes.' }
+
 $ancestorProcessIds = @()
 if (-not $ServiceMode) {
 $processCursor = Get-CimInstance Win32_Process -Filter "ProcessId=$PID"
@@ -77,8 +86,7 @@ function Get-NorthstarHealth {
 function Get-NorthstarProcesses {
     Get-CimInstance Win32_Process | Where-Object {
         $_.ProcessId -ne $PID -and $ancestorProcessIds -notcontains $_.ProcessId -and (
-            ($_.Name -match '^(?:python|py)(?:\.exe)?$' -and $_.CommandLine -match 'ieso_backend\.py') -or
-            ($_.Name -match '^powershell(?:\.exe)?$' -and $_.CommandLine -match 'start-northstar(?:-v[23])?\.ps1')
+            ($_.Name -match '^(?:python|py)(?:\.exe)?$' -and $_.CommandLine -match 'ieso_backend\.py')
         )
     }
 }
@@ -101,7 +109,13 @@ if ($health -and $freshBackend) {
 if ($northstarProcesses.Count) {
     Write-Host 'Stopping an older NorthStar startup process...'
     foreach ($process in $northstarProcesses) {
-        Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+        $oldBackend = Get-Process -Id $process.ProcessId -ErrorAction SilentlyContinue
+        if ($oldBackend) {
+            Stop-Process -InputObject $oldBackend -Force -ErrorAction Stop
+            if (-not $oldBackend.WaitForExit(60000)) {
+                throw 'The previous NorthStar backend is still releasing its database. Try again after it exits.'
+            }
+        }
     }
     Start-Sleep -Milliseconds 800
 }
@@ -146,6 +160,15 @@ if (-not $env:OPENAI_API_KEY -and (Test-Path -LiteralPath $runtimeEnvFile)) {
     }
 }
 if (-not $env:NORTHSTAR_AI_ENGINE) { $env:NORTHSTAR_AI_ENGINE = 'openai' }
+
+# Optional local voice engine, enabled only after setup completes successfully.
+$voiceEnabled = Join-Path $projectRoot 'data\voice-local.enabled'
+$voicePython = Join-Path $projectRoot 'data\voice-engine\Scripts\python.exe'
+if (-not $env:NORTHSTAR_VOICE_ENGINE -and (Test-Path -LiteralPath $voiceEnabled) -and (Test-Path -LiteralPath $voicePython)) {
+    $voiceAdapter = Join-Path $projectRoot 'scripts\voice-transcribe-local.py'
+    $env:NORTHSTAR_VOICE_ENGINE = 'command'
+    $env:NORTHSTAR_VOICE_COMMAND = '"' + $voicePython + '" "' + $voiceAdapter + '" "{file}"'
+}
 
 # Public deployment settings. Both are safe to leave set for local-only use:
 # the gate only engages when it is 'access' or 'demo', and the check-in origin
@@ -203,6 +226,8 @@ if ($ServiceMode -and $health) {
 }
 
 if ($ServiceMode) {
+    $startupMutex.ReleaseMutex()
+    $startupLockHeld = $false
     Write-Host 'Service mode: running the backend in the foreground.'
     # Keep Python in the scheduled task's process tree.  Start-Process -Wait
     # still detaches it on this host, so ending the task leaves an old backend
@@ -221,7 +246,7 @@ $backendProcess = Start-Process -FilePath $pythonFile -ArgumentList $pythonArgum
     -WorkingDirectory $projectRoot -WindowStyle Hidden -PassThru `
     -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
 
-$readyDeadline = (Get-Date).AddSeconds(30)
+$readyDeadline = (Get-Date).AddSeconds(300)
 do {
     Start-Sleep -Milliseconds 500
     if ($backendProcess.HasExited) {
@@ -235,13 +260,19 @@ do {
 
 if (-not $health) {
     Stop-Process -Id $backendProcess.Id -Force -ErrorAction SilentlyContinue
-    throw "NorthStar did not become ready within 30 seconds. Last health error: $lastHealthError"
+    throw "NorthStar did not become ready within 300 seconds. Last health error: $lastHealthError. See $stderrLog"
 }
 
 Write-Host 'Core systems are ready. Live market and weather feeds may take another minute to warm up.'
+$startupMutex.ReleaseMutex()
+$startupLockHeld = $false
 if (-not $NoBrowser) { Start-Process $dashboardUrl }
 if ($Wait) {
     Write-Host "Holding this process while the backend runs (pid $($backendProcess.Id))."
     Wait-Process -Id $backendProcess.Id
     Write-Host 'The backend exited.'
+}
+} finally {
+    if ($startupLockHeld) { $startupMutex.ReleaseMutex() }
+    $startupMutex.Dispose()
 }

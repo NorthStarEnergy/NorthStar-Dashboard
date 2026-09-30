@@ -157,7 +157,9 @@ def classify_display(record: dict[str, Any]) -> dict[str, str]:
     log_class = "OPERATIONAL"
     filter_group = "operator"
 
-    if event_type.startswith("ai."):
+    if event_type.startswith("system.") or aggregate == "system" or source == "system":
+        channel, log_class, filter_group = "system", "SYSTEM", "system"
+    elif event_type.startswith("ai."):
         channel, log_class, filter_group = "ai", "OPERATIONAL", "system"
     elif event_type.startswith("voice.") or source == "voice" or aggregate == "voice_recording":
         channel, log_class, filter_group = "voice", "COMMUNICATION", "comms"

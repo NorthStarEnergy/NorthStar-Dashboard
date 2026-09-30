@@ -24,8 +24,9 @@ from zoneinfo import ZoneInfo
 import northstar_events as events
 import northstar_sites as sites
 import northstar_uwpc as uwpc
+from northstar_paths import app_root
 
-ROOT = Path(__file__).resolve().parent
+ROOT = app_root(__file__)
 DB_PATH = Path(os.environ.get("NORTHSTAR_DB", ROOT / "data" / "northstar.db"))
 BACKUP_DIR = DB_PATH.parent / "backups"
 BACKUP_KEEP = 14
@@ -707,16 +708,23 @@ def init_db() -> None:
         from northstar_chat import init_schema as init_chat_schema
 
         init_chat_schema(connection)
+        from northstar_ai_history import init_schema as init_ai_history_schema
+
+        init_ai_history_schema(connection)
         from northstar_data_catalog import init_schema as init_data_catalog_schema
 
         init_data_catalog_schema(connection)
+        from northstar_uwpc_desk import init_schema as init_uwpc_desk_schema
+
+        init_uwpc_desk_schema(connection)
         _migrate_unified_events(connection)
         _seed_readiness_registry(connection)
         connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_checkins_help_state"
             " ON checkins(help_state) WHERE help_state IN ('requested','acknowledged')"
         )
-        connection.execute("PRAGMA optimize")
+        # Planner maintenance is optional; do not delay service readiness with
+        # PRAGMA optimize on the multi-gigabyte operational database.
 
 
 def _seed_readiness_registry(connection: sqlite3.Connection) -> None:
@@ -1535,7 +1543,11 @@ def operational_summary(reference: datetime | None = None) -> dict[str, Any]:
     """Small, read-only status snapshot for watchdog and support diagnostics."""
     reference = reference or datetime.now(TZ)
     with _LOCK, _session() as connection:
-        integrity = connection.execute("PRAGMA quick_check(1)").fetchone()[0]
+        # Health is polled by launchers every few seconds. A quick_check still
+        # reads the whole multi-gigabyte database and can stall service startup.
+        # Opening the connection and reading a value verifies live DB access;
+        # reserve full integrity checks for explicit maintenance.
+        connection.execute("SELECT 1").fetchone()
         counts = connection.execute(
             "SELECT"
             " SUM(CASE WHEN status IN ('on-site','overdue','provisional') THEN 1 ELSE 0 END)"
@@ -1559,8 +1571,8 @@ def operational_summary(reference: datetime | None = None) -> dict[str, Any]:
         backup_at = modified.isoformat()
         backup_age_minutes = max(0, int((reference - modified).total_seconds() // 60))
     return {
-        "ok": integrity == "ok",
-        "integrity": integrity,
+        "ok": True,
+        "integrity": "not_checked",
         "activeCheckins": int(counts["active_checkins"] or 0),
         "overdueCheckins": int(counts["overdue_checkins"] or 0),
         "openHelpRequests": int(counts["open_help"] or 0),
@@ -2514,6 +2526,7 @@ _SWITCHING_ATTACHMENT_TYPES = {
         ".txt": "text/plain",
         ".doc": "application/msword",
         ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     },
 }
 MAX_SWITCHING_ATTACHMENT_BYTES = 25 * 1024 * 1024
@@ -2815,6 +2828,17 @@ def _one_line_terminal_id(value: Any) -> str:
     return raw[:12]
 
 
+def _one_line_binding(value: Any) -> dict[str, Any]:
+    value = value if isinstance(value, dict) else {}
+    return {
+        "feedCode": _switching_clip(value.get("feedCode"), 80),
+        "tagName": _switching_clip(value.get("tagName"), 160),
+        "openValue": _switching_clip(value.get("openValue", "0"), 80),
+        "closedValue": _switching_clip(value.get("closedValue", "1"), 80),
+        "staleAfterSeconds": _bounded_int(value.get("staleAfterSeconds"), 10, 86400, 1800),
+    }
+
+
 def _normalise_one_line_record(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError("schematic record must be a JSON object")
@@ -2852,6 +2876,18 @@ def _normalise_one_line_record(value: Any) -> dict[str, Any]:
             "deviceFunction": _switching_clip(item.get("deviceFunction"), 80),
             "operatingState": operating_state,
             "windingConfig": winding_config,
+            "assetTag": _switching_clip(item.get("assetTag"), 160),
+            "siteCode": _switching_clip(item.get("siteCode"), 80),
+            "voltage": _switching_clip(item.get("voltage"), 80),
+            "description": _switching_clip(item.get("description"), 320),
+            "scada": _one_line_binding(item.get("scada")),
+            "measurements": [
+                {**_one_line_binding(reading),
+                 "label": _switching_clip(reading.get("label"), 80),
+                 "unit": _switching_clip(reading.get("unit"), 32)}
+                for reading in (item.get("measurements") if isinstance(item.get("measurements"), list) else [])[:6]
+                if isinstance(reading, dict)
+            ],
         })
     edges: list[dict[str, str]] = []
     pairs: set[tuple[str, str]] = set()

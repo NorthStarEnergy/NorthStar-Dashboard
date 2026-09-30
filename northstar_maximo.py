@@ -18,8 +18,9 @@ from urllib.parse import urlencode, urljoin, urlparse
 from urllib.request import Request, urlopen
 
 import northstar_device_library as library
+from northstar_paths import app_root
 
-ROOT = Path(__file__).resolve().parent
+ROOT = app_root(__file__)
 CONFIG_NOTE = (
     "Maximo is the station asset source. This origin does not write work orders, "
     "change asset status, or acknowledge alarms."

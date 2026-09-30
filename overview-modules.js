@@ -106,6 +106,11 @@
     return {key,body,footer:freshness(key)};
   }
   function present(m,el,p){
+    if(el.id==='overviewGeneratingStations'){
+      el.classList.remove('ov-managed');
+      el.querySelector(':scope > .ov-summary')?.remove();
+      return;
+    }
     if(m.id.startsWith('weather:')){
       // Preserve the pre-redesign weatherCard/forecast renderer and its live anchors.
       el.classList.remove('ov-managed');el.classList.add('ns-weather-original');
@@ -140,7 +145,7 @@
     summary.hidden=!!p.customOnly;
     // Isolate the compact renderer from inherited per-card grid/position rules.
     [...el.children].forEach(child=>{
-      if(!child.matches('.ns-module-content,.ns-open-module,.ns-edit-module,.ov-summary,.canvas-move-handle,.canvas-resize-handle,.canvas-select-handle'))child.style.setProperty('display','none','important');
+      if(!child.matches('.ns-module-content,.ns-open-module,.ns-edit-module,.ov-summary,.canvas-remove-module,.canvas-move-handle,.canvas-resize-handle,.canvas-select-handle'))child.style.setProperty('display','none','important');
     });
     const open=el.querySelector(':scope > .ns-open-module');if(open){if(open.textContent)open.textContent='';open.setAttribute('aria-label','Open '+(p.title || m.title));open.title='Open full module';}
     const edit=el.querySelector(':scope > .ns-edit-module');if(edit){if(edit.textContent!=='✎')edit.textContent='✎';edit.setAttribute('aria-label','Edit '+(p.title || m.title));edit.title='Edit module';}
@@ -152,7 +157,7 @@
   }
   function init(){
     const root=document.getElementById('overviewModules');if(!root)return;
-    for(const [id,title] of [['overviewStaffSummary','Field staff'],['overviewEventsSummary','Events'],['overviewChatSummary','Chat']]){
+    for(const [id,title] of [['overviewEventsSummary','Events'],['overviewChatSummary','Chat']]){
       const card=document.createElement('article');card.id=id;card.className='panel';card.dataset.overviewModule='';card.dataset.moduleId=id;card.setAttribute('aria-label',title);root.append(card);
     }
     const detail=document.createElement('article');detail.id='dispatchDetail';detail.className='panel';document.getElementById('markets')?.append(detail);

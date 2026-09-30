@@ -30,6 +30,7 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timedelta
@@ -38,11 +39,14 @@ from typing import Any, Iterator
 from zoneinfo import ZoneInfo
 
 import northstar_events as events
+from northstar_paths import app_root
 
-ROOT = Path(__file__).resolve().parent
+ROOT = app_root(__file__)
 TZ = ZoneInfo("America/Toronto")
 
-AUDIO_SUFFIXES = {".wav", ".mp3", ".m4a", ".ogg", ".oga", ".flac", ".amr", ".aac", ".wma", ".opus"}
+AUDIO_SUFFIXES = {".wav", ".mp3", ".m4a", ".ogg", ".oga", ".flac", ".amr", ".aac", ".wma", ".opus", ".webm"}
+MAX_UPLOAD_BYTES = 32 * 1024 * 1024
+_UPLOAD_LOCK = threading.Lock()
 MAX_AUDIO_BYTES = 256 * 1024 * 1024
 
 # Two observations of an unchanged (size, mtime) before a file is considered
@@ -384,6 +388,47 @@ def ingest_audio(
     record = _recording_row(row)
     record["duplicate"] = False
     return record
+
+
+def receive_upload(name: str, content: bytes, source: str, actor: str) -> dict[str, Any]:
+    """Persist browser audio before registering it in the shared intake log."""
+    name = name.strip()
+    if not name or len(name) > 180 or any(c in name for c in '/\\\r\n\x00'):
+        raise ValueError("Use a file name without folders (up to 180 characters)")
+    suffix = Path(name).suffix.lower()
+    if suffix not in AUDIO_SUFFIXES:
+        raise ValueError("Unsupported audio format")
+    if source not in {"pc-microphone", "audio-upload"}:
+        raise ValueError("Unsupported audio source")
+    if not content or len(content) > MAX_UPLOAD_BYTES:
+        raise ValueError("Audio must be between 1 byte and 32 MB")
+    directory = store_path()
+    directory.mkdir(parents=True, exist_ok=True)
+    # Serialize browser uploads; the shared intake still deduplicates inbox races.
+    with _UPLOAD_LOCK:
+        digest = hashlib.sha256(content).hexdigest()
+        with _db() as connection:
+            existing = connection.execute(
+                "SELECT * FROM voice_recordings WHERE content_sha256=?", (digest,)
+            ).fetchone()
+        if existing is not None:
+            record = _recording_row(existing)
+            record["duplicate"] = True
+            return record
+        stored_name = uuid.uuid4().hex + suffix
+        target = directory / stored_name
+        try:
+            target.write_bytes(content)
+            record = ingest_audio(name, content, source=source, stored_name=stored_name)
+        except Exception:
+            target.unlink(missing_ok=True)
+            raise
+        if record.get("duplicate"):
+            target.unlink(missing_ok=True)
+            return record
+        with _db() as connection:
+            _log(connection, record["recordingId"], "uploaded", source, actor)
+        return record
 
 
 def scan_inbox_once() -> list[dict[str, Any]]:

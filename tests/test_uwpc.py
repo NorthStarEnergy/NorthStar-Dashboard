@@ -91,6 +91,24 @@ def test_unknown_template_is_rejected_and_known_template_is_stored(database):
     assert companion["templateFields"] == {"requestType": "Issued permit"}
 
 
+def test_order_to_operate_template_can_be_created_as_a_draft(database):
+    draft = store.create_switching_draft({
+        "packageName": "PC17A FDR-01 draft",
+        "site": "Kenora",
+        "asset": "FDR-01",
+        "ruleSet": "UWPC 2024",
+        "authorityProcedureId": "uwpc-2024",
+        "authorityProcedureRevision": "2024",
+        "workProtectionTemplateId": "pc17a",
+        "templateFields": {"holder": "Draft receiver", "steps": "Enter from approved source"},
+        "scope": "Draft an order-to-operate review.",
+    }, actor="operator")
+    assert draft["status"] == "DRAFT"
+    assert draft["workProtectionTemplateId"] == "pc17a"
+    assert draft["workProtectionId"] == ""
+    assert draft["templateFields"] == {"holder": "Draft receiver", "steps": "Enter from approved source"}
+
+
 def test_unknown_instrument_is_rejected_and_known_instrument_is_stored(database):
     with pytest.raises(ValueError, match="instrument"):
         store.create_switching_draft({"packageName": "x", "workProtectionId": "pc99"}, actor="operator")
@@ -180,15 +198,23 @@ def test_dashboard_uses_uwpc_2024_and_keeps_it_off_the_checkin_host():
     outages = (ROOT / "outages-workspace.js").read_text(encoding="utf-8")
     assert "UWPC 2024" in html
     assert 'id="wpWorkProtection"' in html
-    assert "switching-workspace.js?v=20260914-5" in html
+    assert "switching-workspace.js?v=20260920-2" in html
+    assert 'id="wpReadinessGuide"' in html
+    assert 'id="wpReadinessList"' in html
+    assert "data-readiness-target" in html
     assert "northstar-sites.js?v=20260914-2" in html
-    assert "outages-workspace.js?v=8" in html
+    assert "outages-workspace.js?v=20260920-1" in html
     assert 'id="wpTemplateGallery"' in html
     assert 'id="uwpcTemplateList"' in html
     assert '<select id="wpSite">' in html
     assert 'id="uwpcInstrumentList"' in html
     assert "/api/uwpc" in switching
+    assert "function readinessItems()" in switching
+    assert "function renderReadinessGuide()" in switching
+    assert "does not change the qualified-review gate" in switching
     assert "void renderUwpcSource()" in outages
+    assert "const governingCode" in outages
+    assert "undefined undefined" not in outages
     assert "closest('[data-outage-tab]')" in outages
     assert backend.OPERATOR_ROUTES["/api/uwpc"] == ("GET",)
     assert backend.OPERATOR_ROUTES["/api/uwpc/book"] == ("GET",)

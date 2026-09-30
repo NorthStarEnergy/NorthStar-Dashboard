@@ -10,7 +10,9 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parent
+from northstar_paths import app_root
+
+ROOT = app_root(__file__)
 SNAPSHOT_NAME = "incident-index.json"
 PAGE_SIZE = 60
 MAX_PAGE_SIZE = 150

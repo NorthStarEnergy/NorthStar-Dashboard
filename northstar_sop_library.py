@@ -13,7 +13,9 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parent
+from northstar_paths import app_root
+
+ROOT = app_root(__file__)
 DEFAULT_LIBRARY_ROOT = ROOT / "data" / "controlled-sources" / "firstlight-legacy-sops"
 PDF_MAGIC = b"%PDF-"
 DOC_ID_RE = re.compile(r"^flc-[a-f0-9]{16}$")

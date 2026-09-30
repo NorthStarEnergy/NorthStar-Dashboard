@@ -1,0 +1,26 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('dashboard-chrome.js','utf8');
+const helpers=source.slice(source.indexOf('    // Fixed crew strip:'),source.indexOf('    const marketNode='));
+const context={fetch:()=>new Promise(()=>{})};vm.createContext(context);vm.runInContext('const esc=v=>String(v);'+helpers+';this.state=crewWorkerState;this.markup=crewMarkup;this.code=crewCode;',context);
+const now=Date.now(),person={site:'Iroquois Falls',status:'on-site',lastHeard:new Date(now-3600000).toISOString(),overdueAfterMinutes:60};
+assert.equal(context.state(person,now-1),'current');
+assert.equal(context.state(person,now),'due');
+assert.equal(context.state(person,now+300000),'due');
+assert.equal(context.state(person,now+300001),'missed');
+assert.equal(context.state({...person,needsHelp:true},now-1),'missed');
+assert.equal(context.state({...person,lastHeard:null},now),'pending');
+assert.equal(context.state({...person,status:'provisional'},now-1),'pending');
+assert.equal(context.code({siteId:'site:iroquois-falls'}),'IR');
+assert.equal(context.code({site:'Island Falls GS'}),'IS');
+assert.equal(context.code({site:'Cogent'}),'CG');
+const base=context.markup([]);assert.match(base,/left:25%;top:0px[^>]*[\s\S]*?IR - 0/);
+const html=context.markup([person,{...person,site:'Twin Falls'},{...person,site:'Twin Falls'}]);
+assert.match(html,/left:25%;top:0px[^>]*data-crew-site="Iroquois Falls"/);
+assert.match(html,/IR - 1/);assert.match(html,/TW - 2/);
+assert.match(context.markup(null),/UNAVAILABLE/);
+console.log('PASS: timing boundaries, help priority, unknown conditions, aliases, grid, lone promotion, labels');
+
+const unknown=context.markup([{...person,site:'Alder Creek GS',alone:true},{...person,site:'Timmins GS'},{...person,site:'Timmins GS'}]);
+assert.ok(!unknown.includes('Alder Creek')&&!unknown.includes('Timmins'));
+assert.equal((unknown.match(/data-crew-site=/g)||[]).length,21);
+console.log('PASS: unconfigured sites cannot create or promote full-name buttons');

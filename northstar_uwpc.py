@@ -16,8 +16,9 @@ from pathlib import Path
 from typing import Any
 
 import northstar_uwpc_templates as templates
+from northstar_paths import app_root
 
-ROOT = Path(__file__).resolve().parent
+ROOT = app_root(__file__)
 RULE_SET = "UWPC 2024"
 PROCEDURE_ID = "uwpc-2024"
 EDITION = "2024"

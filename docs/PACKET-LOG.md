@@ -1,3 +1,11 @@
+- 2026-09-28: Station schematic builder foundation — equipment metadata, durable SCADA bindings, read-only display, dynamic measurements, reusable templates and editing tools. See [report](packets/2026-09-28-station-schematic-builder.md).
+
+- 2026-09-28: Advanced module asset editor v0.126 — individual geometry and styling, custom module builder, live bindings, undo/redo and saved reset. See [report](packets/2026-09-28-module-asset-editor.md). Local implementation; Git publication pending separation from concurrent changes.
+
+# Controlled operator knowledge library - 2026-09-26
+
+Added reviewed source intake, scoped AI retrieval and exact evidence links. Standalone Git publication is blocked by the inherited source baseline. See [report](packets/2026-09-26-operator-knowledge-library.md).
+
 # IESO HE clock and 24-hour times — 2026-09-18
 
 Event log shows live `[HE xx - HH:MM]` and operator clocks use Toronto 24-hour
@@ -405,3 +413,6 @@ as live behavior:
 - Replaced the large persistent Events card with an `Alarms (n)` button that pulses gently only for unacknowledged alarms and opens the full Events workspace.
 - Details: `docs/packets/2026-09-11-compact-alarm-indicator.md`.
 - Verification: 209 tests passed.
+
+## 2026-09-28 — AI environment guidance
+Versioned operational prompting, selected-section/site/time context, response-depth budgets, and incomplete-answer handling. Targeted checks: 26 passed. Backend restarted; authenticated UI check and coherent Git publication pending. See `docs/packets/2026-09-28-ai-environment.md`.

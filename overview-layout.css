@@ -1,10 +1,10 @@
 /* Main-page layout: one responsive flow, shared with the layout editor. */
-body main #weatherStrip:empty::before {content:'Loading station weather…';grid-column:1 / -1;padding:20px;color:var(--muted);font-size:14px;}
-body main #marketTopTiles:empty::before {content:'Loading IESO / APIROQ market data…';grid-column:1 / -1;padding:20px;color:var(--muted);font-size:14px;}
+body main #weatherStrip:empty::before {content:'Loading station weather…';grid-column:1 / -1;padding:20px;color:var(--muted);font-size:calc(14px * var(--ns-font-scale, 1));}
+body main #marketTopTiles:empty::before {content:'Loading IESO / APIROQ market data…';grid-column:1 / -1;padding:20px;color:var(--muted);font-size:calc(14px * var(--ns-font-scale, 1));}
 body main .page-header {
   position:relative!important; top:auto!important; display:flex!important;
   flex-wrap:wrap!important; align-items:stretch!important; gap:16px!important;
-  height:auto!important; min-height:0!important; padding:12px 0 20px!important;
+  height:auto!important; min-height:0!important; padding:0!important;
   overflow:visible!important; z-index:20!important;
 }
 body main .page-header > :is(#eventsCard,#dispatchClient,#marketTopTiles,#weatherStrip) {
@@ -24,10 +24,10 @@ body main #weatherStrip > .weather-card {
   min-height:132px!important; padding:12px 6px!important; border-radius:10px!important;
   background:var(--panel)!important; box-sizing:border-box!important;
 }
-body main #weatherStrip .station-title strong {font-size:14px!important; white-space:normal!important; min-height:32px;}
-body main #weatherStrip .weather-current b {font-size:28px!important;}
-body main #weatherStrip :is(.weather-extra-line,.weather-current span) {font-size:12px!important; line-height:1.4!important;}
-body main #weatherStrip .details-btn {width:24px!important;height:24px!important;font-size:14px!important;}
+body main #weatherStrip .station-title strong {font-size:calc(14px * var(--ns-font-scale, 1))!important; white-space:normal!important; min-height:32px;}
+body main #weatherStrip .weather-current b {font-size:calc(28px * var(--ns-font-scale, 1))!important;}
+body main #weatherStrip :is(.weather-extra-line,.weather-current span) {font-size:calc(12px * var(--ns-font-scale, 1))!important; line-height:1.4!important;}
+body main #weatherStrip .details-btn {width:24px!important;height:24px!important;font-size:calc(14px * var(--ns-font-scale, 1))!important;}
 body main #weatherStrip .weather-card:focus-within .periods {display:grid!important;}
 body main .page-header > #dispatchClient {order:0!important;flex:0 1 360px!important;min-height:0!important;padding:12px!important;align-self:flex-start!important;}
 body main .page-header > #marketTopTiles {
@@ -44,28 +44,28 @@ body main #marketTopTiles > :is(.node-card.featured,.ontario-market) {
 body main #marketTopTiles .node-card.featured .node-head {height:auto!important;min-height:26px!important;}
 body main #marketTopTiles .node-card.featured .price-row {height:auto!important;min-height:54px!important;grid-template-rows:auto auto!important;padding:6px 0!important;}
 body main #marketTopTiles .node-card.featured .price-row > span,
-body main #marketTopTiles .node-card.featured .row-commit-label {font-size:12px!important;height:auto!important;line-height:1.3!important;}
-body main #marketTopTiles .node-card.featured .price-row > strong {font-size:22px!important;line-height:1.3!important;}
-body main #marketTopTiles .node-card.featured .row-commit-value {font-size:14px!important;line-height:1.4!important;}
-body main #marketTopTiles .node-card.featured .or-item span {font-size:12px!important;}
-body main #marketTopTiles .node-card.featured .or-item b {font-size:14px!important;}
+body main #marketTopTiles .node-card.featured .row-commit-label {font-size:calc(12px * var(--ns-font-scale, 1))!important;height:auto!important;line-height:1.3!important;}
+body main #marketTopTiles .node-card.featured .price-row > strong {font-size:calc(22px * var(--ns-font-scale, 1))!important;line-height:1.3!important;}
+body main #marketTopTiles .node-card.featured .row-commit-value {font-size:calc(14px * var(--ns-font-scale, 1))!important;line-height:1.4!important;}
+body main #marketTopTiles .node-card.featured .or-item span {font-size:calc(12px * var(--ns-font-scale, 1))!important;}
+body main #marketTopTiles .node-card.featured .or-item b {font-size:calc(14px * var(--ns-font-scale, 1))!important;}
 /* Compact dispatch summary: identity, output and a quiet inline OR status. */
 body main #dispatchClient {display:grid!important;grid-template-columns:minmax(90px,1fr) auto!important;gap:10px 14px!important;border-radius:10px!important;}
 body main #dispatchClient :is(.dispatch-client-main,.dispatch-values,.dispatch-reserve) {padding:0!important;border:0!important;min-width:0!important;}
 body main #dispatchClient .dispatch-client-main {grid-column:1!important;grid-row:1!important;}
-body main #dispatchClient .dispatch-client-title {font-size:16px!important;line-height:1.2!important;}
-body main #dispatchClient .dispatch-client-label {font-size:12px!important;margin-top:4px!important;}
+body main #dispatchClient .dispatch-client-title {font-size:calc(16px * var(--ns-font-scale, 1))!important;line-height:1.2!important;}
+body main #dispatchClient .dispatch-client-label {font-size:calc(12px * var(--ns-font-scale, 1))!important;margin-top:4px!important;}
 body main #dispatchClient .dispatch-mw {display:none!important;}
 body main #dispatchClient .dispatch-values {grid-column:2!important;grid-row:1!important;display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:6px!important;}
 body main #dispatchClient .dispatch-values > .dispatch-field:first-child {display:none!important;}
-body main #dispatchClient .dispatch-field > span {font-size:12px!important;letter-spacing:0!important;}
-body main #dispatchClient .dispatch-field > b {font-size:20px!important;margin:0!important;line-height:1.2!important;}
+body main #dispatchClient .dispatch-field > span {font-size:calc(12px * var(--ns-font-scale, 1))!important;letter-spacing:0!important;}
+body main #dispatchClient .dispatch-field > b {font-size:calc(20px * var(--ns-font-scale, 1))!important;margin:0!important;line-height:1.2!important;}
 body main #dispatchClient .dispatch-field.activation {display:inline-flex!important;align-items:center!important;gap:5px!important;width:max-content!important;max-width:100%!important;padding:3px 7px!important;border:1px solid var(--line)!important;border-radius:20px!important;background:var(--panel2)!important;}
-body main #dispatchClient .dispatch-field.activation > :is(span,b) {display:inline!important;font-size:12px!important;line-height:1.2!important;margin:0!important;color:var(--muted)!important;letter-spacing:0!important;}
+body main #dispatchClient .dispatch-field.activation > :is(span,b) {display:inline!important;font-size:calc(12px * var(--ns-font-scale, 1))!important;line-height:1.2!important;margin:0!important;color:var(--muted)!important;letter-spacing:0!important;}
 body main #dispatchClient .dispatch-reserve {grid-column:1 / -1!important;grid-row:2!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;border-top:1px solid var(--line)!important;padding-top:8px!important;margin:0!important;white-space:normal!important;}
-body main #dispatchClient .dispatch-reserve > span {font-size:12px!important;white-space:normal!important;}
-body main #dispatchClient .dispatch-reserve > b {font-size:14px!important;margin:0!important;}
-body main .page-header > #eventsCard {order:2!important;flex:1 1 100%!important;min-height:0!important;padding:16px!important;overflow:visible!important;}
+body main #dispatchClient .dispatch-reserve > span {font-size:calc(12px * var(--ns-font-scale, 1))!important;white-space:normal!important;}
+body main #dispatchClient .dispatch-reserve > b {font-size:calc(14px * var(--ns-font-scale, 1))!important;margin:0!important;}
+body main .page-header > #eventsCard {order:2!important;flex:1 1 100%!important;min-height:0!important;padding:16px 6px 4px 16px!important;overflow:visible!important;}
 body main #eventsCard .events-stream {max-height:240px!important;overflow:auto!important;}
 body main #eventsCard .events-log-entry {display:block!important;}
 body main #overviewModules {
@@ -83,9 +83,9 @@ body main #overviewModules > #overviewFieldTracker {grid-column:2;grid-row:1;}
 body main #overviewModules > #overviewGeneratingStations {grid-column:1 / -1;}
 body main #overviewStaff #staffGroups {grid-template-columns:repeat(auto-fit,minmax(250px,1fr))!important;gap:12px!important;}
 body main #overviewStaff .staff-group {height:auto!important;min-height:100px!important;}
-body main #overview :is(h2,.staff-group h3) {font-size:16px!important;line-height:1.4!important;}
-body main #overview :is(.staff-row,.staff-empty,.overview-tracker-workers) {font-size:14px!important;line-height:1.5!important;}
-body main #overview :is(button,input) {font-size:14px!important;min-height:32px;}
+body main #overview :is(h2,.staff-group h3) {font-size:calc(16px * var(--ns-font-scale, 1))!important;line-height:1.4!important;}
+body main #overview :is(.staff-row,.staff-empty,.overview-tracker-workers) {font-size:calc(14px * var(--ns-font-scale, 1))!important;line-height:1.5!important;}
+body main #overview :is(button,input) {font-size:calc(14px * var(--ns-font-scale, 1))!important;min-height:32px;}
 body main :is(#overviewModules,.page-header) > [hidden],body main #marketTopTiles[hidden] {display:none!important;}
 body main :is(button,a,input):focus-visible {outline:2px solid var(--blue);outline-offset:3px;}
 @media(max-width:1200px) {
@@ -101,7 +101,7 @@ body main :is(button,a,input):focus-visible {outline:2px solid var(--blue);outli
   body main #weatherStrip .periods {width:min(340px,85vw)!important;min-width:0!important;}
 }
 
-.events-integration-status{padding:8px 0;color:var(--muted);font-size:12px;line-height:1.4}.events-filters{flex-wrap:wrap}
+.events-integration-status{padding:8px 0;color:var(--muted);font-size:calc(12px * var(--ns-font-scale, 1));line-height:1.4}.events-filters{flex-wrap:wrap}
 
 /* Shared overview canvas. Containers remain only as feed-rendering anchors. */
 body.overview-canvas main {position:relative!important;overflow:visible!important;}
@@ -109,9 +109,7 @@ body.overview-canvas main .page-header,
 body.overview-canvas main .page-header > #weatherStrip,
 body.overview-canvas main .page-header > #marketTopTiles,
 body.overview-canvas main #overview.active,
-body.overview-canvas main #overviewModules,
-body.overview-canvas main #overviewModules > #overviewStaff,
-body.overview-canvas main #overviewStaff #staffGroups {
+body.overview-canvas main #overviewModules {
   display:contents!important;position:static!important;transform:none!important;
   padding:0!important;margin:0!important;border:0!important;min-height:0!important;
   height:auto!important;width:auto!important;overflow:visible!important;
@@ -120,20 +118,33 @@ body.overview-canvas main #overviewStaff > .overview-module-close {display:none!
 body.overview-canvas main [data-canvas-module] {box-sizing:border-box!important;overflow:auto!important;align-self:auto!important;}
 body.overview-canvas main #weatherStrip > [data-canvas-module] {overflow:visible!important;}
 body.overview-canvas main #overviewStaff > .staff-panel-head {background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px!important;align-items:center!important;gap:12px;}
-body.overview-canvas main .staff-panel-head #staffHeading {font-size:16px!important;}
+body.overview-canvas main .staff-panel-head #staffHeading {font-size:calc(16px * var(--ns-font-scale, 1))!important;}
 body.overview-canvas main #marketTopTiles .node-card.featured .price-row {grid-template-columns:minmax(0,1fr) minmax(90px,1fr)!important;}
 body.overview-canvas main #marketTopTiles .node-card.featured .price-row > span {white-space:normal!important;}
 body.overview-canvas main [data-canvas-module] > .module-resize-handle {display:none!important;}
 body.overview-canvas.layout-edit main [data-canvas-module] {outline:1px dashed var(--blue);outline-offset:3px;}
+body.overview-canvas.layout-edit.overview-grid-hidden main [data-canvas-module] {outline:none!important;}
 body main :is(.canvas-move-handle,.canvas-resize-handle) {display:none!important;}
 body.overview-canvas.layout-edit main :is(.canvas-move-handle,.canvas-resize-handle) {
   display:grid!important;place-items:center!important;position:absolute!important;
   width:26px!important;height:26px!important;min-height:0!important;padding:0!important;
   z-index:100!important;background:var(--panel2)!important;color:var(--blue)!important;
   border:1px solid var(--blue)!important;border-radius:5px!important;line-height:1!important;
-  font-size:18px!important;touch-action:none;user-select:none;
+  font-size:calc(18px * var(--ns-font-scale, 1))!important;touch-action:none;user-select:none;
 }
-body.overview-canvas.layout-edit main .canvas-move-handle {right:32px;top:3px;cursor:grab;}
-body.overview-canvas.layout-edit main .canvas-resize-handle {right:3px;bottom:3px;cursor:nwse-resize;}
+body.overview-canvas.layout-edit main .canvas-move-handle {left:50%;top:3px;transform:translateX(-50%);width:36px!important;height:26px!important;cursor:grab;}
+body.overview-canvas.layout-edit main .canvas-resize-handle[data-corner="se"] {right:3px;bottom:3px;cursor:nwse-resize;}
+body.overview-canvas.layout-edit main .canvas-resize-handle[data-corner="sw"] {left:3px;bottom:3px;cursor:nesw-resize;}
+body.overview-canvas.layout-edit main .canvas-resize-handle[data-corner="ne"] {right:3px;top:3px;bottom:auto;cursor:nesw-resize;}
+body.overview-canvas.layout-edit main .canvas-resize-handle[data-corner="nw"] {left:3px;top:3px;bottom:auto;cursor:nwse-resize;}
 body.overview-canvas main [hidden] {display:none!important;}
 body.overview-canvas main :is(#overviewModules #overviewStaff,#marketTopTiles,#weatherStrip,#overview)[hidden] {display:none!important;}
+
+/* Keep roster cards in their parent; only the outer panel uses canvas coordinates. */
+body.overview-canvas main #overviewModules > #overviewStaff {display:block!important;overflow:auto!important;padding:12px!important;}
+body.overview-canvas main #overviewStaff #staffGroups {display:flex!important;flex-wrap:wrap!important;align-items:flex-start!important;gap:8px!important;column-count:auto!important;position:relative!important;margin-top:8px!important;}
+body.overview-canvas main #overviewStaff #staffGroups > .staff-group {position:relative!important;inset:auto!important;transform:none!important;flex:1 1 260px;width:260px!important;min-width:0!important;max-width:100%!important;height:auto;min-height:100px;box-sizing:border-box!important;overflow:auto!important;margin:0!important;}
+body.overview-canvas main #overviewStaff .staff-panel-head {padding:8px!important;flex-wrap:wrap!important;gap:8px!important;}
+body.overview-canvas main #overviewStaff #staffHeading {white-space:normal!important;overflow-wrap:anywhere;font-size:calc(14px * var(--ns-font-scale,1))!important;}
+body.overview-canvas main #overviewStaff .staff-row {width:100%!important;min-width:0!important;grid-template-columns:minmax(70px,1fr) 42px 52px 44px!important;gap:4px!important;min-height:38px!important;padding:4px 0!important;font-size:calc(11px * var(--ns-font-scale,1))!important;}
+body.overview-canvas.layout-edit main #overviewStaff #staffGroups > .staff-group > .module-resize-handle {display:block!important;z-index:110;touch-action:none;}

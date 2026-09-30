@@ -1,0 +1,14 @@
+{
+  "enabled": false,
+  "tenantId": "REPLACE-WITH-WORK-TENANT-UUID",
+  "clientId": "REPLACE-WITH-APP-CLIENT-UUID",
+  "startAt": "2026-09-28T00:00:00Z",
+  "intervalSeconds": 60,
+  "maxPages": 100,
+  "sources": [
+    {
+      "resource": "teams/REPLACE-TEAM-ID/channels/REPLACE-CHANNEL-ID/messages",
+      "label": "Approved operations channel"
+    }
+  ]
+}

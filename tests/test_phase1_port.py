@@ -148,6 +148,14 @@ class Phase1PortTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(len(snapshot["readings"]), 2)
         self.assertEqual(snapshot["feeds"][0]["status"], "Current")
+        tag = snapshot["readings"][0]["tagName"]
+        from urllib.parse import urlencode
+        status, filtered = self.request("GET", "/api/scada/readings?" + urlencode({"feed": "default", "tag": tag}))
+        self.assertEqual(status, 200)
+        self.assertEqual([row["tagName"] for row in filtered], [tag])
+        status, missing = self.request("GET", "/api/scada/readings?tag=DOES_NOT_EXIST")
+        self.assertEqual(status, 200)
+        self.assertEqual(missing, [])
 
 
 if __name__ == "__main__":

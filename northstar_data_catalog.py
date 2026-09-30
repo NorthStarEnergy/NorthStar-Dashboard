@@ -20,11 +20,42 @@ from typing import Any, Iterable
 import northstar_events as events
 
 
-ROOT = Path(__file__).resolve().parent
+from northstar_paths import app_root
+
+ROOT = app_root(__file__)
 DATA = ROOT / "data"
 UPLOAD_ROOT = Path(os.environ.get("NORTHSTAR_OPERATIONS_UPLOAD_ROOT", Path.home() / "Downloads"))
 MAX_ARTIFACTS = 10_000
 MAX_RESULTS = 200
+MAX_PAGE_SIZE = 500
+
+WATER_ROWS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS water_source_files (
+    id TEXT PRIMARY KEY,
+    relative_path TEXT NOT NULL UNIQUE,
+    sha256 TEXT NOT NULL,
+    byte_count INTEGER NOT NULL,
+    row_count INTEGER NOT NULL,
+    headers_json TEXT NOT NULL,
+    source_modified_at TEXT NOT NULL DEFAULT '',
+    imported_at TEXT NOT NULL,
+    status TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS water_source_rows (
+    file_id TEXT NOT NULL REFERENCES water_source_files(id) ON DELETE CASCADE,
+    row_number INTEGER NOT NULL,
+    values_json TEXT NOT NULL,
+    PRIMARY KEY(file_id, row_number)
+);
+CREATE TABLE IF NOT EXISTS water_source_staging_rows (
+    run_id TEXT NOT NULL,
+    row_number INTEGER NOT NULL,
+    values_json TEXT NOT NULL,
+    PRIMARY KEY(run_id, row_number)
+);
+CREATE INDEX IF NOT EXISTS idx_water_source_row_file
+    ON water_source_rows(file_id, row_number);
+"""
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS data_catalog_collections (
@@ -87,6 +118,141 @@ CREATE INDEX IF NOT EXISTS idx_data_catalog_runs_completed
 
 def init_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(SCHEMA)
+    connection.executescript(WATER_ROWS_SCHEMA)
+    columns = {row["name"] for row in connection.execute("PRAGMA table_info(water_source_files)")}
+    if "source_modified_at" not in columns:
+        connection.execute("ALTER TABLE water_source_files ADD COLUMN source_modified_at TEXT NOT NULL DEFAULT ''")
+
+
+def ingest_water_csvs(actor: str = "local data intake", *, batch_size: int = 1000) -> dict[str, Any]:
+    """Import extracted CSV review sources as exact string rows; preserve source files."""
+    import csv
+    import northstar_store as store
+
+    root = DATA / "water-management" / "source"
+    if not root.is_dir():
+        raise FileNotFoundError("Water Management extracted source directory is unavailable")
+    batch_size = max(100, min(int(batch_size), 5000))
+    files_seen = rows_seen = files_imported = files_skipped = 0
+    errors: list[dict[str, str]] = []
+    with store._LOCK, store._session() as connection:
+        init_schema(connection)
+        known = {row["relative_path"]: row for row in connection.execute(
+            "SELECT relative_path,sha256,byte_count,row_count,source_modified_at FROM water_source_files"
+        )}
+    for path in sorted(p for p in root.rglob("*") if p.is_file() and p.suffix.lower() == ".csv"):
+        files_seen += 1
+        relative = path.relative_to(root).as_posix()
+        try:
+            stat = path.stat()
+            modified = _iso_from_timestamp(stat.st_mtime)
+            previous = known.get(relative)
+            if previous and previous["byte_count"] == stat.st_size and previous["source_modified_at"] == modified:
+                files_skipped += 1
+                rows_seen += int(previous["row_count"])
+                continue
+            digest = _digest_file(path)
+            file_id = "water-file-" + hashlib.sha256(relative.encode("utf-8")).hexdigest()[:32]
+            with path.open("r", encoding="utf-8-sig", newline="", errors="replace") as stream:
+                reader = csv.reader(stream)
+                headers = next(reader, [])
+                headers_json = json.dumps(headers, ensure_ascii=False, separators=(",", ":"))
+                run_id = uuid.uuid4().hex
+                row_count = 0
+                with store._LOCK, store._session() as connection:
+                    init_schema(connection)
+                    existing = connection.execute(
+                        "SELECT sha256,byte_count,row_count,source_modified_at FROM water_source_files WHERE relative_path=?",
+                        (relative,),
+                    ).fetchone()
+                    if existing and existing["sha256"] == digest and existing["byte_count"] == stat.st_size and existing["source_modified_at"] == modified:
+                        files_skipped += 1
+                        rows_seen += int(existing["row_count"])
+                        continue
+                    batch: list[tuple[str, int, str]] = []
+                    for row_count, values in enumerate(reader, start=1):
+                        batch.append((run_id, row_count, json.dumps(values, ensure_ascii=False, separators=(",", ":"))))
+                        if len(batch) >= batch_size:
+                            connection.executemany(
+                                "INSERT INTO water_source_staging_rows(run_id,row_number,values_json) VALUES(?,?,?)", batch)
+                            batch.clear()
+                    if batch:
+                        connection.executemany(
+                            "INSERT INTO water_source_staging_rows(run_id,row_number,values_json) VALUES(?,?,?)", batch)
+                    # Publish the complete file in one transaction; a parse or insert error
+                    # leaves the previously imported version intact.
+                    connection.execute("DELETE FROM water_source_files WHERE relative_path=?", (relative,))
+                    connection.execute(
+                        "INSERT INTO water_source_files(id,relative_path,sha256,byte_count,row_count,headers_json,source_modified_at,imported_at,status) VALUES(?,?,?,?,?,?,?,?,?)",
+                        (file_id, relative, digest, stat.st_size, row_count, headers_json, modified, _now(), "IMPORTED"),
+                    )
+                    connection.execute(
+                        "INSERT INTO water_source_rows(file_id,row_number,values_json) "
+                        "SELECT ?,row_number,values_json FROM water_source_staging_rows WHERE run_id=? ORDER BY row_number",
+                        (file_id, run_id),
+                    )
+                    connection.execute("DELETE FROM water_source_staging_rows WHERE run_id=?", (run_id,))
+            files_imported += 1
+            rows_seen += row_count
+        except Exception as error:
+            errors.append({"file": relative, "error": _safe_text(f"{type(error).__name__}: {error}", 300)})
+    return {"sourceFileCount": files_seen, "importedFileCount": files_imported,
+            "unchangedFileCount": files_skipped, "rowCount": rows_seen, "errors": errors,
+            "actor": _safe_text(actor, 160)}
+
+
+def query_water_rows(*, file_id: str = "", query: str = "", cursor: int = 0, limit: int = 100) -> dict[str, Any]:
+    """Return a bounded page of exact source cells with stable file/row continuation."""
+    import northstar_store as store
+
+    bounded_limit = max(1, min(int(limit), MAX_PAGE_SIZE))
+    after = max(0, int(cursor))
+    with store._LOCK, store._session() as connection:
+        init_schema(connection)
+        selected = _safe_text(file_id, 100)
+        if not selected:
+            raise ValueError("fileId is required")
+        file_row = connection.execute("SELECT * FROM water_source_files WHERE id=?", (selected,)).fetchone()
+        if not file_row:
+            return {"file": None, "rows": [], "nextCursor": None}
+        # Cursor is a row number; optional text search is bounded to the selected source file.
+        clauses = ["file_id=?", "row_number>?", "values_json LIKE ?"]
+        params: list[Any] = [selected, after, f"%{_safe_text(query, 120)}%"]
+        rows = connection.execute(
+            "SELECT row_number,values_json FROM water_source_rows WHERE " + " AND ".join(clauses)
+            + " ORDER BY row_number LIMIT ?", (*params, bounded_limit + 1),
+        ).fetchall()
+    more = len(rows) > bounded_limit
+    rows = rows[:bounded_limit]
+    return {"file": {"id": file_row["id"], "relativePath": file_row["relative_path"],
+                     "sha256": file_row["sha256"], "rowCount": file_row["row_count"],
+                     "headers": json.loads(file_row["headers_json"])},
+            "rows": [{"rowNumber": row["row_number"], "values": json.loads(row["values_json"])} for row in rows],
+            "nextCursor": rows[-1]["row_number"] if more and rows else None}
+
+
+def list_water_files(*, query: str = "", cursor: str = "", limit: int = 100) -> dict[str, Any]:
+    """Return an operator-safe, bounded file catalog for imported CSV sources."""
+    import northstar_store as store
+
+    bounded_limit = max(1, min(int(limit), MAX_PAGE_SIZE))
+    after = _safe_text(cursor, 1_500)
+    search = _safe_text(query, 200)
+    with store._LOCK, store._session() as connection:
+        init_schema(connection)
+        rows = connection.execute(
+            "SELECT id,relative_path,sha256,byte_count,row_count,headers_json,source_modified_at,imported_at "
+            "FROM water_source_files WHERE relative_path>? AND relative_path LIKE ? "
+            "ORDER BY relative_path LIMIT ?",
+            (after, f"%{search}%", bounded_limit + 1),
+        ).fetchall()
+    more = len(rows) > bounded_limit
+    rows = rows[:bounded_limit]
+    items = [{"id": row["id"], "relativePath": row["relative_path"], "sha256": row["sha256"],
+              "byteCount": row["byte_count"], "rowCount": row["row_count"],
+              "headers": json.loads(row["headers_json"]), "sourceModifiedAt": row["source_modified_at"],
+              "importedAt": row["imported_at"]} for row in rows]
+    return {"files": items, "nextCursor": items[-1]["relativePath"] if more and items else None}
 
 
 def _now() -> str:
@@ -437,7 +603,7 @@ def _json_object(value: object) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
-def snapshot(query: str = "", collection_id: str = "", limit: int = 100) -> dict[str, Any]:
+def snapshot(query: str = "", collection_id: str = "", limit: int = 100, cursor: str = "") -> dict[str, Any]:
     """Return operator-safe metadata only; no local paths or source bytes are exposed."""
     import northstar_store as store
 
@@ -447,6 +613,7 @@ def snapshot(query: str = "", collection_id: str = "", limit: int = 100) -> dict
         bounded_limit = max(1, min(int(limit), MAX_RESULTS))
     except (TypeError, ValueError):
         bounded_limit = 100
+    after = _safe_text(cursor, 160)
     with store._LOCK, store._session() as connection:
         init_schema(connection)
         collections = connection.execute(
@@ -458,9 +625,13 @@ def snapshot(query: str = "", collection_id: str = "", limit: int = 100) -> dict
         artifact_rows: Iterable[sqlite3.Row] = []
         if selected:
             artifact_rows = connection.execute(
-                "SELECT * FROM data_catalog_artifacts WHERE collection_id=? AND active=1 ORDER BY filename LIMIT ?",
-                (selected, bounded_limit),
+                "SELECT * FROM data_catalog_artifacts WHERE collection_id=? AND active=1 AND (filename>? OR (filename=? AND id>?)) ORDER BY filename,id LIMIT ?",
+                (selected, after.split("\0", 1)[0], after.split("\0", 1)[0], after.split("\0", 1)[1] if "\0" in after else "", bounded_limit + 1),
             ).fetchall()
+            has_more = len(artifact_rows) > bounded_limit
+            artifact_rows = list(artifact_rows[:bounded_limit])
+        else:
+            has_more = False
     result_collections = []
     for row in collections:
         value = {
@@ -484,6 +655,7 @@ def snapshot(query: str = "", collection_id: str = "", limit: int = 100) -> dict
         "note": "Metadata catalog only. Raw source files are not copied, altered, or served by this API.",
         "collections": result_collections,
         "artifacts": artifacts,
+        "nextCursor": (artifacts[-1]["filename"] + "\0" + artifacts[-1]["id"]) if has_more and artifacts else None,
         "selectedCollectionId": selected,
         "latestRun": ({
             "id": latest["id"], "startedAt": latest["started_at"], "completedAt": latest["completed_at"],

@@ -129,7 +129,7 @@ class AIAssistantTest(unittest.TestCase):
         self.assertEqual(request.full_url, "https://api.openai.com/v1/responses")
         request_body = request.data.decode()
         self.assertNotIn("test-key", request_body)
-        self.assertEqual(json.loads(request_body)["max_output_tokens"], 400)
+        self.assertEqual(json.loads(request_body)["max_output_tokens"], 800)
         self.assertEqual(json.loads(request_body)["reasoning"]["effort"], "none")
         self.assertFalse(json.loads(request_body)["store"])
 

@@ -1,0 +1,32 @@
+/* Browser equivalent of the desktop application's single hamburger menu. */
+body.ns-web-toolbar .app>aside{padding-top:6px!important}
+body.ns-web-toolbar .app>aside .brand.brand-home{grid-template-columns:28px minmax(0,1fr) 28px!important;column-gap:4px!important;row-gap:0!important;min-height:28px!important;margin:0!important}
+body.ns-web-toolbar .app>aside .brand .brand-home-control{display:grid!important;grid-column:2!important;grid-row:1!important;justify-self:start!important}
+body.ns-web-toolbar .app>aside .brand .northstar-ai-menu-toggle{grid-column:3!important;grid-row:1!important;width:28px;height:28px}
+body.ns-web-toolbar .app>aside .brand>.dashboard-build-label{grid-column:2!important;grid-row:2!important;justify-self:start;min-height:12px!important;height:12px!important;padding:0!important}
+body.ns-web-toolbar .app>aside .sidebar-tools{margin:4px 0!important;gap:4px}
+body.ns-web-toolbar .app>aside .sidebar-search{margin-bottom:4px!important}
+#nsWebToolbar{position:relative;grid-column:1;grid-row:1;z-index:900;display:flex;align-items:center;height:28px;color:var(--text,#edf3f5);font:600 12px/1.2 Arial,sans-serif}
+#nsWebToolbar button{font:inherit;cursor:pointer}
+#nsWebToolbar .ns-web-toolbar-menu{height:28px;min-width:28px;padding:0 4px;border:1px solid #426273;border-radius:4px;background:#19303e;color:#edf3f5;font-size:18px;line-height:1}
+body.ns-web-toolbar .app>aside .brand :is(.northstar-ai-menu-toggle,.brand-home-control),body.ns-web-toolbar #sideNav button[data-tab="assistant"]{position:relative}
+body.ns-web-toolbar .ns-app-notification{position:absolute;left:19px;bottom:-5px;z-index:2;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;border:1px solid #101d26;border-radius:9px;background:#fff;color:#101d26;font:700 10px/14px Arial,sans-serif;text-align:center;pointer-events:none}
+body.ns-web-toolbar #sideNav button[data-tab="assistant"] .ns-app-notification{left:12px;bottom:calc(50% - 13px)}
+body.ns-web-toolbar .ns-app-notification[data-type="critical"]{background:#e34b4b;color:#fff}
+body.ns-web-toolbar .ns-app-notification[data-type="alarm"]{background:#f2c94c;color:#322900}
+body.ns-web-toolbar .ns-app-notification[data-type="communication"]{background:#35b878;color:#062315}
+body.ns-web-toolbar .ns-app-notification[data-type="ai"]{background:#fff;color:#101d26}
+body.ns-web-toolbar .ns-app-notification[hidden]{display:none}
+#nsWebToolbar .ns-web-toolbar-menu:hover,#nsWebToolbar .ns-web-toolbar-menu[aria-expanded="true"]{background:#25485c;border-color:#69b7e8}
+#nsWebToolbar .ns-web-toolbar-title{margin-left:10px;letter-spacing:.2px;white-space:nowrap}
+#nsWebToolbar .ns-web-toolbar-dropdown{position:absolute;top:calc(100% + 1px);left:0;width:min(295px,calc(100vw - 20px));max-height:calc(100vh - 46px);overflow:auto;padding:5px;box-sizing:border-box;background:#101d26;border:1px solid #466779;border-radius:0 0 7px 7px;box-shadow:0 14px 28px #000a}
+#nsWebToolbar .ns-web-toolbar-dropdown[hidden]{display:none}
+#nsWebToolbar .ns-web-toolbar-dropdown button{display:block;width:100%;padding:8px 10px;border:0;border-radius:4px;background:transparent;color:#e6f0f5;text-align:left}
+#nsWebToolbar .ns-web-toolbar-dropdown .operator-signout{font:inherit;cursor:pointer}
+#nsWebToolbar .ns-web-toolbar-dropdown button:hover,#nsWebToolbar .ns-web-toolbar-dropdown button:focus-visible{background:#244252}
+#nsWebToolbar .ns-web-toolbar-dropdown hr{height:1px;margin:5px 4px;border:0;background:#355567}
+#nsWebToolbar .ns-web-toolbar-dropdown .ns-web-toolbar-group{padding:6px 10px 2px;color:#91adbb;font-size:10px;text-transform:uppercase;letter-spacing:.7px}
+#nsWebToolbar :focus-visible{outline:2px solid #e7c364;outline-offset:2px}
+@media(max-width:700px){#nsWebToolbar .ns-web-toolbar-title{font-size:11px}}
+
+@media(max-width:1050px){body.ns-web-toolbar .app>aside .brand .brand-home-control .brand-name{display:block!important}}

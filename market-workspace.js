@@ -67,15 +67,51 @@
   const movePrimaryMarketTilesWithoutCompactIeso = movePrimaryMarketTiles;
   movePrimaryMarketTiles = function moveCompactPrimaryMarketTiles() {
     movePrimaryMarketTilesWithoutCompactIeso();
+    addHydroQuebecTile();
     const tile = document.querySelector('#marketTopTiles [data-module-id="IESO"]');
     if (!tile) return;
     const values = [...tile.querySelectorAll('.ontario-metric b')].map(node => node.textContent.trim());
     const stamp = tile.querySelector('.market-update b')?.textContent.trim() || 'WAITING';
     tile.className = 'node-card featured ieso-tile';
-    tile.innerHTML = `<div class="node-head"><div class="node-name">IESO <small class="market-update">${safe(stamp)}</small></div><button class="market-dogear" data-expand="IESO" type="button" title="Open IESO market detail" aria-label="Open IESO market detail"></button></div><div class="node-body"><div class="pricing-column"><div class="price-row"><span>REAL-TIME PRICE</span><span class="row-commit-label">REAL-TIME DEMAND</span><strong>${safe(values[0] || 'â€”')}</strong><b class="row-commit-value">${safe(values[1] || 'â€” MW')}</b></div><div class="price-row"><span>DAY-AHEAD PRICE</span><span class="row-commit-label">DAY-AHEAD DEMAND</span><strong class="near">${safe(values[2] || 'â€”')}</strong><b class="row-commit-value">${safe(values[3] || 'â€” MW')}</b></div></div></div>`;
-    tile.querySelector('[data-expand="IESO"]').onclick = () => openNode('IESO');
+    tile.innerHTML = `<div class="node-head"><div class="node-name">IESO <small class="market-update">${safe(stamp)}</small></div></div><div class="node-body"><div class="pricing-column"><div class="price-row"><span>REAL-TIME PRICE</span><span class="row-commit-label">REAL-TIME DEMAND</span><strong>${safe(values[0] || 'â€”')}</strong><b class="row-commit-value">${safe(values[1] || 'â€” MW')}</b></div><div class="price-row"><span>DAY-AHEAD PRICE</span><span class="row-commit-label">DEMAND FORECAST</span><strong class="near">${safe(values[2] || 'â€”')}</strong><b class="row-commit-value">${safe(values[3] || 'â€” MW')}</b></div></div></div>`;
   };
 
+  async function loadHydroQuebecSummary() {
+    const tile = document.querySelector('#marketTopTiles [data-module-id="HYDRO_QUEBEC"]');
+    if (!tile) return;
+    const endpoint = 'https://hydroquebec.aws-ec2-ca-central-1.opendatasoft.com/api/explore/v2.1/catalog/datasets/importations-exportations-avec-transits/records?limit=1&order_by=date%20desc';
+    try {
+      const response = await fetch(endpoint, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Feed unavailable');
+      const payload = await response.json();
+      const row = payload.results?.[0] || {};
+      const data = [['Exports total', row.exportationstotal], ['Exports to Ontario', row.exportationsontario], ['Exports to New York', row.exportationsnewyork], ['Exports to New England', row.exportationsnewengland], ['Exports to New Brunswick', row.exportationsnewbrunswick], ['Imports from Ontario', row.importationssourcesontariototal], ['Imports from New York', row.importationssourcesnewyorktotal], ['Imports from New England', row.importationssourcesnewenglandtotal], ['Imports from New Brunswick', row.importationssourcesnewbrunswicktotal]].filter(([, value]) => value != null && Number.isFinite(Number(value)));
+      const detail = data.map(([key, value]) => `${key} ${Number(value).toLocaleString()} MW`).join(' · ');
+      tile.querySelector('.hydro-values').textContent = detail || 'Hourly exchange data unavailable';
+      tile.querySelector('.market-update').textContent = row.date ? `HOURLY · ${time(row.date)}` : 'HOURLY DATA';
+      window.NorthstarHydroQuebec = {
+        updatedAt: row.date || null,
+        metrics: data.map(([label, value]) => ({ label, value: `${Number(value).toLocaleString()} MW` }))
+      };
+      window.dispatchEvent(new Event('northstar:market-extra-update'));
+    } catch (_) {
+      tile.querySelector('.hydro-values').textContent = 'Open hourly exchange data unavailable';
+      tile.querySelector('.market-update').textContent = 'FEED UNAVAILABLE';
+      window.NorthstarHydroQuebec = { updatedAt: null, metrics: [] };
+      window.dispatchEvent(new Event('northstar:market-extra-update'));
+    }
+  }
+
+  function addHydroQuebecTile() {
+    const host = document.querySelector('#marketTopTiles');
+    if (!host || host.querySelector('[data-module-id="HYDRO_QUEBEC"]')) return;
+    const tile = document.createElement('article');
+    tile.className = 'node-card featured hydro-quebec-tile';
+    tile.dataset.moduleId = 'HYDRO_QUEBEC';
+    tile.innerHTML = '<div class="node-head"><div class="node-name">HYDRO-QUÉBEC <small class="market-update">LOADING</small></div></div><div class="node-body"><div class="hydro-values">Loading hourly exchange data…</div><small class="hydro-note">REAL-TIME EXCHANGE · MW · NO PUBLIC RT PRICE</small></div>';
+    host.append(tile);
+    loadHydroQuebecSummary();
+  }
   function applyCompactPrimaryTileStyle() {
     if (document.querySelector('#compact-primary-market-style')) return;
     const style = document.createElement('style');
@@ -86,21 +122,21 @@
       #marketTopTiles .node-card.featured .node-body{display:block!important}
       #marketTopTiles .node-card.featured .pricing-column{overflow:visible!important}
       #marketTopTiles .node-card.featured .price-row{box-sizing:border-box!important;grid-template-columns:minmax(0,1fr) 78px!important;grid-template-rows:9px 18px!important;column-gap:10px!important;row-gap:2px!important;align-content:center!important;height:36px!important;min-height:36px!important;padding:3px 0!important;overflow:visible!important}
-      #marketTopTiles .node-card.featured .price-row>span,#marketTopTiles .node-card.featured .row-commit-label{align-self:start!important;height:9px!important;overflow:visible!important;font-size:7px!important;line-height:9px!important;letter-spacing:0!important;text-overflow:clip!important;white-space:nowrap!important}
-      #marketTopTiles .node-card.featured .price-row>strong{align-self:start!important;font-size:15px!important;line-height:18px!important;margin-top:0!important}
+      #marketTopTiles .node-card.featured .price-row>span,#marketTopTiles .node-card.featured .row-commit-label{align-self:start!important;height:9px!important;overflow:visible!important;font-size:calc(7px * var(--ns-font-scale, 1))!important;line-height:9px!important;letter-spacing:0!important;text-overflow:clip!important;white-space:nowrap!important}
+      #marketTopTiles .node-card.featured .price-row>strong{align-self:start!important;font-size:calc(15px * var(--ns-font-scale, 1))!important;line-height:18px!important;margin-top:0!important}
       #marketTopTiles .node-card.featured .row-commit-label,#marketTopTiles .node-card.featured .row-commit-value{text-align:right!important;padding-right:0!important}
-      #marketTopTiles .node-card.featured .row-commit-value{align-self:start!important;font-size:10px!important;line-height:18px!important;margin-top:0!important}
+      #marketTopTiles .node-card.featured .row-commit-value{align-self:start!important;font-size:calc(10px * var(--ns-font-scale, 1))!important;line-height:18px!important;margin-top:0!important}
       #marketTopTiles .node-card.featured .or-line{box-sizing:border-box!important;width:100%!important;min-width:0!important;margin-top:6px!important;padding:6px 0 0!important;gap:5px!important}
       #marketTopTiles .node-card.featured .or-item{min-width:0!important;padding:0!important;column-gap:4px!important}
-      #marketTopTiles .node-card.featured .or-item span{font-size:7px!important}
-      #marketTopTiles .node-card.featured .or-item b{font-size:10px!important}
+      #marketTopTiles .node-card.featured .or-item span{font-size:calc(7px * var(--ns-font-scale, 1))!important}
+      #marketTopTiles .node-card.featured .or-item b{font-size:calc(10px * var(--ns-font-scale, 1))!important}
       #marketTopTiles .ieso-tile .node-name{display:flex!important;align-items:baseline!important;gap:8px!important}
-      #marketTopTiles .ieso-tile .market-update{color:var(--muted)!important;font:700 9px/1 monospace!important}
+      #marketTopTiles .ieso-tile .market-update{color:var(--muted)!important;font:700 calc(9px * var(--ns-font-scale, 1))/1 monospace!important}
     `;
     document.head.append(style);
   }
 
-  applyCompactPrimaryTileStyle();
+  addHydroQuebecTile();  applyCompactPrimaryTileStyle();
   setTimeout(applyCompactPrimaryTileStyle, 0);
 
   const renderMarketWithoutIeso = renderMarket;
@@ -108,6 +144,7 @@
     ensureIesoMarket(data);
     renderMarketWithoutIeso(data);
     ensureIesoMarket(data);
+    document.querySelectorAll('.market-trend-host[data-market-node]').forEach(host => mountTrend(host, host.dataset.marketNode));
   };
 
   const openNodeWithoutIeso = openNode;
@@ -145,6 +182,31 @@
     return rows.map(point => `<div class="market-series-row ${point.kind.includes('HISTORY') ? 'history' : ''}"><span>${safe(point.kind)}<br>${safe(time(point.time))}</span><i style="width:${Math.max(2, Math.abs(Number(point.value)) / maximum * 100)}%"></i><b>${money(point.value)}</b></div>`).join('');
   }
 
+  async function refreshTrendData() {
+    const response = await fetchNorthstar('/api/market-prices?ts=' + Date.now());
+    if (!response.ok) throw new Error('Market feed unavailable');
+    renderMarket(await response.json());
+  }
+
+  function mountTrend(host, key) {
+    window.NorthstarMarketTrends?.mount(host, marketData || {}, key, refreshTrendData);
+  }
+
+  drawGraph = function drawMarketComparison() {
+    const canvas = document.querySelector('#priceGraph');
+    if (!canvas) return;
+    canvas.hidden = true;
+    let host = canvas.parentElement.querySelector('.market-trend-host');
+    if (!host) {
+      host = document.createElement('div');
+      host.className = 'market-trend-host';
+      canvas.before(host);
+    }
+    mountTrend(host, selected);
+    const title = document.querySelector('#graphTitle');
+    if (title) title.textContent = (nodeLabels[selected] || selected) + ' · Market trends';
+  };
+
   function reserveHtml(node) {
     const reserve = node.reserve;
     if (!reserve) return '';
@@ -161,6 +223,7 @@
     const setting = alertSettings[key] || {};
     const isIeso = key === 'IESO';
     const detail = target || document.querySelector('#marketDetail');
+    detail.querySelectorAll('.market-trend-host').forEach(host => window.NorthstarMarketTrends?.unmount(host));
     const control = id => detail.querySelector('[data-market-control="'+id+'"]');
     detail.innerHTML = `
       <div class="market-head"><div><label>${isIeso ? 'IESO MARKET DETAIL' : 'IESO NODE DETAIL'}</label><h2>${safe(nodeLabels[key] || key)}</h2></div><button class="node-expand" id="backOverview">← OVERVIEW</button></div>
@@ -168,11 +231,12 @@
         <div class="market-detail-metric"><span>REAL-TIME PRICE</span><strong class="${priceClass(node.rt, node.da)}">${money(node.rt)}</strong><small>${safe(time(node.rtTimestamp))}</small></div>
         <div class="market-detail-metric"><span>DAY-AHEAD PRICE</span><strong>${money(node.da)}</strong><small>${safe(time(node.daTimestamp))}</small></div>
         <div class="market-detail-metric"><span>${isIeso ? 'REAL-TIME DEMAND' : 'REAL-TIME TRANSFER'}</span><strong>${mw(operations.rtTransfer)}</strong><small>${safe(operations.source || 'Feed pending')}</small></div>
-        <div class="market-detail-metric"><span>${isIeso ? 'DAY-AHEAD DEMAND' : 'DAY-AHEAD SCHEDULE'}</span><strong>${mw(operations.dayAhead)}</strong><small>${safe(operations.source || 'Feed pending')}</small></div>
+        <div class="market-detail-metric"><span>${isIeso ? 'DEMAND FORECAST' /* DAY-AHEAD DEMAND */ : 'DAY-AHEAD SCHEDULE'}</span><strong>${mw(operations.dayAhead)}</strong><small>${safe(operations.source || 'Feed pending')}</small></div>
       </div>
       ${reserveHtml(node)}
-      <section class="market-detail-section"><h3>PRICE SERIES</h3><div class="market-series">${seriesRows(node)}</div></section>
+      <section class="market-detail-section market-price-section"><h3>MARKET TRENDS <small>$/MWh · Eastern time</small></h3><div class="market-trend-host" data-market-node="${safe(key)}"></div></section>
       ${isIeso ? '<p class="market-detail-note">Provincial pricing is calculated from the currently reported IESO nodes. Demand values come from the IESO Ontario demand report.</p>' : `<div class="alert-settings"><div class="alert-settings-head"><h3>PRICING ALERTS</h3><label class="alert-enabled"><input id="alertEnabled" type="checkbox" ${setting.enabled !== false ? 'checked' : ''}> ALERT ENABLED</label></div><div class="alert-grid"><label>LOW THRESHOLD ($/MWh)<input id="alertLow" type="number" step="0.01" placeholder="e.g. 20.00" value="${safe(setting.low ?? '')}"></label><label>HIGH THRESHOLD ($/MWh)<input id="alertHigh" type="number" step="0.01" placeholder="e.g. 100.00" value="${safe(setting.high ?? '')}"></label></div><div class="alert-actions">${alertActionsHtml(setting.actions)}</div><button class="primary-btn" id="saveAlertSettings" type="button">SAVE ALERT SETTINGS</button><div class="saved-note" id="alertSaved">${setting.updatedAt ? `${setting.enabled === false ? 'DISABLED' : 'ACTIVE'} · SAVED ${opsTime(setting.updatedAt)}` : 'NOT CONFIGURED'}</div><div id="alertBanner"></div><p class="muted-note">Email and text actions activate only when their delivery connectors are available.</p></div>`}`;
+    mountTrend(detail.querySelector('.market-trend-host'), key);
     detail.querySelectorAll('[id]').forEach(el => {
       el.dataset.marketControl = el.id;
       if (detail.id !== 'marketDetail') el.id = detail.id + '-' + el.id;
@@ -200,5 +264,9 @@
     };
     if (detail.id === "marketDetail") renderNodeBanner(key);
   };
-  window.NorthstarMarketModules = {render: (key,target) => renderNodeDetail(key,target), data: () => marketData};
+  window.NorthstarMarketModules = {render: (key,target) => renderNodeDetail(key,target), data: () => marketData, mountPreview: host => {
+    if (!host) return;
+    if (!marketData?.nodes) { host.textContent = 'Waiting for the market feed…'; return; }
+    mountTrend(host, 'IESO');
+  }};
 })();

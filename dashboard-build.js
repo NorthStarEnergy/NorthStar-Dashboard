@@ -5,8 +5,19 @@
   const buildData = window.NORTHSTAR_BUILD_DATA;
   if (!buildData?.current || !Array.isArray(buildData.history)) return;
   let activeAssistantRequests = 0;
+  let assistantHasAnswer = false;
 
-  const formatDate = value => {
+  const formatPublication = record => {
+    const timestamp = String(record.publishedAt || '').trim();
+    if (timestamp) {
+        const parsed = new Date(timestamp);
+        if (!Number.isNaN(parsed.getTime())) {
+        return new Intl.DateTimeFormat(undefined, {
+          year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+        }).format(parsed);
+      }
+    }
+    const value = record.published;
     const [year, month, day] = String(value).split('-').map(Number);
     if (!year || !month || !day) return String(value);
     return new Intl.DateTimeFormat(undefined, {
@@ -26,11 +37,17 @@
 
   const applyAssistantThinkingState = () => {
     const assistantControl = document.getElementById('aiOpen');
-    if (!assistantControl) return;
     const thinking = activeAssistantRequests > 0;
-    assistantControl.classList.toggle('is-thinking', thinking);
-    assistantControl.setAttribute('aria-busy', String(thinking));
-    assistantControl.title = thinking ? 'NorthStar AI is thinking' : 'Open NorthStar AI';
+    if (assistantControl) {
+      assistantControl.classList.toggle('is-thinking', thinking);
+      assistantControl.classList.toggle('has-answer', assistantHasAnswer && !thinking);
+      assistantControl.setAttribute('aria-busy', String(thinking));
+      assistantControl.title = thinking ? 'AGENT is thinking' : assistantHasAnswer ? 'AGENT has a new answer' : 'Open AGENT';
+      assistantControl.setAttribute('aria-label', thinking ? 'AGENT is thinking' : assistantHasAnswer ? 'Open AGENT with a new answer' : 'Open AGENT');
+    }
+    document.querySelectorAll('.app>aside .brand-home-control img').forEach(logo => {
+      logo.classList.toggle('is-ai-thinking', thinking);
+    });
   };
 
   const setAssistantIcon = () => {
@@ -38,18 +55,29 @@
     if (!assistantControl) return;
     const icon = document.createElement('img');
     icon.className = 'northstar-ai-icon';
-    icon.src = 'northstar-symbol-transparent.png';
+    icon.src = 'northstar-agent-icon.png';
     icon.alt = '';
     icon.setAttribute('aria-hidden', 'true');
     assistantControl.replaceChildren(icon);
-    assistantControl.setAttribute('aria-label', 'Open NorthStar AI');
+    assistantControl.setAttribute('aria-label', 'Open AGENT');
     applyAssistantThinkingState();
   };
 
   const setAssistantThinking = active => {
     activeAssistantRequests = Math.max(0, activeAssistantRequests + (active ? 1 : -1));
+    if (active) assistantHasAnswer = false;
     applyAssistantThinkingState();
   };
+
+  document.getElementById('aiOpen')?.addEventListener('click', () => {
+    assistantHasAnswer = false;
+    applyAssistantThinkingState();
+  });
+
+  window.addEventListener('northstar-ai-answer', () => {
+    assistantHasAnswer = true;
+    applyAssistantThinkingState();
+  });
 
   window.addEventListener('northstar-ai-thinking', event => {
     if (typeof event.detail?.active === 'boolean') setAssistantThinking(event.detail.active);
@@ -86,8 +114,8 @@
       const version = document.createElement('strong');
       version.textContent = record.version;
       const date = document.createElement('time');
-      date.dateTime = record.published;
-      date.textContent = formatDate(record.published);
+      date.dateTime = record.publishedAt || record.published;
+      date.textContent = formatPublication(record);
       meta.append(version, date);
       const summary = document.createElement('p');
       summary.textContent = record.summary;
@@ -128,7 +156,51 @@
     }
     home.addEventListener('click', overview);
 
+    const rail = brand.closest('.app > aside');
+    const assistantMenu = document.querySelector('#assistantWorkspace .ai-assistant-sidebar');
+    const assistantLayout = assistantMenu?.parentElement;
+    const brandIcon = home.querySelector('img');
+    if (rail && assistantMenu && assistantLayout && brandIcon) {
+      const menuButton = document.createElement('button');
+      menuButton.type = 'button';
+      menuButton.className = 'northstar-ai-menu-toggle';
+      menuButton.setAttribute('aria-label', 'Open AI menu');
+      menuButton.title = 'Open AI menu';
+      menuButton.append(brandIcon);
+      brand.prepend(menuButton);
+
+      const back = document.createElement('button');
+      back.type = 'button';
+      back.className = 'northstar-ai-menu-back';
+      back.innerHTML = '<span aria-hidden="true">←</span><span>NorthStar menu</span>';
+      back.setAttribute('aria-label', 'Back to NorthStar menu');
+      rail.prepend(back);
+      const newChat = assistantMenu.querySelector('[data-ai-new]');
+
+      const openMenu = () => {
+        document.querySelector('#sideNav [data-tab="assistant"]')?.click();
+        rail.insertBefore(assistantMenu, brand.nextSibling);
+        document.body.classList.add('northstar-ai-menu-open');
+        menuButton.setAttribute('aria-expanded', 'true');
+      };
+      const closeMenu = () => {
+        assistantLayout.prepend(assistantMenu);
+        document.body.classList.remove('northstar-ai-menu-open');
+        menuButton.setAttribute('aria-expanded', 'false');
+        menuButton.focus();
+      };
+      menuButton.setAttribute('aria-expanded', 'false');
+      menuButton.addEventListener('click', openMenu);
+      back.addEventListener('click', closeMenu);
+    }
+
     let badge = brand.querySelector('.build-label');
+    if (!badge) {
+      badge = document.createElement('button');
+      badge.type = 'button';
+      badge.className = 'build-label';
+      brand.append(badge);
+    }
     if (badge?.tagName !== 'BUTTON') {
       const replacement = document.createElement('button');
       replacement.type = 'button';
@@ -136,10 +208,9 @@
       badge?.replaceWith(replacement);
       badge = replacement;
     }
-    if (!badge) return;
 
     const current = buildData.current;
-    const published = formatDate(current.published);
+    const published = formatPublication(current);
     badge.className = 'build-label dashboard-build-label';
     badge.type = 'button';
     badge.textContent = current.version;

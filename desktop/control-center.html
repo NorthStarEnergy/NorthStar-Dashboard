@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NorthStar Manager</title>
+  <style>
+    :root{color-scheme:dark;font-family:Segoe UI,Arial,sans-serif;background:#091319;color:#edf3f5}
+    body{margin:0;padding:28px;background:linear-gradient(135deg,#091319,#10232d);min-height:100vh}
+    header{display:flex;justify-content:space-between;align-items:center;gap:16px;max-width:1000px;margin-bottom:22px}
+    h1{margin:0 0 6px;color:#f2b84b}p{color:#9fb1ba}.grid{display:grid;grid-template-columns:repeat(2,minmax(280px,1fr));gap:16px;max-width:1000px}
+    .card{background:#121d25;border:1px solid #293943;border-radius:10px;padding:18px}.card h2{margin:0 0 8px}
+    .status{padding:10px;border-radius:6px;background:#0b151c;color:#82929d;margin:12px 0;white-space:pre-wrap;line-height:1.55}
+    .status.ok{color:#65d5a2}.status.bad{color:#ff7169}.actions{display:flex;flex-wrap:wrap;gap:8px}
+    button{border:1px solid #355567;background:#172b36;color:#edf3f5;border-radius:5px;padding:9px 12px;cursor:pointer}
+    button.primary{background:#69b7e8;color:#071118;border-color:#69b7e8;font-weight:700}button:hover{filter:brightness(1.15)}
+    small,.note{color:#82929d}.note{font-size:12px;line-height:1.5}.badge{padding:7px 10px;border:1px solid #355567;border-radius:20px;color:#b7d5df;white-space:nowrap}
+    @media(max-width:680px){.grid{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <header><div><h1>NorthStar Manager</h1><p>Live health checks, dashboard launch, and release status.</p></div><button id="refresh" type="button">REFRESH BOTH SYSTEMS</button></header>
+  <div class="grid">
+    <section class="card">
+      <h2>Local NorthStar</h2><small>Workstation · health and installed release</small>
+      <div id="localStatus" class="status">Checking…</div>
+      <div class="actions">
+        <button class="primary" data-action="launch" data-target="local">Start local system</button>
+        <button data-action="restart" data-target="local">Restart</button>
+        <button data-action="stop" data-target="local">Stop</button>
+        <button data-action="dashboard" data-target="local">Open local dashboard</button>
+        <button data-action="logs" data-target="local">View logs</button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Production NorthStar</h2><small>ops.northstarenergy.ca · live health and release status</small>
+      <div id="productionStatus" class="status">Checking…</div>
+      <div class="actions"><button class="primary" data-action="dashboard" data-target="production">Open production dashboard</button></div>
+      <p class="note">The production dashboard checks for its latest release after operator sign-in. Production restart and update controls require a configured management service.</p>
+    </section>
+  </div>
+  <p class="note">Health refreshes automatically every 30 seconds. Manager build <span id="managerVersion">checking…</span>.</p>
+  <script>
+    const $=id=>document.getElementById(id);
+    async function run(action,target){const box=$(target==='local'?'localStatus':'productionStatus');box.textContent='Working…';try{const result=await window.northstarDesktop.control(action,target);box.textContent=result.message||'Done';box.className='status '+(result.ok?'ok':'bad');if(action!=='logs')setTimeout(refresh,500)}catch(error){box.textContent=error.message;box.className='status bad'}}
+    async function refresh(){for(const target of ['local','production']){try{const result=await window.northstarDesktop.control('status',target);const box=$(target==='local'?'localStatus':'productionStatus');box.textContent=result.message;box.className='status '+(result.ok?'ok':'bad')}catch(error){const box=$(target==='local'?'localStatus':'productionStatus');box.textContent=error.message;box.className='status bad'}}}
+    document.querySelectorAll('button[data-action]').forEach(button=>button.onclick=()=>run(button.dataset.action,button.dataset.target));
+    $('refresh').onclick=refresh;window.northstarDesktop.control('version','local').then(result=>{$('managerVersion').textContent=result.message}).catch(()=>{});
+    refresh();setInterval(refresh,30000);
+  </script>
+</body>
+</html>

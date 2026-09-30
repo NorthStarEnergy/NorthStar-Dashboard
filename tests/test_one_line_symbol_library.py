@@ -24,8 +24,8 @@ def _eval_library() -> dict:
 def test_dashboard_loads_symbol_library_before_editor() -> None:
     html = (ROOT / "northstar-clean.html").read_text(encoding="utf-8")
 
-    library = 'src="one-line-symbol-library.js?v=20260918-4"'
-    editor = 'src="one-line-editor-ui.js?v=20260903-4"'
+    library = 'src="one-line-symbol-library.js?v=20260918-4'
+    editor = 'src="one-line-editor-ui.js?v=20260903-4'
     assert library in html
     assert editor in html
     assert html.index(library) < html.index(editor)
@@ -35,9 +35,9 @@ def test_dashboard_loads_symbol_library_before_editor() -> None:
     assert "Catalogue 2026.4" in html
     assert "Figure A-1" in html
     assert "Workplace line switch" in html
-    assert 'href="one-line-editor.css?v=20260918-3"' in html
-    assert 'href="one-line-scada.css?v=20260918-1"' in html
-    assert 'href="one-line-technical.css?v=20260918-1"' in html
+    assert 'href="one-line-editor.css?v=20260918-3' in html
+    assert 'href="one-line-scada.css?v=20260918-1' in html
+    assert 'href="one-line-technical.css?v=20260918-1' in html
     assert 'class="one-line-toolbar"' in html
     assert 'id="one-line-black-board"' in html
     css = (ROOT / "one-line-editor.css").read_text(encoding="utf-8")
@@ -159,7 +159,7 @@ def test_imported_labels_and_designations_are_bounded_and_escaped() -> None:
 
     assert "cleanText(item?.label)" in editor
     assert "cleanText(item?.deviceFunction" in editor
-    assert ("${esc(symbol.label || symbol.id)}" in editor or
+    assert ("${esc(symbol.assetTag || symbol.label || symbol.id)}" in editor or
             ("const label = esc(symbol.label || symbol.id);" in editor and "${label}</text>" in editor))
     assert "${esc(symbol.deviceFunction)}" in editor
 

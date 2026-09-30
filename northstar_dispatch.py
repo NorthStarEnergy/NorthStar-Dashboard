@@ -108,6 +108,7 @@ def _initial_state(moment: float) -> dict[str, Any]:
         "tracking": "on-target",
         "capacityMw": MW_CAPACITY,
         "orActivation": None,
+        "orActivationMw": None,
         "reserveStandby": _random_reserve_standby(),
         "dispatchInterval": {
             "sequence": int(interval_start // DISPATCH_INTERVAL_SECONDS),
@@ -142,6 +143,7 @@ def _maybe_or_activation(state: dict[str, Any]) -> None:
         state["orTicks"] = int(state.get("orTicks", 0)) + 1
         if state["orTicks"] >= 6:
             state["orActivation"] = None
+            state["orActivationMw"] = None
             state.pop("orTicks", None)
         return
     if _RNG.random() < 0.02:
@@ -151,6 +153,7 @@ def _maybe_or_activation(state: dict[str, Any]) -> None:
         if float(reserve.get(key, 0.0) or 0.0) <= 0.0:
             return
         state["orActivation"] = product
+        state["orActivationMw"] = round(float(reserve.get(key, 0.0)), 1)
         state["orTicks"] = 0
 
 
@@ -270,6 +273,7 @@ def _placeholder_snapshot(*, stale: bool) -> dict[str, Any]:
         "tracking": "unknown",
         "capacityMw": MW_CAPACITY,
         "orActivation": None,
+        "orActivationMw": None,
         "reserveStandby": {"tenS": 0.0, "tenN": 0.0, "thirtyR": 0.0},
         "dispatchInterval": {"sequence": None, "start": None, "end": None, "cadenceSeconds": DISPATCH_INTERVAL_SECONDS},
         "history": [],
