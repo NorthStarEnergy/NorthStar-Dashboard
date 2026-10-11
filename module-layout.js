@@ -199,10 +199,10 @@
     positions = Object.fromEntries(Object.entries(positions).filter(([key,p]) => key.startsWith('canvas:') && valid(p)));
     // Keep the old canvas intact as a selectable arrangement, never delete it.
     if (!profiles.previous && Object.keys(positions).length) profiles.previous = JSON.parse(JSON.stringify(positions));
-    const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].filter(el=>!document.body.classList.contains('ns-has-status') || !el.matches('#dispatchClient,#marketTopTiles>*,#overviewEventsSummary,#overviewFieldTracker')).map(el => {
+    const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].filter(el=>!(document.body.classList.contains('oc-tracker-popped') && el.id==='overviewFieldTracker') && (!document.body.classList.contains('ns-has-status') || !el.matches('#dispatchClient,#marketTopTiles>*,#overviewEventsSummary,#overviewFieldTracker,#overviewOperationsConsole'))).map(el => {
       const staffPanel = el.id === 'overviewStaff';
       const fieldTracker = el.id === 'overviewFieldTracker';
-      return {el, size: staffPanel ? [560, 320] : fieldTracker ? [280, 180] : size, min: fieldTracker ? [220, 140] : staffPanel ? [300, 180] : [1, 1], key: 'canvas:' + group + ':' + (el.id || el.dataset.moduleId || el.dataset.site || group)};
+      return {el, size: staffPanel ? [560, 320] : fieldTracker ? [280, 180] : size, min: fieldTracker ? [220, 140] : staffPanel ? [300, 180] : [1, 1], key: 'canvas:' + group + ':' + (el.dataset.canvasSlot || el.id || el.dataset.moduleId || el.dataset.site || group)};
     }));
     const overviewModuleId = el => el.id || el.dataset.moduleId || el.dataset.site;
     const closedOverview = () => readPreference('northstarClosedOverviewModules');

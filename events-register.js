@@ -12,7 +12,7 @@
     const original=host.querySelector('.logbook-layout');if(original){original.hidden=true;const composer=original.querySelector('.logbook-card');if(composer){composer.dataset.moduleId='event-composer';composer.setAttribute('aria-label','Write log entry');}}
     const root=document.createElement('div');root.id='eventRegister';
     root.innerHTML=`<header class="er-heading"><div><h1>Event Log</h1><p>Operations history · ${esc(Intl.DateTimeFormat().resolvedOptions().timeZone)} · Dashboard-only alarm controls</p></div><div class="er-actions"><button type="button" id="erWrite">＋ Log input</button><button type="button" id="erRefresh">Refresh</button></div></header>
-      <nav class="er-views" role="toolbar" aria-label="Event log views"><button type="button" data-view="all" class="is-active">All events</button><button type="button" data-view="alarms">Alarms <span id="erAlarmCount">0</span></button><button type="button" data-view="shelved">Shelved</button><button type="button" data-view="disabled">Disabled</button></nav>
+      <nav class="er-views" role="toolbar" aria-label="Event log views"><button type="button" data-view="all" class="is-active">All events</button><button type="button" data-view="alarms">Alarms <span id="erAlarmCount">0</span></button><button type="button" data-view="communications">Communications</button><button type="button" data-view="tasks">Tasks</button><button type="button" data-view="events">Events</button><button type="button" data-view="feed">Feed</button><button type="button" data-view="shelved">Shelved</button><button type="button" data-view="disabled">Disabled</button></nav>
       <p class="er-control-note">Shelving temporarily hides an alarm in this dashboard. Disabling hides it until re-enabled. Neither action changes the alarm source or event history.</p>
       <details class="er-sources"><summary>Input sources and recording status</summary><div id="erSources">Loading source information…</div></details>
       <form id="erFilters" class="er-filters"><label class="er-search">Search events<input name="q" type="search" maxlength="500" placeholder="Message, equipment, person or event ID"></label>
@@ -49,7 +49,7 @@
     function render(){
       const focus=document.activeElement?.dataset.eventId;
       const alarms=rows.filter(isAlarm);$('erAlarmCount').textContent=alarms.filter(e=>!stateOf(e)).length;
-      const shown=rows.filter(e=>{const s=stateOf(e);return view==='all'||(view==='alarms'&&isAlarm(e)&&!s)||(view==='shelved'&&s==='shelved')||(view==='disabled'&&s==='disabled');});
+      const shown=rows.filter(e=>{const s=stateOf(e);return ['communications','tasks','events','feed'].includes(view)||view==='all'||(view==='alarms'&&isAlarm(e)&&!s)||(view==='shelved'&&s==='shelved')||(view==='disabled'&&s==='disabled');});
       $('erRows').innerHTML=shown.map(e=>{const href=String(e.href||'').startsWith('event-detail.html?id=')?e.href:`event-detail.html?id=${encodeURIComponent(e.eventId)}`;const alarm=isAlarm(e),state=stateOf(e),id=alarmId(e);const control=alarm?(state?`<span class="er-control-state">${state==='shelved'?'Shelved':'Disabled'}</span> <button type="button" data-alarm-action="enable" data-alarm-id="${esc(id)}">Re-enable</button>`:`<button type="button" data-alarm-action="shelve" data-alarm-id="${esc(id)}" aria-label="Shelve ${esc(e.summary||'alarm')} for one hour">Shelve 1h</button> <button type="button" data-alarm-action="disable" data-alarm-id="${esc(id)}" aria-label="Disable ${esc(e.summary||'alarm')} on this dashboard">Disable</button>`):'';return `<tr class="er-severity-${['critical','warning'].includes(e.severity)?e.severity:'info'}"><td>${esc(date(e.occurredAt))}</td><td><span class="er-severity">${esc(e.severity)}</span></td><td><a class="er-open" href="${esc(href)}" data-event-id="${esc(e.eventId)}">${esc(e.summary||e.eventType)}</a><small>${esc(e.category)} · ${esc(e.eventType)}</small></td><td>${esc(e.source)}<small>${esc(e.actorId)}</small></td><td>${esc(e.site||'—')}</td><td>${esc(e.status||'—')}</td><td class="er-controls">${control}</td></tr>`}).join('');
       if(focus)[...$('erRows').querySelectorAll('[data-event-id]')].find(b=>b.dataset.eventId===focus)?.focus();
       $('erCount').textContent=`${shown.length.toLocaleString()} shown · ${total.toLocaleString()} matching events`;
@@ -58,7 +58,7 @@
     async function load(older=false){
       if(older&&(!cursor||loading))return;
       try{sessionStorage.setItem('northstarEventFilters',filters.toString());}catch{}
-      const request=++listRequest, p=new URLSearchParams(filters);p.set('limit','50');if(older)p.set('cursor',cursor);
+      const request=++listRequest, p=new URLSearchParams(filters);p.set('limit','50');if(['alarms','communications','tasks','events','feed'].includes(view))p.set('consoleCategory',view);if(older)p.set('cursor',cursor);
       loading=true;$('erMore').disabled=true;$('erRefresh').disabled=true;$('erFreshness').textContent='Refreshing…';
       try {
         const result=await json(url('/api/events/register',p));if(request!==listRequest)return;
@@ -72,7 +72,7 @@
     $('erClear').onclick=()=>{form.reset();filters=new URLSearchParams();chips();load();};
     $('erChips').onclick=e=>{const b=e.target.closest('[data-chip]');if(!b)return;const [key,value]=[...filters][Number(b.dataset.chip)];for(const input of form.elements){if(input.name!==key)continue;if(input.type==='checkbox'){if(input.value===value)input.checked=false;}else input.value='';}form.requestSubmit();};
     $('erRefresh').onclick=()=>load();$('erNew').onclick=()=>load();$('erMore').onclick=()=>load(true);
-    root.querySelector('.er-views').onclick=e=>{const b=e.target.closest('[data-view]');if(!b)return;view=b.dataset.view;root.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('is-active',x===b));render();};
+    root.querySelector('.er-views').onclick=e=>{const b=e.target.closest('[data-view]');if(!b)return;view=b.dataset.view;root.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('is-active',x===b));load();};
     $('erRows').onclick=e=>{const b=e.target.closest('[data-alarm-action]');if(!b)return;const id=b.dataset.alarmId;if(b.dataset.alarmAction==='shelve')controls[id]={shelvedUntil:Date.now()+3600000};else if(b.dataset.alarmAction==='disable')controls[id]={disabled:true};else delete controls[id];saveControls();render();};
     $('erWrite').onclick=()=>{if(original){if(window.NorthstarModules){window.NorthstarModules.open('logbook:event-composer');document.querySelector('#logSubject')?.focus();return;}original.hidden=!original.hidden;if(!original.hidden){original.scrollIntoView({behavior:'smooth'});document.querySelector('#logSubject')?.focus();}}};
     async function sourceInfo(){try{const data=await json('/api/events/sources');$('erSources').innerHTML=data.sources.map(s=>`<div><strong>${esc(s.label)}</strong><span>${esc(s.state)}</span><small>${s.count.toLocaleString()} recorded${s.lastRecordedAt?' · last '+esc(date(s.lastRecordedAt)):''}</small></div>`).join('')+`<p>${esc(data.note)}</p>`;

@@ -1,3 +1,7 @@
+# 2026-10-11 — Operations Console / five-category Event Log (v0.157)
+
+Implemented shared Console, durable linked tasks, daily/DST and exact-event templates, additive SQLite storage and operator-only API. See [packet report](packets/2026-10-11-operations-console.md). Actual Windows origin activation and visual acceptance remain pending. Baseline failures are documented in delivery validation.
+
 - 2026-09-30: NorthStar v0.156 — large-area Event Log with dashboard-only alarm controls, custom-module deletion, Manager readiness improvements, and timestamp-tolerant versioning. See [report](packets/2026-09-30-event-log-v0156.md).
 
 - 2026-09-28: Station schematic builder foundation — equipment metadata, durable SCADA bindings, read-only display, dynamic measurements, reusable templates and editing tools. See [report](packets/2026-09-28-station-schematic-builder.md).

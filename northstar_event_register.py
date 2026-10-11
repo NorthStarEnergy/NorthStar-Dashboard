@@ -16,9 +16,11 @@ KINDS = {
     "log": "Operator logs", "workforce": "Workforce", "outage": "Outages",
     "switching": "Switching", "field": "Field reports", "scada": "SCADA imports",
     "voice": "Voice", "governance": "Governance", "library": "Library",
-    "system": "Systems", "other": "Other",
+    "system": "Systems", "other": "Other", "task": "Tasks", "feed": "Feed",
 }
 CATEGORY = """CASE
+ WHEN aggregate_type='console_task' THEN 'task'
+ WHEN source='console' AND json_valid(payload) AND json_extract(payload,'$.category') IS NOT NULL THEN json_extract(payload,'$.category')
  WHEN event_type LIKE '%.note.added' AND json_valid(payload) THEN COALESCE(json_extract(payload,'$.category'),'other')
  WHEN aggregate_type='price_alert' OR event_type LIKE 'alarm.%'
    OR event_type LIKE 'workforce.%help%' OR event_type LIKE 'workforce.%overdue%' THEN 'alarm'
@@ -136,6 +138,12 @@ def _query(connection, params, *, relation=None):
 
 def register(params):
     with store._session() as connection:
+        category = _one(params, "consoleCategory")
+        if category:
+            import northstar_console as console
+            if category not in console.CATEGORIES:
+                raise ValueError("Unknown console category")
+            return _query(connection,params,relation=(f"({console.GROUP})=?",[category]))
         return _query(connection,params)
 
 
@@ -162,6 +170,9 @@ def detail(event_id, params):
         if row['correlation_id']:
             links.append("(source=? AND correlation_id=?)")
             linked_values.extend([row['source'],row['correlation_id']])
+        if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='console_links'").fetchone():
+            links.append("event_id IN (SELECT CASE WHEN left_id=? THEN right_id ELSE left_id END FROM console_links WHERE left_id=? OR right_id=?)")
+            linked_values.extend([event_id,event_id,event_id])
         related=("event_id!=? AND ("+' OR '.join(links)+")",[event_id,*linked_values])
         selected={"history":relation,"occurrences":recurrence,"related":related}[section]
         result=_query(connection,params,relation=selected)

@@ -54,7 +54,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     register('outages:uwpc', 'UWPC', 'outages', $('#switching .switching-workspace'));
     $$('.section').filter(el => !['overview','weather','markets','outages','switching','modules'].includes(el.id)).forEach(root => {
       if(root.id==='logbook' && $('.logbook-layout',root))$('.logbook-layout',root).hidden=false;
-      const explicit = (root.id==='logbook'?$$('#eventRegister,.logbook-card,.logbook-report',root):root.id==='tools'?$$('.tool-grid,.workbench-card,#deviceLibrary,#overviewChat,#outlookWorkspace',root):$$('[data-module-id],.workbench-card',root)).filter(el=>el!==root && !el.dataset.nsCustom);
+      const explicit = (root.id==='logbook'?$$('#operationsConsole,#eventRegister,.logbook-card,.logbook-report',root):root.id==='tools'?$$('.tool-grid,.workbench-card,#deviceLibrary,#overviewChat,#outlookWorkspace',root):$$('[data-module-id],.workbench-card',root)).filter(el=>el!==root && !el.dataset.nsCustom);
       const candidates = explicit.length?explicit:$$('.panel', root).filter(el => !el.dataset.nsCustom && (!el.parentElement.closest('.panel') || !root.contains(el.parentElement.closest('.panel'))));
       const currentIds = new Set();
       (candidates.length ? candidates : [root]).forEach((el, i) => {
@@ -405,6 +405,7 @@ window.NORTHSTAR_MODULE_WORKSPACE = true;
     const name='northstar-module-'+id.replace(/[^a-z0-9_-]/gi,'-');
     const popup=window.open(url.href,name,'popup=yes,width=1200,height=850,resizable=yes,scrollbars=yes');
     if(!popup)window.alert('Allow pop-up windows for NorthStar, then try again.');
+    else window.dispatchEvent(new CustomEvent('northstar:module-popout',{detail:{id,popup}}));
   }
   function showModulePopout(id) {
     const m=registry.get(id);if(!m)return;

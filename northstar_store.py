@@ -717,6 +717,9 @@ def init_db() -> None:
         from northstar_uwpc_desk import init_schema as init_uwpc_desk_schema
 
         init_uwpc_desk_schema(connection)
+        from northstar_console import init_schema as init_console_schema
+
+        init_console_schema(connection)
         _migrate_unified_events(connection)
         _seed_readiness_registry(connection)
         connection.execute(

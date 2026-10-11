@@ -3,12 +3,18 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.156",
-    "published": "2026-09-30",
-    "publishedAt": "2026-09-30T03:18:01-04:00",
-    "summary": "Event Log alarm controls, custom module deletion, and Manager startup readiness"
+    "version": "v0.157",
+    "published": "2026-10-11",
+    "publishedAt": "2026-10-11T12:38:13-07:00",
+    "summary": "Five-category event log, shared Operations Console, persistent linked tasks, recurring and triggered schedules."
   },
   "history": [
+    {
+      "version": "v0.157",
+      "published": "2026-10-11",
+      "publishedAt": "2026-10-11T12:38:13-07:00",
+      "summary": "Five-category event log, shared Operations Console, persistent linked tasks, recurring and triggered schedules."
+    },
     {
       "version": "v0.156",
       "published": "2026-09-30",

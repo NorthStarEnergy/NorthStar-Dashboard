@@ -33,6 +33,7 @@ import northstar_auth as auth
 import northstar_client_release as client_release
 import northstar_events as events
 import northstar_event_register as event_register
+import northstar_console as console
 import northstar_operator_knowledge as operator_knowledge
 import northstar_ai as ai
 import northstar_ai_history as ai_history
@@ -185,6 +186,14 @@ OPERATOR_ROUTES = {
     "/api/client-release": ("GET",),
     "/api/events": ("GET",),
     "/api/events/register": ("GET",),
+    "/api/console/records": ("GET", "POST"),
+    "/api/console/tasks": ("GET", "POST"),
+    "/api/console/transition": ("POST",),
+    "/api/console/templates": ("GET", "POST"),
+    "/api/console/template-state": ("POST",),
+    "/api/console/links": ("GET", "POST"),
+    "/api/console/feed": ("GET",),
+    "/api/console/catalog": ("GET",),
     "/api/events/detail": ("GET",),
     "/api/events/sources": ("GET",),
     "/api/events/notes": ("POST",),
@@ -1082,6 +1091,15 @@ def refresh_loop() -> None:
         time.sleep(REFRESH_SECONDS)
 
 
+def console_loop() -> None:
+    while True:
+        try:
+            console.tick()
+        except Exception as exc:
+            print(f"Console scheduler failed: {type(exc).__name__}")
+        time.sleep(60)
+
+
 def overdue_loop() -> None:
     """Server-side overdue detection and coordinate-retention enforcement."""
     while True:
@@ -1487,6 +1505,26 @@ class Handler(SimpleHTTPRequestHandler):
         if self._refused_before_dispatch():
             return
         route = self.path.split("?", 1)[0]
+        if route.startswith("/api/console/"):
+            handlers = {"/api/console/records": lambda q: console.records(q),
+                        "/api/console/tasks": lambda q: console.tasks(q),
+                        "/api/console/templates": lambda q: console.templates(),
+                        "/api/console/feed": lambda q: console.feed(),
+                        "/api/console/catalog": lambda q: console.catalog(),
+                        "/api/console/links": lambda q: console.linked(q.get("id", [""])[0])}
+            handler = handlers.get(route)
+            if handler is None:
+                self._send_json({"error": "Unknown console route"}, 404)
+                return
+            try:
+                self._send_json(handler(parse_qs(urlparse(self.path).query)))
+            except console.Conflict as exc:
+                self._send_json({"error": str(exc)}, 409)
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 400)
+            except LookupError as exc:
+                self._send_json({"error": str(exc)}, 404)
+            return
         if route == "/api/profile/crew-layout":
             try:
                 positions = self._json_body().get("positions") if self.command == "POST" else None
@@ -2415,6 +2453,28 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _do_POST(self) -> None:
         route = self.path.split("?", 1)[0]
+        if route.startswith("/api/console/"):
+            if self._cross_origin_write():
+                raise APIError(403, "cross-origin operator request refused")
+            handlers = {"/api/console/records": console.create_record,
+                        "/api/console/tasks": console.create_task,
+                        "/api/console/transition": console.transition,
+                        "/api/console/templates": console.create_template,
+                        "/api/console/template-state": console.set_template,
+                        "/api/console/links": console.link}
+            handler = handlers.get(route)
+            if handler is None:
+                raise APIError(404, "Unknown console route")
+            payload = self._json_body(40 * 1024)
+            try:
+                self._send_json(handler(payload, self._operator_actor()))
+            except console.Conflict as exc:
+                raise APIError(409, str(exc)) from exc
+            except ValueError as exc:
+                raise APIError(400, str(exc)) from exc
+            except LookupError as exc:
+                raise APIError(404, str(exc)) from exc
+            return
         if route == "/api/profile/crew-layout":
             try:
                 positions = self._json_body().get("positions") if self.command == "POST" else None
@@ -3485,6 +3545,7 @@ if __name__ == "__main__":
         raise SystemExit(f"Northstar could not start on port {PORT}: {exc}") from exc
     threading.Thread(target=refresh_loop, daemon=True).start()
     threading.Thread(target=overdue_loop, daemon=True).start()
+    threading.Thread(target=console_loop, daemon=True).start()
     threading.Thread(target=scada_loop, daemon=True).start()
     threading.Thread(target=flow_loop, daemon=True).start()
     threading.Thread(target=dispatch_loop, daemon=True).start()

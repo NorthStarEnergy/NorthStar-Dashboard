@@ -101,7 +101,7 @@
       const url=new URL(location.href);url.searchParams.set('nsStatusWindow','1');
       const width=screen.availWidth||innerWidth,height=screen.availHeight||innerHeight;
       const popup=window.open(url.href,'northstar-fixed-dashboard',`popup=yes,left=0,top=0,width=${width},height=${height}`);
-      if(!popup)window.alert('Allow pop-up windows for NorthStar, then try again.');else popup.focus();
+      if(!popup)window.alert('Allow pop-up windows for NorthStar, then try again.');else {popup.focus();window.dispatchEvent(new CustomEvent('northstar:status-popout',{detail:{id:'fixed-dashboard',popup}}));}
     }
     const popup=document.createElement('section');popup.id='nsStatusEvents';popup.hidden=true;popup.setAttribute('aria-label','Detailed event log');
     popup.innerHTML='<header><strong>Event log</strong><button type="button" data-close aria-label="Close event preview">×</button></header><div class="ns-status-log" tabindex="0"></div><footer><span role="status"></span><button type="button" data-more hidden>Load older events</button></footer>';document.body.append(popup);

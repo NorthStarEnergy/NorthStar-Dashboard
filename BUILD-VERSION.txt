@@ -1,4 +1,4 @@
-v0.156
-2026-09-30
-2026-09-30T03:18:01-04:00
-Event Log alarm controls, custom module deletion, and Manager startup readiness
+v0.157
+2026-10-11
+2026-10-11T12:38:13-07:00
+Five-category event log, shared Operations Console, persistent linked tasks, recurring and triggered schedules.
