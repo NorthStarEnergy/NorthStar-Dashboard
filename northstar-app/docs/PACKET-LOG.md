@@ -1,3 +1,7 @@
+## 20261105-worker-mobile
+
+Compact mobile check-in, prominent site selection and QR prefill. Live phone viewport verified. See packets/2026-11-05-worker-mobile.md.
+
 ## 20261029-assistant-freshness
 
 Server-calculated saved forecast age, timezone regression coverage, and prompt version 9. 63 focused tests and synthetic provider age check pass. See packets/2026-10-29-assistant-freshness.md.

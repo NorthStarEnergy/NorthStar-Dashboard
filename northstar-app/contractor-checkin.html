@@ -17,23 +17,24 @@ h1{font-size:23px;margin:24px 0 4px}p{color:var(--muted);font:11px monospace;lin
 label{display:block;color:var(--muted);font:9px monospace;letter-spacing:1px;margin-top:14px}input,select{width:100%;padding:12px;margin-top:6px;background:#091218;color:#fff;border:1px solid var(--line);border-radius:5px}
 .consent{display:flex;gap:8px;align-items:flex-start;color:var(--gold);font:10px monospace;letter-spacing:0}.consent input{width:auto;margin:0}.check,.help,.verify,.confirm{width:100%;margin-top:12px;padding:13px;border:0;border-radius:5px;font-weight:700}.check{background:var(--blue);color:#061018}.help{background:var(--red);color:#fff;font-size:15px}.help.sent{background:#4b262d}.verify,.confirm{background:#1d3946;color:var(--text);font-size:11px}.status{margin-top:16px;color:var(--green);font:10px/1.5 monospace;min-height:18px}.status.error{color:var(--red)}.hint{font-size:9px;margin-top:6px}button:disabled{opacity:.7}
 [hidden]{display:none!important}.timer{font:700 30px monospace;margin-top:18px}.call{display:block;text-align:center;text-decoration:none;cursor:pointer;font-size:13px}.call[aria-disabled="true"]{opacity:.65;cursor:default}#safetyPanel[data-stage="1"] .timer{color:var(--gold)}#safetyPanel[data-stage="2"] .timer{color:var(--red)}#safetyPanel:not([hidden])~#submit{background:#223746;color:white}button,a{min-height:44px}
+body{padding:12px;align-items:start}.card{padding:18px;width:min(480px,100%)}.brand{text-align:left;font:700 11px Arial,sans-serif;letter-spacing:2px}.brand h1{font:800 32px/1.1 Arial,sans-serif;letter-spacing:-.6px;color:var(--text);margin:6px 0 8px}p{font:13px/1.4 Arial,sans-serif;margin:6px 0 12px}label{font:600 11px/1.25 Arial,sans-serif;letter-spacing:.3px;margin-top:10px}input,select{font:16px Arial,sans-serif;min-height:44px;padding:10px;margin-top:4px}.site-label{margin-top:12px}.site{font:700 18px Arial,sans-serif;min-height:48px;margin:4px 0 2px;padding:10px;color:var(--blue)}.consent{font:12px/1.4 Arial,sans-serif;min-height:32px;align-items:center;margin-top:8px}.consent input{min-height:22px;width:22px;height:22px;flex-shrink:0}.check{font-size:16px}.status:empty,#callStatus:empty{display:none}.status{margin-top:10px;font:12px/1.4 Arial,sans-serif}#arrivalFields{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}#arrivalFields>label,#arrivalFields>button,#arrivalFields>input{grid-column:1/-1}#arrivalFields>label:has(#phone),#arrivalFields>label:has(#expected){grid-column:auto}@media(max-width:360px){body{padding:8px}.card{padding:14px}#arrivalFields>label:has(#phone),#arrivalFields>label:has(#expected){grid-column:1/-1}}
 </style>
 </head>
 <body>
 <main class="card">
-  <div class="brand"><div class="brand-mark" aria-label="NorthStar"></div><small>SITE CHECK-IN</small></div>
-  <h1 id="screenTitle">Worker arrival</h1>
-  <p>This QR code is tied to the site below. Check in when you arrive and check out before leaving.</p>
-  <div class="site" id="siteName">LOADING SITE TOKEN</div>
+  <header class="brand">NORTHSTAR<h1>SITE CHECK-IN</h1></header>
+  <h2 id="screenTitle" hidden>Worker arrival</h2>
+  <p>Check in on arrival. Check out before leaving.</p>
+  <label class="site-label" for="siteName">SITE</label><select class="site" id="siteName"><option value="">Select your site</option><option>Aiyers 1</option><option>Aiyers 2</option><option>Big Beaver Falls</option><option>Bird GS</option><option>Calm Lake</option><option>Camp Three Rapids</option><option>Cogent</option><option>Fort Frances</option><option>Fort Frances TS</option><option>Iroquois Falls</option><option>Iroquois Falls 230 kV</option><option>Island Falls</option><option>Kenora</option><option>McDougal</option><option>Norman</option><option>Okikendawt GS</option><option>Old Woman Falls</option><option>Sturgeon Falls</option><option>Twin Falls</option><option>White Otter Rapids</option></select>
   <div id="arrivalFields">
   <label>YOUR NAME<input id="name" autocomplete="name" placeholder="Full name"></label>
   <label>CONTRACTOR COMPANY<input id="company" autocomplete="organization" placeholder="Company or crew name"></label>
-  <label>PHONE FOR SAFETY CALLBACK (OPTIONAL)<input id="phone" autocomplete="tel" placeholder="416-555-0123"></label>
+  <label>PHONE (OPTIONAL)<input id="phone" type="tel" autocomplete="tel" placeholder="416-555-0123"></label>
   <button class="verify" id="requestVerification" type="button" hidden>VERIFY PHONE NUMBER</button>
   <input id="verificationCode" inputmode="numeric" maxlength="6" placeholder="Six-digit verification code" hidden>
   <button class="confirm" id="confirmVerification" type="button" hidden>CONFIRM PHONE</button>
-  <p class="hint">Phone verification is optional during the pilot. Without it, the record is marked QR-unverified.</p>
-  <label>EXPECTED TIME ON SITE<select id="expected"><option value="60">1 hour</option><option value="120">2 hours</option><option value="240" selected>4 hours</option><option value="480">8 hours</option><option value="720">12 hours</option></select></label>
+  
+  <label>TIME ON SITE<select id="expected"><option value="60">1 hour</option><option value="120">2 hours</option><option value="240" selected>4 hours</option><option value="480">8 hours</option><option value="720">12 hours</option></select></label>
   <label>WORK NOTES<input id="notes" placeholder="Crew, equipment, or task (optional)"></label>
   <label class="consent"><input type="checkbox" id="alone"> I am working alone and require hourly safety check-ins.</label>
   <label class="consent"><input type="checkbox" id="location"> Share my current location for operator safety tracking.</label>
@@ -48,7 +49,7 @@ label{display:block;color:var(--muted);font:9px monospace;letter-spacing:1px;mar
   <button class="check" id="submit" type="button">CHECK IN</button>
   <button class="help" id="help" type="button" hidden>NEED HELP NOW</button>
   <a class="help call" id="operatorCall" hidden aria-disabled="true">OPERATOR CALL — NOT CONFIGURED</a>
-  <p id="callStatus" role="status" aria-live="polite">Operator calling is not configured for this pilot. No calls are placed to a dummy number.</p>
+  <p id="callStatus" role="status" aria-live="polite"></p>
   <div class="status" id="status" role="status" aria-live="polite"></div>
 </main>
 <script>
@@ -56,9 +57,9 @@ label{display:block;color:var(--muted);font:9px monospace;letter-spacing:1px;mar
 const savedState={get(key){try{return localStorage.getItem(key)}catch{return null}},set(key,value){try{localStorage.setItem(key,value)}catch{}},remove(key){try{localStorage.removeItem(key)}catch{}}};
 const sites={APIROQ:'Iroquois Falls',M1S:'Island Falls',F2B:'Fort Frances','K2M CCTS':'Kenora'};
 const params=new URLSearchParams(location.search),legacySite=params.get('site')||'',tokenKey='northstar-site-token';
-// Launched from the installed home-screen icon there is no query string, so the
-// last token this device resolved stands in for a fresh scan of the site QR.
-const token=params.get('token')||(legacySite?'':savedState.get(tokenKey)||''),storageKey='northstar-checkin-'+(token||legacySite);
+// Restore a QR only for an existing visit; a new direct visit chooses its site.
+const savedToken=savedState.get(tokenKey)||'';
+const token=params.get('token')||(legacySite?'':savedToken&&savedState.get('northstar-checkin-'+savedToken)?savedToken:''),storageKey='northstar-checkin-'+(token||legacySite);
 const statusNode=document.querySelector('#status'),submit=document.querySelector('#submit'),help=document.querySelector('#help'),requestVerification=document.querySelector('#requestVerification'),confirmVerification=document.querySelector('#confirmVerification'),verificationCode=document.querySelector('#verificationCode');
 let site=null,siteReady=false,verificationId=null,active=null,watch=null,stateVersion=0;
 function showStatus(message,error=false){statusNode.textContent=message;statusNode.classList.toggle('error',error)}
@@ -67,8 +68,12 @@ async function resolveSite(){
     if(token){const response=await fetch('/api/checkin-tokens/resolve?token='+encodeURIComponent(token));if(!response.ok)throw new Error('invalid or expired site QR token');site=(await response.json()).site;savedState.set(tokenKey,token);requestVerification.hidden=false}
     else site=sites[legacySite]||legacySite||null;
   }catch(error){site=null;savedState.remove(tokenKey);showStatus(String(error.message||error).toUpperCase(),true)}
-  siteReady=true;document.querySelector('#siteName').textContent=site?site.toUpperCase():'SITE LINK INVALID';
+  siteReady=true;const picker=document.querySelector('#siteName');
+  if(site&&!Array.from(picker.options).some(option=>option.value===site))picker.add(new Option(site,site));
+  picker.value=site||'';picker.disabled=Boolean(token&&site);
+  if(token&&!site)showStatus('QR LINK INVALID � SCAN A CURRENT SITE QR CODE',true);
 }
+document.querySelector('#siteName').onchange=event=>{site=event.target.value;verificationId=null;};
 function sendPosition(){return new Promise(resolve=>{if(!document.querySelector('#location').checked||!navigator.geolocation)return resolve({});navigator.geolocation.getCurrentPosition(p=>resolve({latitude:p.coords.latitude,longitude:p.coords.longitude}),()=>resolve({}),{enableHighAccuracy:true,maximumAge:60000,timeout:8000})})}
 function renderActiveBase(){const checkedIn=Boolean(active&&active.status!=='checked-out');submit.textContent=checkedIn?'CHECK OUT':'CHECK IN';help.hidden=!checkedIn;help.disabled=Boolean(active?.needsHelp);help.classList.toggle('sent',Boolean(active?.needsHelp));help.textContent=active?.helpState==='acknowledged'?'HELP ACKNOWLEDGED — ASSISTANCE OPEN':active?.needsHelp?'HELP REQUEST SENT':'NEED HELP NOW';if(checkedIn){document.querySelector('#name').value=active.name||'';document.querySelector('#company').value=active.company||''}}
 function remember(){if(active)savedState.set(storageKey,active.id);else savedState.remove(storageKey)}
@@ -76,7 +81,7 @@ async function refreshActive(){if(!active)return;const visitId=active.id,version
 function startWatch(){clearInterval(watch);watch=setInterval(refreshActive,15000)}
 requestVerification.onclick=async()=>{const phone=document.querySelector('#phone').value.trim();if(!token){showStatus('USE A SIGNED SITE QR CODE BEFORE VERIFYING A PHONE',true);return}if(!phone){showStatus('ENTER A PHONE NUMBER FIRST',true);return}requestVerification.disabled=true;try{const response=await fetch('/api/phone-verifications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,phone})}),data=await response.json();if(!response.ok)throw new Error(data.error||'verification request failed');verificationId=data.verificationId;verificationCode.hidden=false;confirmVerification.hidden=false;if(data.debugCode){verificationCode.value=data.debugCode;showStatus('DEVELOPMENT CODE FILLED — CONFIRM PHONE')}else showStatus('CODE REQUESTED. SMS DELIVERY IS NOT CONNECTED IN THIS PILOT.')}catch(error){showStatus(String(error.message||error).toUpperCase(),true)}finally{requestVerification.disabled=false}}
 confirmVerification.onclick=async()=>{if(!verificationId)return;confirmVerification.disabled=true;try{const response=await fetch('/api/phone-verifications/'+encodeURIComponent(verificationId)+'/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:verificationCode.value.trim()})}),data=await response.json();if(!response.ok)throw new Error(data.error||'verification failed');showStatus('PHONE VERIFIED FOR SAFETY CALLBACK');confirmVerification.textContent='PHONE VERIFIED';requestVerification.hidden=true;verificationCode.disabled=true}catch(error){showStatus(String(error.message||error).toUpperCase(),true)}finally{confirmVerification.disabled=false}}
-submit.onclick=async()=>{++stateVersion;submit.disabled=true;try{if(active){const response=await fetch('/api/checkins/'+encodeURIComponent(active.id),{method:'DELETE'});if(!response.ok)throw 0;active=null;remember();clearInterval(watch);renderActive();showStatus('CHECKED OUT');return}const name=document.querySelector('#name').value.trim(),company=document.querySelector('#company').value.trim();if(!siteReady||!site||!name||!company){showStatus('ENTER YOUR NAME, CONTRACTOR COMPANY, AND USE A VALID SITE QR CODE',true);return}showStatus('CHECKING IN…');const pos=await sendPosition(),response=await fetch('/api/checkins',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,site,kind:'Contractor',source:'contractor-qr',qrToken:token||undefined,company,phone:document.querySelector('#phone').value.trim()||undefined,phoneVerificationId:verificationId||undefined,provisional:true,alone:document.querySelector('#alone').checked,expectedMinutes:Number(document.querySelector('#expected').value),notes:document.querySelector('#notes').value.trim(),...pos})}),data=await response.json();if(!response.ok)throw new Error(data.error||'check-in failed');acceptRecord(data);remember();renderActive();startWatch();showStatus(data.verificationMethod==='qr-phone'?'CHECKED IN — PHONE VERIFIED — WAITING FOR OPERATOR CONFIRMATION':'CHECKED IN — WAITING FOR OPERATOR CONFIRMATION')}catch(error){showStatus(String(error.message||'CHECK-IN SERVICE UNAVAILABLE').toUpperCase(),true)}finally{submit.disabled=false}}
+submit.onclick=async()=>{++stateVersion;submit.disabled=true;try{if(active){const response=await fetch('/api/checkins/'+encodeURIComponent(active.id),{method:'DELETE'});if(!response.ok)throw 0;active=null;remember();clearInterval(watch);renderActive();showStatus('CHECKED OUT');return}const name=document.querySelector('#name').value.trim(),company=document.querySelector('#company').value.trim();if(!siteReady||!site||!name||!company||(token&&!document.querySelector('#siteName').disabled)){showStatus('ENTER YOUR NAME, COMPANY, AND SELECT A SITE; QR LINKS MUST BE VALID',true);return}showStatus('CHECKING IN…');const pos=await sendPosition(),response=await fetch('/api/checkins',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,site,kind:'Contractor',source:token?'contractor-qr':'contractor-manual',qrToken:token||undefined,company,phone:document.querySelector('#phone').value.trim()||undefined,phoneVerificationId:verificationId||undefined,provisional:true,alone:document.querySelector('#alone').checked,expectedMinutes:Number(document.querySelector('#expected').value),notes:document.querySelector('#notes').value.trim(),...pos})}),data=await response.json();if(!response.ok)throw new Error(data.error||'check-in failed');acceptRecord(data);remember();renderActive();startWatch();showStatus(data.verificationMethod==='qr-phone'?'CHECKED IN — PHONE VERIFIED — WAITING FOR OPERATOR CONFIRMATION':'CHECKED IN — WAITING FOR OPERATOR CONFIRMATION')}catch(error){showStatus(String(error.message||'CHECK-IN SERVICE UNAVAILABLE').toUpperCase(),true)}finally{submit.disabled=false}}
 async function sendHelp(){if(!active)return;++stateVersion;const visitId=active.id;help.disabled=true;try{const response=await fetch('/api/checkins/'+encodeURIComponent(active.id)+'/help',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({actor:(active.name||'worker')+' worker device'}),keepalive:true,signal:AbortSignal.timeout(15000)}),data=await response.json();if(!response.ok)throw 0;if(active?.id!==visitId)return;++stateVersion;active={...active,needsHelp:data.needsHelp,helpState:data.helpState,helpRequestedAt:data.helpRequestedAt};renderActive();showStatus('HELP REQUEST SENT. STAY SAFE AND FOLLOW SITE EMERGENCY PROCEDURES.')}catch{if(active?.id!==visitId)return;help.disabled=false;showStatus('HELP REQUEST FAILED — CALL THE CONTROL ROOM OR EMERGENCY SERVICES DIRECTLY',true)}}
 help.onclick=()=>sendHelp();
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){tickSafety();refreshActive()}});window.addEventListener('online',refreshActive);
@@ -152,6 +157,9 @@ function renderActive(){
   const present=Boolean(active&&active.status!=='checked-out');
   safetyPanel.hidden=!present;
   document.querySelector('#arrivalFields').hidden=present;
+  document.querySelector('#screenTitle').hidden=!present;
+  const picker=document.querySelector('#siteName');picker.disabled=present||Boolean(token&&site);
+  if(present&&active.site){if(!Array.from(picker.options).some(o=>o.value===active.site))picker.add(new Option(active.site,active.site));picker.value=active.site;}
   document.querySelector('#screenTitle').textContent=present?'Your site visit':'Worker arrival';
   safetyButton.disabled=!present||active.safetyProtocol!==1||safetyBusy;
   callButton.hidden=!present;
