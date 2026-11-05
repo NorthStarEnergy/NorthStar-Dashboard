@@ -582,3 +582,10 @@ Persistent 16-group service controls under Tools, inflow and Codex monitor pause
 2026-11-03: Real default research navigation and collapsible NorthStar rail in AI across all builds.
 
 2026-11-03: Full-window AI chat with visible backend-enabled model selection.
+## 20261105-twin-iroquois-complex
+
+Recovered H2O control families now drive a separate 17-unit trainer with connected
+230/120/12/0.6 kV buses, switchgear, taps, station service, water/spill, Twin black
+start, generating islands and synchronization/reconnection. Isolated local entry
+path; native source bases retained separately. See
+[packet](packets/2026-11-05-twin-iroquois-complex.md).

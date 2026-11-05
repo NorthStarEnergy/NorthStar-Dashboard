@@ -310,6 +310,8 @@ OPERATOR_ROUTES = {
 # heartbeat, its DELETE checkout, and POST /api/checkins/<id>/help (the worker
 # raising the alarm) all stay open by design.
 OPERATOR_ROUTE_PATTERNS = (
+    *((method, re.compile(r"^/api/training/switching(?:/.*)?$"))
+      for method in ("GET", "POST")),
     *((method, re.compile(r"^/(?:api/shelf|shelf)(?:/.*)?$"))
       for method in ("GET", "HEAD", "POST", "PATCH", "DELETE", "OPTIONS")),
     ("GET", re.compile(r"^/api/water-collection(?:/.*)?$")),
@@ -1686,6 +1688,29 @@ class Handler(SimpleHTTPRequestHandler):
             identity = self.headers.get("X-Northstar-Operator", "")
         return identity.strip()[:160] or "operator console"
 
+    def _training_simulator_request(self) -> bool:
+        """Dispatch only to the isolated simulation service, never the SCADA provider."""
+        route = self.path.split("?", 1)[0]
+        if route != "/api/training/switching" and not route.startswith("/api/training/switching/"):
+            return False
+        if self.command == "POST" and self._cross_origin_write():
+            self._send_json({"error": "cross-origin training mutation refused"}, 403)
+            return True
+        from northstar_sim.service import get_simulator
+
+        body = self._json_body(2 * 1024 * 1024) if self.command == "POST" else None
+        local_instructor = OPERATOR_GATE == "off" and not CHECKIN_ORIGIN and HOST in {"127.0.0.1", "::1", "localhost"}
+        direct_local = (local_instructor and self._arrived_on() in {"localhost", "127.0.0.1", "::1", "[::1]"}
+                        and self.client_address and self.client_address[0] in {"127.0.0.1", "::1"}
+                        and not any(self.headers.get(name) for name in ("Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "Cf-Ray", "Cf-Connecting-Ip")))
+        response = get_simulator(local_instructor=local_instructor).handle(self.command, self.path, body, self._operator_actor(), instructor_access=bool(direct_local))
+        if response is None:
+            self._send_json({"error": "training simulator route not found"}, 404)
+        else:
+            status, payload = response
+            self._send_json(payload, status)
+        return True
+
     def _audit_actor(self, requested: Any, fallback: str = "operator console") -> str:
         """Who to record for an operator action.
 
@@ -1880,6 +1905,8 @@ class Handler(SimpleHTTPRequestHandler):
         if scada_workbench.handle(self):
             return
         route = self.path.split("?", 1)[0]
+        if self._training_simulator_request():
+            return
         if self._is_platform_demo() and route in PLATFORM_DEMO_ENTRYPOINTS:
             self.path = "/northstar-clean.html"
             super().do_GET()
@@ -2739,6 +2766,8 @@ class Handler(SimpleHTTPRequestHandler):
         if scada_workbench.handle(self):
             return
         route = self.path.split("?", 1)[0]
+        if self._training_simulator_request():
+            return
         if route == "/api/services":
             try:self._send_json(services.update(self._json_body(8192),self._operator_actor()))
             except ValueError as exc:self._send_json({"error":str(exc)},400)

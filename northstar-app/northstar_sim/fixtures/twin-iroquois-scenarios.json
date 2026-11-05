@@ -1,0 +1,174 @@
+{
+  "scenarios": [
+    {
+      "scenarioId": "COMPLEX-NORMAL",
+      "revision": 1,
+      "title": "Connected operation",
+      "modelId": "SIM-TWIN-IROQUOIS",
+      "seed": 1,
+      "synthetic": true,
+      "notAProcedure": true,
+      "objective": "Start, synchronize, load and stop a unit.",
+      "initialOverrides": []
+    },
+    {
+      "scenarioId": "COMPLEX-BLACKSTART",
+      "revision": 1,
+      "title": "Black start and restoration",
+      "modelId": "SIM-TWIN-IROQUOIS",
+      "seed": 1,
+      "synthetic": true,
+      "notAProcedure": true,
+      "objective": "Build an energized Twin island and reconnect it to the grid.",
+      "initialOverrides": [
+        {
+          "equipmentId": "IR-A1L93",
+          "field": "position",
+          "value": "open"
+        },
+        {
+          "equipmentId": "TF-52L1",
+          "field": "position",
+          "value": "open"
+        },
+        {
+          "equipmentId": "TF-52L2",
+          "field": "position",
+          "value": "open"
+        }
+      ]
+    },
+    {
+      "scenarioId": "COMPLEX-ISLAND",
+      "revision": 1,
+      "title": "Island and reconnect",
+      "modelId": "SIM-TWIN-IROQUOIS",
+      "seed": 1,
+      "synthetic": true,
+      "notAProcedure": true,
+      "objective": "Separate the running complex from the grid, hold an island and reconnect.",
+      "initialOverrides": [
+        {
+          "equipmentId": "TF-G1",
+          "field": "sequenceState",
+          "value": "ONLINE"
+        },
+        {
+          "equipmentId": "TF-G1",
+          "field": "speedRpm",
+          "value": 300
+        },
+        {
+          "equipmentId": "TF-G1",
+          "field": "voltagePu",
+          "value": 1
+        },
+        {
+          "equipmentId": "TF-G1",
+          "field": "frequencyHz",
+          "value": 60
+        },
+        {
+          "equipmentId": "TF-G1",
+          "field": "phaseDegrees",
+          "value": 0
+        },
+        {
+          "equipmentId": "TF-G1",
+          "field": "forming",
+          "value": true
+        },
+        {
+          "equipmentId": "TF-G1",
+          "field": "mechanicalMW",
+          "value": 1.4
+        },
+        {
+          "equipmentId": "TF-G1",
+          "field": "activeMW",
+          "value": 1.4
+        },
+        {
+          "equipmentId": "TF-G1",
+          "field": "requestedMW",
+          "value": 1.4
+        },
+        {
+          "equipmentId": "TF-G1",
+          "field": "gate",
+          "value": 0.28
+        },
+        {
+          "equipmentId": "TF-G1",
+          "field": "brakesApplied",
+          "value": false
+        },
+        {
+          "equipmentId": "TF-52G1",
+          "field": "position",
+          "value": "closed"
+        },
+        {
+          "equipmentId": "IR-G1",
+          "field": "sequenceState",
+          "value": "ONLINE"
+        },
+        {
+          "equipmentId": "IR-G1",
+          "field": "speedRpm",
+          "value": 300
+        },
+        {
+          "equipmentId": "IR-G1",
+          "field": "voltagePu",
+          "value": 1
+        },
+        {
+          "equipmentId": "IR-G1",
+          "field": "frequencyHz",
+          "value": 60
+        },
+        {
+          "equipmentId": "IR-G1",
+          "field": "phaseDegrees",
+          "value": 0
+        },
+        {
+          "equipmentId": "IR-G1",
+          "field": "forming",
+          "value": true
+        },
+        {
+          "equipmentId": "IR-G1",
+          "field": "mechanicalMW",
+          "value": 1.4
+        },
+        {
+          "equipmentId": "IR-G1",
+          "field": "activeMW",
+          "value": 1.4
+        },
+        {
+          "equipmentId": "IR-G1",
+          "field": "requestedMW",
+          "value": 1.4
+        },
+        {
+          "equipmentId": "IR-G1",
+          "field": "gate",
+          "value": 0.28
+        },
+        {
+          "equipmentId": "IR-G1",
+          "field": "brakesApplied",
+          "value": false
+        },
+        {
+          "equipmentId": "IR-52G1",
+          "field": "position",
+          "value": "closed"
+        }
+      ]
+    }
+  ]
+}

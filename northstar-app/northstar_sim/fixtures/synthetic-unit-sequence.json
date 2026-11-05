@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "northstar.synthetic-unit-sequence.v1",
+  "sequenceId": "SIM-UNIT-01",
+  "revision": 1,
+  "synthetic": true,
+  "unitId": "GEN1",
+  "generatorBreakerId": "GB1",
+  "generatorId": "GEN1",
+  "turbineId": "TUR1",
+  "reservoirId": "POND1",
+  "provenance": {
+    "sourceId": "SYNTHETIC",
+    "description": "Fictional reduced-order training sequence and thresholds. Not derived from Calm Lake or an operating procedure."
+  },
+  "states": [
+    "STOPPED",
+    "START_CHECK",
+    "STARTING",
+    "READY_TO_SYNCHRONIZE",
+    "SYNCHRONIZING",
+    "ONLINE",
+    "STOPPING",
+    "TRIPPED",
+    "LOCKED_OUT"
+  ],
+  "assumptions": {
+    "startCheckMs": 500,
+    "startupTimeoutMs": 12000,
+    "ratedSpeedRpm": 3600,
+    "speedRampRpmPerSecond": 900,
+    "speedRundownRpmPerSecond": 600,
+    "ratedVoltageKVLL": 6.6,
+    "voltageBuildKVPerSecond": 1.2,
+    "syncPhaseInitialDegrees": 180,
+    "syncPhaseApproachDegreesPerSecond": 30,
+    "syncVoltageToleranceFraction": 0.05,
+    "syncFrequencyToleranceHz": 0.1,
+    "syncPhaseToleranceDegrees": 10,
+    "deadBusVoltageKVLL": 0.3,
+    "syncGateDemandFraction": 0.12,
+    "gateRateFractionPerSecond": 0.2,
+    "minimumHpuPressureKPa": 10000,
+    "initialHpuPressureKPa": 12500,
+    "minimumStopSpeedRpm": 10,
+    "stopPressureRecoveryKPaPerSecond": 250,
+    "bearingAmbientC": 20,
+    "bearingHeatCPerMW": 0.4,
+    "bearingCoolingTauSeconds": 120,
+    "ratedFieldCurrentA": 400,
+    "fieldCurrentRateAperSecond": 80,
+    "minReactiveMvar": -1,
+    "maxReactiveMvar": 1,
+    "syncMode": "reduced_order_voltage_frequency_phase_window"
+  },
+  "limits": {
+    "ratedMW": 2,
+    "minimumRequestedMW": 0,
+    "maximumRequestedMW": 2,
+    "protectionSettings": "Defined in the separate synthetic rule set; fictional training values only."
+  },
+  "fidelity": {
+    "scope": "Synthetic start/stop timing, reduced-order speed and excitation buildup, permissive checks, synchronism window and hydro-constrained MW ramp.",
+    "limitations": [
+      "Not a validated turbine, governor, excitation or relay transient model.",
+      "No rotor inertia, three-phase transient, AVR limiter coordination or vendor sequence emulation.",
+      "Synchronism uses declared steady-state windows and a reduced-order phase approach, not a validated station sync-check relay."
+    ]
+  }
+}

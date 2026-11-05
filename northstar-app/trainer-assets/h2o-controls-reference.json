@@ -1,0 +1,1481 @@
+{
+  "description": "Recovered native page provenance. Live process bindings are retained only in the separate local native archive; runtime uses simulation IDs.",
+  "verification": {
+    "nativeFiles": 2982,
+    "complexPages": 237,
+    "twinPages": 97,
+    "iroquoisPages": 140,
+    "sharedPages": 480,
+    "unitControls": 17,
+    "allComplexQuartetsComplete": true,
+    "allComplexGraphicsHaveL33Header": true,
+    "twinFilesMatch2019Backup": 388,
+    "nativeBuilderImportTested": false,
+    "simulatorRuntimeChanged": false
+  },
+  "units": [
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit01/IF_Unit01_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "01",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 221,
+          "group": 221,
+          "line": 2159
+        },
+        {
+          "text": "Start",
+          "recordId": 228,
+          "group": 228,
+          "line": 2263
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 235,
+          "group": 235,
+          "line": 2367
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 256,
+          "group": 256,
+          "line": 2670
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 265,
+          "group": 263,
+          "line": 2763
+        },
+        {
+          "text": "Set Point",
+          "recordId": 271,
+          "group": 269,
+          "line": 2845
+        },
+        {
+          "text": "Auto/Man Sync",
+          "recordId": 275,
+          "group": 275,
+          "line": 2938
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 290,
+          "group": 290,
+          "line": 3135
+        },
+        {
+          "text": "MW Control",
+          "recordId": 459,
+          "group": 459,
+          "line": 5098
+        },
+        {
+          "text": "WG Control",
+          "recordId": 473,
+          "group": 473,
+          "line": 5297
+        },
+        {
+          "text": "Set Point",
+          "recordId": 490,
+          "group": 488,
+          "line": 5483
+        },
+        {
+          "text": "VAR Control",
+          "recordId": 501,
+          "group": 501,
+          "line": 5671
+        },
+        {
+          "text": "Reset Gen",
+          "recordId": 521,
+          "group": 521,
+          "line": 5965
+        },
+        {
+          "text": "Governor",
+          "recordId": 530,
+          "group": 528,
+          "line": 6058
+        },
+        {
+          "text": "52G Trip/Sync",
+          "recordId": 534,
+          "group": 534,
+          "line": 6151
+        }
+      ]
+    },
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit02/IF_Unit02_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "02",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 221,
+          "group": 221,
+          "line": 2169
+        },
+        {
+          "text": "Start",
+          "recordId": 228,
+          "group": 228,
+          "line": 2273
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 235,
+          "group": 235,
+          "line": 2377
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 256,
+          "group": 256,
+          "line": 2680
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 265,
+          "group": 263,
+          "line": 2773
+        },
+        {
+          "text": "Set Point",
+          "recordId": 271,
+          "group": 269,
+          "line": 2855
+        },
+        {
+          "text": "Auto/Man Sync",
+          "recordId": 275,
+          "group": 275,
+          "line": 2948
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 290,
+          "group": 290,
+          "line": 3145
+        },
+        {
+          "text": "MW Control",
+          "recordId": 459,
+          "group": 459,
+          "line": 5108
+        },
+        {
+          "text": "WG Control",
+          "recordId": 473,
+          "group": 473,
+          "line": 5307
+        },
+        {
+          "text": "Set Point",
+          "recordId": 490,
+          "group": 488,
+          "line": 5493
+        },
+        {
+          "text": "VAR Control",
+          "recordId": 501,
+          "group": 501,
+          "line": 5681
+        },
+        {
+          "text": "Reset Gen",
+          "recordId": 521,
+          "group": 521,
+          "line": 5975
+        },
+        {
+          "text": "Governor",
+          "recordId": 530,
+          "group": 528,
+          "line": 6068
+        },
+        {
+          "text": "52G Trip/Sync",
+          "recordId": 534,
+          "group": 534,
+          "line": 6161
+        }
+      ]
+    },
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit03/IF_Unit03_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "03",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 221,
+          "group": 221,
+          "line": 2169
+        },
+        {
+          "text": "Start",
+          "recordId": 228,
+          "group": 228,
+          "line": 2273
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 235,
+          "group": 235,
+          "line": 2377
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 256,
+          "group": 256,
+          "line": 2680
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 265,
+          "group": 263,
+          "line": 2773
+        },
+        {
+          "text": "Set Point",
+          "recordId": 271,
+          "group": 269,
+          "line": 2855
+        },
+        {
+          "text": "Auto/Man Sync",
+          "recordId": 275,
+          "group": 275,
+          "line": 2948
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 290,
+          "group": 290,
+          "line": 3145
+        },
+        {
+          "text": "MW Control",
+          "recordId": 459,
+          "group": 459,
+          "line": 5108
+        },
+        {
+          "text": "WG Control",
+          "recordId": 473,
+          "group": 473,
+          "line": 5307
+        },
+        {
+          "text": "Set Point",
+          "recordId": 490,
+          "group": 488,
+          "line": 5493
+        },
+        {
+          "text": "VAR Control",
+          "recordId": 501,
+          "group": 501,
+          "line": 5681
+        },
+        {
+          "text": "Reset Gen",
+          "recordId": 521,
+          "group": 521,
+          "line": 5975
+        },
+        {
+          "text": "Governor",
+          "recordId": 530,
+          "group": 528,
+          "line": 6068
+        },
+        {
+          "text": "52G Trip/Sync",
+          "recordId": 534,
+          "group": 534,
+          "line": 6161
+        }
+      ]
+    },
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit04/IF_Unit04_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "04",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 221,
+          "group": 221,
+          "line": 2169
+        },
+        {
+          "text": "Start",
+          "recordId": 228,
+          "group": 228,
+          "line": 2273
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 235,
+          "group": 235,
+          "line": 2377
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 256,
+          "group": 256,
+          "line": 2680
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 265,
+          "group": 263,
+          "line": 2773
+        },
+        {
+          "text": "Set Point",
+          "recordId": 271,
+          "group": 269,
+          "line": 2855
+        },
+        {
+          "text": "Auto/Man Sync",
+          "recordId": 275,
+          "group": 275,
+          "line": 2948
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 290,
+          "group": 290,
+          "line": 3145
+        },
+        {
+          "text": "MW Control",
+          "recordId": 459,
+          "group": 459,
+          "line": 5108
+        },
+        {
+          "text": "WG Control",
+          "recordId": 473,
+          "group": 473,
+          "line": 5307
+        },
+        {
+          "text": "Set Point",
+          "recordId": 490,
+          "group": 488,
+          "line": 5493
+        },
+        {
+          "text": "VAR Control",
+          "recordId": 501,
+          "group": 501,
+          "line": 5681
+        },
+        {
+          "text": "Reset Gen",
+          "recordId": 521,
+          "group": 521,
+          "line": 5975
+        },
+        {
+          "text": "Governor",
+          "recordId": 530,
+          "group": 528,
+          "line": 6068
+        },
+        {
+          "text": "52G Trip/Sync",
+          "recordId": 534,
+          "group": 534,
+          "line": 6161
+        }
+      ]
+    },
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit05/IF_Unit05_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "05",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 221,
+          "group": 221,
+          "line": 2169
+        },
+        {
+          "text": "Start",
+          "recordId": 228,
+          "group": 228,
+          "line": 2273
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 235,
+          "group": 235,
+          "line": 2377
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 256,
+          "group": 256,
+          "line": 2680
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 265,
+          "group": 263,
+          "line": 2773
+        },
+        {
+          "text": "Set Point",
+          "recordId": 271,
+          "group": 269,
+          "line": 2855
+        },
+        {
+          "text": "Auto/Man Sync",
+          "recordId": 275,
+          "group": 275,
+          "line": 2948
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 290,
+          "group": 290,
+          "line": 3145
+        },
+        {
+          "text": "MW Control",
+          "recordId": 459,
+          "group": 459,
+          "line": 5108
+        },
+        {
+          "text": "WG Control",
+          "recordId": 473,
+          "group": 473,
+          "line": 5307
+        },
+        {
+          "text": "Set Point",
+          "recordId": 490,
+          "group": 488,
+          "line": 5493
+        },
+        {
+          "text": "VAR Control",
+          "recordId": 501,
+          "group": 501,
+          "line": 5681
+        },
+        {
+          "text": "Reset Gen",
+          "recordId": 521,
+          "group": 521,
+          "line": 5975
+        },
+        {
+          "text": "Governor",
+          "recordId": 530,
+          "group": 528,
+          "line": 6068
+        },
+        {
+          "text": "52G Trip/Sync",
+          "recordId": 534,
+          "group": 534,
+          "line": 6161
+        }
+      ]
+    },
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit06/IF_Unit06_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "06",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 221,
+          "group": 221,
+          "line": 2169
+        },
+        {
+          "text": "Start",
+          "recordId": 228,
+          "group": 228,
+          "line": 2273
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 235,
+          "group": 235,
+          "line": 2377
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 256,
+          "group": 256,
+          "line": 2680
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 265,
+          "group": 263,
+          "line": 2773
+        },
+        {
+          "text": "Set Point",
+          "recordId": 271,
+          "group": 269,
+          "line": 2855
+        },
+        {
+          "text": "Auto/Man Sync",
+          "recordId": 275,
+          "group": 275,
+          "line": 2948
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 290,
+          "group": 290,
+          "line": 3145
+        },
+        {
+          "text": "MW Control",
+          "recordId": 459,
+          "group": 459,
+          "line": 5108
+        },
+        {
+          "text": "WG Control",
+          "recordId": 473,
+          "group": 473,
+          "line": 5307
+        },
+        {
+          "text": "Set Point",
+          "recordId": 490,
+          "group": 488,
+          "line": 5493
+        },
+        {
+          "text": "VAR Control",
+          "recordId": 501,
+          "group": 501,
+          "line": 5681
+        },
+        {
+          "text": "Reset Gen",
+          "recordId": 521,
+          "group": 521,
+          "line": 5975
+        },
+        {
+          "text": "Governor",
+          "recordId": 530,
+          "group": 528,
+          "line": 6068
+        },
+        {
+          "text": "52G Trip/Sync",
+          "recordId": 534,
+          "group": 534,
+          "line": 6161
+        }
+      ]
+    },
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit07/IF_Unit07_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "07",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 221,
+          "group": 221,
+          "line": 2169
+        },
+        {
+          "text": "Start",
+          "recordId": 228,
+          "group": 228,
+          "line": 2273
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 235,
+          "group": 235,
+          "line": 2377
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 256,
+          "group": 256,
+          "line": 2680
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 265,
+          "group": 263,
+          "line": 2773
+        },
+        {
+          "text": "Set Point",
+          "recordId": 271,
+          "group": 269,
+          "line": 2855
+        },
+        {
+          "text": "Auto/Man Sync",
+          "recordId": 275,
+          "group": 275,
+          "line": 2948
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 290,
+          "group": 290,
+          "line": 3145
+        },
+        {
+          "text": "MW Control",
+          "recordId": 459,
+          "group": 459,
+          "line": 5108
+        },
+        {
+          "text": "WG Control",
+          "recordId": 473,
+          "group": 473,
+          "line": 5307
+        },
+        {
+          "text": "Set Point",
+          "recordId": 490,
+          "group": 488,
+          "line": 5493
+        },
+        {
+          "text": "VAR Control",
+          "recordId": 501,
+          "group": 501,
+          "line": 5681
+        },
+        {
+          "text": "Reset Gen",
+          "recordId": 521,
+          "group": 521,
+          "line": 5975
+        },
+        {
+          "text": "Governor",
+          "recordId": 530,
+          "group": 528,
+          "line": 6068
+        },
+        {
+          "text": "52G Trip/Sync",
+          "recordId": 534,
+          "group": 534,
+          "line": 6161
+        }
+      ]
+    },
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit08/IF_Unit08_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "08",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 221,
+          "group": 221,
+          "line": 2169
+        },
+        {
+          "text": "Start",
+          "recordId": 228,
+          "group": 228,
+          "line": 2273
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 235,
+          "group": 235,
+          "line": 2377
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 256,
+          "group": 256,
+          "line": 2680
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 265,
+          "group": 263,
+          "line": 2773
+        },
+        {
+          "text": "Set Point",
+          "recordId": 271,
+          "group": 269,
+          "line": 2855
+        },
+        {
+          "text": "Auto/Man Sync",
+          "recordId": 275,
+          "group": 275,
+          "line": 2948
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 290,
+          "group": 290,
+          "line": 3145
+        },
+        {
+          "text": "MW Control",
+          "recordId": 459,
+          "group": 459,
+          "line": 5108
+        },
+        {
+          "text": "WG Control",
+          "recordId": 473,
+          "group": 473,
+          "line": 5307
+        },
+        {
+          "text": "Set Point",
+          "recordId": 490,
+          "group": 488,
+          "line": 5493
+        },
+        {
+          "text": "VAR Control",
+          "recordId": 501,
+          "group": 501,
+          "line": 5681
+        },
+        {
+          "text": "Reset Gen",
+          "recordId": 521,
+          "group": 521,
+          "line": 5975
+        },
+        {
+          "text": "Governor",
+          "recordId": 530,
+          "group": 528,
+          "line": 6068
+        },
+        {
+          "text": "52G Trip/Sync",
+          "recordId": 534,
+          "group": 534,
+          "line": 6161
+        }
+      ]
+    },
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit09/IF_Unit09_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "09",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 221,
+          "group": 221,
+          "line": 2169
+        },
+        {
+          "text": "Start",
+          "recordId": 228,
+          "group": 228,
+          "line": 2273
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 235,
+          "group": 235,
+          "line": 2377
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 256,
+          "group": 256,
+          "line": 2680
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 265,
+          "group": 263,
+          "line": 2773
+        },
+        {
+          "text": "Set Point",
+          "recordId": 271,
+          "group": 269,
+          "line": 2855
+        },
+        {
+          "text": "Auto/Man Sync",
+          "recordId": 275,
+          "group": 275,
+          "line": 2948
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 290,
+          "group": 290,
+          "line": 3145
+        },
+        {
+          "text": "MW Control",
+          "recordId": 459,
+          "group": 459,
+          "line": 5108
+        },
+        {
+          "text": "WG Control",
+          "recordId": 473,
+          "group": 473,
+          "line": 5307
+        },
+        {
+          "text": "Set Point",
+          "recordId": 490,
+          "group": 488,
+          "line": 5493
+        },
+        {
+          "text": "VAR Control",
+          "recordId": 501,
+          "group": 501,
+          "line": 5681
+        },
+        {
+          "text": "Reset Gen",
+          "recordId": 521,
+          "group": 521,
+          "line": 5975
+        },
+        {
+          "text": "Governor",
+          "recordId": 530,
+          "group": 528,
+          "line": 6068
+        },
+        {
+          "text": "52G Trip/Sync",
+          "recordId": 534,
+          "group": 534,
+          "line": 6161
+        }
+      ]
+    },
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit11/IF_Unit11_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "11",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 179,
+          "group": 179,
+          "line": 1805
+        },
+        {
+          "text": "Start",
+          "recordId": 186,
+          "group": 186,
+          "line": 1909
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 193,
+          "group": 193,
+          "line": 2013
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 207,
+          "group": 207,
+          "line": 2221
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 222,
+          "group": 222,
+          "line": 2420
+        },
+        {
+          "text": "Set Point",
+          "recordId": 355,
+          "group": 353,
+          "line": 3887
+        }
+      ]
+    },
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit12/IF_Unit12_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "12",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 179,
+          "group": 179,
+          "line": 1805
+        },
+        {
+          "text": "Start",
+          "recordId": 186,
+          "group": 186,
+          "line": 1909
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 193,
+          "group": 193,
+          "line": 2013
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 207,
+          "group": 207,
+          "line": 2221
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 222,
+          "group": 222,
+          "line": 2420
+        },
+        {
+          "text": "Set Point",
+          "recordId": 355,
+          "group": 353,
+          "line": 3887
+        }
+      ]
+    },
+    {
+      "source": "Iroquois Falls/IF_GS/IF_Unit13/IF_Unit13_Control.UCBG",
+      "station": "Iroquois Falls",
+      "unit": "13",
+      "visibleControls": [
+        {
+          "text": "Stop",
+          "recordId": 179,
+          "group": 179,
+          "line": 1785
+        },
+        {
+          "text": "Start",
+          "recordId": 186,
+          "group": 186,
+          "line": 1889
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 193,
+          "group": 193,
+          "line": 1993
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 207,
+          "group": 207,
+          "line": 2201
+        },
+        {
+          "text": "Start Perm.",
+          "recordId": 222,
+          "group": 222,
+          "line": 2398
+        },
+        {
+          "text": "Set Point",
+          "recordId": 355,
+          "group": 353,
+          "line": 3855
+        }
+      ]
+    },
+    {
+      "source": "Twin Falls/TF_UNIT_01/TF_Unit01_Control.UCBG",
+      "station": "Twin Falls",
+      "unit": "01",
+      "visibleControls": [
+        {
+          "text": "Black Start Cmd",
+          "recordId": 138,
+          "group": 138,
+          "line": 1078
+        },
+        {
+          "text": "Sequence...",
+          "recordId": 231,
+          "group": 231,
+          "line": 2227
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 280,
+          "group": 278,
+          "line": 2785
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 302,
+          "group": 300,
+          "line": 3053
+        },
+        {
+          "text": "PB-LOCKOUT",
+          "recordId": 318,
+          "group": 318,
+          "line": 3286
+        },
+        {
+          "text": "Stop",
+          "recordId": 325,
+          "group": 325,
+          "line": 3390
+        },
+        {
+          "text": "Start",
+          "recordId": 332,
+          "group": 332,
+          "line": 3494
+        },
+        {
+          "text": "Power CMD",
+          "recordId": 339,
+          "group": 339,
+          "line": 3598
+        },
+        {
+          "text": "Position CMD",
+          "recordId": 346,
+          "group": 346,
+          "line": 3702
+        },
+        {
+          "text": "Condense CMD",
+          "recordId": 375,
+          "group": 375,
+          "line": 4089
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 396,
+          "group": 396,
+          "line": 4383
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 547,
+          "group": 547,
+          "line": 6297
+        },
+        {
+          "text": "Auto / Manual",
+          "recordId": 570,
+          "group": 570,
+          "line": 6587
+        },
+        {
+          "text": "Cancel Start",
+          "recordId": 598,
+          "group": 598,
+          "line": 6919
+        }
+      ]
+    },
+    {
+      "source": "Twin Falls/TF_UNIT_02/TF_UNIT02_Control.UCBG",
+      "station": "Twin Falls",
+      "unit": "02",
+      "visibleControls": [
+        {
+          "text": "Sequence...",
+          "recordId": 224,
+          "group": 224,
+          "line": 2127
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 273,
+          "group": 271,
+          "line": 2685
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 295,
+          "group": 293,
+          "line": 2953
+        },
+        {
+          "text": "PB-LOCKOUT",
+          "recordId": 311,
+          "group": 311,
+          "line": 3186
+        },
+        {
+          "text": "Stop",
+          "recordId": 318,
+          "group": 318,
+          "line": 3290
+        },
+        {
+          "text": "Start",
+          "recordId": 325,
+          "group": 325,
+          "line": 3394
+        },
+        {
+          "text": "Power CMD",
+          "recordId": 332,
+          "group": 332,
+          "line": 3498
+        },
+        {
+          "text": "Position CMD",
+          "recordId": 339,
+          "group": 339,
+          "line": 3602
+        },
+        {
+          "text": "Condense CMD",
+          "recordId": 368,
+          "group": 368,
+          "line": 3989
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 389,
+          "group": 389,
+          "line": 4283
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 540,
+          "group": 540,
+          "line": 6197
+        },
+        {
+          "text": "Black Start Cmd",
+          "recordId": 563,
+          "group": 563,
+          "line": 6487
+        },
+        {
+          "text": "Auto / Manual",
+          "recordId": 570,
+          "group": 570,
+          "line": 6591
+        },
+        {
+          "text": "Cancel Start",
+          "recordId": 598,
+          "group": 598,
+          "line": 6923
+        }
+      ]
+    },
+    {
+      "source": "Twin Falls/TF_UNIT_03/TF_UNIT03_Control.UCBG",
+      "station": "Twin Falls",
+      "unit": "03",
+      "visibleControls": [
+        {
+          "text": "Sequence...",
+          "recordId": 224,
+          "group": 224,
+          "line": 2131
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 273,
+          "group": 271,
+          "line": 2689
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 295,
+          "group": 293,
+          "line": 2957
+        },
+        {
+          "text": "PB-LOCKOUT",
+          "recordId": 311,
+          "group": 311,
+          "line": 3190
+        },
+        {
+          "text": "Stop",
+          "recordId": 318,
+          "group": 318,
+          "line": 3294
+        },
+        {
+          "text": "Start",
+          "recordId": 325,
+          "group": 325,
+          "line": 3398
+        },
+        {
+          "text": "Power CMD",
+          "recordId": 332,
+          "group": 332,
+          "line": 3502
+        },
+        {
+          "text": "Position CMD",
+          "recordId": 339,
+          "group": 339,
+          "line": 3606
+        },
+        {
+          "text": "Condense CMD",
+          "recordId": 368,
+          "group": 368,
+          "line": 3993
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 389,
+          "group": 389,
+          "line": 4287
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 540,
+          "group": 540,
+          "line": 6201
+        },
+        {
+          "text": "Black Start Cmd",
+          "recordId": 563,
+          "group": 563,
+          "line": 6491
+        },
+        {
+          "text": "Auto / Manual",
+          "recordId": 570,
+          "group": 570,
+          "line": 6595
+        },
+        {
+          "text": "Cancel Start",
+          "recordId": 598,
+          "group": 598,
+          "line": 6927
+        }
+      ]
+    },
+    {
+      "source": "Twin Falls/TF_UNIT_04/TF_UNIT04_Control.UCBG",
+      "station": "Twin Falls",
+      "unit": "04",
+      "visibleControls": [
+        {
+          "text": "Sequence...",
+          "recordId": 224,
+          "group": 224,
+          "line": 2127
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 273,
+          "group": 271,
+          "line": 2685
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 295,
+          "group": 293,
+          "line": 2953
+        },
+        {
+          "text": "PB-LOCKOUT",
+          "recordId": 311,
+          "group": 311,
+          "line": 3186
+        },
+        {
+          "text": "Stop",
+          "recordId": 318,
+          "group": 318,
+          "line": 3290
+        },
+        {
+          "text": "Start",
+          "recordId": 325,
+          "group": 325,
+          "line": 3394
+        },
+        {
+          "text": "Power CMD",
+          "recordId": 332,
+          "group": 332,
+          "line": 3498
+        },
+        {
+          "text": "Position CMD",
+          "recordId": 339,
+          "group": 339,
+          "line": 3602
+        },
+        {
+          "text": "Condense CMD",
+          "recordId": 368,
+          "group": 368,
+          "line": 3989
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 389,
+          "group": 389,
+          "line": 4283
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 540,
+          "group": 540,
+          "line": 6197
+        },
+        {
+          "text": "Black Start Cmd",
+          "recordId": 563,
+          "group": 563,
+          "line": 6487
+        },
+        {
+          "text": "Auto / Manual",
+          "recordId": 570,
+          "group": 570,
+          "line": 6591
+        },
+        {
+          "text": "Cancel Start",
+          "recordId": 598,
+          "group": 598,
+          "line": 6923
+        }
+      ]
+    },
+    {
+      "source": "Twin Falls/TF_UNIT_05/TF_UNIT05_Control.UCBG",
+      "station": "Twin Falls",
+      "unit": "05",
+      "visibleControls": [
+        {
+          "text": "Sequence...",
+          "recordId": 224,
+          "group": 224,
+          "line": 2127
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 273,
+          "group": 271,
+          "line": 2685
+        },
+        {
+          "text": "Setpoint",
+          "recordId": 295,
+          "group": 293,
+          "line": 2953
+        },
+        {
+          "text": "PB-LOCKOUT",
+          "recordId": 311,
+          "group": 311,
+          "line": 3186
+        },
+        {
+          "text": "Stop",
+          "recordId": 318,
+          "group": 318,
+          "line": 3290
+        },
+        {
+          "text": "Start",
+          "recordId": 325,
+          "group": 325,
+          "line": 3394
+        },
+        {
+          "text": "Power CMD",
+          "recordId": 332,
+          "group": 332,
+          "line": 3498
+        },
+        {
+          "text": "Position CMD",
+          "recordId": 339,
+          "group": 339,
+          "line": 3602
+        },
+        {
+          "text": "Condense CMD",
+          "recordId": 368,
+          "group": 368,
+          "line": 3989
+        },
+        {
+          "text": "AVR Raise/Low",
+          "recordId": 389,
+          "group": 389,
+          "line": 4283
+        },
+        {
+          "text": "Emergency Stop",
+          "recordId": 532,
+          "group": 532,
+          "line": 6104
+        },
+        {
+          "text": "Black Start Cmd",
+          "recordId": 563,
+          "group": 563,
+          "line": 6487
+        },
+        {
+          "text": "Auto / Manual",
+          "recordId": 570,
+          "group": 570,
+          "line": 6591
+        },
+        {
+          "text": "Cancel Start",
+          "recordId": 598,
+          "group": 598,
+          "line": 6923
+        }
+      ]
+    }
+  ],
+  "verifiedLinks": [
+    "TF-52L1 to MAIN Sub 52-31",
+    "TF-52L2 to MAIN Sub 52-30",
+    "IR 52-27 links 12 kV Bus C and Bus A"
+  ],
+  "unverified": "Other terminal mapping, ratings and dynamics are illustrative assumptions; see model and packet."
+}

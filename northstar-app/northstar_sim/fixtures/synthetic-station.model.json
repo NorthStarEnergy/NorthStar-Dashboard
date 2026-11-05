@@ -1,0 +1,716 @@
+{
+  "schemaVersion": "northstar.switching-model.v1",
+  "modelId": "SIM-TRAINING-01",
+  "revision": 1,
+  "label": "Synthetic training station; not a NorthStar station drawing",
+  "siteId": null,
+  "synthetic": true,
+  "readiness": "draft_synthetic",
+  "sourceRefs": [
+    {
+      "sourceId": "SYNTHETIC",
+      "kind": "authored_exercise",
+      "description": "All equipment, topology, ratings and settings are fictional; not a switching procedure."
+    }
+  ],
+  "fidelity": {
+    "solver": "balanced_radial_v1",
+    "scope": "one active slack per radial island; PQ load/generator; reduced-order hydro",
+    "limitations": [
+      "ALT and GRID simultaneously supplying a connected island require general AC capability.",
+      "No short-circuit or transient numerical model."
+    ]
+  },
+  "nodes": [
+    {
+      "nodeId": "N0",
+      "nominalKVLL": 6.6,
+      "phaseSystem": "balanced_abc"
+    },
+    {
+      "nodeId": "N1",
+      "nominalKVLL": 6.6,
+      "phaseSystem": "balanced_abc"
+    },
+    {
+      "nodeId": "N2",
+      "nominalKVLL": 6.6,
+      "phaseSystem": "balanced_abc"
+    },
+    {
+      "nodeId": "BUS",
+      "nominalKVLL": 6.6,
+      "phaseSystem": "balanced_abc"
+    },
+    {
+      "nodeId": "NG",
+      "nominalKVLL": 6.6,
+      "phaseSystem": "balanced_abc"
+    },
+    {
+      "nodeId": "EARTH",
+      "kind": "earth",
+      "nominalKVLL": 0
+    }
+  ],
+  "equipment": [
+    {
+      "equipmentId": "GRID",
+      "type": "grid_source",
+      "assetTag": null,
+      "terminals": [
+        {
+          "id": "out",
+          "nodeId": "N0"
+        }
+      ],
+      "parameters": {
+        "nominalKVLL": 6.6,
+        "frequencyHz": 60,
+        "phaseDegrees": 0
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "L1",
+      "type": "line",
+      "assetTag": null,
+      "terminals": [
+        {
+          "id": "a",
+          "nodeId": "N0"
+        },
+        {
+          "id": "b",
+          "nodeId": "N1"
+        }
+      ],
+      "parameters": {
+        "resistanceOhmPerPhase": 0.1,
+        "reactanceOhmPerPhase": 0.2,
+        "ratedCurrentA": 250
+      },
+      "initialState": {},
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "CB1",
+      "type": "breaker",
+      "assetTag": null,
+      "terminals": [
+        {
+          "id": "a",
+          "nodeId": "N1"
+        },
+        {
+          "id": "b",
+          "nodeId": "N2"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 300,
+        "closeDelayMs": 500,
+        "commandTimeoutMs": 3000,
+        "ratedCurrentA": 250,
+        "controlSupplyRef": "DC1"
+      },
+      "initialState": {
+        "position": "closed",
+        "remote": true,
+        "lockout": false,
+        "mechanismHealthy": true
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "DS1",
+      "type": "isolator",
+      "assetTag": null,
+      "terminals": [
+        {
+          "id": "a",
+          "nodeId": "N2"
+        },
+        {
+          "id": "b",
+          "nodeId": "BUS"
+        }
+      ],
+      "parameters": {
+        "loadBreakCapable": false,
+        "syntheticInterlock": true,
+        "maxSwitchingCurrentA": 1,
+        "openDelayMs": 1000,
+        "closeDelayMs": 1000,
+        "commandTimeoutMs": 4000
+      },
+      "initialState": {
+        "position": "closed",
+        "remote": true
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "BUS1",
+      "type": "bus",
+      "assetTag": null,
+      "terminals": [
+        {
+          "id": "bus",
+          "nodeId": "BUS"
+        }
+      ],
+      "parameters": {
+        "nominalKVLL": 6.6
+      },
+      "initialState": {},
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "ES1",
+      "type": "earth_switch",
+      "assetTag": null,
+      "terminals": [
+        {
+          "id": "phase",
+          "nodeId": "BUS"
+        },
+        {
+          "id": "earth",
+          "nodeId": "EARTH"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 500,
+        "closeDelayMs": 500
+      },
+      "initialState": {
+        "position": "open",
+        "remote": true
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "LOAD1",
+      "type": "load",
+      "assetTag": null,
+      "terminals": [
+        {
+          "id": "in",
+          "nodeId": "BUS"
+        }
+      ],
+      "parameters": {
+        "activeMW": 1,
+        "reactiveMvar": 0.25,
+        "model": "constant_pq"
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "GB1",
+      "type": "breaker",
+      "assetTag": null,
+      "terminals": [
+        {
+          "id": "a",
+          "nodeId": "NG"
+        },
+        {
+          "id": "b",
+          "nodeId": "BUS"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 300,
+        "closeDelayMs": 500,
+        "commandTimeoutMs": 3000,
+        "ratedCurrentA": 250,
+        "controlSupplyRef": "DC1"
+      },
+      "initialState": {
+        "position": "open",
+        "remote": true,
+        "lockout": false
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "GEN1",
+      "type": "generator",
+      "assetTag": null,
+      "terminals": [
+        {
+          "id": "out",
+          "nodeId": "NG"
+        }
+      ],
+      "parameters": {
+        "mode": "grid_following_pq",
+        "ratedMW": 2,
+        "reactiveMvar": 0,
+        "rampMWPerSecond": 0.1,
+        "turbineRef": "TUR1"
+      },
+      "initialState": {
+        "enabled": false,
+        "requestedMW": 0,
+        "activeMW": 0,
+        "reactiveMvar": 0,
+        "remote": true,
+        "lockout": false
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "ALT",
+      "type": "grid_source",
+      "assetTag": null,
+      "terminals": [
+        {
+          "id": "out",
+          "nodeId": "NG"
+        }
+      ],
+      "parameters": {
+        "nominalKVLL": 6.6,
+        "frequencyHz": 60,
+        "phaseDegrees": 0
+      },
+      "initialState": {
+        "enabled": false
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "TUR1",
+      "type": "turbine",
+      "assetTag": null,
+      "terminals": [],
+      "parameters": {
+        "generatorRef": "GEN1",
+        "reservoirRef": "POND1",
+        "rhoKgM3": 1000,
+        "gMSecond2": 9.80665,
+        "efficiency": 0.9,
+        "maxFlowM3S": 10,
+        "flowTimeConstantSeconds": 2,
+        "hydraulicLossM": 0,
+        "tailwaterM": 100
+      },
+      "initialState": {
+        "gateFraction": 0,
+        "flowM3S": 0
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "POND1",
+      "type": "reservoir",
+      "assetTag": null,
+      "terminals": [],
+      "parameters": {
+        "areaM2": 10000,
+        "minimumStorageM3": 0,
+        "maximumStorageM3": 100000,
+        "levelAtZeroStorageM": 115,
+        "overflowPolicy": "pause_on_unmodeled_boundary"
+      },
+      "initialState": {
+        "storageM3": 50000,
+        "headwaterM": 120,
+        "inflowM3S": 12,
+        "spillM3S": 1,
+        "bypassM3S": 0
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "DC1",
+      "type": "control_supply",
+      "assetTag": null,
+      "terminals": [],
+      "parameters": {
+        "nominalVoltageV": 125
+      },
+      "initialState": {
+        "available": true,
+        "voltageV": 125
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "equipmentId": "OC1",
+      "type": "protection",
+      "assetTag": null,
+      "terminals": [],
+      "parameters": {
+        "monitoredEquipmentId": "L1",
+        "tripEquipmentId": "CB1",
+        "pickupA": 200,
+        "pickupMs": 2000,
+        "dropoutA": 190
+      },
+      "initialState": {
+        "enabled": true,
+        "latched": false
+      },
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    }
+  ],
+  "tags": [
+    {
+      "tagId": "sim.CB1.position",
+      "equipmentId": "CB1",
+      "source": "equipment.CB1.position",
+      "kind": "discrete",
+      "unit": "",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.BUS1.voltage",
+      "equipmentId": "BUS1",
+      "source": "equipment.BUS1.voltageKVLL",
+      "kind": "analog",
+      "unit": "kV",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.L1.current",
+      "equipmentId": "L1",
+      "source": "equipment.L1.currentA",
+      "kind": "analog",
+      "unit": "A",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.LOAD1.power",
+      "equipmentId": "LOAD1",
+      "source": "equipment.LOAD1.activeMW",
+      "kind": "analog",
+      "unit": "MW",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.power",
+      "equipmentId": "GEN1",
+      "source": "equipment.GEN1.activeMW",
+      "kind": "analog",
+      "unit": "MW",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.POND1.level",
+      "equipmentId": "POND1",
+      "source": "equipment.POND1.headwaterM",
+      "kind": "analog",
+      "unit": "m",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.DS1.position",
+      "equipmentId": "DS1",
+      "source": "equipment.DS1.position",
+      "kind": "discrete",
+      "unit": "",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.ES1.position",
+      "equipmentId": "ES1",
+      "source": "equipment.ES1.position",
+      "kind": "discrete",
+      "unit": "",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GB1.position",
+      "equipmentId": "GB1",
+      "source": "equipment.GB1.position",
+      "kind": "discrete",
+      "unit": "",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.N0.voltage",
+      "equipmentId": "GRID",
+      "source": "node.N0.voltageKVLL",
+      "kind": "analog",
+      "unit": "kV",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.N1.voltage",
+      "equipmentId": "CB1",
+      "source": "node.N1.voltageKVLL",
+      "kind": "analog",
+      "unit": "kV",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.N2.voltage",
+      "equipmentId": "DS1",
+      "source": "node.N2.voltageKVLL",
+      "kind": "analog",
+      "unit": "kV",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.BUS.voltage",
+      "equipmentId": "BUS1",
+      "source": "node.BUS.voltageKVLL",
+      "kind": "analog",
+      "unit": "kV",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.NG.voltage",
+      "equipmentId": "GEN1",
+      "source": "node.NG.voltageKVLL",
+      "kind": "analog",
+      "unit": "kV",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.speed",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.speedRpm",
+      "kind": "analog",
+      "unit": "rpm",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.frequency",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.frequencyHz",
+      "kind": "analog",
+      "unit": "Hz",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.voltage",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.voltageKVLL",
+      "kind": "analog",
+      "unit": "kV",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.fieldCurrent",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.fieldCurrentA",
+      "kind": "analog",
+      "unit": "A",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.hpuPressure",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.hpuPressureKPa",
+      "kind": "analog",
+      "unit": "kPa",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.bearingTemperature",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.bearingTemperatureC",
+      "kind": "analog",
+      "unit": "degC",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.sequenceState",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.sequenceState",
+      "kind": "enum",
+      "unit": "",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.requestedPower",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.requestedMW",
+      "kind": "analog",
+      "unit": "MW",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.reactivePower",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.requestedMvar",
+      "kind": "analog",
+      "unit": "Mvar",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.terminalVoltage",
+      "equipmentId": "GEN1",
+      "source": "equipment.GEN1.voltageKVLL",
+      "kind": "analog",
+      "unit": "kV",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.current",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.currentA",
+      "kind": "analog",
+      "unit": "A",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.powerFactor",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.powerFactor",
+      "kind": "analog",
+      "unit": "",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.energy",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.energyMWh",
+      "kind": "counter",
+      "unit": "MWh",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.GEN1.gate",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.gateFraction",
+      "kind": "analog",
+      "unit": "",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.TUR1.flow",
+      "equipmentId": "TUR1",
+      "source": "equipment.TUR1.flowM3S",
+      "kind": "analog",
+      "unit": "m3/s",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.TUR1.netHead",
+      "equipmentId": "GEN1",
+      "source": "unit.GEN1.netHeadM",
+      "kind": "analog",
+      "unit": "m",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    },
+    {
+      "tagId": "sim.TUR1.hydraulicPower",
+      "equipmentId": "TUR1",
+      "source": "equipment.TUR1.hydraulicPowerMW",
+      "kind": "analog",
+      "unit": "MW",
+      "scanMs": 1000,
+      "staleAfterMs": 3000,
+      "qualityPolicy": "source_and_scan"
+    }
+  ],
+  "ruleSetRef": {
+    "ruleSetId": "SIM-RULES-01",
+    "revision": 1
+  },
+  "initialProcess": {
+    "source": "equipment.initialState",
+    "units": "field-name encoded SI"
+  },
+  "drawingRef": null
+}

@@ -1,0 +1,268 @@
+{
+  "schemaVersion": "northstar.switching-rules.v1",
+  "ruleSetId": "SIM-RULES-01",
+  "revision": 1,
+  "synthetic": true,
+  "coverage": "Illustrative rules, not the complete device capability/interlock implementation. Engine invariants still apply.",
+  "rules": [
+    {
+      "ruleId": "CB1-CLOSE",
+      "revision": 1,
+      "priority": 10,
+      "category": "permissive",
+      "appliesTo": {
+        "equipmentId": "CB1",
+        "action": "close"
+      },
+      "trigger": "command",
+      "when": {
+        "op": "all",
+        "args": [
+          {
+            "ref": "equipment.CB1.remote",
+            "domain": "truth"
+          },
+          {
+            "ref": "equipment.DC1.available",
+            "domain": "truth"
+          },
+          {
+            "op": "not",
+            "args": [
+              {
+                "ref": "equipment.CB1.lockout",
+                "domain": "truth"
+              }
+            ]
+          },
+          {
+            "op": "eq",
+            "args": [
+              {
+                "ref": "equipment.ES1.position",
+                "domain": "truth"
+              },
+              {
+                "const": "open"
+              }
+            ]
+          }
+        ]
+      },
+      "pickupMs": 0,
+      "dropoutMs": 0,
+      "reset": "recompute",
+      "actions": [],
+      "explanation": "Remote, DC supply, no lockout and open synthetic earth switch required; each failed clause reports a reason.",
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "ruleId": "UNIT-START-PERMISSIVES",
+      "revision": 1,
+      "priority": 5,
+      "category": "permissive",
+      "appliesTo": {"equipmentId": "GEN1", "action": "start"},
+      "trigger": "command",
+      "when": {
+        "op": "all",
+        "args": [
+          {"ref": "equipment.GEN1.remote", "domain": "truth"},
+          {"ref": "equipment.DC1.available", "domain": "truth"},
+          {"op": "not", "args": [{"ref": "equipment.GB1.lockout", "domain": "truth"}]},
+          {"op": "eq", "args": [{"ref": "equipment.GB1.position", "domain": "truth"}, {"const": "open"}]},
+          {"op": "eq", "args": [{"ref": "equipment.ES1.position", "domain": "truth"}, {"const": "open"}]},
+          {"ref": "unit.GEN1.brakesApplied", "domain": "truth"},
+          {"op": "gte", "args": [{"ref": "unit.GEN1.hpuPressureKPa", "domain": "truth"}, {"const": 10000, "unit": "kPa"}]}
+        ]
+      },
+      "pickupMs": 0,
+      "dropoutMs": 0,
+      "reset": "recompute",
+      "failureCode": "START_PERMISSIVES_NOT_MET",
+      "actions": [],
+      "explanation": "Synthetic start checks: remote control, DC, no generator lockout, generator breaker open, earth switch open, applied brakes and modeled HPU pressure."
+    },
+    {
+      "ruleId": "GB1-SYNCHRONIZING-CLOSE",
+      "revision": 1,
+      "priority": 4,
+      "category": "permissive",
+      "appliesTo": {"equipmentId": "GB1", "action": "close"},
+      "trigger": "command",
+      "when": {
+        "op": "all",
+        "args": [
+          {"ref": "equipment.GB1.remote", "domain": "truth"},
+          {"ref": "equipment.DC1.available", "domain": "truth"},
+          {"op": "not", "args": [{"ref": "equipment.GB1.lockout", "domain": "truth"}]},
+          {"op": "eq", "args": [{"ref": "equipment.ES1.position", "domain": "truth"}, {"const": "open"}]},
+          {"op": "any", "args": [
+            {"op": "eq", "args": [{"ref": "unit.GEN1.sequenceState", "domain": "truth"}, {"const": "READY_TO_SYNCHRONIZE"}]},
+            {"op": "eq", "args": [{"ref": "unit.GEN1.sequenceState", "domain": "truth"}, {"const": "SYNCHRONIZING"}]}
+          ]},
+          {"ref": "unit.GEN1.syncCheckPassed", "domain": "truth"}
+        ]
+      },
+      "pickupMs": 0,
+      "dropoutMs": 0,
+      "reset": "recompute",
+      "failureCode": "SYNC_NOT_MET",
+      "actions": [],
+      "explanation": "Synthetic generator breaker close requires current remote/DC/lockout/ground checks, unit readiness, and voltage/frequency/phase within the declared sync window."
+    },
+    {
+      "ruleId": "UNIT-MW-SETPOINT",
+      "revision": 1,
+      "priority": 10,
+      "category": "permissive",
+      "appliesTo": {"equipmentId": "GEN1", "action": "setpoint"},
+      "trigger": "command",
+      "when": {
+        "op": "all",
+        "args": [
+          {"ref": "equipment.GEN1.remote", "domain": "truth"},
+          {"ref": "equipment.DC1.available", "domain": "truth"},
+          {"op": "eq", "args": [{"ref": "unit.GEN1.sequenceState", "domain": "truth"}, {"const": "ONLINE"}]}
+        ]
+      },
+      "pickupMs": 0,
+      "dropoutMs": 0,
+      "reset": "recompute",
+      "failureCode": "UNIT_NOT_ONLINE",
+      "actions": [],
+      "explanation": "Synthetic MW demand is accepted only while the remote-controlled unit is ONLINE. Hydraulic head, flow, generator rating and ramp limits remain authoritative."
+    },
+    {
+      "ruleId": "OC1-TRIP",
+      "revision": 1,
+      "priority": 0,
+      "category": "protection",
+      "trigger": "tick",
+      "when": {
+        "op": "all",
+        "args": [
+          {
+            "ref": "equipment.OC1.enabled",
+            "domain": "truth"
+          },
+          {
+            "op": "gte",
+            "args": [
+              {
+                "ref": "equipment.L1.currentA",
+                "domain": "truth"
+              },
+              {
+                "const": 200,
+                "unit": "A"
+              }
+            ]
+          }
+        ]
+      },
+      "pickupMs": 2000,
+      "dropoutMs": 0,
+      "reset": "manual_after_clear",
+      "actions": [
+        {
+          "type": "trip",
+          "equipmentId": "CB1"
+        },
+        {
+          "type": "lockout",
+          "equipmentId": "CB1"
+        }
+      ],
+      "explanation": "Synthetic definite-time overcurrent example; not actual relay settings.",
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    },
+    {
+      "ruleId": "UNIT-LOW-BUS-VOLTAGE-TRIP",
+      "revision": 1,
+      "priority": 0,
+      "category": "protection",
+      "trigger": "tick",
+      "when": {
+        "op": "all",
+        "args": [
+          {"op": "eq", "args": [{"ref": "unit.GEN1.sequenceState", "domain": "truth"}, {"const": "ONLINE"}]},
+          {"op": "lt", "args": [{"ref": "equipment.BUS1.voltageKVLL", "domain": "truth"}, {"const": 0.5, "unit": "kV"}]}
+        ]
+      },
+      "pickupMs": 300,
+      "dropoutMs": 0,
+      "reset": "manual_after_clear",
+      "actions": [
+        {"type": "trip", "equipmentId": "GB1"},
+        {"type": "lockout", "equipmentId": "GB1"}
+      ],
+      "explanation": "Fictional synthetic generator undervoltage protection example; not a station relay setting.",
+      "sourceRefs": ["SYNTHETIC"]
+    },
+    {
+      "ruleId": "BUS-LOW-VOLTAGE",
+      "revision": 1,
+      "priority": 30,
+      "category": "alarm",
+      "trigger": "tick",
+      "when": {
+        "op": "all",
+        "args": [
+          {
+            "op": "qualityGood",
+            "args": [
+              {
+                "ref": "tags.sim.BUS1.voltage",
+                "domain": "observation"
+              }
+            ]
+          },
+          {
+            "op": "lt",
+            "args": [
+              {
+                "ref": "tags.sim.BUS1.voltage",
+                "domain": "observation"
+              },
+              {
+                "const": 5.94,
+                "unit": "kV"
+              }
+            ]
+          }
+        ]
+      },
+      "pickupMs": 1000,
+      "dropoutMs": 1000,
+      "clearWhen": {
+        "op": "gt",
+        "args": [
+          {
+            "ref": "tags.sim.BUS1.voltage",
+            "domain": "observation"
+          },
+          {
+            "const": 6.072,
+            "unit": "kV"
+          }
+        ]
+      },
+      "reset": "automatic_return_separate_ack",
+      "actions": [
+        {
+          "type": "alarm",
+          "alarmId": "BUS-UV",
+          "severity": "high"
+        }
+      ],
+      "explanation": "90% pickup and 92% clear thresholds for synthetic 6.6 kV bus. Unknown observation cannot clear an active occurrence.",
+      "sourceRefs": [
+        "SYNTHETIC"
+      ]
+    }
+  ]
+}

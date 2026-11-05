@@ -1,0 +1,106 @@
+.switching-sim{color:#dce8f2;padding:18px;max-width:1500px;margin:auto}.switching-sim-head,.sim-session-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.sim-kicker{font-size:11px;letter-spacing:.14em;color:#78bde9}.switching-sim-head h2{margin:4px 0}.switching-sim-head p,.sim-limitations{color:#aebdca;font-size:13px}.sim-banner{background:#7b260d;border:1px solid #fb8659;color:#fff;padding:8px 13px;font-weight:800;letter-spacing:.12em}.sim-readiness{padding:10px 12px;margin:12px 0;background:#1d2935;border-left:3px solid #e3a84a}.sim-setup{display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:12px;background:#141e29;border:1px solid #334659}.sim-setup label{display:grid;gap:6px;min-width:230px;color:#afc2d2;font-size:11px}.sim-setup select,.sim-clock-controls select{background:#0e1720;color:#e5edf5;border:1px solid #50667a;padding:9px}.sim-setup button,.sim-clock-controls button,.sim-actions button{min-height:38px;padding:8px 12px;border:1px solid #58738b;background:#263849;color:#f1f6fa;cursor:pointer}.sim-setup button:disabled,.sim-actions button:disabled{opacity:.45;cursor:not-allowed}.sim-empty{padding:24px;color:#aebdca}.sim-session-head{padding:11px;background:#101a24;border:1px solid #34495c}.sim-session-title{color:#b9ddf7}.sim-time{font:700 20px ui-monospace,monospace}.sim-clock-state{font-size:11px;letter-spacing:.1em}.sim-clock-controls{display:flex;gap:6px;flex-wrap:wrap}.sim-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,.8fr);gap:12px;margin-top:12px}.sim-card{background:#141e29;border:1px solid #34495c;padding:13px;min-width:0}.sim-card h3{font-size:14px;margin:0 0 12px;letter-spacing:.04em}.sim-legend{display:flex;gap:16px;flex-wrap:wrap;color:#b8c8d6;font-size:11px}.sim-diagram{overflow-x:auto;padding:12px 0}.sim-diagram svg{width:100%;min-width:640px}.sim-edge line{stroke-width:4}.sim-edge.energized line{stroke:#58d6ae}.sim-edge.deenergized line{stroke:#6b7c8b;stroke-dasharray:7 6}.sim-edge.unknown line{stroke:#edbf5b;stroke-dasharray:3 5}.sim-switch{cursor:pointer;fill:#182534;stroke:#b7cce0;stroke-width:2}.sim-switch text{fill:#fff;stroke:none;text-anchor:middle;font-size:14px}.sim-switch:focus circle{stroke:#fff;stroke-width:4}.sim-device-label,.sim-node text{fill:#cbd8e3;text-anchor:middle;font:12px Arial,sans-serif}.sim-node circle{stroke:#15202c;stroke-width:2}.sim-node.energized-node circle{fill:#58d6ae}.sim-node.dead-node circle{fill:#6b7c8b}.sim-node.unknown-node circle{fill:#edbf5b}.sim-node .sim-voltage{font-size:10px;fill:#9fb0bf}.sim-device dl{display:grid;grid-template-columns:130px 1fr;gap:7px;margin:10px 0}.sim-device dt{color:#91a6b8}.sim-device dd{margin:0}.sim-select-hint,.sim-command-status{font-size:12px;color:#c2d0dc;min-height:20px}.sim-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.sim-tag{display:grid;grid-template-columns:1fr auto;gap:4px;padding:8px 0;border-bottom:1px solid #304151}.sim-tag span,.sim-tag small{color:#9eafbd;font-size:11px}.sim-tag small{grid-column:1/-1}.sim-tag strong{font:600 13px ui-monospace,monospace}.sim-events ol{margin:0;padding-left:22px;max-height:260px;overflow:auto}.sim-events li{padding:4px 0;font-size:12px;color:#b9c8d5}.sim-limitations{border-top:1px solid #34495c;padding-top:10px}.sim-session-head~.sim-grid[hidden],.sim-workspace[hidden]{display:none!important}@media(max-width:900px){.sim-grid{grid-template-columns:1fr}.switching-sim{padding:10px}.sim-setup label{flex:1 1 100%}}
+.sim-entry-link{margin:8px 0;padding:8px 11px;border:1px solid #7289a0;background:#213447;color:#e0edf7;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.04em}
+
+/* Machined control surfaces. Accent colors identify actions, never plant state. */
+html body .switching-sim button {
+  --control-top: #344c60;
+  --control-bottom: #1b2c3b;
+  --control-edge: #60798d;
+  --control-accent: #b4cadb;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 11px 16px;
+  border: 1px solid var(--control-edge);
+  border-bottom-color: #101e2b;
+  border-radius: 7px;
+  background: linear-gradient(180deg, var(--control-top), var(--control-bottom));
+  color: #f3f8fc;
+  box-shadow: inset 0 1px 0 #ffffff30, inset 0 -1px 0 #00000040,
+              0 3px 0 #101c27, 0 5px 9px #00000026;
+  font: 700 11px/1.35 "Segoe UI", system-ui, sans-serif;
+  letter-spacing: .055em;
+  text-align: center;
+  text-shadow: 0 1px 1px #00000060;
+  cursor: pointer;
+  transition: filter 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+html body .switching-sim button:not(:disabled):hover {
+  filter: brightness(1.14);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 #ffffff45, inset 0 -1px 0 #00000040,
+              0 4px 0 #101c27, 0 7px 13px #00000030;
+}
+html body .switching-sim button:not(:disabled):active {
+  transform: translateY(2px);
+  filter: brightness(.97);
+  box-shadow: inset 0 2px 5px #00000050, 0 1px 0 #101c27;
+}
+html body .switching-sim button:focus-visible {
+  outline: 3px solid #eab750;
+  outline-offset: 4px;
+}
+html body .switching-sim button:disabled {
+  opacity: .48;
+  filter: saturate(.3);
+  transform: none;
+  box-shadow: inset 0 1px 0 #ffffff20, 0 1px 0 #101c27;
+  cursor: not-allowed;
+}
+html body .switching-sim :is(.sim-launch, .sim-execute) {
+  --control-top: #287293;
+  --control-bottom: #15445f;
+  --control-edge: #69a8c4;
+  --control-accent: #c2eeff;
+  min-height: 48px;
+}
+html body .switching-sim [data-unit-action="start"] {
+  --control-top: #2e665b;
+  --control-bottom: #183e38;
+  --control-edge: #6f9c8c;
+  --control-accent: #bce8d6;
+}
+html body .switching-sim [data-unit-action="stop"] {
+  --control-top: #815043;
+  --control-bottom: #4e2e29;
+  --control-edge: #b18271;
+  --control-accent: #ffe0cd;
+}
+html body .switching-sim :is([data-action="reset_lockout"], .sim-inject) {
+  --control-top: #785d32;
+  --control-bottom: #45351f;
+  --control-edge: #ac8d55;
+  --control-accent: #ffe0a0;
+}
+html body .switching-sim :is([data-unit-action], [data-action], .sim-execute, .sim-gb-faceplate)::before {
+  content: "";
+  flex: 0 0 3px;
+  align-self: stretch;
+  min-height: 15px;
+  border-radius: 2px;
+  background: var(--control-accent);
+  opacity: .85;
+}
+html body .switching-sim .sim-execute::after {
+  content: "→";
+  color: var(--control-accent);
+  font-size: 19px;
+  line-height: 1;
+}
+.switching-sim .sim-unit-actions,
+.switching-sim .sim-actions { gap: 10px; }
+.switching-sim .sim-unit-actions button { flex: 1 1 145px; }
+.switching-sim .sim-unit-actions .sim-gb-faceplate { flex-basis: 100%; }
+.switching-sim .sim-unit-grid section > button { margin-top: 10px; }
+.switching-sim .sim-actions .sim-execute { margin-top: 5px; }
+@media (prefers-reduced-motion: reduce) {
+  html body .switching-sim button { transition: none; }
+  html body .switching-sim button:not(:disabled):hover,
+  html body .switching-sim button:not(:disabled):active { transform: none; }
+}
+.sim-unit-panel{margin-top:12px;background:#e3e9ed;color:#162633;border:1px solid #536879;padding:10px}.sim-unit-panel>header{background:#143d63;color:#fff;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:10px}.sim-unit-panel>p{font-size:12px;margin:10px 0}.sim-unit-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}.sim-unit-grid section{background:#f5f7f8;border:1px solid #8ca0ad;padding:9px;min-width:0}.sim-unit-grid h3{background:#245178;color:#fff;margin:-9px -9px 8px;padding:7px;font-size:12px}.sim-unit-readouts{display:grid;grid-template-columns:1fr auto;gap:5px 8px;margin:0 0 10px;font-size:12px}.sim-unit-readouts dt,.sim-unit-readouts dd{margin:0}.sim-unit-readouts dd{text-align:right;font-weight:700}.sim-unit-readouts small{display:block;font-weight:400;color:#415767}.sim-unit-grid label{display:block;font-size:12px}.sim-unit-grid input{width:80px;padding:5px;color:#152332;background:#fff;border:1px solid #516979}.sim-unit-panel button{background:#264b68;color:#fff;border:1px solid #173851;padding:7px;margin:4px 4px 0 0;cursor:pointer}.sim-unit-panel button:disabled{opacity:.5;cursor:not-allowed}.sim-unit-actions{display:flex;flex-wrap:wrap}.sim-unit-grid section>small,.sim-instructor small{display:block;color:#425967;margin-top:7px}.sim-instructor{border:2px solid #ae542c;background:#fff0de;padding:10px;margin-top:10px}.sim-instructor[hidden]{display:none}
+.sim-alarm{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #40505d;font-size:12px}.sim-alarm.active_unacknowledged{color:#ffd08a}.sim-alarm.active_acknowledged{color:#f0b4a8}.sim-alarm button{border:1px solid #a35c38;background:#43281e;color:#fff;padding:6px 8px;cursor:pointer}.sim-debrief{white-space:pre-wrap;overflow:auto;max-height:45vh;margin-top:12px;padding:12px;background:#0d1720;border:1px solid #526577;color:#dce8f2;font:11px/1.5 ui-monospace,monospace}
