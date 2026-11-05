@@ -9,7 +9,7 @@ from typing import Any
 
 SCHEMA = "northstar.switching-model.v1"
 READINESS = {"catalog_only", "draft_synthetic", "draft_site_model", "accepted_for_training"}
-TWO_TERMINAL = {"line", "breaker", "isolator", "earth_switch", "transformer_2w"}
+TWO_TERMINAL = {"line", "breaker", "isolator", "earth_switch", "circuit_switcher", "transformer_2w"}
 ONE_TERMINAL = {"grid_source", "bus", "generator", "load"}
 MAX_MODEL_BYTES = 2 * 1024 * 1024
 

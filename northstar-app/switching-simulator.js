@@ -14,6 +14,7 @@
     });
   }
   let sessionId = '', snapshot = null, selected = '', selection = null, eventCursor = 0, pollTimer = 0, lastDebrief = null;
+  let renderingR013 = false;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const request = async (path, options = {}) => {
     const response = await fetch(api + path, {credentials:'same-origin', ...options,
@@ -58,14 +59,14 @@
       models.models.forEach(model => {
         const option = document.createElement('option');
         option.value = model.modelId || model.siteId;
-        option.textContent = model.synthetic ? `${model.modelId} — SYNTHETIC` : `${model.name} — CATALOG ONLY`;
+        option.textContent = model.synthetic ? `${model.label || model.modelId} — ${model.readiness.replaceAll('_',' ').toUpperCase()}` : `${model.name} — CATALOG ONLY`;
         option.disabled = !model.canLaunch;
         option.dataset.readiness = model.readiness;
         stationSelect.append(option);
       });
       scenarioCatalog = scenarios.scenarios;
-      stationSelect.value = 'SIM-TWIN-IROQUOIS'; filterScenarios();
-      status('Twin Falls + Iroquois: recovered H2O controls with illustrative electrical and water models. Training only.');
+      stationSelect.value = 'SIM-IS-TW-IR-R013'; filterScenarios();
+      status('r013: Island / Twin / Iroquois source-qualified draft. Unresolved wiring and assumed dynamics are marked. Training only.');
       $('.sim-launch').disabled = !stationSelect.value.startsWith('SIM-');
       installEntryLinks();
     } catch (error) { status(`Simulator unavailable: ${error.message}`); $('.sim-launch').disabled = true; }
@@ -117,7 +118,9 @@
     $('.sim-finish').disabled = snapshot.status === 'completed';
     $('.sim-reset').disabled = snapshot.status !== 'completed';
     $('.sim-speed').value = String(snapshot.speed);
-    window.ComplexTrainer?.render(snapshot, {chooseDevice, selectAction});
+    if (!snapshot.r013 || !renderingR013) window.ComplexTrainer?.render(snapshot.r013 ? {...snapshot,complex:false} : snapshot, {chooseDevice, selectAction});
+    window.R013Trainer?.render(snapshot, {chooseDevice, selectAction});
+    renderingR013 = !!snapshot.r013;
     if (!snapshot.complex) { renderUnit(); renderDiagram(); }
     $('.sim-tags').innerHTML = (snapshot.tags || []).map(tag => `<div class="sim-tag"><span>${esc(tag.tagId)}</span><strong>${tag.value == null ? '—' : esc(typeof tag.value === 'number' ? Number(tag.value).toFixed(3) : tag.value)} ${esc(tag.unit)}</strong><small>${esc(tag.quality)} · observed ${fmtTime(tag.observedSimTimeMs)}</small></div>`).join('');
     paintAlarms();
@@ -182,6 +185,7 @@
     $('.sim-execute').disabled = true;
   }
   function paintFaceplate() {
+    if (snapshot?.r013) { window.R013Trainer?.faceplate(snapshot, selected); return; }
     if (snapshot?.complex) { window.ComplexTrainer?.faceplate(snapshot, selected); return; }
     const device = snapshot?.diagram?.equipment.find(item => item.equipmentId === selected);
     const actual = snapshot?.equipment.find(item => item.equipmentId === selected);

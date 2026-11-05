@@ -16,6 +16,7 @@ from .model import ModelError, catalog_only_models, content_hash, load_model
 from .rules import RuleSet
 from .unit import validate_unit_sequence
 from .complex import ComplexSession, MODEL_ID as COMPLEX_ID
+from .r013 import R013Session, MODEL_ID as R013_ID
 
 HERE = Path(__file__).resolve().parent
 MODEL_PATH = HERE / "fixtures" / "synthetic-station.model.json"
@@ -45,6 +46,8 @@ class SimulatorService:
         self.local_instructor = bool(local_instructor)
         self.scenarios = {item["scenarioId"]: item for item in json.loads(SCENARIOS_PATH.read_text(encoding="utf-8"))["scenarios"]}
         self.complex_model, self.complex_hash = load_model(HERE / 'fixtures' / 'twin-iroquois.model.json')
+        self.r013_model, self.r013_hash = load_model(HERE / 'fixtures' / 'is-tw-ir-r013.model.json')
+        self.scenarios.update({item['scenarioId']: item for item in json.loads((HERE / 'fixtures' / 'is-tw-ir-r013-scenarios.json').read_text(encoding='utf-8'))['scenarios']})
         self.scenarios.update({item['scenarioId']: item for item in json.loads((HERE / 'fixtures' / 'twin-iroquois-scenarios.json').read_text(encoding='utf-8'))['scenarios']})
         self._init_store()
         self._restore_sessions()
@@ -115,7 +118,7 @@ class SimulatorService:
         for row in rows:
             data = json.loads(row["payload"])
             scenario = data["scenario"]
-            session_class = ComplexSession if data['model']['modelId'] == COMPLEX_ID else Session
+            session_class = R013Session if data['model']['modelId'] == R013_ID else ComplexSession if data['model']['modelId'] == COMPLEX_ID else Session
             session = session_class(data["model"], scenario, data["owner"], data["seed"],
                               data.get("rule_data"), data.get("unit_sequence"), data.get("instructor_enabled", False))
             for key, value in data.items():
@@ -217,7 +220,9 @@ class SimulatorService:
                     "hash": self.model_hash, "unitSequenceHash": self.unit_hash, "rulesHash": self.rule_hash,
                     "canLaunch": True}, {"modelId": COMPLEX_ID, "revision": self.complex_model['revision'],
                     "label": self.complex_model['label'], "readiness": "draft_synthetic", "synthetic": True,
-                    "hash": self.complex_hash, "canLaunch": True}] + catalog_only_models(CATALOG_PATH)}
+                    "hash": self.complex_hash, "canLaunch": True}, {"modelId": R013_ID, "revision": self.r013_model['revision'],
+                    "label": self.r013_model['label'], "readiness": self.r013_model['readiness'], "synthetic": True,
+                    "hash": self.r013_hash, "canLaunch": True}] + catalog_only_models(CATALOG_PATH)}
             if method == "GET" and suffix == "scenarios":
                 return 200, {"source": "simulation", "scenarios": [
                     {"scenarioId": item["scenarioId"], "revision": item["revision"], "title": item["title"],
@@ -229,7 +234,7 @@ class SimulatorService:
                              "readiness": candidate["readiness"], "synthetic": candidate["synthetic"]}
             if method == "POST" and suffix == "sessions":
                 model_id = payload.get('modelId', self.model['modelId'])
-                if model_id not in {self.model['modelId'], COMPLEX_ID}:
+                if model_id not in {self.model['modelId'], COMPLEX_ID, R013_ID}:
                     raise SimError("MODEL_NOT_AVAILABLE", "Only the explicit synthetic training model is launchable", 422)
                 if sum(session.status in {"paused", "running"} for session in self.sessions.values()) >= 10:
                     raise SimError("SESSION_LIMIT", "Ten isolated training sessions are already active", 429)
@@ -239,8 +244,8 @@ class SimulatorService:
                     raise SimError("SCENARIO_NOT_FOUND", "Unknown synthetic scenario", 404)
                 if scenario['modelId'] != model_id:
                     raise SimError('SCENARIO_MODEL_MISMATCH', 'Choose a scenario for the selected model', 422)
-                session_class = ComplexSession if model_id == COMPLEX_ID else Session
-                model = self.complex_model if model_id == COMPLEX_ID else self.model
+                session_class = R013Session if model_id == R013_ID else ComplexSession if model_id == COMPLEX_ID else Session
+                model = self.r013_model if model_id == R013_ID else self.complex_model if model_id == COMPLEX_ID else self.model
                 session = session_class(model, scenario, actor, int(payload.get("seed", scenario.get("seed", 1))),
                                   self.rules, self.unit_sequence, self.local_instructor and instructor_access)
                 with self.lock:

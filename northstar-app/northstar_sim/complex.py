@@ -24,7 +24,7 @@ class ComplexSession(Session):
         self.events=[];self.commands={};self.selections={};self.pending=[];self.idempotency={};self.observations={};self.truth={}
         self.faults={};self.active_faults={};self.scenario_injections=[];self.alarm_occurrences=[];self.alarm_active=False
         self.low_voltage_since=None;self.low_voltage_clear_since=None;self.debriefs=[]
-        self._initial_state();self._emit('session_created',{'modelId':MODEL_ID,'readiness':'draft_synthetic'});self._settle()
+        self._initial_state();self._emit('session_created',{'modelId':model['modelId'],'readiness':model['readiness']});self._settle()
 
     def _initial_state(self):
         self.states={d['equipmentId']:copy.deepcopy(d['initialState']) for d in self.model['equipment']}
@@ -381,7 +381,8 @@ class ComplexSession(Session):
                 if self.sim_time_ms>=s.get('nextScanMs',0):
                     s['reportedPosition']=s['position'] if s.get('quality')=='good' else None;s['observedSimTimeMs']=self.sim_time_ms;s['nextScanMs']=self.sim_time_ms+500
             if d['type']=='generator':
-                s['currentA']=math.hypot(s['activeMW'],s['reactiveMvar'])*1000/(math.sqrt(3)*max(.1,s['voltagePu']*12)) if s['sequenceState']=='ONLINE' else 0
+                kv=next(n['nominalKVLL'] for n in self.model['nodes'] if n['nodeId']==d['terminals'][0]['nodeId'])
+                s['currentA']=math.hypot(s['activeMW'],s['reactiveMvar'])*1000/(math.sqrt(3)*max(.1,s['voltagePu']*kv)) if s['sequenceState']=='ONLINE' else 0
         # An open-breaker READY unit is not a station island. Track the units
         # actually supplying buses, so another grid-connected unit cannot satisfy reconnection.
         tracked=self.unit.setdefault('islandedUnits',[])
@@ -439,7 +440,7 @@ class ComplexSession(Session):
             s=copy.deepcopy(self.states[d['equipmentId']]);devices.append({**copy.deepcopy(d),**s,'actions':self.actions(d),
                 'sync':self.sync_detail(d) if d['type'] in {'breaker','isolator','earth_switch'} else {},
                 'indicationQuality':s.get('quality','good'),'indicationObservedSimTimeMs':s.get('observedSimTimeMs',self.sim_time_ms)})
-        return dict(source='simulation',complex=True,sessionId=self.session_id,runId=self.run_id,modelId=MODEL_ID,modelRevision=self.model['revision'],
+        return dict(source='simulation',complex=True,sessionId=self.session_id,runId=self.run_id,modelId=self.model['modelId'],modelRevision=self.model['revision'],
             modelHash=self.model_hash,scenarioId=self.scenario['scenarioId'],scenarioHash=self.scenario_hash,rulesHash=self.rule_hash,
             unitSequenceHash=self.unit_hash,readiness=self.model['readiness'],stateRevision=self.state_revision,controlRevision=self.control_revision,
             status=self.status,speed=self.speed,simTimeMs=self.sim_time_ms,sessionMode='SOLO LOCAL — LEARNER + INSTRUCTOR' if self.instructor_enabled else 'LEARNER',

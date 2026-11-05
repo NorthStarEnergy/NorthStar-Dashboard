@@ -1,3 +1,11 @@
+## 20261105-r013-island-cts
+
+Imported r013 into a separate 21-unit draft simulator, added Island, corrected
+CTS feeder topology, and blocked unresolved connections/controls. 54 simulator
+and standalone HTTP tests pass; browser control/feedback checks pass. Full-suite
+collection is blocked by main's missing `northstar_shelf_mobile` dependency.
+See packets/2026-11-05-r013-island-cts.md.
+
 ## 20261029-assistant-freshness
 
 Server-calculated saved forecast age, timezone regression coverage, and prompt version 9. 63 focused tests and synthetic provider age check pass. See packets/2026-10-29-assistant-freshness.md.

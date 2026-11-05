@@ -58,12 +58,14 @@ def main():
                 start = html.index('<section id="training"')
                 end = html.index('\n    </section>', start) + len('\n    </section>')
                 page = ('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
-                        '<title>Twin Falls / Iroquois Trainer — NorthStar</title><link rel="stylesheet" href="/switching-simulator.css"><link rel="stylesheet" href="/complex-trainer.css">'
+                        '<title>Island / Twin / Iroquois Trainer — NorthStar</title><link rel="stylesheet" href="/switching-simulator.css"><link rel="stylesheet" href="/complex-trainer.css"><link rel="stylesheet" href="/r013-trainer.css">'
                         '<style>body{margin:0;background:#0e1720;font:14px system-ui}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #e7ad34} [hidden]{display:none!important}</style>'
-                        '</head><body>' + html[start:end] + '<script src="/complex-trainer.js"></script><script src="/switching-simulator.js"></script></body></html>')
+                        '</head><body>' + html[start:end] + '<script src="/complex-trainer.js"></script><script src="/r013-trainer.js"></script><script src="/switching-simulator.js"></script></body></html>')
                 self.respond(200, page.encode(), "text/html; charset=utf-8")
-            elif path in {"/switching-simulator.js", "/switching-simulator.css", "/complex-trainer.js", "/complex-trainer.css"}:
+            elif path in {"/switching-simulator.js", "/switching-simulator.css", "/complex-trainer.js", "/complex-trainer.css", "/r013-trainer.js", "/r013-trainer.css"}:
                 self.respond(200, (ROOT / path[1:]).read_bytes(), "text/javascript; charset=utf-8" if path.endswith(".js") else "text/css; charset=utf-8")
+            elif path == '/trainer-assets/r013/runtime.svg':
+                self.respond(200, (ROOT / path[1:]).read_bytes(), 'image/svg+xml')
             elif path in {"/trainer-assets/h2o-native-bases.zip", "/trainer-assets/h2o-controls-reference.json"}:
                 asset = ROOT / path[1:]
                 if not asset.is_file():

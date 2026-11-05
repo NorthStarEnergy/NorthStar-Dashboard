@@ -34,7 +34,7 @@ def solve_complex(model, states, memory, dt=0):
             raise ValueError('Switch cannot connect unlike voltage bases')
         parent[find(b)]=find(a)
     for d in devices:
-        if d['type'] in {'breaker','isolator','earth_switch'} and states[d['equipmentId']]['position']=='closed':
+        if d['type'] in {'breaker','isolator','earth_switch','circuit_switcher'} and states[d['equipmentId']]['position']=='closed':
             union(*(t['nodeId'] for t in d['terminals']))
     groups={}
     for n in nodes:groups.setdefault(find(n),[]).append(n)
