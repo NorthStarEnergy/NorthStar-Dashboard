@@ -1,8 +1,8 @@
 # NorthStar Manager
 
-Source snapshot of the Manager installed on this workstation, imported 2026-11-05. The dashboard application's source is in the repository root; Games is in `../northstar-games/`.
+Source snapshot of the Manager installed on this workstation, imported 2026-11-05. The dashboard application's source is in `../northstar-app/`; Games is in `../northstar-games/`.
 
-`package.json` starts `desktop/manager-main.cjs`. The `desktop/` folder includes the Manager controls, dashboard window, preloads, HTML, styles, and icons. These files are copied unchanged from the installed Manager's `resources/app` folder; this preserves the actual installed Manager, which may differ from the dashboard root's desktop packaging sources.
+`package.json` starts `desktop/manager-main.cjs`. The `desktop/` folder includes the Manager controls, dashboard window, preloads, HTML, styles, and icons. These files are copied unchanged from the installed Manager's `resources/app` folder; this preserves the actual installed Manager, which may differ from the `../northstar-app/desktop/` packaging sources.
 
 `workstation-scripts/` preserves the PowerShell launch, stop/restart, backend, games, tunnel, and startup-task scripts used by this PC. They are source copies, not an installation procedure: in the installed layout they reside in `C:\Users\User\NorthStar`, beside `northstar-local`, `games`, and the Python runtime folders. Manager resolves `Manage-NorthStar.ps1` from the parent of its configured project root.
 
