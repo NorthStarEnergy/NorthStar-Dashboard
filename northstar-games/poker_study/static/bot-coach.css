@@ -1,0 +1,8 @@
+#botCoach{max-width:1150px;margin:0 auto;padding:20px;color:#eef1ee}
+#botCoach>p{max-width:850px}
+.coach-actions{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+.coach-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;align-items:start}
+.coach-card{background:#19252e;border:1px solid #46545d;border-radius:10px;padding:16px;min-width:0}
+.coach-card h3{margin:0}.coach-card details{border-top:1px solid #46545d;padding:12px 0;overflow-wrap:anywhere}
+.coach-card summary{cursor:pointer;font-weight:600}.coach-card p{line-height:1.5}
+.coach-review-log{padding-left:20px;color:#b7c9ce}#coachStatus{min-height:24px}

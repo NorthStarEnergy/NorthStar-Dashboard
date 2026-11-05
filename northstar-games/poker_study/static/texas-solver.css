@@ -1,0 +1,16 @@
+.texas-dialog{width:min(900px,calc(100vw - 24px));max-height:90dvh;overflow:auto;background:#101e2a;color:#f0f5f8;border:1px solid #587184;border-radius:14px;padding:22px;box-sizing:border-box}
+.texas-dialog::backdrop{background:#000b}
+.texas-heading{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.texas-heading h2{margin:0}
+.texas-form{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
+.texas-dialog label{display:flex;flex-direction:column;gap:6px;min-width:0}
+.texas-dialog input{width:100%;box-sizing:border-box;padding:10px;background:#07131e;border:1px solid #587184;color:#fff;border-radius:6px;font:inherit}
+.texas-wide{grid-column:1/-1}
+.texas-branches{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.texas-table{max-height:360px;overflow:auto;margin:14px 0}
+.texas-table table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.texas-table td,.texas-table th{padding:8px;text-align:left;border-bottom:1px solid #334a5b;white-space:nowrap}
+.texas-table th{position:sticky;top:0;background:#101e2a}
+.texas-dialog .small{color:#bdcbd6;line-height:1.5}
+@media(max-width:600px){.texas-dialog{padding:14px}.texas-form{grid-template-columns:1fr 1fr}.texas-form>label:first-child{grid-column:1/-1}}
+

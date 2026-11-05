@@ -1,0 +1,18 @@
+.ns-invite-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:7px 12px;font:12px/1.4 Arial,sans-serif;color:#cbd7db;background:#14232c;position:relative;z-index:2}
+.ns-invite-bar [data-identity]{max-width:280px;overflow-wrap:anywhere}
+.ns-invite-bar button,.ns-invite-dialog button,.ns-invite-dialog .ns-invite-actions a,.ns-invite-dialog [data-browse]{font:inherit;color:#f2f4ee;background:#29413f;border:1px solid #71817a;border-radius:4px;padding:7px 11px;cursor:pointer;text-decoration:none;display:inline-block;min-height:32px}
+.topbar:has(.ns-invite-bar){height:auto;min-height:72px;flex-wrap:wrap;gap:8px;padding-block:10px}
+.topbar .ns-invite-bar{padding:0;background:transparent}
+.ns-invite-dialog{box-sizing:border-box;width:min(550px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:22px;border:1px solid #74837b;border-radius:10px;background:#182a32;color:#f1f4ef;font:14px/1.5 Arial,sans-serif;overflow:auto;box-shadow:0 15px 60px #0009;color-scheme:dark}
+.ns-invite-dialog::backdrop{background:#071017c9}
+.ns-invite-dialog [hidden]{display:none!important}
+.ns-invite-heading{display:flex;gap:16px;align-items:center;justify-content:space-between}
+.ns-invite-dialog h2{font-size:21px;margin:0}.ns-invite-dialog h3{font-size:15px;margin:22px 0 6px}
+.ns-invite-dialog p{margin:12px 0}.ns-invite-dialog small,.ns-invite-dialog label span{color:#b5c5c9}
+.ns-invite-dialog [data-message]:empty{display:none}.ns-invite-dialog [data-message]{padding:10px;border-left:3px solid #dfbf78;background:#25373f;overflow-wrap:anywhere}
+.ns-invite-dialog label{display:block;margin:12px 0 5px}.ns-invite-dialog input{box-sizing:border-box;display:block;width:100%;min-width:0;min-height:40px;margin-top:4px;padding:9px;border:1px solid #667c82;background:#0f1c24;color:#fff;border-radius:4px;font:14px Arial,sans-serif}
+.ns-invite-dialog button:disabled{opacity:.55;cursor:wait}.ns-invite-dialog :is(button,a,input):focus-visible,.ns-invite-bar button:focus-visible{outline:2px solid #f1d58d;outline-offset:3px}
+.ns-invite-actions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.ns-invite-dialog a{color:#f1d58d}
+.ns-invite-dialog ul{padding:0;list-style:none}.ns-invite-dialog li{padding:8px 0;border-bottom:1px solid #344c55;overflow-wrap:anywhere}.ns-invite-dialog li button{margin-left:6px}
+.ns-invite-dialog figure{margin:16px 0;text-align:center}.ns-invite-dialog figure img{display:block;background:white;width:260px;height:260px;max-width:100%;object-fit:contain;margin:0 auto 8px}.ns-invite-dialog figcaption{margin-bottom:7px}
+@media(max-width:520px){.ns-invite-bar{font-size:11px;padding:5px 8px}.ns-invite-bar [data-identity]{max-width:180px}.topbar .ns-invite-bar{flex-basis:100%}.ns-invite-dialog{padding:16px}.ns-invite-dialog h2{font-size:19px}}

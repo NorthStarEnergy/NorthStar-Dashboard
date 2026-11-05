@@ -1,0 +1,12 @@
+/* Keep the visibility switch available even when every extra panel is hidden. */
+body[data-game="chess"] #games #ng-chess{grid-template-rows:auto;grid-auto-rows:auto}
+#games #ng-chess>.ng-visibility{grid-column:1;grid-row:3;padding:4px}
+#games #ng-chess>.ng-toolbar{grid-row:4}
+#games #ng-chess .ng-chess-rail{grid-row:5}
+#games #ng-chess .ng-table-bottom{grid-row:6}
+#games #ng-chess>details{grid-row:7}
+#games #ng-chess .ng-visibility-trigger{width:auto;min-height:36px;padding:6px 12px}
+#games #ng-chess #ng-visible-panels{display:flex;flex-wrap:wrap;gap:8px 20px;padding:10px 0}
+#games #ng-chess #ng-visible-panels label{display:flex;align-items:center;gap:8px;min-height:36px;cursor:pointer;font-size:14px}
+#games #ng-chess #ng-visible-panels input{width:18px;height:18px;accent-color:#226f79}
+#games #ng-chess #ng-visible-panels[hidden],#games #ng-chess .ng-section-hidden{display:none!important}

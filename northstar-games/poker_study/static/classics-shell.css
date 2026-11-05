@@ -1,0 +1,186 @@
+.all-games{color:var(--gold);text-decoration:none;font-size:12px}.classic-nav{position:sticky;top:0;z-index:5;display:flex;gap:8px;overflow-x:auto;padding:12px max(4%,24px);background:#101a22f2;border-bottom:1px solid var(--line);scrollbar-width:thin}.classic-nav a{flex:0 0 auto;padding:9px 13px;border:1px solid var(--line);border-radius:6px;color:var(--muted);text-decoration:none;font-size:12px}.classic-nav a.active{background:var(--gold);border-color:var(--gold);color:#182329;font-weight:700}body>main{width:min(1120px,94%);padding:24px 0 50px}#games .ng-game{display:none;background:var(--panel);border:1px solid var(--line);border-radius:10px}body[data-game="chess"] #ng-chess,body[data-game="checkers"] #ng-checkers,body[data-game="go"] #ng-go,body[data-game="poker"] #ng-poker,body[data-game="pool"] #ng-pool,body[data-game="euchre"] #ng-euchre{display:block}#games .ng-board{margin-inline:auto}#games .ng-table{max-width:none}#games details{margin-top:18px}#games h2{font:400 30px/1.2 Georgia,serif;margin:0}#games .ng-note{margin-top:5px}@media(max-width:520px){body>main{width:96%;padding-top:12px}.classic-nav{padding-inline:2%}}
+@media(max-width:520px){.classic-nav{gap:6px;padding:9px max(8px,env(safe-area-inset-left));scroll-snap-type:x proximity;scrollbar-width:none}.classic-nav::-webkit-scrollbar{display:none}.classic-nav a{min-height:42px;display:flex;align-items:center;scroll-snap-align:start}body>main{width:auto;margin-inline:max(8px,env(safe-area-inset-left));padding-bottom:max(32px,env(safe-area-inset-bottom))}#games .ng-game{overflow:hidden}#games .ng-toolbar>*{max-width:100%}#games select{min-height:42px;font-size:16px}}
+
+/* Yahoo Classic reference layout; scoped to chess only. */
+body[data-game="chess"]{background:#dedec6;color:#1d2520;color-scheme:light;font-family:Arial,Helvetica,sans-serif}
+body[data-game="chess"] .topbar{height:48px;min-height:48px;background:#315958;border-bottom:1px solid #547978}
+body[data-game="chess"] .classic-nav{position:static;background:#d0d0ad;border-color:#979a75;padding-block:7px;gap:5px}
+body[data-game="chess"] .classic-nav a{color:#223c38;background:#e2e2c6;border:1px solid #9aab92;border-radius:2px;padding:5px 10px;font-size:12px;min-height:30px}
+body[data-game="chess"] .classic-nav a.active{background:#6ca6a4;color:#102e30;border-color:#3c7979}
+body[data-game="chess"]>main{width:min(1000px,98%);padding:14px 0 28px}
+body[data-game="chess"] #games #ng-chess{display:grid;grid-template-columns:128px minmax(0,1fr) 256px;grid-template-rows:auto 21px 94px;gap:0 8px;padding:4px;background:#cccc9d;border:2px ridge #d6dfbd;border-radius:0;color:#1b261d;box-shadow:none;overflow:visible;min-height:0;--text:#1b261d;--muted:#3b4a3d;font:12px/1.3 Arial,Helvetica,sans-serif}
+#games #ng-chess>h2,#games #ng-chess>.ng-note{display:none}
+#games #ng-chess>.ng-toolbar{grid-column:1;grid-row:1/4;display:flex;flex-direction:column;align-items:stretch;gap:4px;margin:-4px 0 -4px -4px;padding:4px;background:#6fa6a3;border-right:2px groove #c4e1d2;min-width:0}
+#games #ng-chess button:not(.ng-square):not(.ng-avatar-button),#games #ng-chess select,#games #ng-chess .ng-classic-button{display:block;box-sizing:border-box;min-height:27px;width:100%;padding:3px 4px;font:12px/1.25 Arial,Helvetica,sans-serif;text-align:center;color:#173e3c;background:#a5ceca;border:2px solid;border-color:#dbefdf #528584 #528584 #dbefdf;border-radius:0;box-shadow:inset 0 0 0 1px #84b7b4;text-decoration:none;cursor:pointer}
+#games #ng-chess button:disabled{opacity:.55;cursor:default}
+#games #ng-chess button:not(.ng-square):not(:disabled):hover,#games #ng-chess .ng-classic-button:hover{background:#b7ded6}
+#games #ng-chess button:focus-visible,#games #ng-chess select:focus-visible,#games #ng-chess a:focus-visible,#games #ng-chess [tabindex]:focus-visible,#games #ng-chess summary:focus-visible{outline:2px solid #005b93;outline-offset:1px}
+#games #ng-chess select{text-align:left;padding:2px;font-size:12px;min-height:26px}
+#games #ng-chess .ng-table-actions{display:grid;gap:4px}
+#games #ng-chess h3{font:700 12px/1.3 Arial,sans-serif;color:#dceced;background:#167596;padding:1px 3px;margin:2px 0 0}
+#games #ng-chess .ng-check{display:flex;align-items:center;gap:3px;font-size:12px;line-height:1.3;color:#153f3c;margin:0}
+#games #ng-chess input[type="checkbox"]{width:13px;height:13px;margin:0;accent-color:#226f79}
+#games #ng-chess .ng-timer-label{padding:2px 0;color:#173b34}
+#games #ng-chess .ng-game-settings{margin:4px 0 0;font-size:11px;color:#173b34}
+#games #ng-chess .ng-game-settings label{display:block;margin:6px 0;font-size:11px}
+#games #ng-chess .ng-game-settings select{margin-top:3px}
+#games #ng-chess .ng-help-quit{display:flex;gap:4px;margin-top:auto;padding-top:12px}
+#games #ng-chess .ng-help-quit>*{flex:1;min-width:0}
+#games #ng-chess>.ng-play{grid-column:2;grid-row:1;min-width:0;padding:0;align-self:start}
+#games #ng-chess .ng-chess-frame{display:grid;grid-template-columns:18px minmax(0,1fr);grid-template-rows:auto 19px;padding:4px 4px 0 0;background:#10190c;border:1px solid #37502a;border-radius:0;box-shadow:none}
+#games #ng-chess .ng-ranks{grid-column:1;grid-row:1;display:grid;grid-template-rows:repeat(8,1fr);align-items:center;text-align:center}
+#games #ng-chess .ng-files{grid-column:2;display:grid;grid-template-columns:repeat(8,1fr);align-items:center;text-align:center}
+#games #ng-chess .ng-ranks,#games #ng-chess .ng-files{font:11px/1 Arial,sans-serif;color:#dddcc0}
+#games #ng-chess .ng-board.chess{grid-column:2;grid-row:1;width:100%;max-width:none;margin:0;border:0;border-radius:0;box-shadow:none;background:#cece9c}
+#games #ng-chess .ng-board.chess .ng-square{background:#cece9c}
+#games #ng-chess .ng-board.chess .ng-square.dark{background:#2f982e}
+#games #ng-chess .ng-board.chess .ng-square.selected{box-shadow:inset 0 0 0 3px #f7dc67}
+#games #ng-chess .ng-board.chess .ng-square.ng-last-move{box-shadow:inset 0 0 0 3px #9bddcf}
+#games #ng-chess .ng-board.chess .ng-square.legal:after{background:#163d20a8;box-shadow:0 0 0 1px #ffffc3}
+#games #ng-chess .ng-board.chess .ng-square.legal:has(.ng-chess-piece):after{background:transparent;border:3px solid #f7dc67;box-shadow:none}
+#games #ng-chess .ng-chess-piece{width:85%;height:85%}
+#games #ng-chess .ng-chess-piece svg{filter:drop-shadow(1px 2px 1px #16200b80)}
+#games #ng-chess .ng-chess-piece svg g{stroke-width:1.2}
+#games #ng-chess .ng-chess-piece.white svg g{stroke:#857f68}
+#games #ng-chess .ng-chess-piece.black svg g{stroke:#090e0a}
+#games #ng-chess>.ng-status{grid-column:2/4;grid-row:2;margin:0;padding:3px 1px;min-height:0;color:#414728;font-size:11px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#games #ng-chess .ng-chess-rail{grid-column:3;grid-row:1;display:flex;flex-direction:column;min-width:0;min-height:0;padding:0 5px 0 2px;border:0;background:#cccc9d;border-radius:0;overflow:hidden}
+#games #ng-chess .ng-player{display:flex;flex-direction:column;gap:2px;min-height:47px;padding:2px 0 5px;flex-shrink:0}
+#games #ng-chess .ng-player[data-player="b"]{flex-direction:column-reverse;align-items:stretch;justify-content:flex-end;padding-bottom:12px}
+#games #ng-chess .ng-player[data-player="w"]{margin-top:auto;padding-top:13px;padding-bottom:2px}
+#games #ng-chess .ng-player small{font-size:11px;color:#2d3621}
+#games #ng-chess .ng-player-identity{display:flex;align-items:center;gap:3px;min-width:0}
+#games #ng-chess .ng-player strong{font:700 12px/1.2 Arial,sans-serif;overflow-wrap:anywhere}
+#games #ng-chess .ng-turn-marker{font:700 22px/1 Arial,sans-serif;color:#09a5a2;-webkit-text-stroke:.6px #366257;visibility:hidden}
+#games #ng-chess .ng-player.is-turn .ng-turn-marker{visibility:visible}
+#games #ng-chess .ng-avatar-button{display:block;flex-shrink:0;width:38px;height:27px;padding:2px!important;border:0;border-radius:0;background:transparent;box-shadow:none;cursor:pointer}
+#games #ng-chess img{image-rendering:pixelated;object-fit:contain}
+#games #ng-chess .ng-avatar-button img{display:block;width:34px;height:23px}
+#games #ng-chess .ng-history-navigation{display:flex;height:19px;border:2px inset #dddfb6;background:#c3c393;flex-shrink:0}
+#games #ng-chess .ng-history-navigation button{width:18px!important;min-height:15px!important;padding:0!important;font-size:9px!important;border-width:1px!important;background:#d8d8ac!important;box-shadow:none!important}
+#games #ng-chess .ng-history-navigation span{flex:1}
+#games #ng-chess .ng-history-scroll{flex:1;height:0;min-height:100px;overflow:auto;background:#fff;border:2px inset #e1e3bc;scrollbar-width:thin;scrollbar-color:#888d58 #dbddb6}
+#games #ng-chess .ng-history{width:100%;border-collapse:collapse;table-layout:fixed;font:12px/1.25 Arial,sans-serif;text-align:left;color:#202715}
+#games #ng-chess .ng-history thead{position:sticky;top:0;background:#efefd1}
+#games #ng-chess .ng-history th,#games #ng-chess .ng-history td{padding:2px 4px;border-right:1px solid #d1d1c4;vertical-align:top;font-weight:400}
+#games #ng-chess .ng-history th:first-child{width:26px}
+#games #ng-chess .ng-invite{margin-top:3px;min-height:24px;background:#d4d4a6;color:#2a321d;border-color:#f0f0c7 #8e9364 #8e9364 #f0f0c7;box-shadow:inset 0 0 0 1px #b0b78e;font-size:11px}
+#games #ng-chess .ng-table-bottom{grid-column:2/4;grid-row:3;display:grid;grid-template-columns:minmax(0,1fr) 208px;gap:3px;min-width:0;padding-bottom:2px}
+#games #ng-chess .ng-table-log,#games #ng-chess .ng-table-players{border:2px inset #e3e7c9;background:#fff;overflow:auto;min-width:0;scrollbar-width:thin;scrollbar-color:#888d58 #dbddb6;font:11px/1.25 Arial,sans-serif}
+#games #ng-chess .ng-table-log{padding:3px;color:#34348b;white-space:pre-wrap;overflow-wrap:anywhere}
+#games #ng-chess .ng-table-players table{width:100%;border-collapse:collapse}
+#games #ng-chess .ng-table-players td{padding:2px 4px;font-size:11px;vertical-align:top}
+#games #ng-chess .ng-table-players td+td{border-left:1px solid #b8bba7;color:#585e44;width:48px}
+#games #ng-chess>details{grid-column:1/-1;grid-row:4;max-width:none;margin:0;color:#303d2a}
+#games #ng-chess>details:not([open]){display:none}
+#games #ng-chess>details[open]{padding:8px;border-top:1px solid #979a75}
+#games #ng-chess .ng-avatar-chooser{width:min(440px,calc(100% - 24px));max-height:80vh;padding:10px;border:2px outset #b9d9c9;border-radius:0;background:#ceceaa;color:#263a2c}
+#games #ng-chess .ng-avatar-chooser::backdrop{background:#183b3266}
+#games #ng-chess .ng-avatar-chooser form{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+#games #ng-chess .ng-avatar-chooser form button{width:28px!important}
+#games #ng-chess .ng-avatar-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+#games #ng-chess .ng-avatar-grid button{display:grid!important;place-items:center;min-height:38px!important;padding:4px!important}
+#games #ng-chess .ng-avatar-grid [aria-pressed="true"]{outline:2px solid #17588b}
+#games #ng-chess .ng-avatar-chooser p{font-size:10px;margin:10px 0 0}
+@media(max-width:760px){body[data-game="chess"] #games #ng-chess{grid-template-columns:96px minmax(0,1fr) 174px;gap:0 5px}#games #ng-chess>.ng-toolbar{gap:3px}#games #ng-chess button:not(.ng-square):not(.ng-avatar-button),#games #ng-chess select,#games #ng-chess .ng-classic-button{font-size:11px;min-height:26px}#games #ng-chess .ng-table-actions{gap:3px}#games #ng-chess .ng-table-bottom{grid-template-columns:minmax(0,1fr) 160px}#games #ng-chess .ng-player strong{font-size:11px}#games #ng-chess .ng-history{font-size:11px}}
+@media(max-width:560px){body[data-game="chess"]>main{width:auto;margin-inline:5px;padding-top:8px}body[data-game="chess"] #games #ng-chess{grid-template-columns:88px minmax(0,1fr);grid-template-rows:auto 24px 190px 100px;gap:0 5px}#games #ng-chess>.ng-toolbar{grid-row:1/5}#games #ng-chess>.ng-play{grid-column:2;grid-row:1}#games #ng-chess>.ng-status{grid-column:2;grid-row:2;font-size:10px}#games #ng-chess .ng-chess-rail{grid-column:2;grid-row:3;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 15px minmax(0,1fr) 24px;gap:0 5px;padding:0 0 5px}#games #ng-chess .ng-player{min-height:41px;gap:1px!important;padding:0!important;margin:0!important;grid-row:1;flex-direction:column!important;justify-content:start!important}#games #ng-chess .ng-player[data-player="b"]{grid-column:1}#games #ng-chess .ng-player[data-player="w"]{grid-column:2}#games #ng-chess .ng-player-identity{flex-wrap:wrap;gap:1px}#games #ng-chess .ng-player strong{font-size:10px}#games #ng-chess .ng-turn-marker{font-size:16px}#games #ng-chess .ng-avatar-button{width:34px;height:23px;padding:0!important}#games #ng-chess .ng-history-navigation{grid-column:1/-1;grid-row:2;height:15px}#games #ng-chess .ng-history-scroll{grid-column:1/-1;grid-row:3;height:auto;min-height:0}#games #ng-chess .ng-invite{grid-column:1/-1;grid-row:4;font-size:10px!important;margin-top:2px}#games #ng-chess .ng-table-bottom{grid-column:2;grid-row:4;grid-template-columns:minmax(0,1fr) 76px;gap:2px}#games #ng-chess .ng-table-players td{display:block;border:0!important;padding:1px 2px;font-size:9px}#games #ng-chess .ng-table-log{font-size:10px}#games #ng-chess .ng-chess-frame{grid-template-columns:12px minmax(0,1fr);grid-template-rows:auto 14px;padding:2px 2px 0 0}#games #ng-chess .ng-ranks,#games #ng-chess .ng-files{font-size:9px}#games #ng-chess select{font-size:12px}#games #ng-chess>details{grid-row:5}}
+
+/* Reference piece sprites, chat composer, and optional engine analysis. */
+#games #ng-chess .ng-board.chess{position:relative}
+#games #ng-chess .ng-board.chess .ng-chess-piece{width:100%;height:100%;background-image:var(--ng-classic-piece-atlas);background-size:600% 200%;background-repeat:no-repeat;filter:drop-shadow(0 1px 1px #12220d4d)}
+#games #ng-chess .ng-chess-piece.piece-p{background-position-x:0%}
+#games #ng-chess .ng-chess-piece.piece-r{background-position-x:20%}
+#games #ng-chess .ng-chess-piece.piece-n{background-position-x:40%}
+#games #ng-chess .ng-chess-piece.piece-b{background-position-x:60%}
+#games #ng-chess .ng-chess-piece.piece-q{background-position-x:80%}
+#games #ng-chess .ng-chess-piece.piece-k{background-position-x:100%}
+#games #ng-chess .ng-chess-piece.black{background-position-y:0%}
+#games #ng-chess .ng-chess-piece.white{background-position-y:100%}
+body[data-game="chess"] #games #ng-chess{grid-template-rows:auto 21px 190px}
+#games #ng-chess .ng-table-bottom{min-height:0;grid-template-columns:minmax(0,1fr) 170px}
+#games #ng-chess .ng-chat-host{min-width:0;min-height:0;height:100%;overflow:hidden;border:2px inset #e3e7c9;background:white}
+#games #ng-chess .ng-chat-host iframe{display:block;width:100%;height:100%;min-height:0;border:0}
+#games #ng-chess .ng-local-chat{display:flex;flex-direction:column;height:100%;min-height:0}
+#games #ng-chess .ng-local-chat[hidden]{display:none}
+#games #ng-chess .ng-table-log{flex:1;min-height:0;border:0;padding:4px;color:#222;white-space:normal}
+#games #ng-chess .ng-chat-notice{color:#68715c;font:11px Arial,sans-serif;padding:2px}
+#games #ng-chess .ng-chat-message{display:flex;gap:4px;align-items:flex-start;line-height:1.4;padding:2px;overflow-wrap:anywhere}
+#games #ng-chess .ng-chat-message img{flex:none;width:34px;height:23px}
+#games #ng-chess .ng-chat-message strong{white-space:nowrap;color:#29595a;font-weight:600}
+#games #ng-chess .ng-chat-message span{min-width:0}
+#games #ng-chess .ng-chat-compose{display:flex;gap:3px;padding:3px;background:#d2d2a9;border-top:1px solid #a7ab86;flex-shrink:0}
+#games #ng-chess .ng-chat-compose input{flex:1;min-width:0;min-height:28px;padding:4px 5px;border:2px inset #e1e6cd;background:white;color:#182d2b;border-radius:0;font:12px Arial,sans-serif}
+#games #ng-chess .ng-chat-compose button{width:48px;min-height:28px;flex-shrink:0}
+#games #ng-chess .ng-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+#games #ng-chess .ng-engine-panel{flex-shrink:0;background:#eeeed4;padding:5px;border:1px solid #9da47b;margin-top:3px;font:11px/1.35 Arial,sans-serif;color:#243529}
+#games #ng-chess .ng-engine-panel[hidden]{display:none}
+#games #ng-chess .ng-engine-heading{display:flex;justify-content:space-between;gap:6px}
+#games #ng-chess [data-evaluation]{font-weight:700;color:#245752}
+#games #ng-chess [data-engine-state]{font-size:10px;color:#56604b}
+#games #ng-chess [data-engine-lines]{margin:4px 0 0;padding-left:20px;overflow-wrap:anywhere}
+#games #ng-chess [data-engine-lines] li{padding:1px 0}
+#games #ng-chess .ng-engine-arrow{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none;opacity:.86;filter:drop-shadow(0 1px 1px #0005)}
+@media(max-width:560px){
+ body[data-game="chess"] #games #ng-chess{grid-template-columns:88px minmax(0,1fr);grid-template-rows:auto 24px auto 200px}
+ #games #ng-chess .ng-chess-rail{height:230px;grid-template-rows:auto 15px minmax(70px,1fr) auto 24px}
+ #games #ng-chess .ng-chess-rail:has(.ng-engine-panel:not([hidden])){height:310px}
+ #games #ng-chess .ng-engine-panel{grid-column:1/-1;grid-row:4;margin:2px 0;max-height:110px;overflow:auto}
+ #games #ng-chess .ng-invite{grid-row:5}
+ #games #ng-chess .ng-table-bottom{grid-template-columns:minmax(0,1fr);position:relative}
+ #games #ng-chess .ng-table-players{display:none}
+ #games #ng-chess .ng-chat-compose input{font-size:16px}
+ #games #ng-chess .ng-chat-compose button{width:42px}
+}
+
+/* Direct manipulation retains the latest custom chess piece atlas. */
+#games #ng-chess .ng-board{touch-action:none;user-select:none}
+#games #ng-chess .ng-square:has(.ng-chess-piece):not(:disabled){cursor:grab}
+#games #ng-chess .ng-drag-source>.ng-chess-piece{opacity:.18}
+#games #ng-chess .ng-square.ng-drop-target{box-shadow:inset 0 0 0 4px #ffe16a}
+#games #ng-chess .ng-board .ng-drag-ghost{cursor:grabbing;filter:drop-shadow(3px 6px 3px #0006)}
+/* Euchre uses the card tables' felt, gold accents and readable controls. */
+#games #ng-euchre{padding:24px;--border:#426358}
+#ng-euchre>.ng-toolbar{justify-content:flex-end}
+#games #ng-euchre>.ng-status{padding:12px 16px;background:#233a40;border-left:3px solid var(--gold);border-radius:4px;font-size:14px;white-space:normal}
+.eu-scoreboard{display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;padding:14px;background:#11252b;border:1px solid #38514f;border-radius:10px;margin-bottom:18px}
+.eu-scoreboard>div{display:flex;flex-direction:column;gap:3px}.eu-scoreboard small{font-size:10px;letter-spacing:1.5px;color:#d8bd7b}.eu-scoreboard strong{font:32px Georgia,serif}.eu-scoreboard strong span{font:13px system-ui;color:#96b3ad}.eu-scoreboard span{font-size:12px;color:#b8cbc6}.eu-trump{border-inline:1px solid #38514f}
+.eu-felt{display:grid;grid-template-columns:minmax(90px,1fr) minmax(0,3fr) minmax(90px,1fr);grid-template-rows:auto minmax(170px,auto) auto;gap:12px;padding:22px;background:radial-gradient(ellipse at center,#245e4c,#123f35);border:8px solid #68513a;border-radius:90px;box-shadow:inset 0 0 0 2px #b49359,inset 0 0 50px #071f1b99,0 14px 30px #0003}
+.eu-seat{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px;border:1px solid #ffffff24;border-radius:9px;background:#112c29c9;text-align:center;align-self:center;color:#eef3ed}.eu-seat small,.eu-seat span{font-size:11px;color:#b7cec5}.eu-seat.is-turn{border-color:#e6c678;box-shadow:0 0 0 2px #d8bd7b33}.eu-seat.is-out{opacity:.5}.eu-seat-2{grid-area:1/2}.eu-seat-3{grid-area:2/1}.eu-seat-1{grid-area:2/3}.eu-seat-0{grid-area:3/2}.eu-centre{grid-area:2/2;text-align:center;align-self:center}.eu-centre>small{letter-spacing:1.5px;font-size:10px;color:#d5d6b4}.eu-trick{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}.eu-played{display:flex;flex-direction:column;align-items:center;gap:5px}.eu-played>span{font-size:10px;color:#d5e4da}
+#games #ng-euchre .ng-card{border-radius:8px;box-shadow:0 4px 9px #0004;font-family:Georgia,serif;min-height:100px}.eu-trick .ng-card:disabled{opacity:1!important}.eu-controls{margin-top:24px;padding:18px;background:#13242d;border:1px solid #344d53;border-radius:10px}.eu-hint{color:#d8bd7b;margin:0 0 14px;font-size:14px}.eu-hand-heading{display:flex;justify-content:space-between;gap:8px}.eu-hand-heading span{color:#9cafb5;font-size:12px}#games #ng-euchre [data-hand]{justify-content:center;margin-bottom:4px}#games #ng-euchre [data-hand] .ng-card:not(:disabled){border-color:#e8c56b!important;box-shadow:0 0 0 2px #d8bd7b33,0 4px 10px #0005;transition:transform .12s}#games #ng-euchre [data-hand] .ng-card:not(:disabled):hover{transform:translateY(-6px)}#games #ng-euchre [data-hand] .ng-card:disabled{opacity:.65}#games #ng-euchre [data-next]{background:#d8bd7b;color:#162b2b;font-weight:700}.eu-match-result{font-size:22px;color:#d8bd7b}
+@media(max-width:600px){#games #ng-euchre{padding:12px}.eu-felt{grid-template-columns:80px minmax(0,1fr) 80px;padding:14px 8px;gap:8px;border-width:5px;border-radius:32px}.eu-seat{padding:7px 3px;font-size:12px}.eu-seat small,.eu-seat span{font-size:10px}.eu-trick{gap:5px}.eu-trick .ng-card{width:44px!important;min-height:62px!important;font-size:18px!important}.eu-controls{padding:12px}.eu-hand-heading{flex-direction:column;gap:2px}#games #ng-euchre [data-hand]{gap:5px}#games #ng-euchre [data-hand] .ng-card{width:calc((100% - 25px)/6);max-width:65px;min-height:78px;font-size:20px!important}.eu-scoreboard{padding:10px 4px}.eu-scoreboard small{font-size:9px;letter-spacing:.7px}}
+@media(min-width:601px){#games #ng-euchre{position:relative;padding:18px 24px}#ng-euchre>.ng-toolbar{position:absolute;right:24px;top:16px;margin:0}#games #ng-euchre>.ng-status{margin:10px 0}.eu-scoreboard{padding:9px;margin-bottom:12px}.eu-felt{grid-template-rows:auto minmax(120px,auto) auto;gap:8px;padding:14px 22px}.eu-seat{padding:6px}.eu-controls{margin-top:14px;padding:12px 18px}.eu-hint{margin-bottom:8px}.eu-controls .ng-toolbar{margin:8px 0}#ng-euchre>.ng-note{margin-bottom:8px}}
+@media(max-width:600px){#games #ng-euchre .eu-trick .ng-card{padding:4px!important;min-height:66px!important;font-size:17px!important}#games #ng-euchre [data-hand] .ng-card{width:calc((100% - 20px)/5);min-height:86px}#games #ng-euchre [data-hand]:has(> :nth-child(6)) .ng-card{width:calc((100% - 25px)/6);font-size:17px!important;padding:3px!important}}
+
+/* Board first: all table controls follow the full-width playing surface. */
+body[data-game="chess"]>main{width:calc(100% - 16px);max-width:none;margin:0 8px;padding:8px 0 28px}
+body[data-game="chess"] #games #ng-chess{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto auto auto;gap:8px;padding:4px}
+#games #ng-chess>.ng-play{grid-column:1;grid-row:1;width:100%}
+#games #ng-chess>.ng-status{grid-column:1;grid-row:2;font-size:14px;white-space:normal;padding:4px}
+#games #ng-chess>.ng-toolbar{grid-column:1;grid-row:3;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:start;gap:8px;margin:0;padding:10px;border:0}
+#games #ng-chess .ng-chess-rail{grid-column:1;grid-row:4;display:flex;flex-direction:column;height:auto;min-height:260px;padding:8px}
+#games #ng-chess .ng-chess-rail:has(.ng-engine-panel:not([hidden])){height:auto}
+#games #ng-chess .ng-history-scroll{flex:auto;height:160px;min-height:100px}
+#games #ng-chess .ng-player{flex-direction:row!important;align-items:center!important;gap:8px!important;padding:6px!important;margin:0!important}
+#games #ng-chess .ng-table-bottom{grid-column:1;grid-row:5;min-height:230px;grid-template-columns:minmax(0,1fr) 170px}
+#games #ng-chess>details{grid-column:1;grid-row:6}
+#games #ng-chess .ng-square{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#games #ng-chess .ng-board .ng-drag-ghost{position:fixed;z-index:10000;pointer-events:none;will-change:left,top}
+@media(max-width:560px){
+ body[data-game="chess"]>main{width:calc(100% - 8px);margin-inline:4px;padding-top:4px}
+ body[data-game="chess"] #games #ng-chess{padding:2px}
+ #games #ng-chess>.ng-toolbar{grid-template-columns:repeat(2,minmax(0,1fr));padding:8px}
+ #games #ng-chess .ng-table-bottom{grid-template-columns:minmax(0,1fr)}
+}
+
+/* Keep the visibility switch available even when every extra panel is hidden. */
+body[data-game="chess"] #games #ng-chess{grid-template-rows:auto;grid-auto-rows:auto}
+#games #ng-chess>.ng-visibility{grid-column:1;grid-row:3;padding:4px}
+#games #ng-chess>.ng-toolbar{grid-row:4}
+#games #ng-chess .ng-chess-rail{grid-row:5}
+#games #ng-chess .ng-table-bottom{grid-row:6}
+#games #ng-chess>details{grid-row:7}
+#games #ng-chess .ng-visibility-trigger{width:auto;min-height:36px;padding:6px 12px}
+#games #ng-chess #ng-visible-panels{display:flex;flex-wrap:wrap;gap:8px 20px;padding:10px 0}
+#games #ng-chess #ng-visible-panels label{display:flex;align-items:center;gap:8px;min-height:36px;cursor:pointer;font-size:14px}
+#games #ng-chess #ng-visible-panels input{width:18px;height:18px;accent-color:#226f79}
+#games #ng-chess #ng-visible-panels[hidden],#games #ng-chess .ng-section-hidden{display:none!important}

@@ -1,0 +1,6 @@
+OpenSpiel outcome-sampling MCCFR reference
+Copyright 2019 DeepMind Technologies Limited
+Licensed under the Apache License, Version 2.0; see OPEN_SPIEL_LICENSE.txt.
+Source: https://github.com/google-deepmind/open_spiel/blob/master/open_spiel/python/algorithms/outcome_sampling_mccfr.py
+
+NorthStar changes: adapted the outcome-sampling regret/average update equations to an iterative trajectory interface without OpenSpiel dependencies. Added a public-information Hold'em adapter, explicit card/bet abstractions, compatible joint-range sampling, checkpoint validation, experimental policy gate and personality integration. No pretrained OpenSpiel strategy data is included. The heads-up river CFR+ implementation remains independently implemented.

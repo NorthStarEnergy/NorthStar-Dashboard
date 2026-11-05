@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "NorthStar Games",
+  "short_name": "NorthStar",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#121b22",
+  "theme_color": "#121b22",
+  "description": "Poker, blackjack, chess, checkers, Go, pool, Euchre, and more.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+data/
+outputs/
+session.json
+.env
+.env.*
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+build/
+dist/

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "offline-poker-study"
+version = "0.6.3"
+description = "Offline six-max hold'em study engine and CFR reference"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+web = ["waitress>=3,<4", "qrcode>=8,<9"]
+solver = ["numpy>=1.26,<3"]
+
+[project.scripts]
+poker-study = "poker_study.__main__:main"
+northstar-games = "poker_study.web:main"
+
+[tool.setuptools.packages.find]
+include = ["poker_study*"]
+
+[tool.setuptools.package-data]
+poker_study = ["static/*", "static/avatars/*", "licenses/*"]
