@@ -1,13 +1,17 @@
 # Island / Twin / Iroquois operator trainer
 
-The default **r013 draft** imports the recovered combined single-line with 96
+The default **r013 draft** imports the recovered combined single-line with 99
 clickable targets and 21 units. Island's four units and the CTS connections are
 modeled from r013: T4/T7 feed shared M1 at 115 kV; T8/T9 feed separate 12.5 kV
 CTS buses. Twin L1 lands on T9 and L2 on T8; Iroquois L1 lands on T8 and L2 on T9.
 The older 17-unit synthetic model remains separately selectable.
 
-**Unverified items remain explicit.** IR G11–13 are isolated at 600 V, with
-controls blocked until step-up routing is established. Unresolved station-service,
+**User-confirmed topology (model revision 2).** G11/G12/G13 share a 600 V bus
+connected through a 12.5/0.6 kV transformer, then IR 52-L3, to IR Bus 2. All 21
+units are available for isolated training. The transformer tag is unknown; its
+5 MVA rating and 0.08 pu reactance are explicit training assumptions.
+
+**Unverified items remain explicit.** Unresolved station-service,
 sluice and other inventory targets have no inferred electrical connections.
 Circuit switchers have their own device type; unverified operating duty means
 fixed closed training boundaries with controls disabled. Auxiliary availability
@@ -15,8 +19,9 @@ is an explicit training assumption, not evidence of a station-service circuit.
 All dynamics, impedances, protection and initial positions are assumed; source
 voltage/rating discrepancies are retained in each device's historical source notes.
 
-The drawing shows simulated C/O positions, unit state and amber unresolved
-markers. Wires retain source geometry and **do not indicate energization**; use
+The drawing uses green/red for simulated closed/open switching positions, with
+no C/O or OFF/ON badges. Enlarged breaker bars are inset from the box sides.
+Amber question marks still identify unresolved devices; unit state is in details. Wires retain source geometry and **do not indicate energization**; use
 the live simulated bus-voltage strip and device terminal readings. Start, select,
 execute, synchronize and stop operate only on the isolated session. Normal,
 T8-loss, T9-loss and Island-line-1-loss exercises are available.

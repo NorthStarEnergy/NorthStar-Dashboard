@@ -1,3 +1,12 @@
+## 20261105-r013-600v-symbols
+
+Revision 2 adds the user-confirmed common 600 V bus, transformer and IR 52-L3
+route to IR Bus 2 for G11/G12/G13. Enlarged switching symbols, inset breaker
+bars, color-only position indication and corrected Twin/Island labels. Original
+source bytes preserved; transformer data and other unknowns remain marked.
+Python 631 passed, 21 skipped, 347 subtests; JavaScript 72 passed; Chrome checked.
+See packets/2026-11-05-r013-600v-symbols.md.
+
 ## 20261105-r013-viewport
 
 Full-width and full-screen r013 schematic with pointer-centered zoom, drag/keyboard

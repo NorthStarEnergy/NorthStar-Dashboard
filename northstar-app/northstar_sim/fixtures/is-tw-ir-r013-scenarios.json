@@ -2,7 +2,7 @@
   "scenarios": [
     {
       "scenarioId": "R013-NORMAL",
-      "revision": 1,
+      "revision": 2,
       "title": "r013 \u2014 connected start / synchronize / stop",
       "modelId": "SIM-IS-TW-IR-R013",
       "seed": 1,
@@ -13,7 +13,7 @@
     },
     {
       "scenarioId": "R013-T8-LOSS",
-      "revision": 1,
+      "revision": 2,
       "title": "r013 \u2014 T8 supply lost (ties open)",
       "modelId": "SIM-IS-TW-IR-R013",
       "seed": 1,
@@ -30,7 +30,7 @@
     },
     {
       "scenarioId": "R013-T9-LOSS",
-      "revision": 1,
+      "revision": 2,
       "title": "r013 \u2014 T9 supply lost (ties open)",
       "modelId": "SIM-IS-TW-IR-R013",
       "seed": 1,
@@ -47,7 +47,7 @@
     },
     {
       "scenarioId": "R013-IS-L1-LOSS",
-      "revision": 1,
+      "revision": 2,
       "title": "r013 \u2014 Island line 1 lost",
       "modelId": "SIM-IS-TW-IR-R013",
       "seed": 1,

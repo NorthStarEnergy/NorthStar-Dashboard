@@ -1,7 +1,7 @@
 {
   "schemaVersion": "northstar.switching-model.v1",
   "modelId": "SIM-IS-TW-IR-R013",
-  "revision": 1,
+  "revision": 2,
   "label": "Island / Twin / Iroquois \u2014 r013 draft",
   "synthetic": true,
   "siteId": null,
@@ -156,6 +156,14 @@
       "nominalKVLL": 12.5
     },
     {
+      "nodeId": "IR-B600",
+      "nominalKVLL": 0.6
+    },
+    {
+      "nodeId": "IR-L3-TX-HV",
+      "nominalKVLL": 12.5
+    },
+    {
       "nodeId": "IS-G1-TERMINAL",
       "nominalKVLL": 12.5
     },
@@ -228,23 +236,11 @@
       "nominalKVLL": 12.5
     },
     {
-      "nodeId": "IR-G11-UNRESOLVED-600V",
-      "nominalKVLL": 0.6
-    },
-    {
       "nodeId": "IR-G11-TERMINAL",
       "nominalKVLL": 0.6
     },
     {
-      "nodeId": "IR-G12-UNRESOLVED-600V",
-      "nominalKVLL": 0.6
-    },
-    {
       "nodeId": "IR-G12-TERMINAL",
-      "nominalKVLL": 0.6
-    },
-    {
-      "nodeId": "IR-G13-UNRESOLVED-600V",
       "nominalKVLL": 0.6
     },
     {
@@ -284,7 +280,7 @@
     {
       "equipmentId": "IR-A1L93",
       "type": "breaker",
-      "label": "IR-A1L93",
+      "label": "A1L93",
       "area": "r013",
       "terminals": [
         {
@@ -329,7 +325,7 @@
     {
       "equipmentId": "CTS-89-T4",
       "type": "isolator",
-      "label": "CTS-89-T4",
+      "label": "89-T4-HV",
       "area": "r013",
       "terminals": [
         {
@@ -377,7 +373,7 @@
     {
       "equipmentId": "CTS-52-T4",
       "type": "breaker",
-      "label": "CTS-52-T4",
+      "label": "52-T4HV",
       "area": "r013",
       "terminals": [
         {
@@ -422,7 +418,7 @@
     {
       "equipmentId": "IR-T4",
       "type": "transformer_2w",
-      "label": "IR-T4",
+      "label": "T4",
       "area": "r013",
       "terminals": [
         {
@@ -466,7 +462,7 @@
     {
       "equipmentId": "CTS-T4-LV",
       "type": "circuit_switcher",
-      "label": "CTS-T4-LV",
+      "label": "89-52-T4-LV",
       "area": "r013",
       "terminals": [
         {
@@ -510,7 +506,7 @@
     {
       "equipmentId": "CTS-89-T7",
       "type": "isolator",
-      "label": "CTS-89-T7",
+      "label": "89-T7-HV",
       "area": "r013",
       "terminals": [
         {
@@ -558,7 +554,7 @@
     {
       "equipmentId": "CTS-52-T7",
       "type": "breaker",
-      "label": "CTS-52-T7",
+      "label": "52-T7HV",
       "area": "r013",
       "terminals": [
         {
@@ -603,7 +599,7 @@
     {
       "equipmentId": "IR-T7",
       "type": "transformer_2w",
-      "label": "IR-T7",
+      "label": "T7",
       "area": "r013",
       "terminals": [
         {
@@ -647,7 +643,7 @@
     {
       "equipmentId": "CTS-T7-LV",
       "type": "circuit_switcher",
-      "label": "CTS-T7-LV",
+      "label": "89-52-T7-LV",
       "area": "r013",
       "terminals": [
         {
@@ -691,7 +687,7 @@
     {
       "equipmentId": "CTS-89-T8",
       "type": "isolator",
-      "label": "CTS-89-T8",
+      "label": "89-T8-HV",
       "area": "r013",
       "terminals": [
         {
@@ -739,7 +735,7 @@
     {
       "equipmentId": "CTS-52-T8",
       "type": "breaker",
-      "label": "CTS-52-T8",
+      "label": "52-T8HV",
       "area": "r013",
       "terminals": [
         {
@@ -784,7 +780,7 @@
     {
       "equipmentId": "IR-T8",
       "type": "transformer_2w",
-      "label": "IR-T8",
+      "label": "T8",
       "area": "r013",
       "terminals": [
         {
@@ -828,7 +824,7 @@
     {
       "equipmentId": "CTS-T8-LV",
       "type": "breaker",
-      "label": "CTS-T8-LV",
+      "label": "52-T8LV",
       "area": "r013",
       "terminals": [
         {
@@ -873,7 +869,7 @@
     {
       "equipmentId": "CTS-89-T9",
       "type": "isolator",
-      "label": "CTS-89-T9",
+      "label": "89-T9-HV",
       "area": "r013",
       "terminals": [
         {
@@ -921,7 +917,7 @@
     {
       "equipmentId": "CTS-52-T9",
       "type": "breaker",
-      "label": "CTS-52-T9",
+      "label": "52-T9HV",
       "area": "r013",
       "terminals": [
         {
@@ -966,7 +962,7 @@
     {
       "equipmentId": "IR-T9",
       "type": "transformer_2w",
-      "label": "IR-T9",
+      "label": "T9",
       "area": "r013",
       "terminals": [
         {
@@ -1010,7 +1006,7 @@
     {
       "equipmentId": "CTS-T9-LV",
       "type": "breaker",
-      "label": "CTS-T9-LV",
+      "label": "52-T9LV",
       "area": "r013",
       "terminals": [
         {
@@ -1055,7 +1051,7 @@
     {
       "equipmentId": "CTS-TIE",
       "type": "breaker",
-      "label": "CTS-TIE",
+      "label": "52-T8.9LV",
       "area": "r013",
       "terminals": [
         {
@@ -1100,7 +1096,7 @@
     {
       "equipmentId": "CTS-ISL1",
       "type": "circuit_switcher",
-      "label": "CTS-ISL1",
+      "label": "CS1",
       "area": "r013",
       "terminals": [
         {
@@ -1178,7 +1174,7 @@
     {
       "equipmentId": "IS-L1-HV",
       "type": "breaker",
-      "label": "IS-L1-HV",
+      "label": "IS 52-L1 HV",
       "area": "r013",
       "terminals": [
         {
@@ -1300,7 +1296,7 @@
     {
       "equipmentId": "IS-B1",
       "type": "bus",
-      "label": "IS-B1",
+      "label": "IS Bus 1 (B1)",
       "area": "r013",
       "terminals": [
         {
@@ -1329,7 +1325,7 @@
     {
       "equipmentId": "CTS-ISL2",
       "type": "circuit_switcher",
-      "label": "CTS-ISL2",
+      "label": "CS2",
       "area": "r013",
       "terminals": [
         {
@@ -1407,7 +1403,7 @@
     {
       "equipmentId": "IS-L2-HV",
       "type": "breaker",
-      "label": "IS-L2-HV",
+      "label": "IS 52-L2 HV",
       "area": "r013",
       "terminals": [
         {
@@ -1498,7 +1494,7 @@
     {
       "equipmentId": "IS-L2-LV",
       "type": "breaker",
-      "label": "IS-L2-LV",
+      "label": "IS 52-L2 LV",
       "area": "r013",
       "terminals": [
         {
@@ -1547,7 +1543,7 @@
     {
       "equipmentId": "IS-B2",
       "type": "bus",
-      "label": "IS-B2",
+      "label": "IS Bus 2 (B2)",
       "area": "r013",
       "terminals": [
         {
@@ -1576,7 +1572,7 @@
     {
       "equipmentId": "TF-52BT",
       "type": "breaker",
-      "label": "TF-52BT",
+      "label": "TW 52-BT",
       "area": "r013",
       "terminals": [
         {
@@ -1624,7 +1620,7 @@
     {
       "equipmentId": "CTS-TFL1",
       "type": "breaker",
-      "label": "CTS-TFL1",
+      "label": "CTS 52-TWL1",
       "area": "r013",
       "terminals": [
         {
@@ -1703,7 +1699,7 @@
     {
       "equipmentId": "TF-52L1",
       "type": "breaker",
-      "label": "TF-52L1",
+      "label": "TW 52-L1",
       "area": "r013",
       "terminals": [
         {
@@ -1753,7 +1749,7 @@
     {
       "equipmentId": "CTS-TFL2",
       "type": "breaker",
-      "label": "CTS-TFL2",
+      "label": "CTS 52-TWL2",
       "area": "r013",
       "terminals": [
         {
@@ -1832,7 +1828,7 @@
     {
       "equipmentId": "TF-52L2",
       "type": "breaker",
-      "label": "TF-52L2",
+      "label": "TW 52-L2",
       "area": "r013",
       "terminals": [
         {
@@ -1882,7 +1878,7 @@
     {
       "equipmentId": "IR-52BT",
       "type": "breaker",
-      "label": "IR-52BT",
+      "label": "IR 52-BT",
       "area": "r013",
       "terminals": [
         {
@@ -1930,7 +1926,7 @@
     {
       "equipmentId": "CTS-IRL1",
       "type": "breaker",
-      "label": "CTS-IRL1",
+      "label": "CTS 52-IRL1",
       "area": "r013",
       "terminals": [
         {
@@ -2009,7 +2005,7 @@
     {
       "equipmentId": "CTS-IRL2",
       "type": "breaker",
-      "label": "CTS-IRL2",
+      "label": "CTS 52-IRL2",
       "area": "r013",
       "terminals": [
         {
@@ -2084,6 +2080,114 @@
         "note": "r013 topology; not checked against as-built drawing. Electrical/dynamic parameters and initial positions are training assumptions."
       },
       "controlBlocked": false
+    },
+    {
+      "equipmentId": "IR-B600",
+      "type": "bus",
+      "label": "IR 600 V bus",
+      "area": "r013",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-B600"
+        }
+      ],
+      "parameters": {},
+      "initialState": {},
+      "sourceRefs": [
+        "user-20261105-600v",
+        "assumptions"
+      ],
+      "verification": {
+        "status": "user-confirmed-topology",
+        "note": "User confirmed shared G11/G12/G13 600 V bus, 12.5/0.6 kV transformer, IR 52-L3 and IR Bus 2 route on 2026-11-05. Not as-built verified. Transformer tag unknown; 5 MVA rating and 0.08 pu reactance are training assumptions, not equipment data. Protection, dynamics and initial positions unverified."
+      },
+      "controlBlocked": false,
+      "sourceDetails": {
+        "title": "IR-B600",
+        "Source": "User topology clarification, 2026-11-05; not as-built verified."
+      }
+    },
+    {
+      "equipmentId": "IR-T-600V",
+      "type": "transformer_2w",
+      "label": "12.5 / 0.6 kV transformer (tag unverified)",
+      "area": "r013",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-L3-TX-HV"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B600"
+        }
+      ],
+      "parameters": {
+        "xPu": 0.08,
+        "ratedMVA": 5,
+        "tapCapable": false
+      },
+      "initialState": {
+        "tap": 0,
+        "mode": "manual",
+        "healthy": true
+      },
+      "sourceRefs": [
+        "user-20261105-600v",
+        "assumptions"
+      ],
+      "verification": {
+        "status": "user-confirmed-topology",
+        "note": "User confirmed shared G11/G12/G13 600 V bus, 12.5/0.6 kV transformer, IR 52-L3 and IR Bus 2 route on 2026-11-05. Not as-built verified. Transformer tag unknown; 5 MVA rating and 0.08 pu reactance are training assumptions, not equipment data. Protection, dynamics and initial positions unverified."
+      },
+      "controlBlocked": false,
+      "sourceDetails": {
+        "title": "IR-T-600V",
+        "Source": "User topology clarification, 2026-11-05; not as-built verified."
+      }
+    },
+    {
+      "equipmentId": "IR-52L3",
+      "type": "breaker",
+      "label": "IR 52-L3",
+      "area": "r013",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-B2"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-L3-TX-HV"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "station": "IR"
+      },
+      "initialState": {
+        "position": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "user-20261105-600v",
+        "assumptions"
+      ],
+      "verification": {
+        "status": "user-confirmed-topology",
+        "note": "User confirmed shared G11/G12/G13 600 V bus, 12.5/0.6 kV transformer, IR 52-L3 and IR Bus 2 route on 2026-11-05. Not as-built verified. Transformer tag unknown; 5 MVA rating and 0.08 pu reactance are training assumptions, not equipment data. Protection, dynamics and initial positions unverified."
+      },
+      "controlBlocked": false,
+      "sourceDetails": {
+        "title": "IR-52L3",
+        "Source": "User topology clarification, 2026-11-05; not as-built verified."
+      }
     },
     {
       "equipmentId": "IS-DC",
@@ -2226,7 +2330,7 @@
     {
       "equipmentId": "IS-52G1",
       "type": "breaker",
-      "label": "IS-52G1",
+      "label": "IS 52-G1",
       "area": "r013",
       "terminals": [
         {
@@ -2274,7 +2378,7 @@
     {
       "equipmentId": "IS-G1",
       "type": "generator",
-      "label": "IS-G1",
+      "label": "IS G1",
       "area": "twin",
       "terminals": [
         {
@@ -2356,7 +2460,7 @@
     {
       "equipmentId": "IS-52G2",
       "type": "breaker",
-      "label": "IS-52G2",
+      "label": "IS 52-G2",
       "area": "r013",
       "terminals": [
         {
@@ -2404,7 +2508,7 @@
     {
       "equipmentId": "IS-G2",
       "type": "generator",
-      "label": "IS-G2",
+      "label": "IS G2",
       "area": "twin",
       "terminals": [
         {
@@ -2486,7 +2590,7 @@
     {
       "equipmentId": "IS-52G3",
       "type": "breaker",
-      "label": "IS-52G3",
+      "label": "IS 52-G3",
       "area": "r013",
       "terminals": [
         {
@@ -2534,7 +2638,7 @@
     {
       "equipmentId": "IS-G3",
       "type": "generator",
-      "label": "IS-G3",
+      "label": "IS G3",
       "area": "twin",
       "terminals": [
         {
@@ -2616,7 +2720,7 @@
     {
       "equipmentId": "IS-52G4",
       "type": "breaker",
-      "label": "IS-52G4",
+      "label": "IS 52-G4",
       "area": "r013",
       "terminals": [
         {
@@ -2664,7 +2768,7 @@
     {
       "equipmentId": "IS-G4",
       "type": "generator",
-      "label": "IS-G4",
+      "label": "IS G4",
       "area": "twin",
       "terminals": [
         {
@@ -2746,7 +2850,7 @@
     {
       "equipmentId": "TF-52G1",
       "type": "breaker",
-      "label": "TF-52G1",
+      "label": "TW 52-G1",
       "area": "r013",
       "terminals": [
         {
@@ -2794,7 +2898,7 @@
     {
       "equipmentId": "TF-G1",
       "type": "generator",
-      "label": "TF-G1",
+      "label": "TW G1",
       "area": "twin",
       "terminals": [
         {
@@ -2874,7 +2978,7 @@
     {
       "equipmentId": "TF-52G2",
       "type": "breaker",
-      "label": "TF-52G2",
+      "label": "TW 52-G2",
       "area": "r013",
       "terminals": [
         {
@@ -2922,7 +3026,7 @@
     {
       "equipmentId": "TF-G2",
       "type": "generator",
-      "label": "TF-G2",
+      "label": "TW G2",
       "area": "twin",
       "terminals": [
         {
@@ -3002,7 +3106,7 @@
     {
       "equipmentId": "TF-52G3",
       "type": "breaker",
-      "label": "TF-52G3",
+      "label": "TW 52-G3",
       "area": "r013",
       "terminals": [
         {
@@ -3050,7 +3154,7 @@
     {
       "equipmentId": "TF-G3",
       "type": "generator",
-      "label": "TF-G3",
+      "label": "TW G3",
       "area": "twin",
       "terminals": [
         {
@@ -3130,7 +3234,7 @@
     {
       "equipmentId": "TF-52G4",
       "type": "breaker",
-      "label": "TF-52G4",
+      "label": "TW 52-G4",
       "area": "r013",
       "terminals": [
         {
@@ -3178,7 +3282,7 @@
     {
       "equipmentId": "TF-G4",
       "type": "generator",
-      "label": "TF-G4",
+      "label": "TW G4",
       "area": "twin",
       "terminals": [
         {
@@ -3258,7 +3362,7 @@
     {
       "equipmentId": "TF-52G5",
       "type": "breaker",
-      "label": "TF-52G5",
+      "label": "TW 52-G5",
       "area": "r013",
       "terminals": [
         {
@@ -3306,7 +3410,7 @@
     {
       "equipmentId": "TF-G5",
       "type": "generator",
-      "label": "TF-G5",
+      "label": "TW G5",
       "area": "twin",
       "terminals": [
         {
@@ -3386,7 +3490,7 @@
     {
       "equipmentId": "IR-52G1",
       "type": "breaker",
-      "label": "IR-52G1",
+      "label": "IR 52-G1",
       "area": "r013",
       "terminals": [
         {
@@ -3434,7 +3538,7 @@
     {
       "equipmentId": "IR-G1",
       "type": "generator",
-      "label": "IR-G1",
+      "label": "IR G1",
       "area": "twin",
       "terminals": [
         {
@@ -3514,7 +3618,7 @@
     {
       "equipmentId": "IR-52G2",
       "type": "breaker",
-      "label": "IR-52G2",
+      "label": "IR 52-G2",
       "area": "r013",
       "terminals": [
         {
@@ -3562,7 +3666,7 @@
     {
       "equipmentId": "IR-G2",
       "type": "generator",
-      "label": "IR-G2",
+      "label": "IR G2",
       "area": "twin",
       "terminals": [
         {
@@ -3642,7 +3746,7 @@
     {
       "equipmentId": "IR-52G3",
       "type": "breaker",
-      "label": "IR-52G3",
+      "label": "IR 52-G3",
       "area": "r013",
       "terminals": [
         {
@@ -3690,7 +3794,7 @@
     {
       "equipmentId": "IR-G3",
       "type": "generator",
-      "label": "IR-G3",
+      "label": "IR G3",
       "area": "twin",
       "terminals": [
         {
@@ -3770,7 +3874,7 @@
     {
       "equipmentId": "IR-52G4",
       "type": "breaker",
-      "label": "IR-52G4",
+      "label": "IR 52-G4",
       "area": "r013",
       "terminals": [
         {
@@ -3818,7 +3922,7 @@
     {
       "equipmentId": "IR-G4",
       "type": "generator",
-      "label": "IR-G4",
+      "label": "IR G4",
       "area": "twin",
       "terminals": [
         {
@@ -3898,7 +4002,7 @@
     {
       "equipmentId": "IR-52G5",
       "type": "breaker",
-      "label": "IR-52G5",
+      "label": "IR 52-G5",
       "area": "r013",
       "terminals": [
         {
@@ -3946,7 +4050,7 @@
     {
       "equipmentId": "IR-G5",
       "type": "generator",
-      "label": "IR-G5",
+      "label": "IR G5",
       "area": "twin",
       "terminals": [
         {
@@ -4026,7 +4130,7 @@
     {
       "equipmentId": "IR-52G6",
       "type": "breaker",
-      "label": "IR-52G6",
+      "label": "IR 52-G6",
       "area": "r013",
       "terminals": [
         {
@@ -4074,7 +4178,7 @@
     {
       "equipmentId": "IR-G6",
       "type": "generator",
-      "label": "IR-G6",
+      "label": "IR G6",
       "area": "twin",
       "terminals": [
         {
@@ -4154,7 +4258,7 @@
     {
       "equipmentId": "IR-52G7",
       "type": "breaker",
-      "label": "IR-52G7",
+      "label": "IR 52-G7",
       "area": "r013",
       "terminals": [
         {
@@ -4202,7 +4306,7 @@
     {
       "equipmentId": "IR-G7",
       "type": "generator",
-      "label": "IR-G7",
+      "label": "IR G7",
       "area": "twin",
       "terminals": [
         {
@@ -4282,7 +4386,7 @@
     {
       "equipmentId": "IR-52G8",
       "type": "breaker",
-      "label": "IR-52G8",
+      "label": "IR 52-G8",
       "area": "r013",
       "terminals": [
         {
@@ -4330,7 +4434,7 @@
     {
       "equipmentId": "IR-G8",
       "type": "generator",
-      "label": "IR-G8",
+      "label": "IR G8",
       "area": "twin",
       "terminals": [
         {
@@ -4410,7 +4514,7 @@
     {
       "equipmentId": "IR-52G9",
       "type": "breaker",
-      "label": "IR-52G9",
+      "label": "IR 52-G9",
       "area": "r013",
       "terminals": [
         {
@@ -4458,7 +4562,7 @@
     {
       "equipmentId": "IR-G9",
       "type": "generator",
-      "label": "IR-G9",
+      "label": "IR G9",
       "area": "twin",
       "terminals": [
         {
@@ -4538,7 +4642,7 @@
     {
       "equipmentId": "IR-52G11",
       "type": "breaker",
-      "label": "IR-52G11",
+      "label": "IR 52-G11",
       "area": "r013",
       "terminals": [
         {
@@ -4547,7 +4651,7 @@
         },
         {
           "id": "2",
-          "nodeId": "IR-G11-UNRESOLVED-600V"
+          "nodeId": "IR-B600"
         }
       ],
       "parameters": {
@@ -4566,13 +4670,14 @@
       },
       "sourceRefs": [
         "r013",
+        "user-20261105-600v",
         "assumptions"
       ],
       "verification": {
-        "status": "unresolved",
-        "note": "Unresolved 600 V step-up: electrically isolated; unit and breaker controls blocked."
+        "status": "user-confirmed-topology",
+        "note": "User confirmed common 600 V bus through 12.5/0.6 kV transformer and IR 52-L3 to IR Bus 2. Not as-built verified. Unit MW limits, transformer rating/impedance, dynamics, protection and auxiliaries remain training assumptions."
       },
-      "controlBlocked": true,
+      "controlBlocked": false,
       "sourceDetails": {
         "title": "",
         "Display state": "User-selected demo closed",
@@ -4587,7 +4692,7 @@
     {
       "equipmentId": "IR-G11",
       "type": "generator",
-      "label": "IR-G11",
+      "label": "IR G11",
       "area": "twin",
       "terminals": [
         {
@@ -4598,7 +4703,7 @@
       "parameters": {
         "station": "IR",
         "unitNumber": 11,
-        "bus": "IR-G11-UNRESOLVED-600V",
+        "bus": "IR-B600",
         "breaker": "IR-52G11",
         "ratedMW": 1,
         "ratedMVA": 1.6,
@@ -4647,9 +4752,10 @@
       },
       "sourceRefs": [
         "r013",
+        "user-20261105-600v",
         "assumptions"
       ],
-      "controlBlocked": true,
+      "controlBlocked": false,
       "sourceDetails": {
         "title": "IR G11",
         "Nameplate description": "1.6 MVA / 600 V in SOP \u00c2\u00a75.2",
@@ -4660,14 +4766,14 @@
         "Symbol type": "generator"
       },
       "verification": {
-        "status": "unresolved",
-        "note": "Unresolved 600 V step-up: electrically isolated; unit and breaker controls blocked."
+        "status": "user-confirmed-topology",
+        "note": "User confirmed common 600 V bus through 12.5/0.6 kV transformer and IR 52-L3 to IR Bus 2. Not as-built verified. Unit MW limits, transformer rating/impedance, dynamics, protection and auxiliaries remain training assumptions."
       }
     },
     {
       "equipmentId": "IR-52G12",
       "type": "breaker",
-      "label": "IR-52G12",
+      "label": "IR 52-G12",
       "area": "r013",
       "terminals": [
         {
@@ -4676,7 +4782,7 @@
         },
         {
           "id": "2",
-          "nodeId": "IR-G12-UNRESOLVED-600V"
+          "nodeId": "IR-B600"
         }
       ],
       "parameters": {
@@ -4695,13 +4801,14 @@
       },
       "sourceRefs": [
         "r013",
+        "user-20261105-600v",
         "assumptions"
       ],
       "verification": {
-        "status": "unresolved",
-        "note": "Unresolved 600 V step-up: electrically isolated; unit and breaker controls blocked."
+        "status": "user-confirmed-topology",
+        "note": "User confirmed common 600 V bus through 12.5/0.6 kV transformer and IR 52-L3 to IR Bus 2. Not as-built verified. Unit MW limits, transformer rating/impedance, dynamics, protection and auxiliaries remain training assumptions."
       },
-      "controlBlocked": true,
+      "controlBlocked": false,
       "sourceDetails": {
         "title": "",
         "Display state": "User-selected demo closed",
@@ -4716,7 +4823,7 @@
     {
       "equipmentId": "IR-G12",
       "type": "generator",
-      "label": "IR-G12",
+      "label": "IR G12",
       "area": "twin",
       "terminals": [
         {
@@ -4727,7 +4834,7 @@
       "parameters": {
         "station": "IR",
         "unitNumber": 12,
-        "bus": "IR-G12-UNRESOLVED-600V",
+        "bus": "IR-B600",
         "breaker": "IR-52G12",
         "ratedMW": 1,
         "ratedMVA": 1.6,
@@ -4776,9 +4883,10 @@
       },
       "sourceRefs": [
         "r013",
+        "user-20261105-600v",
         "assumptions"
       ],
-      "controlBlocked": true,
+      "controlBlocked": false,
       "sourceDetails": {
         "title": "IR G12",
         "Nameplate description": "1.6 MVA / 600 V in SOP \u00c2\u00a75.2",
@@ -4789,14 +4897,14 @@
         "Symbol type": "generator"
       },
       "verification": {
-        "status": "unresolved",
-        "note": "Unresolved 600 V step-up: electrically isolated; unit and breaker controls blocked."
+        "status": "user-confirmed-topology",
+        "note": "User confirmed common 600 V bus through 12.5/0.6 kV transformer and IR 52-L3 to IR Bus 2. Not as-built verified. Unit MW limits, transformer rating/impedance, dynamics, protection and auxiliaries remain training assumptions."
       }
     },
     {
       "equipmentId": "IR-52G13",
       "type": "breaker",
-      "label": "IR-52G13",
+      "label": "IR 52-G13",
       "area": "r013",
       "terminals": [
         {
@@ -4805,7 +4913,7 @@
         },
         {
           "id": "2",
-          "nodeId": "IR-G13-UNRESOLVED-600V"
+          "nodeId": "IR-B600"
         }
       ],
       "parameters": {
@@ -4824,13 +4932,14 @@
       },
       "sourceRefs": [
         "r013",
+        "user-20261105-600v",
         "assumptions"
       ],
       "verification": {
-        "status": "unresolved",
-        "note": "Unresolved 600 V step-up: electrically isolated; unit and breaker controls blocked."
+        "status": "user-confirmed-topology",
+        "note": "User confirmed common 600 V bus through 12.5/0.6 kV transformer and IR 52-L3 to IR Bus 2. Not as-built verified. Unit MW limits, transformer rating/impedance, dynamics, protection and auxiliaries remain training assumptions."
       },
-      "controlBlocked": true,
+      "controlBlocked": false,
       "sourceDetails": {
         "title": "",
         "Display state": "User-selected demo closed",
@@ -4845,7 +4954,7 @@
     {
       "equipmentId": "IR-G13",
       "type": "generator",
-      "label": "IR-G13",
+      "label": "IR G13",
       "area": "twin",
       "terminals": [
         {
@@ -4856,7 +4965,7 @@
       "parameters": {
         "station": "IR",
         "unitNumber": 13,
-        "bus": "IR-G13-UNRESOLVED-600V",
+        "bus": "IR-B600",
         "breaker": "IR-52G13",
         "ratedMW": 1,
         "ratedMVA": 1.6,
@@ -4905,9 +5014,10 @@
       },
       "sourceRefs": [
         "r013",
+        "user-20261105-600v",
         "assumptions"
       ],
-      "controlBlocked": true,
+      "controlBlocked": false,
       "sourceDetails": {
         "title": "IR G13",
         "Nameplate description": "1.6 MVA / 600 V in SOP \u00c2\u00a75.2",
@@ -4918,14 +5028,14 @@
         "Symbol type": "generator"
       },
       "verification": {
-        "status": "unresolved",
-        "note": "Unresolved 600 V step-up: electrically isolated; unit and breaker controls blocked."
+        "status": "user-confirmed-topology",
+        "note": "User confirmed common 600 V bus through 12.5/0.6 kV transformer and IR 52-L3 to IR Bus 2. Not as-built verified. Unit MW limits, transformer rating/impedance, dynamics, protection and auxiliaries remain training assumptions."
       }
     },
     {
       "equipmentId": "UNRESOLVED-IS-TSS1",
       "type": "control_supply",
-      "label": "UNRESOLVED-IS-TSS1",
+      "label": "IS-TSS1",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -4950,7 +5060,7 @@
     {
       "equipmentId": "UNRESOLVED-IS-TSS2",
       "type": "control_supply",
-      "label": "UNRESOLVED-IS-TSS2",
+      "label": "IS-TSS2",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -4975,7 +5085,7 @@
     {
       "equipmentId": "UNRESOLVED-TW-TSS1",
       "type": "control_supply",
-      "label": "UNRESOLVED-TW-TSS1",
+      "label": "TW-TSS1",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -4999,7 +5109,7 @@
     {
       "equipmentId": "UNRESOLVED-TW-SS1",
       "type": "control_supply",
-      "label": "UNRESOLVED-TW-SS1",
+      "label": "52-SS1",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5027,7 +5137,7 @@
     {
       "equipmentId": "UNRESOLVED-TW-TSS2",
       "type": "control_supply",
-      "label": "UNRESOLVED-TW-TSS2",
+      "label": "TW-TSS2",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5051,7 +5161,7 @@
     {
       "equipmentId": "UNRESOLVED-TW-SS2",
       "type": "control_supply",
-      "label": "UNRESOLVED-TW-SS2",
+      "label": "52-SS2",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5079,7 +5189,7 @@
     {
       "equipmentId": "UNRESOLVED-TW-SS-TIE",
       "type": "control_supply",
-      "label": "UNRESOLVED-TW-SS-TIE",
+      "label": "52BT-SS",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5107,7 +5217,7 @@
     {
       "equipmentId": "UNRESOLVED-IR-T12",
       "type": "control_supply",
-      "label": "UNRESOLVED-IR-T12",
+      "label": "IR-T12",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5131,7 +5241,7 @@
     {
       "equipmentId": "UNRESOLVED-IR-T14",
       "type": "control_supply",
-      "label": "UNRESOLVED-IR-T14",
+      "label": "IR-T14",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5155,7 +5265,7 @@
     {
       "equipmentId": "UNRESOLVED-IR-SLUICE",
       "type": "control_supply",
-      "label": "UNRESOLVED-IR-SLUICE",
+      "label": "52-T12.14",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5184,7 +5294,7 @@
     {
       "equipmentId": "UNRESOLVED-IR-TSS1",
       "type": "control_supply",
-      "label": "UNRESOLVED-IR-TSS1",
+      "label": "IR-TSS1",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5208,7 +5318,7 @@
     {
       "equipmentId": "UNRESOLVED-IR-SS1",
       "type": "control_supply",
-      "label": "UNRESOLVED-IR-SS1",
+      "label": "52-SS1",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5235,7 +5345,7 @@
     {
       "equipmentId": "UNRESOLVED-IR-TSS2",
       "type": "control_supply",
-      "label": "UNRESOLVED-IR-TSS2",
+      "label": "IR-TSS2",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5259,7 +5369,7 @@
     {
       "equipmentId": "UNRESOLVED-IR-SS2",
       "type": "control_supply",
-      "label": "UNRESOLVED-IR-SS2",
+      "label": "52-SS2",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5286,7 +5396,7 @@
     {
       "equipmentId": "UNRESOLVED-CTS-BS6F",
       "type": "control_supply",
-      "label": "UNRESOLVED-CTS-BS6F",
+      "label": "BS6-F",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5311,7 +5421,7 @@
     {
       "equipmentId": "UNRESOLVED-CTS-BS6G",
       "type": "control_supply",
-      "label": "UNRESOLVED-CTS-BS6G",
+      "label": "BS6-G",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5336,7 +5446,7 @@
     {
       "equipmentId": "UNRESOLVED-CTS-ACOIL",
       "type": "control_supply",
-      "label": "UNRESOLVED-CTS-ACOIL",
+      "label": "A1L93 A coil",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5361,7 +5471,7 @@
     {
       "equipmentId": "UNRESOLVED-CTS-BCOIL",
       "type": "control_supply",
-      "label": "UNRESOLVED-CTS-BCOIL",
+      "label": "A1L93 B coil",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5386,7 +5496,7 @@
     {
       "equipmentId": "UNRESOLVED-A1L93-DS",
       "type": "control_supply",
-      "label": "UNRESOLVED-A1L93-DS",
+      "label": "A1L93-L",
       "area": "r013",
       "terminals": [],
       "parameters": {},
@@ -5448,6 +5558,9 @@
     "IR-TIE": "IR-52BT",
     "IRL1": "CTS-IRL1",
     "IRL2": "CTS-IRL2",
+    "IR-B600": "IR-B600",
+    "IR-T-600V": "IR-T-600V",
+    "IR-52L3": "IR-52L3",
     "IS-G1-52": "IS-52G1",
     "IS-G1": "IS-G1",
     "IS-G2-52": "IS-52G2",
@@ -5512,6 +5625,10 @@
   },
   "sourceRefs": [
     {
+      "sourceId": "user-20261105-600v",
+      "description": "User confirmed G11/G12/G13 common 600 V bus through a 12.5/0.6 kV transformer and IR 52-L3 to IR Bus 2; transformer tag/rating/protection not supplied."
+    },
+    {
       "sourceId": "r013",
       "description": "Recovered IR-Visual-Demo-r013; conceptual SOP grouping, not as-built verified."
     },
@@ -5535,7 +5652,7 @@
       "DRAFT \u2014 NOT AS-BUILT VERIFIED; simulation only, not a switching procedure.",
       "r013 conceptual feeder grouping requires confirmation against 085-4-2101r13.",
       "All impedances, dynamics, protection, sync windows and auxiliary availability are assumptions.",
-      "IR G11\u201313 step-up and service wiring unresolved: no inferred connections; associated controls blocked.",
+      "G11/G12/G13 600 V route user-confirmed via transformer and IR 52-L3 to Bus 2; transformer tag/rating, impedance and protection unverified. Service wiring remains unresolved and blocked.",
       "T4/T7 circuit-switcher operation unverified: fixed closed training boundaries; no controls.",
       "12/12.5/13 kV and 230/245 kV source differences retained; operating voltage bases assumed."
     ]

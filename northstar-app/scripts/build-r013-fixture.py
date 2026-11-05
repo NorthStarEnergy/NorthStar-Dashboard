@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -29,7 +30,7 @@ def build():
         equipment.append(d)
         if drawing:
             bindings[drawing] = id
-            d['sourceDetails'] = details[drawing]
+            d['sourceDetails'] = details.get(drawing, {'title': id, 'Source': 'User topology clarification, 2026-11-05; not as-built verified.'})
         return d
 
     def sw(id, a, b, drawing=None, closed=True, kind='breaker', **kw):
@@ -90,6 +91,17 @@ def build():
                 sw(f'TF-52L{i}',far,f'TF-B{i}',f'TW-52L{i}',station=st)
             else:line(f'IR-LINE{i}',near,f'IR-B{i}')  # No invented GS-end breaker.
 
+    # User-confirmed route: common 600 V bus -> transformer -> IR 52-L3 -> IR Bus 2.
+    node('IR-B600',.6);node('IR-L3-TX-HV',12.5)
+    bus600=dev('IR-B600','bus',['IR-B600'],drawing='IR-B600')
+    transformer=tx('IR-T-600V','IR-L3-TX-HV','IR-B600','IR-T-600V',mva=5)
+    l3=sw('IR-52L3','IR-B2','IR-L3-TX-HV','IR-52L3',station='IR')
+    for d in [bus600,transformer,l3]:
+        d['sourceRefs']=['user-20261105-600v','assumptions']
+        d['verification']=dict(status='user-confirmed-topology',note='User confirmed shared G11/G12/G13 600 V bus, 12.5/0.6 kV transformer, IR 52-L3 and IR Bus 2 route on 2026-11-05. Not as-built verified. Transformer tag unknown; 5 MVA rating and 0.08 pu reactance are training assumptions, not equipment data. Protection, dynamics and initial positions unverified.')
+    transformer['label']='12.5 / 0.6 kV transformer (tag unverified)'
+    bus600['label']='IR 600 V bus';l3['label']='IR 52-L3'
+
     for st in ['IS','TF','IR']:
         dev(st+'-DC','control_supply',params={'station':st},state={'available':True},
             note='ASSUMPTION: independent available control DC. No actual DC circuit modeled.')
@@ -98,10 +110,10 @@ def build():
         equipment.append(pond)
     for st,nums in [('IS',range(1,5)),('TF',range(1,6)),('IR',[*range(1,10),11,12,13])]:
         for i in nums:
-            id=f'{st}-G{i}';unresolved=st=='IR' and i>=11
+            id=f'{st}-G{i}';low_voltage=st=='IR' and i>=11;unresolved=False
             bus=(f'IS-B{1 if i<=2 else 2}' if st=='IS' else f'TF-B{1 if i<=3 else 2}' if st=='TF' else f'IR-B{1 if i<=5 else 2}')
-            if unresolved:bus=node(id+'-UNRESOLVED-600V',.6)
-            terminal=node(id+'-TERMINAL',.6 if unresolved else 12.5)
+            if low_voltage:bus='IR-B600'
+            terminal=node(id+'-TERMINAL',.6 if low_voltage else 12.5)
             drawing=id.replace('TF-','TW-');cb=id.replace('-G','-52G')
             breaker=sw(cb,terminal,bus,drawing+'-52',closed=False,station=st,generatorRef=id)
             g=copy.deepcopy(templates['TF-G1'])
@@ -115,7 +127,11 @@ def build():
                 note=('Unresolved 600 V step-up: electrically isolated; unit and breaker controls blocked.' if unresolved else
                       ('Island MW user supplied; ' if st=='IS' else f'ASSUMED {mw} MW operating limit, not nameplate MW; ')+
                       'MVA from r013. Dynamics, permissives and available auxiliaries assumed. Common 12.5 kV operating base; source 12/13 kV labels retained.'))
+            if low_voltage:
+                g['sourceRefs']=['r013','user-20261105-600v','assumptions']
+                g['verification']=dict(status='user-confirmed-topology',note='User confirmed common 600 V bus through 12.5/0.6 kV transformer and IR 52-L3 to IR Bus 2. Not as-built verified. Unit MW limits, transformer rating/impedance, dynamics, protection and auxiliaries remain training assumptions.')
             breaker['controlBlocked']=unresolved;breaker['verification']=copy.deepcopy(g['verification'])
+            if low_voltage:breaker['sourceRefs']=list(g['sourceRefs'])
             equipment.append(g);bindings[drawing]=id
 
     # Remaining source targets are explicit inventory-only records: no implicit electrical paths.
@@ -123,10 +139,20 @@ def build():
         if key not in bindings:
             dev('UNRESOLVED-'+key,'control_supply',drawing=key,blocked=True,
                 note='UNRESOLVED: wiring or device identity not established. Inventory only; no modeled connection or control.')
-    model=dict(schemaVersion='northstar.switching-model.v1',modelId='SIM-IS-TW-IR-R013',revision=1,
+    for d in equipment:
+        id=d['equipmentId']
+        if d['label']==id and d.get('sourceDetails'):
+            source=d['sourceDetails'];d['label']=(source.get('title') or source.get('Equipment') or id).strip() or id
+        if id.startswith('TF-52L'):d['label']='TW 52-L'+id[-1]
+        elif id.startswith('CTS-TFL'):d['label']='CTS 52-TWL'+id[-1]
+        elif id.startswith('CTS-IRL'):d['label']='CTS 52-IRL'+id[-1]
+        elif id.startswith('IS-L') and id.endswith('-HV'):d['label']='IS 52-L'+id[4]+' HV'
+        elif id=='IS-L2-LV':d['label']='IS 52-L2 LV'
+        elif d['type']=='breaker' and '-52G' in id:d['label']=id.replace('TF-','TW ').replace('IS-','IS ').replace('IR-','IR ').replace('52G','52-G')
+    model=dict(schemaVersion='northstar.switching-model.v1',modelId='SIM-IS-TW-IR-R013',revision=2,
         label='Island / Twin / Iroquois — r013 draft',synthetic=True,siteId=None,readiness='draft_site_model',
         nodes=nodes,equipment=equipment,tags=[],drawingBindings=bindings,
-        sourceRefs=[dict(sourceId='r013',description='Recovered IR-Visual-Demo-r013; conceptual SOP grouping, not as-built verified.'),
+        sourceRefs=[dict(sourceId='user-20261105-600v',description='User confirmed G11/G12/G13 common 600 V bus through a 12.5/0.6 kV transformer and IR 52-L3 to IR Bus 2; transformer tag/rating/protection not supplied.'),dict(sourceId='r013',description='Recovered IR-Visual-Demo-r013; conceptual SOP grouping, not as-built verified.'),
                     dict(sourceId='assumptions',description='All dynamics, impedances, initial positions, loads and available auxiliaries are training assumptions.')],
         assumptions=dict(baseMVA=100,frequencyHz=60,auxiliariesAvailable=True,
             topology='r013 source-qualified topology; unresolved paths omitted',
@@ -137,7 +163,7 @@ def build():
         fidelity=dict(limitations=['DRAFT — NOT AS-BUILT VERIFIED; simulation only, not a switching procedure.',
             'r013 conceptual feeder grouping requires confirmation against 085-4-2101r13.',
             'All impedances, dynamics, protection, sync windows and auxiliary availability are assumptions.',
-            'IR G11–13 step-up and service wiring unresolved: no inferred connections; associated controls blocked.',
+            'G11/G12/G13 600 V route user-confirmed via transformer and IR 52-L3 to Bus 2; transformer tag/rating, impedance and protection unverified. Service wiring remains unresolved and blocked.',
             'T4/T7 circuit-switcher operation unverified: fixed closed training boundaries; no controls.',
             '12/12.5/13 kV and 230/245 kV source differences retained; operating voltage bases assumed.']))
     scenarios=[]
@@ -146,12 +172,12 @@ def build():
         ('R013-T8-LOSS','r013 — T8 supply lost (ties open)',[dict(equipmentId='CTS-52-T8',field='position',value='open')]),
         ('R013-T9-LOSS','r013 — T9 supply lost (ties open)',[dict(equipmentId='CTS-52-T9',field='position',value='open')]),
         ('R013-IS-L1-LOSS','r013 — Island line 1 lost',[dict(equipmentId='IS-L1-HV',field='position',value='open')])]:
-        scenarios.append(dict(scenarioId=id,revision=1,title=title,modelId=model['modelId'],seed=1,
+        scenarios.append(dict(scenarioId=id,revision=2,title=title,modelId=model['modelId'],seed=1,
             synthetic=True,notAProcedure=True,objective='Explore the draft topology; start, synchronize and stop a modeled unit. Unresolved routes remain isolated.',initialOverrides=overrides))
     return model,dict(scenarios=scenarios)
 
 
-if __name__=='__main__':
+def write_artifacts():
     model,scenarios=build()
     for name,obj in [('is-tw-ir-r013.model.json',model),('is-tw-ir-r013-scenarios.json',scenarios)]:
         (FIX/name).write_text(json.dumps(obj,indent=2)+'\n',encoding='utf-8')
@@ -167,12 +193,79 @@ if __name__=='__main__':
             if 'DEMO CONFIGURATION' in text:element.text='SIMULATION · UNVERIFIED DRAFT'
             elif 'No live data' in text:element.text='Select a device for simulated state and source notes'
             elif 'CLOSED demo state' in text:element.text='Unit positions from simulator; no plant feedback'
-            elif text.startswith('Breakers:'):element.text='C / O = simulated position · ? = unresolved'
+            elif text.startswith('Breakers:'):element.text='Green = closed · red = open · amber ? = unverified'
         if 'data-device' in element.attrib:
             key=element.get('data-device');id=model['drawingBindings'][key]
             element.set('aria-label',id+' simulator details')
         if 'data-breaker-state' in element.attrib:
             element.set('data-breaker-state','unknown')
             element.set('stroke','#9db0c0')
+    enhance_drawing(svg,model)
     (assets/'runtime.svg').write_text(ET.tostring(svg,encoding='unicode'),encoding='utf-8')
     print(f"r013: {len(model['equipment'])} equipment, {len(model['drawingBindings'])} drawing bindings")
+
+
+def enhance_drawing(svg, model):
+    """Derived review geometry; recovered r013 source bytes remain untouched."""
+    ns='{http://www.w3.org/2000/svg}'
+    def add(parent,tag,**attrs):return ET.SubElement(parent,ns+tag,{k.replace('_','-'):str(v) for k,v in attrs.items()})
+    def text(parent,x,y,value,**attrs):
+        e=add(parent,'text',x=x,y=y,fill='#e4edf5',font_family='Helvetica,Arial,sans-serif',font_size=15,**attrs);e.text=value;return e
+    # New visible route is right of the existing G6-G9 branches; no crossing implies a junction.
+    route=ET.Element(ns+'g',{'data-user-confirmed-route':'IR-600V'})
+    add(route,'path',d='M 2086.8595041322315 790 H 2130 V 985 H 1770.495867768595',stroke='#75c5d4',stroke_width=3,fill='none')
+    for x in [1770.495867768595,1899.9173553719008,2029.3388429752067]:
+        add(route,'circle',cx=x,cy=985,r=3,fill='#75c5d4')
+    add(route,'circle',cx=2086.8595041322315,cy=790,r=3,fill='#75c5d4')
+    svg.append(route)
+    def device(key,x,y,kind):
+        g=add(svg,'g',data_device=key,tabindex=0,role='button',aria_label=key+' simulator details')
+        add(g,'title').text=key+' - click for details'
+        add(g,'rect',x=x-20,y=y-20,width=40,height=40,fill='#101b26')
+        sym=add(g,'g',data_northstar_symbol=kind,transform=f'translate({x} {y}) rotate(90) scale(0.45)',stroke='#9db0c0',stroke_width=5.5,fill='none')
+        return g,sym
+    g,sym=device('IR-52L3',2130,845,'breaker')
+    add(sym,'path',d='M-31 0 H-22 M22 0 H31')
+    add(sym,'rect',x=-22,y=-22,width=44,height=44)
+    add(sym,'path',data_position_bar='simulation',d='M-13 0 H13')
+    text(g,2100,840,'IR 52-L3',text_anchor='end')
+    g,sym=device('IR-T-600V',2130,930,'transformer')
+    sym.set('transform','translate(2130 930) scale(0.7)')
+    add(sym,'path',d='M0 -32 V-18 M0 18 V32')
+    add(sym,'circle',cx=0,cy=-8,r=13);add(sym,'circle',cx=0,cy=8,r=13)
+    text(g,2100,925,'12.5 / 0.6 kV',text_anchor='end')
+    note=add(g,'text',x=2100,y=945,fill='#f2bc61',font_size=12,text_anchor='end');note.text='Tag / rating unverified'
+    g=add(svg,'g',data_device='IR-B600',tabindex=0,role='button',aria_label='IR 600 V bus simulator details')
+    add(g,'path',d='M1770.495867768595 985 H2130',stroke='transparent',stroke_width=15,fill='none')
+    for e in list(svg):
+        if e.tag==ns+'text' and (e.text or '') in ['TW 52L1','TW 52L2','IS-52-L1','IS 52-L2','52-L2']:svg.remove(e)
+    for e in svg.iter(ns+'text'):
+        if '600 V' in (e.text or '') and 'step-up routing unresolved' in (e.text or ''):
+            e.text='600 V bus - user-confirmed route';e.set('data-600v-route-label','true')
+    by_id={d['equipmentId']:d for d in model['equipment']}
+    for g in svg.iter(ns+'g'):
+        key=g.get('data-device')
+        if not key:continue
+        d=by_id[model['drawingBindings'][key]]
+        g.set('aria-label',d['label']+' simulator details')
+        title=g.find(ns+'title')
+        if title is not None:title.text=d['label']+' - click for details'
+        sym=next((e for e in g if e.get('data-northstar-symbol')),None)
+        if sym is None or sym.get('data-northstar-symbol') not in {'breaker','disconnect','circuit-switcher','earth-switch'}:continue
+        transform=sym.get('transform','');xy=re.search(r'translate\(([-.0-9]+) ([-.0-9]+)\)',transform)
+        if not xy:continue
+        x,y=map(float,xy.groups())
+        scale=.75 if sym.get('data-northstar-symbol')=='breaker' else .65
+        sym.set('transform',re.sub(r'scale\([^)]+\)',f'scale({scale})',transform))
+        for rect in g.findall(ns+'rect'):
+            rect.set('x',str(x-20));rect.set('y',str(y-20));rect.set('width','40');rect.set('height','40')
+        for bar in sym.iter(ns+'path'):
+            if 'data-position-bar' in bar.attrib:bar.set('d','M-13 0 H13')
+        for label in list(g.findall(ns+'text')):
+            if label.text=='?':g.remove(label)
+            elif float(label.get('x','0'))>x and float(label.get('x','0'))<x+28:label.set('x',str(x+28))
+        if key in ['TW-52L1','TW-52L2','IS-L1-HV','IS-L2-HV','IS-L2-LV']:
+            text(g,x+28,y+5,d['label'])
+
+
+if __name__=='__main__':write_artifacts()

@@ -3,7 +3,7 @@
   const root=document.querySelector('.switching-sim'); if(!root)return;
   const $=s=>root.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const shell=document.createElement('section');shell.className='r013';shell.hidden=true;
-  shell.innerHTML='<header><div><small>SIMULATION ONLY · SOURCE-QUALIFIED DRAFT</small><h2>Island / Twin / Iroquois · r013</h2></div><div class="r013-summary"></div></header><p class="r013-warning">Unverified: no as-built acceptance. Auxiliary availability, impedances, dynamics and initial positions are assumptions. Amber ? devices have unresolved wiring or operating duty; their controls are disabled. Wires show source geometry, not energization.</p><div class="r013-toolbar"><button data-zoom="out">Zoom out</button><button data-zoom="fit">Fit drawing</button><button data-zoom="in">Zoom in</button><output class="r013-zoom" aria-live="polite">100%</output><button data-fullscreen>Full screen</button><button data-details aria-expanded="false">Device details</button><span class="r013-pan-help">Scroll to zoom &middot; drag to pan &middot; Esc to exit</span><label>Device <select class="r013-picker" aria-label="r013 device"></select></label></div><div class="r013-layout"><div class="r013-scroll" tabindex="0" aria-label="Schematic viewport: scroll to zoom, drag or arrow keys to pan"><div class="r013-drawing">Loading r013 drawing…</div></div><aside class="r013-face"></aside></div><details><summary>Assumptions and unresolved connections</summary><ul class="r013-limitations"></ul><p>600 V IR G11–13 step-up routes, station-service supply routes, T12/T14 sluice wiring and remaining unidentified targets have no inferred connection. Circuit switchers remain fixed training boundaries. Original demo colors are not used as feedback.</p></details>';
+  shell.innerHTML='<header><div><small>SIMULATION ONLY · SOURCE-QUALIFIED DRAFT</small><h2>Island / Twin / Iroquois · r013</h2></div><div class="r013-summary"></div></header><p class="r013-warning">Unverified: no as-built acceptance. Auxiliary availability, impedances, dynamics and initial positions are assumptions. Amber ? devices have unresolved wiring or operating duty; their controls are disabled. Wires show source geometry, not energization.</p><div class="r013-toolbar"><button data-zoom="out">Zoom out</button><button data-zoom="fit">Fit drawing</button><button data-zoom="in">Zoom in</button><output class="r013-zoom" aria-live="polite">100%</output><button data-fullscreen>Full screen</button><button data-details aria-expanded="false">Device details</button><span class="r013-pan-help">Scroll to zoom &middot; drag to pan &middot; Esc to exit</span><label>Device <select class="r013-picker" aria-label="r013 device"></select></label></div><div class="r013-layout"><div class="r013-scroll" tabindex="0" aria-label="Schematic viewport: scroll to zoom, drag or arrow keys to pan"><div class="r013-drawing">Loading r013 drawing…</div></div><aside class="r013-face"></aside></div><details><summary>Assumptions and unresolved connections</summary><ul class="r013-limitations"></ul><p>G11/G12/G13 share a user-confirmed 600 V bus through a 12.5/0.6 kV transformer and IR 52-L3 to IR Bus 2. Transformer tag, rating and protection remain unverified. Station-service routes, T12/T14 sluice wiring and other unidentified targets have no inferred connection. Circuit switchers remain fixed training boundaries. Original demo colors are not used as feedback.</p></details>';
   $('.sim-unit-panel').before(shell);
   const buses=document.createElement('div');buses.className='r013-buses';buses.setAttribute('aria-label','Simulated bus voltages');
   shell.querySelector('.r013-toolbar').after(buses);
@@ -56,12 +56,15 @@
   function update(){
     if(!snap?.r013)return;
     const devices=snap.equipment;
-    shell.querySelector('.r013-summary').textContent=`21 units · ${devices.filter(d=>d.type==='generator'&&d.sequenceState==='ONLINE').length} online · ${snap.status.toUpperCase()}`;
-    buses.innerHTML=['CTS-M1','CTS-T8LV','CTS-T9LV','IS-B1','IS-B2','TF-B1','TF-B2','IR-B1','IR-B2'].map(id=>{
-      const n=snap.electrical.nodes[id];return `<span><b>${id}</b> ${number(n.voltageKVLL)} kV · ${n.energization==='deenergized'?'DEAD':n.gridConnected?'GRID':'ISLAND'}</span>`;
+    const confirmed600=!!snap.drawingBindings['IR-52L3'];
+    shell.querySelectorAll('[data-user-confirmed-route]').forEach(e=>e.style.display=confirmed600?'':'none');
+    shell.querySelectorAll('[data-600v-route-label]').forEach(e=>e.textContent=confirmed600?'600 V bus - user-confirmed route':'600 V route unresolved in this saved revision');
+    shell.querySelector('.r013-summary').textContent=`Revision ${snap.modelRevision} · 21 units · ${devices.filter(d=>d.type==='generator'&&d.sequenceState==='ONLINE').length} online · ${snap.status.toUpperCase()}`;
+    buses.innerHTML=['CTS-M1','CTS-T8LV','CTS-T9LV','IS-B1','IS-B2','TF-B1','TF-B2','IR-B1','IR-B2','IR-B600'].map(id=>{
+      const n=snap.electrical.nodes[id];if(!n)return '';return `<span><b>${id}</b> ${number(n.voltageKVLL)} kV · ${n.energization==='deenergized'?'DEAD':n.gridConnected?'GRID':'ISLAND'}</span>`;
     }).join('');
     shell.querySelectorAll('g[data-device]').forEach(g=>{
-      const d=find(snap.drawingBindings[g.dataset.device]);if(!d)return;
+      const d=find(snap.drawingBindings[g.dataset.device]);g.style.display=d?'':'none';if(!d)return;
       const unresolved=d.controlBlocked,position=d.indicationQuality==='good'?d.reportedPosition:null;
       const status=unresolved?'?':position==='closed'?'C':position==='open'?'O':({STOPPED:'OFF',ONLINE:'ON',STARTING:'START',STOPPING:'STOP'}[d.sequenceState]||d.sequenceState||'');
       g.classList.toggle('r013-unresolved',!!unresolved);
@@ -75,14 +78,14 @@
         if(!bar&&symbol.dataset.northstarSymbol==='breaker'){
           bar=document.createElementNS('http://www.w3.org/2000/svg','path');bar.setAttribute('data-position-bar','simulation');symbol.append(bar);
         }
-        if(bar){bar.setAttribute('d',position==='closed'?'M-22 0 H22':'M0 -17 V17');bar.setAttribute('visibility',unresolved?'hidden':'visible');}
+        if(bar){bar.setAttribute('d',position==='closed'?'M-13 0 H13':'M0 -13 V13');bar.setAttribute('visibility',unresolved?'hidden':'visible');}
       }
       let label=g.querySelector('.r013-status');
       if(!label){
         const box=g.getBBox();label=document.createElementNS('http://www.w3.org/2000/svg','text');label.setAttribute('class','r013-status');
         label.setAttribute('x',box.x);label.setAttribute('y',box.y-7);g.append(label);
       }
-      label.textContent=status;label.setAttribute('fill',unresolved?'#f2bc61':'#e4edf5');
+      label.textContent=unresolved?'?':'';label.setAttribute('fill',unresolved?'#f2bc61':'#e4edf5');
     });
     shell.querySelectorAll('[data-r013-action]').forEach(b=>b.disabled=snap.status!=='running');
   }
@@ -107,7 +110,7 @@
     if(faceId!==id){
       details(true);faceId=id;
       const actions=d.actions.filter(a=>['start','stop','emergency_stop','open','close','close_dead','synchronize','cancel_sync','reset_lockout','reset_86','reset_94'].includes(a));
-      $('.sim-device').innerHTML=`<h3>${esc(d.sourceDetails?.title||d.sourceDetails?.Equipment||d.label)}</h3><p>${esc(id)} · ${esc(d.type)}</p><p class="r013-warning">${esc(d.verification?.note)}</p><div class="r013-values"></div><div class="r013-controls">${actions.map(a=>`<button data-r013-action="${a}">${esc({close:'Close · sync check',close_dead:'Energize dead bus'}[a]||a.replaceAll('_',' '))}</button>`).join('')}</div>${d.actions.includes('setpoint')?`<label>Simulated MW demand <input class="r013-mw" type="number" min="0" max="${d.parameters.ratedMW}" step="0.1" value="${d.requestedMW}" aria-label="Simulated MW demand"></label><button data-r013-action="setpoint">Select MW demand</button>`:''}<details><summary>Original r013 source notes (historical demo)</summary><dl>${Object.entries(d.sourceDetails||{}).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></details>`;
+      $('.sim-device').innerHTML=`<h3>${esc(d.label||d.sourceDetails?.title||d.sourceDetails?.Equipment)}</h3><p>${esc(id)} · ${esc(d.type)}</p><p class="r013-warning">${esc(d.verification?.note)}</p><div class="r013-values"></div><div class="r013-controls">${actions.map(a=>`<button data-r013-action="${a}">${esc({close:'Close · sync check',close_dead:'Energize dead bus'}[a]||a.replaceAll('_',' '))}</button>`).join('')}</div>${d.actions.includes('setpoint')?`<label>Simulated MW demand <input class="r013-mw" type="number" min="0" max="${d.parameters.ratedMW}" step="0.1" value="${d.requestedMW}" aria-label="Simulated MW demand"></label><button data-r013-action="setpoint">Select MW demand</button>`:''}<details><summary>Original r013 source notes (historical demo)</summary><dl>${Object.entries(d.sourceDetails||{}).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></details>`;
     }
     const terminals=d.terminals.map(t=>{const n=s.electrical.nodes[t.nodeId];return `<p>${esc(t.nodeId)}: ${number(n?.voltageKVLL)} kV · ${number(n?.frequencyHz)} Hz · ${n?.gridConnected?'GRID':'NO GRID'}</p>`;}).join('');
     const latest=[...s.commands].reverse().find(c=>c.equipmentId===id);

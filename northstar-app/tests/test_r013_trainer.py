@@ -5,6 +5,7 @@ import importlib.util
 import json
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from northstar_sim.r013 import R013Session, MODEL_ID
 from northstar_sim.model import load_model
@@ -36,11 +37,11 @@ class R013Tests(unittest.TestCase):
         self.assertEqual(model,json.loads((FIX/'is-tw-ir-r013.model.json').read_text()))
         self.assertEqual(scenarios,json.loads((FIX/'is-tw-ir-r013-scenarios.json').read_text()))
 
-    def test_all_96_targets_have_provenance_and_21_units(self):
+    def test_all_99_targets_have_provenance_and_21_units(self):
         s=session();snap=s.snapshot()
         self.assertEqual(snap['modelId'],MODEL_ID)
         self.assertEqual(s.events[0]['detail']['modelId'],MODEL_ID)
-        self.assertEqual(len(snap['drawingBindings']),96)
+        self.assertEqual(len(snap['drawingBindings']),99)
         self.assertEqual(len(s._generators()),21)
         self.assertEqual(s.model['readiness'],'draft_site_model')
         self.assertTrue(all(s._device(id).get('verification') and s._device(id).get('sourceDetails') for id in snap['drawingBindings'].values()))
@@ -84,9 +85,9 @@ class R013Tests(unittest.TestCase):
         command(s,'IS-L1-HV','close_dead')
         self.assertGreater(s._node('IS-B1')['voltagePu'],.9)
 
-    def test_all_18_connected_units_start_sync_load_and_stop(self):
+    def test_all_21_connected_units_start_sync_load_and_stop(self):
         s=session();gens=[d for d in s._generators() if not d['controlBlocked']]
-        self.assertEqual(len(gens),18)
+        self.assertEqual(len(gens),21)
         for d in gens:command(s,d['equipmentId'],'start',wait=.1)
         advance(s,16)
         for d in gens:
@@ -103,14 +104,62 @@ class R013Tests(unittest.TestCase):
 
     def test_unresolved_devices_refused_server_side_and_remain_isolated(self):
         s=session()
-        for id,action in [('IR-G11','start'),('IR-52G11','close_dead'),('UNRESOLVED-IS-TSS1','close'),('CTS-T4-LV','open'),('CTS-ISL1','open')]:
+        for id,action in [('UNRESOLVED-IS-TSS1','close'),('CTS-T4-LV','open'),('CTS-ISL1','open')]:
             before=copy.deepcopy(s.states[id])
             choice=s.select('operator',dict(equipmentId=id,action=action,expectedControlRevision=s.control_revision))
             self.assertEqual(choice['permissives'][0]['code'],'UNVERIFIED_TOPOLOGY')
             with self.assertRaises(SimError):s.execute('operator',dict(selectionToken=choice['selectionToken'],expectedControlRevision=s.control_revision,idempotencyKey=id))
             self.assertEqual(s.states[id],before)
-        for i in [11,12,13]:self.assertEqual(s._node(f'IR-G{i}-UNRESOLVED-600V')['voltagePu'],0)
         self.assertEqual(s._device('UNRESOLVED-IS-TSS1')['terminals'],[])
+
+    def test_common_600v_bus_l3_isolation_and_voltage_ratio(self):
+        s=session()
+        self.assertEqual(s.model['revision'],2)
+        for i in [11,12,13]:
+            self.assertEqual(s._device(f'IR-G{i}')['parameters']['bus'],'IR-B600')
+            self.assertEqual(s._device(f'IR-52G{i}')['terminals'][1]['nodeId'],'IR-B600')
+            self.assertFalse(s._device(f'IR-G{i}')['controlBlocked'])
+        self.assertEqual([t['nodeId'] for t in s._device('IR-52L3')['terminals']],['IR-B2','IR-L3-TX-HV'])
+        self.assertEqual([t['nodeId'] for t in s._device('IR-T-600V')['terminals']],['IR-L3-TX-HV','IR-B600'])
+        self.assertAlmostEqual(s._node('IR-B600')['voltageKVLL'],.6)
+        self.assertAlmostEqual(s._node('IR-B2')['voltageKVLL'],12.5)
+        command(s,'IR-52L3','open')
+        self.assertEqual(s._node('IR-B600')['voltageKVLL'],0)
+        self.assertGreater(s._node('IR-B2')['voltageKVLL'],12)
+        command(s,'IR-52L3','close_dead')
+        self.assertAlmostEqual(s._node('IR-B600')['voltageKVLL'],.6)
+        lost=session('R013-T9-LOSS')
+        self.assertEqual(lost._node('IR-B600')['voltageKVLL'],0)
+        self.assertIn('training assumptions',s._device('IR-T-600V')['verification']['note'])
+
+    def test_low_voltage_units_export_through_l3_transformer(self):
+        s=session()
+        for i in [11,12,13]:command(s,f'IR-G{i}','start',wait=.1)
+        advance(s,16)
+        for i in [11,12,13]:command(s,f'IR-52G{i}','close')
+        advance(s,8)
+        snap=s.snapshot()
+        flow=snap['electrical']['branches']['IR-T-600V']
+        self.assertLess(flow['activeMW'],-2.5)
+        self.assertGreater(flow['secondaryCurrentA'],flow['currentA']*19)
+        for i in [11,12,13]:self.assertEqual(s.states[f'IR-G{i}']['sequenceState'],'ONLINE')
+
+    def test_runtime_switch_geometry_and_user_route(self):
+        svg=ET.fromstring((ROOT/'trainer-assets/r013/runtime.svg').read_text(encoding='utf-8'))
+        ns={'s':'http://www.w3.org/2000/svg'}
+        groups={e.get('data-device'):e for e in svg.findall('.//s:g[@data-device]',ns)}
+        for key in ['TW-52L1','TW-52L2','IR-52L3']:
+            g=groups[key];symbol=g.find('s:g[@data-northstar-symbol="breaker"]',ns)
+            self.assertIn('scale(0.75)',symbol.get('transform'))
+            self.assertIn('52-L',g.find('s:title',ns).text)
+        for bar in svg.findall('.//s:path[@data-position-bar]',ns):
+            self.assertEqual(bar.get('d'),'M-13 0 H13')
+        self.assertIn('IR-T-600V',groups)
+        self.assertIn('IR-B600',groups)
+        route=svg.find('s:g[@data-user-confirmed-route="IR-600V"]',ns)
+        self.assertIsNotNone(route)
+        self.assertGreater(list(svg).index(route),max(i for i,e in enumerate(svg) if e.tag.endswith('rect')))
+        self.assertNotIn('step-up routing unresolved',' '.join(svg.itertext()))
 
     def test_disconnector_requires_its_own_breaker_open(self):
         s=session();d=s._device('CTS-89-T8')
