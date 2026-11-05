@@ -1,3 +1,7 @@
+## 20261105-login-workers-button
+
+Login version and worker explanation removed; solid green WORKERS - CONTRACTORS beneath OPEN DASHBOARD. Live HTML and browser preview verified. 599 tests passed; existing 4 failures/8 errors. See packets/2026-11-05-login-workers-button.md.
+
 ## 20261029-assistant-freshness
 
 Server-calculated saved forecast age, timezone regression coverage, and prompt version 9. 63 focused tests and synthetic provider age check pass. See packets/2026-10-29-assistant-freshness.md.
