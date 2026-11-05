@@ -25,7 +25,7 @@ MAX_BYTES = int(os.environ.get("NORTHSTAR_SHELF_MAX_MB", "90")) * 1024 * 1024
 LOCK = threading.RLock()
 RASTER = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
           ".gif": "image/gif", ".webp": "image/webp", ".avif": "image/avif"}
-ASSETS = {"index.html", "icon.svg", "mobile.js", "mobile.css", "manifest.webmanifest"}
+ASSETS = {"index.html", "icon.svg", "mobile.js", "mobile.css", "calendar-layout.js", "manifest.webmanifest"}
 ID = r"[a-f0-9-]{36}"
 
 
@@ -81,6 +81,10 @@ def database():
           id TEXT PRIMARY KEY, name TEXT NOT NULL, url TEXT NOT NULL DEFAULT '',
           item_id TEXT REFERENCES items(id) ON DELETE SET NULL);
         """)
+        calendar_columns = {row[1] for row in db.execute('PRAGMA table_info(shelf_calendar)')}
+        for name, definition in {'end_time':"TEXT NOT NULL DEFAULT ''", 'creator':"TEXT NOT NULL DEFAULT ''", 'category':"TEXT NOT NULL DEFAULT 'Other'", 'color':"TEXT NOT NULL DEFAULT '#E8E9E5'"}.items():
+            if name not in calendar_columns:
+                db.execute('ALTER TABLE shelf_calendar ADD COLUMN '+name+' '+definition)
         db.executemany('INSERT OR IGNORE INTO shelf_apps(id,name,url) VALUES (?,?,?)', [
             ('asd-connects','ASD Connects','https://common-ground-ontario.forceofnaturegenetics.chatgpt.site'), ('northstar','NorthStar','/northstar-clean.html'),
             ('northstar-games','NorthStar Games','https://games.northstarenergy.ca/'), ('mywords','MyWords','https://my-communication-aac.forceofnaturegenetics.chatgpt.site/'),
@@ -320,6 +324,9 @@ def dispatch(h):
         return send_file(h, ROOT / "shelf" / name, mimetypes.guess_type(name)[0] or "application/octet-stream")
     if route == "/api/shelf/session" and method == "GET":
         return send_json(h, {"authenticated":True,"username":"Ryan","platform":True,"maxUploadMB":MAX_BYTES//1048576})
+    if route == "/api/shelf/agenda/import" and method == "POST":
+        import northstar_shelf_agenda
+        return northstar_shelf_agenda.handle(h, __import__(__name__))
     if route == "/api/shelf/uploads" and method == "POST":
         return upload(h)
     match = re.fullmatch(r"/api/shelf/items/("+ID+r")/versions",route)
@@ -327,20 +334,37 @@ def dispatch(h):
         return upload(h, match[1])
     with LOCK, database() as db:
         if route == '/api/shelf/calendar' and method == 'GET':
-            return send_json(h, {'events':[dict(r) for r in db.execute('SELECT * FROM shelf_calendar ORDER BY day,time,created')]})
-        if route == '/api/shelf/calendar' and method == 'POST':
+            return send_json(h, {'calendar_version':2,'events':[dict(r) for r in db.execute('SELECT * FROM shelf_calendar ORDER BY day,time,created')]})
+        event_match = re.fullmatch(r'/api/shelf/calendar/('+ID+r')',route)
+        if method == 'POST' and (route == '/api/shelf/calendar' or event_match):
             body = read_json(h)
             title, day, time = text(body.get('title')), text(body.get('day')), text(body.get('time'))
+            end_time = text(body.get('end_time'))
+            existing = db.execute('SELECT * FROM shelf_calendar WHERE id=?',(event_match[1],)).fetchone() if event_match else None
+            if event_match and not existing: raise ShelfError('Event not found',404)
             try:
                 datetime.strptime(day, '%Y-%m-%d')
                 if time: datetime.strptime(time, '%H:%M')
+                if end_time:
+                    datetime.strptime(end_time, '%H:%M')
+                    if not re.fullmatch(r'\d{2}:\d{2}',time) or not re.fullmatch(r'\d{2}:\d{2}',end_time) or end_time <= time:
+                        raise ValueError()
+                    if not existing and (int(time[-2:]) % 15 or int(end_time[-2:]) % 15): raise ValueError()
             except ValueError:
-                raise ShelfError('Choose a valid calendar date and time')
+                raise ShelfError('Choose a valid date and an end time after the start, in 15-minute steps')
             if not title: raise ShelfError('Event title is required')
-            event = {'id':str(uuid.uuid4()),'title':title,'day':day,'time':time,'notes':text(body.get('notes'),2000),'created':now()}
-            db.execute('INSERT INTO shelf_calendar VALUES (?,?,?,?,?,?)', tuple(event.values()))
-            return send_json(h,event,201)
-        event_match = re.fullmatch(r'/api/shelf/calendar/('+ID+r')',route)
+            creator = existing['creator'] if existing else text(body.get('creator')).upper()
+            if not existing and (creator not in {'','R','S'} or ('end_time' in body and creator not in {'R','S'})):
+                raise ShelfError('Choose who is adding this event: R or S')
+            category = text(body.get('category',existing['category'] if existing else 'Other'),60) or 'Other'
+            color = text(body.get('color',existing['color'] if existing else '#E8E9E5'))
+            if not re.fullmatch(r'#[0-9a-fA-F]{6}',color): raise ShelfError('Choose a valid event colour')
+            event = {'id':existing['id'] if existing else str(uuid.uuid4()),'title':title,'day':day,'time':time,'notes':text(body.get('notes'),2000),'created':existing['created'] if existing else now(),'end_time':end_time,'creator':creator,'category':category,'color':color.upper()}
+            if existing:
+                db.execute('UPDATE shelf_calendar SET title=?,day=?,time=?,notes=?,end_time=?,category=?,color=? WHERE id=?',tuple(event[k] for k in ('title','day','time','notes','end_time','category','color','id')))
+            else:
+                db.execute('INSERT INTO shelf_calendar (id,title,day,time,notes,created,end_time,creator,category,color) VALUES (?,?,?,?,?,?,?,?,?,?)',tuple(event.values()))
+            return send_json(h,event,200 if existing else 201)
         if event_match and method == 'DELETE':
             db.execute('DELETE FROM shelf_calendar WHERE id=?',(event_match[1],))
             return send_json(h,{'ok':True})

@@ -30,7 +30,7 @@ def handle(handler):
     relative = route.path[len(PREFIX):] or '/'
     if relative == '/':
         relative = '/index.html'
-    if not (relative in ('/index.html', '/app.js', '/style.css') or relative.startswith('/api/')):
+    if not (relative in ('/index.html', '/app.js', '/style.css', '/manager.html', '/manager.js', '/manager.css') or relative.startswith('/api/')):
         handler.send_error(404)
         return True
     if handler.command == 'POST' and not relative.startswith('/api/'):
@@ -53,7 +53,8 @@ def handle(handler):
             headers['Authorization'] = 'Bearer ' + json.loads(ACCESS_FILE.read_text(encoding='utf-8-sig'))['dashboard']
         if body is not None:
             headers['Content-Type'] = handler.headers.get('Content-Type', 'application/json')
-        target = BASE + relative + (('?' + route.query) if route.query else '')
+        management = relative in ('/manager.html', '/manager.js', '/manager.css', '/api/manager', '/api/manager/receipt')
+        target = ('http://127.0.0.1:4311' if management else BASE) + relative + (('?' + route.query) if route.query else '')
         request = Request(target, data=body, headers=headers, method=handler.command)
         try:
             response = urlopen(request, timeout=30)

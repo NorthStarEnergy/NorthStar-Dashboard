@@ -8,7 +8,7 @@
 // fail so they call the control room instead — a request quietly queued by a
 // service worker would tell someone help is on the way when nothing was sent.
 
-const CACHE = 'northstar-checkin-v4-manual-safety';
+const CACHE = 'northstar-checkin-v6-worker-session';
 const SHELL = [
   '/contractor-checkin.html',
   '/manifest.webmanifest',
