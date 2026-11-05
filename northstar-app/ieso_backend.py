@@ -32,6 +32,7 @@ import northstar_phase1 as phase1
 import northstar_voice as voice
 import northstar_auth as auth
 import northstar_shelf as shelf
+import northstar_shelf_mobile as shelf_mobile
 import northstar_scada_workbench as scada_workbench
 import northstar_client_release as client_release
 import northstar_events as events
@@ -1709,6 +1710,8 @@ class Handler(SimpleHTTPRequestHandler):
         then 404s, because it does not exist on that hostname.
         """
         self.correlation_id = events.set_correlation_id(self.headers.get("X-Correlation-Id"))
+        if shelf_mobile.handle(self, shelf, OPERATOR_GATE):
+            return True
         denial = self._operator_gate_denial()
         if denial:
             self._refuse_operator_request(denial)
