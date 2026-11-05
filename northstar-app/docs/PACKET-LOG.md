@@ -1,3 +1,12 @@
+## 20261105-r013-main-readiness
+
+Restored the missing Shelf mobile module, database schema and retired server
+redirect; updated stale regression fixtures without widening runtime permissions.
+Full Python suite: 628 passed, 21 optional integration skips, 347 subtests passed.
+Full JavaScript suite: 72 passed. The earlier r013 collection blocker is resolved.
+Skipped PostgreSQL/browser integrations and r013 as-built/native acceptance remain
+unverified. See packets/2026-11-05-r013-main-readiness.md.
+
 ## 20261105-r013-island-cts
 
 Imported r013 into a separate 21-unit draft simulator, added Island, corrected

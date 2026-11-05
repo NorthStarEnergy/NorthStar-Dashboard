@@ -4,6 +4,7 @@ import hashlib
 import http.client
 import json
 import unittest
+from unittest.mock import patch
 import test_demo_auth as auth_tests
 
 
@@ -54,18 +55,35 @@ class ResearchAccessTest(unittest.TestCase):
             cookie=self.cookie(role)
             for route in ('/research/private.html','/research/projects/private.md',
                           '/research/../knowledge-library.html','/research/%2e%2e/device-library.js',
-                          '/research\\..\\device-library.js','/operator-session.js',
-                          '/api/daily-report/status','/api/library','/data/private.json'):
+                          '/research\\..\\device-library.js',
+                          '/api/library','/data/private.json'):
                 for method in ('GET','HEAD'):
                     self.assertIn(self.raw(method,route,cookie)[0],(403,405))
             for route in self.backend.SHARED_RESEARCH_ROUTES:
                 self.assertEqual(self.raw('POST',route,cookie)[0],403)
+            # The newer platform demo explicitly serves the shared shell's boot
+            # asset and read-only report status. The site-only role still cannot.
+            for method in ('GET','HEAD'):
+                self.assertEqual(self.raw(method,'/operator-session.js',cookie)[0],
+                                 200 if role=='platform_demo' else 403)
+            with patch.object(self.backend.daily_report,'request',return_value={'configured':False}) as report:
+                self.assertEqual(self.raw('GET','/api/daily-report/status',cookie)[0],
+                                 200 if role=='platform_demo' else 403)
+                self.assertEqual(report.call_count,1 if role=='platform_demo' else 0)
+            for method in ('HEAD','POST','DELETE'):
+                self.assertEqual(self.raw(method,'/api/daily-report/status',cookie)[0],403)
 
-    def test_demo_workspaces_link_to_research(self):
+    def test_demo_entrypoints_and_research_remain_available(self):
         for role,route in [('site_viewer','/demo-sites.html'),('platform_demo','/platform-demo.html')]:
             status,body=self.raw('GET',route,self.cookie(role))
             self.assertEqual(status,200)
-            self.assertIn(b'href="research.html"',body)
+            if role=='site_viewer':
+                self.assertTrue(b'href="research.html"' in body)
+            else:
+                # platform-demo now serves the role-filtered shared dashboard,
+                # rather than the historical standalone demo page.
+                self.assertTrue(b'operator-session.js' in body and b'demo-mode.js' in body)
+            self.assertEqual(self.raw('GET','/research.html',self.cookie(role))[0],200)
 
 
 if __name__=='__main__':unittest.main()
