@@ -19,8 +19,16 @@ The drawing shows simulated C/O positions, unit state and amber unresolved
 markers. Wires retain source geometry and **do not indicate energization**; use
 the live simulated bus-voltage strip and device terminal readings. Start, select,
 execute, synchronize and stop operate only on the isolated session. Normal,
-T8-loss, T9-loss and Island-line-1-loss exercises are available. Use zoom to inspect
-the original geometry. This is a draft training model, not an accepted as-built
+T8-loss, T9-loss and Island-line-1-loss exercises are available.
+
+Use **Full screen** for a dedicated schematic view. Scroll over the drawing to
+zoom around the pointer, drag to pan, or use Zoom in/out and Fit drawing. The
+zoom range is 10-600%; Fit drawing fits both dimensions. With the viewport
+focused, arrow keys pan, +/- zoom and 0 fits; Escape exits full screen. Device
+details are optional and open when equipment is selected. The unverified warning
+stays visible above the drawing, including in full screen.
+
+This is a draft training model, not an accepted as-built
 model or an ABB runtime integration.
 
 The original SVG and metadata are preserved under `trainer-assets/r013/`, with

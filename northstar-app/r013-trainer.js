@@ -3,12 +3,41 @@
   const root=document.querySelector('.switching-sim'); if(!root)return;
   const $=s=>root.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const shell=document.createElement('section');shell.className='r013';shell.hidden=true;
-  shell.innerHTML='<header><div><small>SIMULATION ONLY · SOURCE-QUALIFIED DRAFT</small><h2>Island / Twin / Iroquois · r013</h2></div><div class="r013-summary"></div></header><p class="r013-warning">Unverified: no as-built acceptance. Auxiliary availability, impedances, dynamics and initial positions are assumptions. Amber ? devices have unresolved wiring or operating duty; their controls are disabled. Wires show source geometry, not energization.</p><div class="r013-toolbar"><button data-zoom="out">Zoom out</button><button data-zoom="fit">Fit drawing</button><button data-zoom="in">Zoom in</button><label>Device <select class="r013-picker" aria-label="r013 device"></select></label></div><div class="r013-layout"><div class="r013-scroll"><div class="r013-drawing">Loading r013 drawing…</div></div><aside class="r013-face"></aside></div><details><summary>Assumptions and unresolved connections</summary><ul class="r013-limitations"></ul><p>600 V IR G11–13 step-up routes, station-service supply routes, T12/T14 sluice wiring and remaining unidentified targets have no inferred connection. Circuit switchers remain fixed training boundaries. Original demo colors are not used as feedback.</p></details>';
+  shell.innerHTML='<header><div><small>SIMULATION ONLY · SOURCE-QUALIFIED DRAFT</small><h2>Island / Twin / Iroquois · r013</h2></div><div class="r013-summary"></div></header><p class="r013-warning">Unverified: no as-built acceptance. Auxiliary availability, impedances, dynamics and initial positions are assumptions. Amber ? devices have unresolved wiring or operating duty; their controls are disabled. Wires show source geometry, not energization.</p><div class="r013-toolbar"><button data-zoom="out">Zoom out</button><button data-zoom="fit">Fit drawing</button><button data-zoom="in">Zoom in</button><output class="r013-zoom" aria-live="polite">100%</output><button data-fullscreen>Full screen</button><button data-details aria-expanded="false">Device details</button><span class="r013-pan-help">Scroll to zoom &middot; drag to pan &middot; Esc to exit</span><label>Device <select class="r013-picker" aria-label="r013 device"></select></label></div><div class="r013-layout"><div class="r013-scroll" tabindex="0" aria-label="Schematic viewport: scroll to zoom, drag or arrow keys to pan"><div class="r013-drawing">Loading r013 drawing…</div></div><aside class="r013-face"></aside></div><details><summary>Assumptions and unresolved connections</summary><ul class="r013-limitations"></ul><p>600 V IR G11–13 step-up routes, station-service supply routes, T12/T14 sluice wiring and remaining unidentified targets have no inferred connection. Circuit switchers remain fixed training boundaries. Original demo colors are not used as feedback.</p></details>';
   $('.sim-unit-panel').before(shell);
   const buses=document.createElement('div');buses.className='r013-buses';buses.setAttribute('aria-label','Simulated bus voltages');
   shell.querySelector('.r013-toolbar').after(buses);
   let snap,api,loaded=false,loading=false,zoom=100,faceId='',sessionKey='';
   const face=$('.sim-faceplate');
+  const viewport=shell.querySelector('.r013-scroll'), drawing=shell.querySelector('.r013-drawing');
+  let drag=null,suppressClick=false;
+  function setZoom(next,x=viewport.clientWidth/2,y=viewport.clientHeight/2){
+    const old=drawing.getBoundingClientRect().width;
+    const px=viewport.scrollLeft+x,py=viewport.scrollTop+y;
+    zoom=Math.max(10,Math.min(600,next));
+    drawing.style.width=zoom+'%';
+    const ratio=drawing.getBoundingClientRect().width/old;
+    viewport.scrollLeft=px*ratio-x;viewport.scrollTop=py*ratio-y;
+    shell.querySelector('.r013-zoom').textContent=Math.round(zoom)+'%';
+  }
+  function fitDrawing(){const svg=drawing.querySelector('svg');const box=svg?.viewBox.baseVal;if(!box?.width)return;setZoom(Math.min(100,100*viewport.clientHeight*box.width/(viewport.clientWidth*box.height)));viewport.scrollLeft=0;viewport.scrollTop=0;}
+  function details(show){shell.classList.toggle('r013-show-details',show);shell.querySelector('[data-details]').setAttribute('aria-expanded',String(show));}
+  function leaveFullscreen(){shell.classList.remove('r013-expanded');shell.querySelector('[data-fullscreen]').textContent='Full screen';document.body.style.overflow=previousOverflow;}
+  let previousOverflow='';
+  async function fullscreen(){
+    if(shell.classList.contains('r013-expanded')){if(document.fullscreenElement===shell)await document.exitFullscreen();leaveFullscreen();return;}
+    previousOverflow=document.body.style.overflow;document.body.style.overflow='hidden';shell.classList.add('r013-expanded');shell.querySelector('[data-fullscreen]').textContent='Exit full screen';
+    try{if(shell.requestFullscreen)await shell.requestFullscreen();}catch(_){/* The viewport overlay remains available when native fullscreen is denied. */}
+  }
+  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&shell.classList.contains('r013-expanded'))leaveFullscreen();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&shell.classList.contains('r013-expanded')){if(document.fullscreenElement===shell)document.exitFullscreen();leaveFullscreen();}});
+  viewport.addEventListener('wheel',e=>{e.preventDefault();const r=viewport.getBoundingClientRect();setZoom(zoom*Math.exp(-e.deltaY*.002),e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  viewport.addEventListener('pointerdown',e=>{if(e.button!==0)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:viewport.scrollLeft,top:viewport.scrollTop,moved:false};suppressClick=false;});
+  viewport.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(!drag.moved&&Math.hypot(dx,dy)>5){drag.moved=true;viewport.setPointerCapture(e.pointerId);viewport.classList.add('is-panning');}if(drag.moved){viewport.scrollLeft=drag.left-dx;viewport.scrollTop=drag.top-dy;}});
+  function endPan(){if(drag?.moved)suppressClick=true;drag=null;viewport.classList.remove('is-panning');}
+  viewport.addEventListener('pointerup',endPan);viewport.addEventListener('pointercancel',endPan);
+  viewport.addEventListener('keydown',e=>{if(e.target!==viewport)return;const moves={ArrowLeft:[-80,0],ArrowRight:[80,0],ArrowUp:[0,-80],ArrowDown:[0,80]};if(moves[e.key]){e.preventDefault();viewport.scrollBy(...moves[e.key]);}if(['+','=','-','0'].includes(e.key)){e.preventDefault();if(e.key==='0')fitDrawing();else setZoom(zoom*(e.key==='-'?.8:1.25));}});
+
   const find=id=>snap.equipment.find(d=>d.equipmentId===id);
   const number=v=>Number.isFinite(v)?v.toFixed(2):'—';
 
@@ -76,7 +105,7 @@
     snap=s;const d=find(id);if(!d)return;
     $('.sim-actions').querySelectorAll('[data-action]').forEach(b=>b.hidden=true);
     if(faceId!==id){
-      faceId=id;
+      details(true);faceId=id;
       const actions=d.actions.filter(a=>['start','stop','emergency_stop','open','close','close_dead','synchronize','cancel_sync','reset_lockout','reset_86','reset_94'].includes(a));
       $('.sim-device').innerHTML=`<h3>${esc(d.sourceDetails?.title||d.sourceDetails?.Equipment||d.label)}</h3><p>${esc(id)} · ${esc(d.type)}</p><p class="r013-warning">${esc(d.verification?.note)}</p><div class="r013-values"></div><div class="r013-controls">${actions.map(a=>`<button data-r013-action="${a}">${esc({close:'Close · sync check',close_dead:'Energize dead bus'}[a]||a.replaceAll('_',' '))}</button>`).join('')}</div>${d.actions.includes('setpoint')?`<label>Simulated MW demand <input class="r013-mw" type="number" min="0" max="${d.parameters.ratedMW}" step="0.1" value="${d.requestedMW}" aria-label="Simulated MW demand"></label><button data-r013-action="setpoint">Select MW demand</button>`:''}<details><summary>Original r013 source notes (historical demo)</summary><dl>${Object.entries(d.sourceDetails||{}).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></details>`;
     }
@@ -86,7 +115,10 @@
     update();
   }
   shell.addEventListener('click',e=>{
-    const z=e.target.closest('[data-zoom]');if(z){zoom=z.dataset.zoom==='fit'?100:Math.max(100,Math.min(300,zoom+(z.dataset.zoom==='in'?25:-25)));shell.querySelector('.r013-drawing').style.width=zoom+'%';return;}
+    if(e.target.closest('[data-fullscreen]')){fullscreen();return;}
+    if(e.target.closest('[data-details]')){details(!shell.classList.contains('r013-show-details'));return;}
+    const z=e.target.closest('[data-zoom]');if(z){if(z.dataset.zoom==='fit')fitDrawing();else setZoom(zoom*(z.dataset.zoom==='in'?1.25:.8));return;}
+    if(suppressClick){suppressClick=false;return;}
     const g=e.target.closest('[data-device]');if(g){api.chooseDevice(snap.drawingBindings[g.dataset.device]);return;}
     const b=e.target.closest('[data-r013-action]');if(!b)return;
     let extra={};if(b.dataset.r013Action==='setpoint'){const input=$('.r013-mw');if(!input.value.trim()||!input.checkValidity()){input.reportValidity();return;}extra={requestedValue:Number(input.value),unit:'MW'};}

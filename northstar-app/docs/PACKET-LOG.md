@@ -1,3 +1,11 @@
+## 20261105-r013-viewport
+
+Full-width and full-screen r013 schematic with pointer-centered zoom, drag/keyboard
+pan, fit drawing and optional device details. Unverified warning remains visible;
+unresolved equipment controls remain blocked. Chrome checks pass; Python 628
+passed, 21 skipped, 347 subtests passed; JavaScript 72 passed. See
+packets/2026-11-05-r013-viewport.md.
+
 ## 20261105-r013-main-readiness
 
 Restored the missing Shelf mobile module, database schema and retired server
