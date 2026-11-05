@@ -1,0 +1,9 @@
+node_modules/
+outputs/
+dist/
+*.log
+.env
+.env.*
+production-ready.json
+connector/
+data/

@@ -1,0 +1,8 @@
+{
+  "name": "northstar-manager",
+  "version": "1.0.5",
+  "private": true,
+  "main": "desktop/manager-main.cjs",
+  "northstarProjectRoot": "C:\\Users\\User\\NorthStar\\northstar-local",
+  "description": "NorthStar Manager for this production server"
+}
