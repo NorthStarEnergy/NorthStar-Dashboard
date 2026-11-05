@@ -1,3 +1,7 @@
+## 20261105-apex-login
+
+Root domain routes to the updated operations login. See packets/2026-11-05-apex-login.md.
+
 # 2026-10-11 — Operations Console / five-category Event Log (v0.157)
 
 Implemented shared Console, durable linked tasks, daily/DST and exact-event templates, additive SQLite storage and operator-only API. See [packet report](packets/2026-10-11-operations-console.md). Actual Windows origin activation and visual acceptance remain pending. Baseline failures are documented in delivery validation.
