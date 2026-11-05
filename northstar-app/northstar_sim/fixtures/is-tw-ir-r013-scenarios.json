@@ -1,0 +1,66 @@
+{
+  "scenarios": [
+    {
+      "scenarioId": "R013-NORMAL",
+      "revision": 1,
+      "title": "r013 \u2014 connected start / synchronize / stop",
+      "modelId": "SIM-IS-TW-IR-R013",
+      "seed": 1,
+      "synthetic": true,
+      "notAProcedure": true,
+      "objective": "Explore the draft topology; start, synchronize and stop a modeled unit. Unresolved routes remain isolated.",
+      "initialOverrides": []
+    },
+    {
+      "scenarioId": "R013-T8-LOSS",
+      "revision": 1,
+      "title": "r013 \u2014 T8 supply lost (ties open)",
+      "modelId": "SIM-IS-TW-IR-R013",
+      "seed": 1,
+      "synthetic": true,
+      "notAProcedure": true,
+      "objective": "Explore the draft topology; start, synchronize and stop a modeled unit. Unresolved routes remain isolated.",
+      "initialOverrides": [
+        {
+          "equipmentId": "CTS-52-T8",
+          "field": "position",
+          "value": "open"
+        }
+      ]
+    },
+    {
+      "scenarioId": "R013-T9-LOSS",
+      "revision": 1,
+      "title": "r013 \u2014 T9 supply lost (ties open)",
+      "modelId": "SIM-IS-TW-IR-R013",
+      "seed": 1,
+      "synthetic": true,
+      "notAProcedure": true,
+      "objective": "Explore the draft topology; start, synchronize and stop a modeled unit. Unresolved routes remain isolated.",
+      "initialOverrides": [
+        {
+          "equipmentId": "CTS-52-T9",
+          "field": "position",
+          "value": "open"
+        }
+      ]
+    },
+    {
+      "scenarioId": "R013-IS-L1-LOSS",
+      "revision": 1,
+      "title": "r013 \u2014 Island line 1 lost",
+      "modelId": "SIM-IS-TW-IR-R013",
+      "seed": 1,
+      "synthetic": true,
+      "notAProcedure": true,
+      "objective": "Explore the draft topology; start, synchronize and stop a modeled unit. Unresolved routes remain isolated.",
+      "initialOverrides": [
+        {
+          "equipmentId": "IS-L1-HV",
+          "field": "position",
+          "value": "open"
+        }
+      ]
+    }
+  ]
+}

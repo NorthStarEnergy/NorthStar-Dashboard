@@ -1,0 +1,213 @@
+{
+  "schemaVersion": "northstar.training-station-inventory.v1",
+  "preparedDate": "2026-11-05",
+  "stations": [
+    {
+      "siteId": "site:fort-frances",
+      "name": "Fort Frances",
+      "area": "West",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:fort-frances-ts",
+      "name": "Fort Frances TS",
+      "area": "West",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:calm-lake",
+      "name": "Calm Lake",
+      "area": "West",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:sturgeon-falls",
+      "name": "Sturgeon Falls",
+      "area": "West",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:kenora",
+      "name": "Kenora",
+      "area": "West",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:norman",
+      "name": "Norman",
+      "area": "West",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:twin-falls",
+      "name": "Twin Falls",
+      "area": "East",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:iroquois-falls",
+      "name": "Iroquois Falls",
+      "area": "East",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:iroquois-falls-230-kv",
+      "name": "Iroquois Falls 230 kV",
+      "area": "East",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:island-falls",
+      "name": "Island Falls",
+      "area": "East",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:old-woman-falls",
+      "name": "Old Woman Falls",
+      "area": "East",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:white-otter-rapids",
+      "name": "White Otter Rapids",
+      "area": "East",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:camp-three-rapids",
+      "name": "Camp Three Rapids",
+      "area": "East",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:big-beaver-falls",
+      "name": "Big Beaver Falls",
+      "area": "East",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:okikendawt-gs",
+      "name": "Okikendawt GS",
+      "area": "East",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:mcdougal",
+      "name": "McDougal",
+      "area": "Quebec",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:bird-gs",
+      "name": "Bird GS",
+      "area": "Quebec",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:cogent",
+      "name": "Cogent",
+      "area": "Quebec",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:aiyers-1",
+      "name": "Aiyers 1",
+      "area": "Quebec",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    },
+    {
+      "siteId": "site:aiyers-2",
+      "name": "Aiyers 2",
+      "area": "Quebec",
+      "readiness": "catalog_only",
+      "modelId": null,
+      "equipmentCount": null,
+      "source": "reference/northstar-sites.js",
+      "notes": "Identity only; equipment/topology/parameters require source review."
+    }
+  ],
+  "legacyMappings": [
+    {
+      "legacyId": "site:iroquois-falls-ts",
+      "canonicalCandidate": "site:iroquois-falls-230-kv",
+      "status": "verify source meaning before migration"
+    }
+  ]
+}

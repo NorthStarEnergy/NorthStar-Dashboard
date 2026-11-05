@@ -1,0 +1,854 @@
+{
+  "A1L93": {
+    "title": "A1L93",
+    "Display state": "SOP normally closed",
+    "Source": "FLC-2.1-C-07 Rev 02, §5.3",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "T4-HV": {
+    "title": "52-T4HV",
+    "Display state": "SOP normally closed",
+    "Source": "FLC-2.1-C-07 Rev 02, §5.3",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "T4": {
+    "title": "T4",
+    "Voltage ratio": "230 / 115 kV",
+    "Rated capacity": "45 / 60 / 75 MVA",
+    "Cooling": "Normally AUTO; see SOP §5.6 for single T8/T9 operation",
+    "Tap control": "Normally MANUAL; IESO direction/consent per SOP",
+    "Source": "SOP §§5.2, 5.6",
+    "Symbol": "Top and bottom opposing windings; not a winding-connection diagram"
+  },
+  "T4-LV": {
+    "title": "89-52-T4-LV",
+    "Display state": "SOP normally closed",
+    "Source": "SOP §5.6",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "circuit-switcher"
+  },
+  "T7-HV": {
+    "title": "52-T7HV",
+    "Display state": "SOP normally closed",
+    "Source": "FLC-2.1-C-07 Rev 02, §5.3",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "T7": {
+    "title": "T7",
+    "Voltage ratio": "230 / 115 kV",
+    "Rated capacity": "45 / 60 / 75 MVA",
+    "Cooling": "Normally AUTO; see SOP §5.6 for single T8/T9 operation",
+    "Tap control": "Normally MANUAL; IESO direction/consent per SOP",
+    "Source": "SOP §§5.2, 5.6",
+    "Symbol": "Top and bottom opposing windings; not a winding-connection diagram"
+  },
+  "T7-LV": {
+    "title": "89-52-T7-LV",
+    "Display state": "SOP normally closed",
+    "Source": "SOP §5.6",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "circuit-switcher"
+  },
+  "T8-HV": {
+    "title": "52-T8HV",
+    "Display state": "SOP normally closed",
+    "Source": "FLC-2.1-C-07 Rev 02, §5.3",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "T8": {
+    "title": "T8",
+    "Voltage ratio": "245 / 12.5 kV",
+    "Rated capacity": "30 / 45 / 60 MVA",
+    "Cooling": "Normally AUTO; see SOP §5.6 for single T8/T9 operation",
+    "Tap control": "Normally MANUAL; IESO direction/consent per SOP",
+    "Source": "SOP §§5.2, 5.6",
+    "Symbol": "Top and bottom opposing windings; not a winding-connection diagram"
+  },
+  "T8-LV": {
+    "title": "52-T8LV",
+    "Display state": "SOP normally closed",
+    "Source": "SOP §5.6",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "T9-HV": {
+    "title": "52-T9HV",
+    "Display state": "SOP normally closed",
+    "Source": "FLC-2.1-C-07 Rev 02, §5.3",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "T9": {
+    "title": "T9",
+    "Voltage ratio": "245 / 12.5 kV",
+    "Rated capacity": "30 / 45 / 60 MVA",
+    "Cooling": "Normally AUTO; see SOP §5.6 for single T8/T9 operation",
+    "Tap control": "Normally MANUAL; IESO direction/consent per SOP",
+    "Source": "SOP §§5.2, 5.6",
+    "Symbol": "Top and bottom opposing windings; not a winding-connection diagram"
+  },
+  "T9-LV": {
+    "title": "52-T9LV",
+    "Display state": "SOP normally closed",
+    "Source": "SOP §5.6",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "CS1": {
+    "title": "CS1",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2; normal position not explicitly established here",
+    "Equipment": "52-89-L1",
+    "Line rating": "315 A at 30°C",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "circuit-switcher",
+    "Symbol state note": "Open-position artwork with ? is a placeholder; actual position is unknown."
+  },
+  "CS2": {
+    "title": "CS2",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2; normal position not explicitly established here",
+    "Equipment": "52-89-L2",
+    "Line rating": "315 A at 30°C",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "circuit-switcher",
+    "Symbol state note": "Open-position artwork with ? is a placeholder; actual position is unknown."
+  },
+  "IS-L1-HV": {
+    "title": "",
+    "Display state": "SOP normally closed",
+    "Source": "User-supplied topology; SOP normal configuration",
+    "Equipment": "IS-52-L1",
+    "Side": "115 kV line end",
+    "Alias in SOP": "IS 52-T1L1",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IS-L2-HV": {
+    "title": "",
+    "Display state": "SOP normally closed",
+    "Source": "User-supplied topology; SOP normal configuration",
+    "Equipment": "IS 52-L2",
+    "Side": "115 kV line end",
+    "Alias in SOP": "IS 52-T2L2",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IS-T1": {
+    "title": "IS-T1",
+    "Voltage ratio": "115 / 12.5 kV — user supplied",
+    "SOP nameplate voltage": "120 / 12.5 kV in §5.2; retained as source discrepancy",
+    "Rated capacity": "24 MVA per SOP; user voltage 115 / 12.5 kV",
+    "Source": "User instruction 2026-11-05 + SOP §5.2"
+  },
+  "IS-T2": {
+    "title": "IS-T2",
+    "Voltage ratio": "115 / 12.5 kV — user supplied",
+    "SOP nameplate voltage": "120 / 12.5 kV in §5.2; retained as source discrepancy",
+    "Rated capacity": "SOP prints 5/35 MVA; user voltage 115 / 12.5 kV",
+    "Source": "User instruction 2026-11-05 + SOP §5.2"
+  },
+  "IS-L2-LV": {
+    "title": "",
+    "Display state": "SOP normally closed",
+    "Source": "User-supplied sequence; SOP names IS 52L2",
+    "Equipment": "52-L2",
+    "Side": "12.5 kV transformer-secondary side",
+    "Identity": "Separate from IS 52-L2 at the 115 kV line end",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IS-B1": {
+    "title": "IS Bus 1 (B1)",
+    "Voltage": "12 kV",
+    "Source": "User topology 2026-11-05",
+    "Units": "ISG1 / ISG2 — 10 MW each"
+  },
+  "IS-B2": {
+    "title": "IS Bus 2 (B2)",
+    "Voltage": "12 kV",
+    "Source": "User topology 2026-11-05",
+    "Units": "ISG3 / ISG4 — 11 MW each"
+  },
+  "IS-G1-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IS 52-G1",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IS-G1": {
+    "title": "IS G1",
+    "Rating": "10 MW — user supplied",
+    "Feeder assignment": "B1 via IS-T1",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Source": "User instruction 2026-11-05",
+    "SOP apparent-power rating": "12.5 MVA",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IS-G2-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IS 52-G2",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IS-G2": {
+    "title": "IS G2",
+    "Rating": "10 MW — user supplied",
+    "Feeder assignment": "B1 via IS-T1",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Source": "User instruction 2026-11-05",
+    "SOP apparent-power rating": "12.5 MVA",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IS-G3-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IS 52-G3",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IS-G3": {
+    "title": "IS G3",
+    "Rating": "11 MW — user supplied",
+    "Feeder assignment": "B2 via IS-T2 and secondary 52-L2",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Source": "User instruction 2026-11-05",
+    "SOP apparent-power rating": "15.2 MVA",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IS-G4-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IS 52-G4",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IS-G4": {
+    "title": "IS G4",
+    "Rating": "11 MW — user supplied",
+    "Feeder assignment": "B2 via IS-T2 and secondary 52-L2",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Source": "User instruction 2026-11-05",
+    "SOP apparent-power rating": "15.2 MVA",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IS-TSS1": {
+    "title": "IS-TSS1",
+    "Rating": "300 kVA; 12.5 / 0.6 kV",
+    "Source": "SOP §5.2",
+    "Supply wiring": "Not specified; no connection inferred",
+    "LV breakers": "Not named in the SOP"
+  },
+  "IS-TSS2": {
+    "title": "IS-TSS2",
+    "Rating": "300 kVA; 12.5 / 0.6 kV",
+    "Source": "SOP §5.2",
+    "Supply wiring": "Not specified; no connection inferred",
+    "LV breakers": "Not named in the SOP"
+  },
+  "CTS-TIE": {
+    "title": "52-T8.9LV",
+    "Display state": "SOP normally closed",
+    "Source": "FLC-2.1-C-07 Rev 02, §5.3",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IRL1": {
+    "title": "CTS 52-IRL1",
+    "Display state": "SOP normally closed",
+    "Source": "SOP §§5.3–5.4",
+    "Circuit limit": "1060 A",
+    "Generator group": "IR G1–G5",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "TWL2": {
+    "title": "CTS 52-TWL2",
+    "Display state": "SOP normally closed",
+    "Source": "SOP §§5.3–5.4",
+    "Circuit limit": "1060 A",
+    "Generator group": "TW G4–G5",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "TWL1": {
+    "title": "CTS 52-TWL1",
+    "Display state": "SOP normally closed",
+    "Source": "SOP §§5.3–5.4",
+    "Circuit limit": "1060 A",
+    "Generator group": "TW G1–G3",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IRL2": {
+    "title": "CTS 52-IRL2",
+    "Display state": "SOP normally closed",
+    "Source": "SOP §§5.3–5.4",
+    "Circuit limit": "1060 A",
+    "Generator group": "IR G6–G9, G11–G13",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "TW-G4-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "TW 52-G4",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "TW-G4": {
+    "title": "TW G4",
+    "Rating": "5.5 MVA / 13 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "TW-G5-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "TW 52-G5",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "TW-G5": {
+    "title": "TW G5",
+    "Rating": "5.5 MVA / 13 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "TW-G1-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "TW 52-G1",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "TW-G1": {
+    "title": "TW G1",
+    "Rating": "5.5 MVA / 13 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "TW-G2-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "TW 52-G2",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "TW-G2": {
+    "title": "TW G2",
+    "Rating": "5.5 MVA / 13 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "TW-G3-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "TW 52-G3",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "TW-G3": {
+    "title": "TW G3",
+    "Rating": "5.5 MVA / 13 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G1-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G1",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G1": {
+    "title": "IR G1",
+    "Rating": "3.1 MVA / 12 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G2-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G2",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G2": {
+    "title": "IR G2",
+    "Rating": "3.1 MVA / 12 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G3-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G3",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G3": {
+    "title": "IR G3",
+    "Rating": "3.1 MVA / 12 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G4-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G4",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G4": {
+    "title": "IR G4",
+    "Rating": "3.1 MVA / 12 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G5-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G5",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G5": {
+    "title": "IR G5",
+    "Rating": "3.1 MVA / 12 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G6-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G6",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G6": {
+    "title": "IR G6",
+    "Rating": "3.1 MVA / 12 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G7-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G7",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G7": {
+    "title": "IR G7",
+    "Rating": "3.1 MVA / 12 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G8-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G8",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G8": {
+    "title": "IR G8",
+    "Rating": "3.1 MVA / 12 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G9-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G9",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G9": {
+    "title": "IR G9",
+    "Rating": "3.1 MVA / 12 kV",
+    "Feeder assignment": "SOP §5.7; conceptual grouping",
+    "Telemetry": "Not connected",
+    "Controls": "Preview only; no start/stop or switching commands",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G11-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G11",
+    "Connection": "600 V synchronizing breaker; step-up wiring unresolved",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G11": {
+    "title": "IR G11",
+    "Nameplate description": "1.6 MVA / 600 V in SOP §5.2",
+    "Loading assumption": "1.5 MVA / 75 A at 12 kV in §5.7 — reconcile before modeling",
+    "Feeder group": "IR L2, per §5.7",
+    "Step-up routing": "Unresolved; drawing required",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G12-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G12",
+    "Connection": "600 V synchronizing breaker; step-up wiring unresolved",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G12": {
+    "title": "IR G12",
+    "Nameplate description": "1.6 MVA / 600 V in SOP §5.2",
+    "Loading assumption": "1.5 MVA / 75 A at 12 kV in §5.7 — reconcile before modeling",
+    "Feeder group": "IR L2, per §5.7",
+    "Step-up routing": "Unresolved; drawing required",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "IR-G13-52": {
+    "title": "",
+    "Display state": "User-selected demo closed",
+    "Source": "User instruction 2026-11-05; not live telemetry or SOP normal-state evidence",
+    "Equipment": "IR 52-G13",
+    "Connection": "600 V synchronizing breaker; step-up wiring unresolved",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-G13": {
+    "title": "IR G13",
+    "Nameplate description": "1.6 MVA / 600 V in SOP §5.2",
+    "Loading assumption": "1.5 MVA / 75 A at 12 kV in §5.7 — reconcile before modeling",
+    "Feeder group": "IR L2, per §5.7",
+    "Step-up routing": "Unresolved; drawing required",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "generator"
+  },
+  "TW-TIE": {
+    "title": "",
+    "Display state": "SOP normally open",
+    "Source": "FLC-2.1-C-07 Rev 02, §5.3",
+    "Equipment": "TW 52-BT",
+    "Restriction": "See SOP §5.5; no switching logic implemented",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-TIE": {
+    "title": "IR 52-BT",
+    "Display state": "SOP normally open",
+    "Source": "FLC-2.1-C-07 Rev 02, §5.3",
+    "Restriction": "IR tie must not close on a line fault; see SOP §§5.5 and 5.9",
+    "Capacity check": "Connected generation, not just actual load, matters per SOP §5.5",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "TW-52L2": {
+    "title": "",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2",
+    "Equipment": "TW 52L2",
+    "Location": "Twin Falls GS line terminal",
+    "State": "Unknown; not inferred from CTS feeder position",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker",
+    "Symbol state note": "Neutral square and ?; no position inferred."
+  },
+  "TW-52L1": {
+    "title": "",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2",
+    "Equipment": "TW 52L1",
+    "Location": "Twin Falls GS line terminal",
+    "State": "Unknown; not inferred from CTS feeder position",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker",
+    "Symbol state note": "Neutral square and ?; no position inferred."
+  },
+  "TW-TSS1": {
+    "title": "TW-TSS1",
+    "Rating": "300 kVA; 12.5 / 0.6 kV",
+    "Source": "SOP §5.2",
+    "Supply bus": "Not established; upstream wiring omitted"
+  },
+  "TW-SS1": {
+    "title": "52-SS1",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2; associated transformer LV breaker",
+    "Connection": "Downstream bus routing unresolved",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker",
+    "Symbol state note": "Neutral square and ?; no position inferred."
+  },
+  "TW-TSS2": {
+    "title": "TW-TSS2",
+    "Rating": "300 kVA; 12.5 / 0.6 kV",
+    "Source": "SOP §5.2",
+    "Supply bus": "Not established; upstream wiring omitted"
+  },
+  "TW-SS2": {
+    "title": "52-SS2",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2; associated transformer LV breaker",
+    "Connection": "Downstream bus routing unresolved",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker",
+    "Symbol state note": "Neutral square and ?; no position inferred."
+  },
+  "TW-SS-TIE": {
+    "title": "52BT-SS",
+    "Display state": "SOP normally open",
+    "Source": "SOP §§5.2–5.3",
+    "Equipment": "600 V station-service bus tie",
+    "Connection": "Inventory position only; bus routing unresolved",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-T12": {
+    "title": "IR-T12",
+    "Rating": "3000 / 4500 kVA; 12.5 / 0.6 kV",
+    "Source": "SOP §5.2",
+    "Exact wiring": "Unresolved; inventory placement only"
+  },
+  "IR-T14": {
+    "title": "IR-T14",
+    "Rating": "3000 / 4500 kVA; 12.5 / 0.6 kV",
+    "Source": "SOP §5.2",
+    "Exact wiring": "Unresolved; inventory placement only"
+  },
+  "IR-SLUICE": {
+    "title": "52-T12.14",
+    "Display state": "SOP normally closed",
+    "Source": "SOP §§5.2–5.3",
+    "Equipment": "Sluice-gate-service breaker",
+    "Alias": "52-T12.T14",
+    "Wiring": "Unresolved; NOT an IR L1/L2 terminal breaker",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker"
+  },
+  "IR-TSS1": {
+    "title": "IR-TSS1",
+    "Rating": "300 kVA; 12.5 / 0.6 kV",
+    "Source": "SOP §5.2",
+    "Supply bus": "Not established; upstream wiring omitted"
+  },
+  "IR-SS1": {
+    "title": "52-SS1",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2; associated transformer LV breaker",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker",
+    "Symbol state note": "Neutral square and ?; no position inferred."
+  },
+  "IR-TSS2": {
+    "title": "IR-TSS2",
+    "Rating": "300 kVA; 12.5 / 0.6 kV",
+    "Source": "SOP §5.2",
+    "Supply bus": "Not established; upstream wiring omitted"
+  },
+  "IR-SS2": {
+    "title": "52-SS2",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2; associated transformer LV breaker",
+    "Breaker appearance": "Square, green/aligned closed; red/perpendicular open; neutral ? unknown. User correction, 2026-11-05.",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "breaker",
+    "Symbol state note": "Neutral square and ?; no position inferred."
+  },
+  "CTS-BS6F": {
+    "title": "BS6-F",
+    "Description": "A1L93 B-coil trip selection",
+    "Source": "SOP §5.8, p.9",
+    "Location": "230 kV e-house teleprotection / A1L93",
+    "Note": "Inventory marker, not a switching command"
+  },
+  "CTS-BS6G": {
+    "title": "BS6-G",
+    "Description": "A1L93 A-coil trip selection",
+    "Source": "SOP §5.8, p.9",
+    "Location": "230 kV e-house teleprotection / A1L93",
+    "Note": "Inventory marker, not a switching command"
+  },
+  "CTS-ACOIL": {
+    "title": "A1L93 A coil",
+    "Description": "Trip coil",
+    "Source": "SOP §5.8, p.9",
+    "Location": "230 kV e-house teleprotection / A1L93",
+    "Note": "Inventory marker, not a switching command"
+  },
+  "CTS-BCOIL": {
+    "title": "A1L93 B coil",
+    "Description": "Trip coil",
+    "Source": "SOP §5.8, p.9",
+    "Location": "230 kV e-house teleprotection / A1L93",
+    "Note": "Inventory marker, not a switching command"
+  },
+  "T4-DS": {
+    "title": "89-T4-HV",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2",
+    "Equipment": "HV disconnect / line switch",
+    "State": "Unverified",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "disconnect",
+    "Symbol state note": "Open-position artwork with ? is a placeholder; actual position is unknown."
+  },
+  "T7-DS": {
+    "title": "89-T7-HV",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2",
+    "Equipment": "HV disconnect / line switch",
+    "State": "Unverified",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "disconnect",
+    "Symbol state note": "Open-position artwork with ? is a placeholder; actual position is unknown."
+  },
+  "T8-DS": {
+    "title": "89-T8-HV",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2",
+    "Equipment": "HV disconnect / line switch",
+    "State": "Unverified",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "disconnect",
+    "Symbol state note": "Open-position artwork with ? is a placeholder; actual position is unknown."
+  },
+  "T9-DS": {
+    "title": "89-T9-HV",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2",
+    "Equipment": "HV disconnect / line switch",
+    "State": "Unverified",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "disconnect",
+    "Symbol state note": "Open-position artwork with ? is a placeholder; actual position is unknown."
+  },
+  "A1L93-DS": {
+    "title": "A1L93-L",
+    "Display state": "Unknown — not live telemetry",
+    "Source": "SOP §5.2",
+    "Equipment": "Line disconnect",
+    "Symbol library": "NorthStar northstar-ieee-compat-2026.4 (local snapshot)",
+    "Symbol type": "disconnect",
+    "Symbol state note": "Open-position artwork with ? is a placeholder; actual position is unknown."
+  }
+}

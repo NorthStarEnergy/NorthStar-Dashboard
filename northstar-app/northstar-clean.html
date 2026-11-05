@@ -239,6 +239,12 @@
   <link rel="stylesheet" href="logbook-editor.css?v=20260826-1">
 
   <script data-ns-required src="switching-workspace.js?v=20260926-uwpc1" defer></script>
+  <link rel="stylesheet" href="switching-simulator.css?v=sim-0.2.0">
+  <link rel="stylesheet" href="complex-trainer.css?v=complex-1">
+  <script data-ns-required src="complex-trainer.js?v=complex-1" defer></script>
+  <link rel="stylesheet" href="r013-trainer.css?v=r013-1">
+  <script data-ns-required src="r013-trainer.js?v=r013-1" defer></script>
+  <script data-ns-required src="switching-simulator.js?v=sim-0.2.0" defer></script>
 
   <script data-ns-required src="uwpc-desk.js?v=20261008-evidence" defer></script>
 
@@ -1669,7 +1675,38 @@
 
     </section>
 
-    <section id="training" class="section"><div class="panel placeholder">OPERATOR TRAINING / PROCEDURES AND SIMULATIONS</div></section>
+    <section id="training" class="section">
+      <div class="switching-sim" data-module-id="switching-simulator">
+        <header class="switching-sim-head"><div><span class="sim-kicker">TOOLS / TRAINING</span><h2>Switching Simulator</h2><p>Isolated training environment. No controls connect to live SCADA or plant equipment.</p></div><span class="sim-banner">TRAINING SIMULATION</span></header>
+        <div class="sim-readiness" role="status">Model readiness has not been checked.</div>
+        <div class="sim-setup"><label>STATION / MODEL<select class="sim-station" aria-label="Training station"><option>Loading model readiness…</option></select></label><label>SCENARIO<select class="sim-scenario" aria-label="Training scenario"><option value="NORMAL-OPEN">Loading scenarios…</option></select></label><button type="button" class="sim-launch primary-btn">START SYNTHETIC EXERCISE</button></div>
+        <div class="sim-empty">Select a synthetic exercise to begin. Real stations without reviewed models are not launchable.</div>
+        <div class="sim-workspace" hidden>
+          <div class="sim-session-head"><strong class="sim-session-title">SIM-TRAINING-01</strong><span class="sim-time">00:00.0</span><span class="sim-clock-state">PAUSED</span><div class="sim-clock-controls"><button type="button" data-clock="run">RUN</button><button type="button" data-clock="pause">PAUSE</button><button type="button" data-clock="step">STEP 100 MS</button><select class="sim-speed" aria-label="Simulation speed"><option value="1">1×</option><option value="5">5×</option><option value="10">10×</option></select><button type="button" class="sim-finish">FINISH / DEBRIEF</button><button type="button" class="sim-reset" disabled>RESET RUN</button></div></div>
+          <section class="sim-unit-panel" aria-label="Synthetic unit control panel">
+            <header><strong>FICTIONAL TRAINING STATION · UNIT GEN1</strong><span class="sim-mode">SIMULATION</span></header>
+            <p>Fictional reduced-order model and settings; not a real station or operating procedure. All readings are scanned simulated observations.</p>
+            <div class="sim-unit-grid">
+              <section><h3>UNIT CONTROL</h3><div class="sim-unit-sequence"></div><div class="sim-unit-actions"><button type="button" data-unit-action="start">SELECT START</button><button type="button" data-unit-action="stop">SELECT NORMAL STOP</button><button type="button" class="sim-gb-faceplate">GENERATOR BREAKER FACEPLATE</button></div></section>
+              <section><h3>GENERATOR / ELECTRICAL</h3><div class="sim-unit-electrical"></div></section>
+              <section><h3>POWER / GOVERNOR</h3><div class="sim-unit-governor"></div><label>Fictional demand (0–2 MW) <input class="sim-mw" type="number" min="0" max="2" step="0.1" value="0.5"></label><button type="button" data-unit-action="setpoint">SELECT MW DEMAND</button></section>
+              <section><h3>EXCITATION</h3><div class="sim-unit-excitation"></div><label>Fictional demand (−1 to 1 Mvar) <input class="sim-mvar" type="number" min="-1" max="1" step="0.1" value="0"></label><button type="button" data-unit-action="set_mvar">SELECT MVAR DEMAND</button><small>Reduced-order approximation; no AVR/limiter model.</small></section>
+              <section><h3>SPEED / WATER</h3><div class="sim-unit-water"></div><small>Brake commands and tailwater controls are not modeled.</small></section>
+              <section><h3>SYNTHETIC AUXILIARIES</h3><div class="sim-unit-aux"></div><small>Independent auxiliary fault controls are not modeled.</small></section>
+            </div>
+            <div class="sim-instructor" hidden><strong>LOCAL INSTRUCTOR · SIMULATION ONLY</strong> <button type="button" class="sim-inject">INJECT 5 S SYNTHETIC OVERLOAD</button><small>Triggers the fictional feeder protection; does not affect operational equipment.</small></div>
+          </section>
+          <div class="sim-grid"><section class="sim-card"><h3>Synthetic one-line</h3><div class="sim-legend"><span>━━ energized</span><span>┄┄ deenergized</span><span>● unknown / unsupported</span></div><div class="sim-diagram" role="img" aria-label="Synthetic station one-line diagram"></div></section>
+            <section class="sim-card sim-faceplate"><h3>Equipment faceplate / command confirmation</h3><p class="sim-select-hint">Select a switch on the diagram to inspect it; opening a faceplate does not operate equipment. Selecting is not execution.</p><div class="sim-device"></div><div class="sim-actions"><button type="button" data-action="open" disabled>SELECT OPEN</button><button type="button" data-action="close" disabled>SELECT CLOSE</button><button type="button" data-action="reset_lockout" disabled>SELECT LOCKOUT RESET</button><button type="button" class="sim-execute primary-btn" disabled>EXECUTE SIMULATED COMMAND</button></div><div class="sim-command-status" role="status"></div></section>
+            <section class="sim-card sim-alarms"><h3>Simulated alarms</h3><div class="sim-alarm-list">No active simulated alarms.</div></section>
+            <section class="sim-card sim-measurements"><h3>Simulated measurements</h3><div class="sim-tags"></div></section>
+            <section class="sim-card sim-events"><h3>Exercise events</h3><ol></ol></section></div>
+          <pre class="sim-debrief" hidden aria-live="polite"></pre>
+          <button type="button" class="sim-export" disabled>DOWNLOAD SIMULATION DEBRIEF JSON</button>
+          <p class="sim-limitations">Fictional synthetic equipment and parameters; not a NorthStar station model, procedure, competency record, switching release, transient study or operational control.</p>
+        </div>
+      </div>
+    </section>
 
      <section id="logbook" class="section"><div class="logbook-layout"><div class="panel logbook-card"><div class="events-head"><div><h2>LOGBOOK</h2><small>EMAIL-STYLE OPERATIONAL MESSAGE</small></div><span class="events-live"><i>●</i> APPEND-ONLY</span></div><form class="logbook-composer" id="logForm"><div class="logbook-fields"><label>FROM<input id="logFrom" value="CONTROL ROOM OPERATOR" readonly></label><label>TO<input id="logTo" placeholder="Shift team, site, or distribution list"></label><label>CC<input id="logCc" placeholder="Optional copy recipients"></label><label>ENTRY TYPE<select id="logType"><option>Operator action</option><option>IESO update</option><option>SCADA reading</option><option>Teams message</option><option>Outlook email</option><option>Staff movement</option></select></label><label>SUBJECT<input id="logSubject" placeholder="Subject or event title" required></label></div><div class="logbook-toolbar" role="toolbar" aria-label="Message formatting"><button type="button" data-format="bold" title="Bold">B</button><button type="button" data-format="italic" title="Italic"><em>I</em></button><button type="button" data-format="underline" title="Underline"><u>U</u></button><button type="button" data-format="bullet" title="Bulleted list">• LIST</button><button type="button" data-format="quote" title="Quote">❯ QUOTE</button><button type="button" data-format="clear" title="Clear formatting">CLEAR</button><span class="toolbar-spacer"></span><span class="muted-note">PLAIN TEXT + MARKDOWN OPTIONS</span></div><textarea class="logbook-body" id="logDetails" placeholder="Compose the operational message… Include context, decisions, conditions, actions, and follow-up."></textarea><div class="logbook-compose-footer"><label class="logbook-attach">📎 ATTACH FILES<input id="logAttachments" type="file" multiple></label><div class="logbook-attachments" id="logAttachmentList"></div><button class="primary-btn" type="submit">ADD TO LOGBOOK</button></div><div class="logbook-status" id="logbookStatus"></div></form><div class="events-stream" id="logList"><div class="muted-note">Loading operational history…</div></div></div><div class="panel logbook-report"><label>REPORT BUILDER</label><h2>Generate Report</h2><p class="muted-note">Use the logged record set as the basis for a shift handoff or incident report.</p><div class="report-actions"><button class="primary-btn" data-report="shift">SHIFT REPORT</button><button class="primary-btn" data-report="incident">INCIDENT REPORT</button><button class="primary-btn" data-report="quality">QUALITY SUMMARY</button></div><pre class="report-output" id="reportOutput">Select a report type to generate a draft.</pre></div></div></section>
 

@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 data/
+trainer-data/
 .northstar-*
 cloudflared-config.yml
 *.pem

@@ -15,7 +15,7 @@ function element(id='',moduleId='') {
 const main=element('main'), weather=element('','Kenora'), dispatch=element('fixturePanel','fixture-panel');
 let market=element('','APIROQ');
 const events=element('overviewEventsSummary','overview-events'), staff=element('','Station A');
-const document={getElementById:()=>null,addEventListener(){},documentElement:{clientWidth:1440,dataset:{nsStyles:'ready'}},body:{classList:{toggle(){},contains:()=>false}},createElement:()=>element(),
+const document={getElementById:()=>null,addEventListener(){},documentElement:{clientWidth:1440,dataset:{nsStyles:'ready'}},body:{classList:{toggle(){},contains:()=>false},matches(selector){return selector.split(',').some(s=>this.classList.contains(s.trim().slice(1)));}},createElement:()=>element(),
   querySelector:s=>s==='main'?main:s==='#overview'?{classList:{contains:()=>active}}:null,
   querySelectorAll:s=>s.includes('#overviewStaff #staffGroups')?[staff]:s.includes('#weatherStrip')?[weather]:s==='#dispatchClient'?[dispatch]:
     s.includes('#marketTopTiles')?[market]:s.includes('#overviewModules >')?[events,dispatch]:

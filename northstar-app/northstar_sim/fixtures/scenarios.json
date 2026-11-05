@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "northstar.switching-scenarios.v1",
+  "synthetic": true,
+  "scenarios": [
+    {
+      "scenarioId": "NORMAL-OPEN",
+      "revision": 1,
+      "modelId": "SIM-TRAINING-01",
+      "title": "Loss of radial supply",
+      "seed": 100,
+      "initialOverrides": [],
+      "injections": [],
+      "objective": "Learner opens CB1; after 300 ms travel the supplied load loses voltage and load power. Feedback follows scan; event chain recorded.",
+      "completion": "CB1 actual open and BUS deenergized and learner reviews low-voltage alarm",
+      "notAProcedure": true
+    },
+    {
+      "scenarioId": "BACKFEED",
+      "revision": 1,
+      "modelId": "SIM-TRAINING-01",
+      "title": "Alternative supply remains",
+      "seed": 101,
+      "initialOverrides": [
+        {
+          "equipmentId": "GRID",
+          "field": "enabled",
+          "value": false
+        },
+        {
+          "equipmentId": "ALT",
+          "field": "enabled",
+          "value": true
+        },
+        {
+          "equipmentId": "GB1",
+          "field": "position",
+          "value": "closed"
+        }
+      ],
+      "injections": [],
+      "objective": "Opening CB1 does not deenergize BUS because ALT supplies through GB1; show correct energized paths.",
+      "notAProcedure": true
+    },
+    {
+      "scenarioId": "STUCK-MECHANISM",
+      "revision": 1,
+      "modelId": "SIM-TRAINING-01",
+      "title": "Accepted command without operation",
+      "seed": 102,
+      "initialOverrides": [],
+      "injections": [
+        {
+          "atSimTimeMs": 0,
+          "type": "mechanism_stuck",
+          "equipmentId": "CB1",
+          "durationMs": null
+        }
+      ],
+      "objective": "An open command times out at 3000 ms; actual CB1 remains closed and BUS remains supplied; discrepancy alarm recorded.",
+      "notAProcedure": true
+    },
+    {
+      "scenarioId": "STALE-STATUS",
+      "revision": 1,
+      "modelId": "SIM-TRAINING-01",
+      "title": "Communications loss during switching",
+      "seed": 103,
+      "initialOverrides": [],
+      "injections": [
+        {
+          "atSimTimeMs": 1000,
+          "type": "freeze_observation",
+          "tagId": "sim.CB1.position",
+          "durationMs": 10000
+        }
+      ],
+      "objective": "Opening CB1 changes topology even though observation is frozen. Its original timestamp ages beyond 3000 ms and indication becomes stale/unknown.",
+      "notAProcedure": true
+    },
+    {
+      "scenarioId": "UNIT-STARTUP",
+      "revision": 1,
+      "modelId": "SIM-TRAINING-01",
+      "title": "Synthetic unit start, synchronization and load ramp",
+      "seed": 104,
+      "initialOverrides": [],
+      "injections": [],
+      "objective": "Start the fictional unit, inspect sequence permissives, synchronize and close GB1, ramp a modest MW demand, then unload and stop.",
+      "notAProcedure": true
+    },
+    {
+      "scenarioId": "UNIT-TRIP",
+      "revision": 1,
+      "modelId": "SIM-TRAINING-01",
+      "title": "Synthetic overload and protection trip",
+      "seed": 105,
+      "initialOverrides": [],
+      "injections": [],
+      "objective": "With a local instructor, inject the fictional overload, observe protection response and lockout, let the cause clear, then reset without automatically restarting.",
+      "notAProcedure": true
+    }
+  ]
+}

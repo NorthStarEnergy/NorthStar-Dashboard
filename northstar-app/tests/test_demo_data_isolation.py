@@ -12,7 +12,7 @@ class DemoMenuTest(unittest.TestCase):
   import sys
   sys.path.insert(0,str(Path(__file__).parent.resolve()))
   auth_tests.DemoAuthTest.setUp(self)
-  self.backend.ROOT=Path('C:/Users/User/NorthStar/northstar-local')
+  self.backend.ROOT=Path(__file__).resolve().parents[1]
  def cookie(self):
   token,_=self.backend.DEMO_SESSIONS.create('demo',600,role=self.auth.ROLE_PLATFORM_DEMO)
   return f'{self.auth.COOKIE_NAME}={token}'

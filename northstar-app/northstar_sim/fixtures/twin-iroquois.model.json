@@ -1,0 +1,4732 @@
+{
+  "schemaVersion": "northstar.switching-model.v1",
+  "modelId": "SIM-TWIN-IROQUOIS",
+  "revision": 1,
+  "label": "Twin Falls + Iroquois complex",
+  "synthetic": true,
+  "siteId": null,
+  "readiness": "draft_synthetic",
+  "nodes": [
+    {
+      "nodeId": "GRID230",
+      "nominalKVLL": 230,
+      "x": 75,
+      "y": 70,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-HV",
+      "nominalKVLL": 230,
+      "x": 360,
+      "y": 70,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-T4-ISO",
+      "nominalKVLL": 230,
+      "x": 240,
+      "y": 135,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-T4-HV",
+      "nominalKVLL": 230,
+      "x": 240,
+      "y": 200,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-T4-LV",
+      "nominalKVLL": 120,
+      "x": 240,
+      "y": 280,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-120A",
+      "nominalKVLL": 120,
+      "x": 240,
+      "y": 355,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-T4-GROUND",
+      "nominalKVLL": 230,
+      "x": 340,
+      "y": 200,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-T7-ISO",
+      "nominalKVLL": 230,
+      "x": 560,
+      "y": 135,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-T7-HV",
+      "nominalKVLL": 230,
+      "x": 560,
+      "y": 200,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-T7-LV",
+      "nominalKVLL": 120,
+      "x": 560,
+      "y": 280,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-120B",
+      "nominalKVLL": 120,
+      "x": 560,
+      "y": 355,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-T7-GROUND",
+      "nominalKVLL": 230,
+      "x": 660,
+      "y": 200,
+      "area": "hv"
+    },
+    {
+      "nodeId": "IR-12A",
+      "nominalKVLL": 12,
+      "x": 280,
+      "y": 140,
+      "area": "main"
+    },
+    {
+      "nodeId": "IR-12C",
+      "nominalKVLL": 12,
+      "x": 720,
+      "y": 140,
+      "area": "main"
+    },
+    {
+      "nodeId": "IR-T5-IN",
+      "nominalKVLL": 120,
+      "x": 280,
+      "y": 45,
+      "area": "main"
+    },
+    {
+      "nodeId": "IR-T5-OUT",
+      "nominalKVLL": 12,
+      "x": 280,
+      "y": 90,
+      "area": "main"
+    },
+    {
+      "nodeId": "IR-T6-IN",
+      "nominalKVLL": 120,
+      "x": 720,
+      "y": 45,
+      "area": "main"
+    },
+    {
+      "nodeId": "IR-T6-OUT",
+      "nominalKVLL": 12,
+      "x": 720,
+      "y": 90,
+      "area": "main"
+    },
+    {
+      "nodeId": "TF-A",
+      "nominalKVLL": 12,
+      "x": 170,
+      "y": 160,
+      "area": "twin"
+    },
+    {
+      "nodeId": "TF-B",
+      "nominalKVLL": 12,
+      "x": 690,
+      "y": 160,
+      "area": "twin"
+    },
+    {
+      "nodeId": "TF-L1-NEAR",
+      "nominalKVLL": 12,
+      "x": 170,
+      "y": 70,
+      "area": "twin"
+    },
+    {
+      "nodeId": "TF-L1-FAR",
+      "nominalKVLL": 12,
+      "x": 210,
+      "y": 70,
+      "area": "main"
+    },
+    {
+      "nodeId": "TF-L2-NEAR",
+      "nominalKVLL": 12,
+      "x": 690,
+      "y": 70,
+      "area": "twin"
+    },
+    {
+      "nodeId": "TF-L2-FAR",
+      "nominalKVLL": 12,
+      "x": 730,
+      "y": 70,
+      "area": "main"
+    },
+    {
+      "nodeId": "IR-B1",
+      "nominalKVLL": 12,
+      "x": 180,
+      "y": 300,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-B2",
+      "nominalKVLL": 12,
+      "x": 510,
+      "y": 300,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-B3",
+      "nominalKVLL": 12,
+      "x": 840,
+      "y": 300,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-52-1-LOAD",
+      "nominalKVLL": 12,
+      "x": 920,
+      "y": 400,
+      "area": "main"
+    },
+    {
+      "nodeId": "IR-52-33-LOAD",
+      "nominalKVLL": 12,
+      "x": 920,
+      "y": 400,
+      "area": "main"
+    },
+    {
+      "nodeId": "IR-52-14-LOAD",
+      "nominalKVLL": 12,
+      "x": 920,
+      "y": 400,
+      "area": "main"
+    },
+    {
+      "nodeId": "TF-SS1-SOURCE",
+      "nominalKVLL": 0.6,
+      "x": 430,
+      "y": 440,
+      "area": "twin"
+    },
+    {
+      "nodeId": "TF-SS1",
+      "nominalKVLL": 0.6,
+      "x": 430,
+      "y": 520,
+      "area": "twin"
+    },
+    {
+      "nodeId": "TF-SS2-SOURCE",
+      "nominalKVLL": 0.6,
+      "x": 660,
+      "y": 440,
+      "area": "twin"
+    },
+    {
+      "nodeId": "TF-SS2",
+      "nominalKVLL": 0.6,
+      "x": 660,
+      "y": 520,
+      "area": "twin"
+    },
+    {
+      "nodeId": "IR-SS1-SOURCE",
+      "nominalKVLL": 0.6,
+      "x": 430,
+      "y": 440,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-SS1",
+      "nominalKVLL": 0.6,
+      "x": 430,
+      "y": 520,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-SS2-SOURCE",
+      "nominalKVLL": 0.6,
+      "x": 660,
+      "y": 440,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-SS2",
+      "nominalKVLL": 0.6,
+      "x": 660,
+      "y": 520,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "TF-G1-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 80,
+      "y": 310,
+      "area": "twin"
+    },
+    {
+      "nodeId": "TF-G2-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 265,
+      "y": 310,
+      "area": "twin"
+    },
+    {
+      "nodeId": "TF-G3-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 450,
+      "y": 310,
+      "area": "twin"
+    },
+    {
+      "nodeId": "TF-G4-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 635,
+      "y": 310,
+      "area": "twin"
+    },
+    {
+      "nodeId": "TF-G5-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 820,
+      "y": 310,
+      "area": "twin"
+    },
+    {
+      "nodeId": "IR-G1-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 80,
+      "y": 410,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-G2-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 265,
+      "y": 410,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-G3-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 450,
+      "y": 410,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-G4-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 635,
+      "y": 410,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-G5-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 820,
+      "y": 410,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-G6-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 80,
+      "y": 410,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-G7-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 265,
+      "y": 410,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-G8-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 450,
+      "y": 410,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-G9-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 635,
+      "y": 410,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-G11-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 80,
+      "y": 410,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-G12-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 265,
+      "y": 410,
+      "area": "iroquois"
+    },
+    {
+      "nodeId": "IR-G13-TERMINAL",
+      "nominalKVLL": 12,
+      "x": 450,
+      "y": 410,
+      "area": "iroquois"
+    }
+  ],
+  "equipment": [
+    {
+      "equipmentId": "GRID",
+      "type": "grid_source",
+      "label": "GRID",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "GRID230"
+        }
+      ],
+      "parameters": {
+        "nominalKVLL": 230,
+        "frequencyHz": 60
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-A1L93",
+      "type": "breaker",
+      "label": "IR-A1L93",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "GRID230"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-HV"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-89-T4-HV",
+      "type": "isolator",
+      "label": "IR-89-T4-HV",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-HV"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T4-ISO"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-T4-HV",
+      "type": "breaker",
+      "label": "IR-52-T4-HV",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T4-ISO"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T4-HV"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-T4",
+      "type": "transformer_2w",
+      "label": "IR-T4",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T4-HV"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T4-LV"
+        }
+      ],
+      "parameters": {
+        "xPu": 0.08,
+        "ratedMVA": 40,
+        "tapStep": 0.00625,
+        "tapMin": -8,
+        "tapMax": 8,
+        "tapCapable": true
+      },
+      "initialState": {
+        "tap": 0,
+        "mode": "manual",
+        "remote": true,
+        "dc": true,
+        "healthy": true,
+        "targetPu": 1.0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-89-T4-LV",
+      "type": "breaker",
+      "label": "IR-52-89-T4-LV",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T4-LV"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-120A"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-T4-HV-G",
+      "type": "earth_switch",
+      "label": "IR-T4-HV-G",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T4-HV"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T4-GROUND"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-89-T7-HV",
+      "type": "isolator",
+      "label": "IR-89-T7-HV",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-HV"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T7-ISO"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-T7-HV",
+      "type": "breaker",
+      "label": "IR-52-T7-HV",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T7-ISO"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T7-HV"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-T7",
+      "type": "transformer_2w",
+      "label": "IR-T7",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T7-HV"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T7-LV"
+        }
+      ],
+      "parameters": {
+        "xPu": 0.08,
+        "ratedMVA": 40,
+        "tapStep": 0.00625,
+        "tapMin": -8,
+        "tapMax": 8,
+        "tapCapable": true
+      },
+      "initialState": {
+        "tap": 0,
+        "mode": "manual",
+        "remote": true,
+        "dc": true,
+        "healthy": true,
+        "targetPu": 1.0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-89-T7-LV",
+      "type": "breaker",
+      "label": "IR-52-89-T7-LV",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T7-LV"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-120B"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-T7-HV-G",
+      "type": "earth_switch",
+      "label": "IR-T7-HV-G",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T7-HV"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T7-GROUND"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-120-TIE",
+      "type": "breaker",
+      "label": "IR-120-TIE",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-120A"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-120B"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "trainingAssumption": true
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-89-T5",
+      "type": "isolator",
+      "label": "IR-89-T5",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-120A"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T5-IN"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-T5",
+      "type": "transformer_2w",
+      "label": "IR-T5",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T5-IN"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T5-OUT"
+        }
+      ],
+      "parameters": {
+        "xPu": 0.08,
+        "ratedMVA": 40,
+        "tapStep": 0.00625,
+        "tapMin": -8,
+        "tapMax": 8,
+        "tapCapable": false
+      },
+      "initialState": {
+        "tap": 0,
+        "mode": "manual",
+        "remote": true,
+        "dc": true,
+        "healthy": true,
+        "targetPu": 1.0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-7",
+      "type": "breaker",
+      "label": "IR-52-7",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T5-OUT"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-12A"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "trainingAssumption": true
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-89-T6",
+      "type": "isolator",
+      "label": "IR-89-T6",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-120B"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T6-IN"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-T6",
+      "type": "transformer_2w",
+      "label": "IR-T6",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T6-IN"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-T6-OUT"
+        }
+      ],
+      "parameters": {
+        "xPu": 0.08,
+        "ratedMVA": 40,
+        "tapStep": 0.00625,
+        "tapMin": -8,
+        "tapMax": 8,
+        "tapCapable": false
+      },
+      "initialState": {
+        "tap": 0,
+        "mode": "manual",
+        "remote": true,
+        "dc": true,
+        "healthy": true,
+        "targetPu": 1.0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-8",
+      "type": "breaker",
+      "label": "IR-52-8",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-T6-OUT"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-12C"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "trainingAssumption": true
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-27",
+      "type": "breaker",
+      "label": "IR-52-27",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-12A"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-12C"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-T4M",
+      "type": "breaker",
+      "label": "IR-52-T4M",
+      "area": "hv",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-120A"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-120B"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "trainingAssumption": true
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-52BT",
+      "type": "breaker",
+      "label": "TF-52BT",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-A"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-B"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-52L1",
+      "type": "breaker",
+      "label": "TF-52L1",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-A"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-L1-NEAR"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-LINE1",
+      "type": "line",
+      "label": "TF-LINE1",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-L1-NEAR"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-L1-FAR"
+        }
+      ],
+      "parameters": {
+        "xPu": 0.025,
+        "resistanceOhmPerPhase": 0.1,
+        "reactanceOhmPerPhase": 0.5
+      },
+      "initialState": {},
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-31",
+      "type": "breaker",
+      "label": "IR-52-31",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-L1-FAR"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-12C"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-52L2",
+      "type": "breaker",
+      "label": "TF-52L2",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-B"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-L2-NEAR"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-LINE2",
+      "type": "line",
+      "label": "TF-LINE2",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-L2-NEAR"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-L2-FAR"
+        }
+      ],
+      "parameters": {
+        "xPu": 0.025,
+        "resistanceOhmPerPhase": 0.1,
+        "reactanceOhmPerPhase": 0.5
+      },
+      "initialState": {},
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-30",
+      "type": "breaker",
+      "label": "IR-52-30",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-L2-FAR"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-12C"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-5",
+      "type": "breaker",
+      "label": "IR-52-5",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-B1"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-12A"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "trainingAssumption": true
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-INCOMER2",
+      "type": "breaker",
+      "label": "IR-INCOMER2",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-B2"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-12A"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "trainingAssumption": true
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-17",
+      "type": "breaker",
+      "label": "IR-52-17",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-B3"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-12A"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "trainingAssumption": true
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52BT",
+      "type": "breaker",
+      "label": "IR-52BT",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-B1"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B2"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-1",
+      "type": "breaker",
+      "label": "IR-52-1",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-12C"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-52-1-LOAD"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "trainingAssumption": true
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-1-DEMAND",
+      "type": "load",
+      "label": "IR-52-1-DEMAND",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-52-1-LOAD"
+        }
+      ],
+      "parameters": {
+        "activeMW": 0.15,
+        "reactiveMvar": 0.05
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-33",
+      "type": "breaker",
+      "label": "IR-52-33",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-12C"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-52-33-LOAD"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "trainingAssumption": true
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-33-DEMAND",
+      "type": "load",
+      "label": "IR-52-33-DEMAND",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-52-33-LOAD"
+        }
+      ],
+      "parameters": {
+        "activeMW": 0.15,
+        "reactiveMvar": 0.05
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-14",
+      "type": "breaker",
+      "label": "IR-52-14",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-12C"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-52-14-LOAD"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "trainingAssumption": true
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52-14-DEMAND",
+      "type": "load",
+      "label": "IR-52-14-DEMAND",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-52-14-LOAD"
+        }
+      ],
+      "parameters": {
+        "activeMW": 0.2,
+        "reactiveMvar": 0.05
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-A-LOAD",
+      "type": "load",
+      "label": "IR-A-LOAD",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-12A"
+        }
+      ],
+      "parameters": {
+        "activeMW": 1.0,
+        "reactiveMvar": 0.2
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-C-LOAD",
+      "type": "load",
+      "label": "IR-C-LOAD",
+      "area": "main",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-12C"
+        }
+      ],
+      "parameters": {
+        "activeMW": 1.0,
+        "reactiveMvar": 0.2
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-A-LOAD",
+      "type": "load",
+      "label": "TF-A-LOAD",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-A"
+        }
+      ],
+      "parameters": {
+        "activeMW": 0.2,
+        "reactiveMvar": 0.04000000000000001
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-B-LOAD",
+      "type": "load",
+      "label": "TF-B-LOAD",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-B"
+        }
+      ],
+      "parameters": {
+        "activeMW": 0.2,
+        "reactiveMvar": 0.04000000000000001
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-TSS1",
+      "type": "transformer_2w",
+      "label": "TF-TSS1",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-A"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-SS1-SOURCE"
+        }
+      ],
+      "parameters": {
+        "xPu": 0.08,
+        "ratedMVA": 40,
+        "tapStep": 0.00625,
+        "tapMin": -8,
+        "tapMax": 8,
+        "tapCapable": false
+      },
+      "initialState": {
+        "tap": 0,
+        "mode": "manual",
+        "remote": true,
+        "dc": true,
+        "healthy": true,
+        "targetPu": 1.0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-52SS1",
+      "type": "breaker",
+      "label": "TF-52SS1",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-SS1-SOURCE"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-SS1"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-SS1-LOAD",
+      "type": "load",
+      "label": "TF-SS1-LOAD",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-SS1"
+        }
+      ],
+      "parameters": {
+        "activeMW": 0.08,
+        "reactiveMvar": 0.025
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-TSS2",
+      "type": "transformer_2w",
+      "label": "TF-TSS2",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-B"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-SS2-SOURCE"
+        }
+      ],
+      "parameters": {
+        "xPu": 0.08,
+        "ratedMVA": 40,
+        "tapStep": 0.00625,
+        "tapMin": -8,
+        "tapMax": 8,
+        "tapCapable": false
+      },
+      "initialState": {
+        "tap": 0,
+        "mode": "manual",
+        "remote": true,
+        "dc": true,
+        "healthy": true,
+        "targetPu": 1.0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-52SS2",
+      "type": "breaker",
+      "label": "TF-52SS2",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-SS2-SOURCE"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-SS2"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-SS2-LOAD",
+      "type": "load",
+      "label": "TF-SS2-LOAD",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-SS2"
+        }
+      ],
+      "parameters": {
+        "activeMW": 0.08,
+        "reactiveMvar": 0.025
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-52SSBT",
+      "type": "breaker",
+      "label": "TF-52SSBT",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-SS1"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-SS2"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-TRANSFER",
+      "type": "transfer_controller",
+      "label": "TF-TRANSFER",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF"
+      },
+      "initialState": {
+        "mode": "auto",
+        "preferred": 1,
+        "retransfer": true,
+        "remote": true,
+        "dc": true,
+        "timer": 0,
+        "phase": "normal"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-DC",
+      "type": "control_supply",
+      "label": "TF-DC",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {},
+      "initialState": {
+        "available": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-LUBE1",
+      "type": "auxiliary",
+      "label": "TF-LUBE1",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-LUBE2",
+      "type": "auxiliary",
+      "label": "TF-LUBE2",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-DC-LUBE",
+      "type": "auxiliary",
+      "label": "TF-DC-LUBE",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": true
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-COMPRESSOR1",
+      "type": "auxiliary",
+      "label": "TF-COMPRESSOR1",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-COMPRESSOR2",
+      "type": "auxiliary",
+      "label": "TF-COMPRESSOR2",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-WATER",
+      "type": "auxiliary",
+      "label": "TF-WATER",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-FAN1",
+      "type": "auxiliary",
+      "label": "TF-FAN1",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-FAN2",
+      "type": "auxiliary",
+      "label": "TF-FAN2",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-FAN3",
+      "type": "auxiliary",
+      "label": "TF-FAN3",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-FAN4",
+      "type": "auxiliary",
+      "label": "TF-FAN4",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-FAN5",
+      "type": "auxiliary",
+      "label": "TF-FAN5",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-FAN6",
+      "type": "auxiliary",
+      "label": "TF-FAN6",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "bus": "TF-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-POND",
+      "type": "reservoir",
+      "label": "TF-POND",
+      "area": "water",
+      "terminals": [],
+      "parameters": {
+        "areaM2": 100000,
+        "inflowM3S": 10,
+        "tailwaterM": 100,
+        "initialHeadM": 20
+      },
+      "initialState": {
+        "headwaterM": 120,
+        "storageM3": 2000000
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-SPILL1",
+      "type": "spill_gate",
+      "label": "TF-SPILL1",
+      "area": "water",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "maxM": 6,
+        "slewMPerS": 0.15,
+        "flowCoefficient": 3
+      },
+      "initialState": {
+        "positionM": 0,
+        "targetM": 0,
+        "flowM3S": 0,
+        "remote": true,
+        "dc": true,
+        "enabled": true,
+        "fault": false,
+        "stopped": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-SPILL2",
+      "type": "spill_gate",
+      "label": "TF-SPILL2",
+      "area": "water",
+      "terminals": [],
+      "parameters": {
+        "station": "TF",
+        "maxM": 6,
+        "slewMPerS": 0.15,
+        "flowCoefficient": 3
+      },
+      "initialState": {
+        "positionM": 0,
+        "targetM": 0,
+        "flowM3S": 0,
+        "remote": true,
+        "dc": true,
+        "enabled": true,
+        "fault": false,
+        "stopped": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-TSS1",
+      "type": "transformer_2w",
+      "label": "IR-TSS1",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-B1"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-SS1-SOURCE"
+        }
+      ],
+      "parameters": {
+        "xPu": 0.08,
+        "ratedMVA": 40,
+        "tapStep": 0.00625,
+        "tapMin": -8,
+        "tapMax": 8,
+        "tapCapable": false
+      },
+      "initialState": {
+        "tap": 0,
+        "mode": "manual",
+        "remote": true,
+        "dc": true,
+        "healthy": true,
+        "targetPu": 1.0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52SS1",
+      "type": "breaker",
+      "label": "IR-52SS1",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-SS1-SOURCE"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-SS1"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-SS1-LOAD",
+      "type": "load",
+      "label": "IR-SS1-LOAD",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-SS1"
+        }
+      ],
+      "parameters": {
+        "activeMW": 0.08,
+        "reactiveMvar": 0.025
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-TSS2",
+      "type": "transformer_2w",
+      "label": "IR-TSS2",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-B2"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-SS2-SOURCE"
+        }
+      ],
+      "parameters": {
+        "xPu": 0.08,
+        "ratedMVA": 40,
+        "tapStep": 0.00625,
+        "tapMin": -8,
+        "tapMax": 8,
+        "tapCapable": false
+      },
+      "initialState": {
+        "tap": 0,
+        "mode": "manual",
+        "remote": true,
+        "dc": true,
+        "healthy": true,
+        "targetPu": 1.0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52SS2",
+      "type": "breaker",
+      "label": "IR-52SS2",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-SS2-SOURCE"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-SS2"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "closed",
+        "reportedPosition": "closed",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-SS2-LOAD",
+      "type": "load",
+      "label": "IR-SS2-LOAD",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-SS2"
+        }
+      ],
+      "parameters": {
+        "activeMW": 0.08,
+        "reactiveMvar": 0.025
+      },
+      "initialState": {
+        "enabled": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52SSBT",
+      "type": "breaker",
+      "label": "IR-52SSBT",
+      "area": "aux",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-SS1"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-SS2"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-TRANSFER",
+      "type": "transfer_controller",
+      "label": "IR-TRANSFER",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR"
+      },
+      "initialState": {
+        "mode": "auto",
+        "preferred": 1,
+        "retransfer": true,
+        "remote": true,
+        "dc": true,
+        "timer": 0,
+        "phase": "normal"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-DC",
+      "type": "control_supply",
+      "label": "IR-DC",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {},
+      "initialState": {
+        "available": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-LUBE1",
+      "type": "auxiliary",
+      "label": "IR-LUBE1",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-LUBE2",
+      "type": "auxiliary",
+      "label": "IR-LUBE2",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-DC-LUBE",
+      "type": "auxiliary",
+      "label": "IR-DC-LUBE",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": true
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-COMPRESSOR1",
+      "type": "auxiliary",
+      "label": "IR-COMPRESSOR1",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-COMPRESSOR2",
+      "type": "auxiliary",
+      "label": "IR-COMPRESSOR2",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-WATER",
+      "type": "auxiliary",
+      "label": "IR-WATER",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-FAN1",
+      "type": "auxiliary",
+      "label": "IR-FAN1",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-FAN2",
+      "type": "auxiliary",
+      "label": "IR-FAN2",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-FAN3",
+      "type": "auxiliary",
+      "label": "IR-FAN3",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-FAN4",
+      "type": "auxiliary",
+      "label": "IR-FAN4",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-FAN5",
+      "type": "auxiliary",
+      "label": "IR-FAN5",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-FAN6",
+      "type": "auxiliary",
+      "label": "IR-FAN6",
+      "area": "aux",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "bus": "IR-SS1",
+        "battery": false
+      },
+      "initialState": {
+        "requested": true,
+        "running": true,
+        "mode": "auto",
+        "fault": false,
+        "remote": true,
+        "dc": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-POND",
+      "type": "reservoir",
+      "label": "IR-POND",
+      "area": "water",
+      "terminals": [],
+      "parameters": {
+        "areaM2": 100000,
+        "inflowM3S": 10,
+        "tailwaterM": 100,
+        "initialHeadM": 20
+      },
+      "initialState": {
+        "headwaterM": 120,
+        "storageM3": 2000000
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-SPILL1",
+      "type": "spill_gate",
+      "label": "IR-SPILL1",
+      "area": "water",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "maxM": 6,
+        "slewMPerS": 0.15,
+        "flowCoefficient": 3
+      },
+      "initialState": {
+        "positionM": 0,
+        "targetM": 0,
+        "flowM3S": 0,
+        "remote": true,
+        "dc": true,
+        "enabled": true,
+        "fault": false,
+        "stopped": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-SPILL2",
+      "type": "spill_gate",
+      "label": "IR-SPILL2",
+      "area": "water",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "maxM": 3.5,
+        "slewMPerS": 0.15,
+        "flowCoefficient": 3
+      },
+      "initialState": {
+        "positionM": 0,
+        "targetM": 0,
+        "flowM3S": 0,
+        "remote": true,
+        "dc": true,
+        "enabled": true,
+        "fault": false,
+        "stopped": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-SPILL3",
+      "type": "spill_gate",
+      "label": "IR-SPILL3",
+      "area": "water",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "maxM": 3.5,
+        "slewMPerS": 0.15,
+        "flowCoefficient": 3
+      },
+      "initialState": {
+        "positionM": 0,
+        "targetM": 0,
+        "flowM3S": 0,
+        "remote": true,
+        "dc": true,
+        "enabled": true,
+        "fault": false,
+        "stopped": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-SPILL4",
+      "type": "spill_gate",
+      "label": "IR-SPILL4",
+      "area": "water",
+      "terminals": [],
+      "parameters": {
+        "station": "IR",
+        "maxM": 3.5,
+        "slewMPerS": 0.15,
+        "flowCoefficient": 3
+      },
+      "initialState": {
+        "positionM": 0,
+        "targetM": 0,
+        "flowM3S": 0,
+        "remote": true,
+        "dc": true,
+        "enabled": true,
+        "fault": false,
+        "stopped": true
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-52G1",
+      "type": "breaker",
+      "label": "TF-52G1",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-G1-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-A"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "TF-G1"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-G1",
+      "type": "generator",
+      "label": "TF-G1",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-G1-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "TF",
+        "unitNumber": 1,
+        "bus": "TF-A",
+        "breaker": "TF-52G1",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": true,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Twin Falls/TF_UNIT_01/TF_Unit01_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-52G2",
+      "type": "breaker",
+      "label": "TF-52G2",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-G2-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-A"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "TF-G2"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-G2",
+      "type": "generator",
+      "label": "TF-G2",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-G2-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "TF",
+        "unitNumber": 2,
+        "bus": "TF-A",
+        "breaker": "TF-52G2",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": true,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Twin Falls/TF_UNIT_02/TF_Unit02_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-52G3",
+      "type": "breaker",
+      "label": "TF-52G3",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-G3-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-A"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "TF-G3"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-G3",
+      "type": "generator",
+      "label": "TF-G3",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-G3-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "TF",
+        "unitNumber": 3,
+        "bus": "TF-A",
+        "breaker": "TF-52G3",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": true,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Twin Falls/TF_UNIT_03/TF_Unit03_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-52G4",
+      "type": "breaker",
+      "label": "TF-52G4",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-G4-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-B"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "TF-G4"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-G4",
+      "type": "generator",
+      "label": "TF-G4",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-G4-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "TF",
+        "unitNumber": 4,
+        "bus": "TF-B",
+        "breaker": "TF-52G4",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": true,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Twin Falls/TF_UNIT_04/TF_Unit04_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-52G5",
+      "type": "breaker",
+      "label": "TF-52G5",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-G5-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "TF-B"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "TF-G5"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "TF-G5",
+      "type": "generator",
+      "label": "TF-G5",
+      "area": "twin",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "TF-G5-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "TF",
+        "unitNumber": 5,
+        "bus": "TF-B",
+        "breaker": "TF-52G5",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": true,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Twin Falls/TF_UNIT_05/TF_Unit05_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G1",
+      "type": "breaker",
+      "label": "IR-52G1",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G1-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B1"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G1"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G1",
+      "type": "generator",
+      "label": "IR-G1",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G1-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 1,
+        "bus": "IR-B1",
+        "breaker": "IR-52G1",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit01/IF_Unit01_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G2",
+      "type": "breaker",
+      "label": "IR-52G2",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G2-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B1"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G2"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G2",
+      "type": "generator",
+      "label": "IR-G2",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G2-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 2,
+        "bus": "IR-B1",
+        "breaker": "IR-52G2",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit02/IF_Unit02_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G3",
+      "type": "breaker",
+      "label": "IR-52G3",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G3-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B1"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G3"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G3",
+      "type": "generator",
+      "label": "IR-G3",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G3-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 3,
+        "bus": "IR-B1",
+        "breaker": "IR-52G3",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit03/IF_Unit03_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G4",
+      "type": "breaker",
+      "label": "IR-52G4",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G4-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B1"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G4"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G4",
+      "type": "generator",
+      "label": "IR-G4",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G4-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 4,
+        "bus": "IR-B1",
+        "breaker": "IR-52G4",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit04/IF_Unit04_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G5",
+      "type": "breaker",
+      "label": "IR-52G5",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G5-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B1"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G5"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G5",
+      "type": "generator",
+      "label": "IR-G5",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G5-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 5,
+        "bus": "IR-B1",
+        "breaker": "IR-52G5",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit05/IF_Unit05_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G6",
+      "type": "breaker",
+      "label": "IR-52G6",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G6-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B2"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G6"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G6",
+      "type": "generator",
+      "label": "IR-G6",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G6-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 6,
+        "bus": "IR-B2",
+        "breaker": "IR-52G6",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit06/IF_Unit06_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G7",
+      "type": "breaker",
+      "label": "IR-52G7",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G7-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B2"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G7"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G7",
+      "type": "generator",
+      "label": "IR-G7",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G7-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 7,
+        "bus": "IR-B2",
+        "breaker": "IR-52G7",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit07/IF_Unit07_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G8",
+      "type": "breaker",
+      "label": "IR-52G8",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G8-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B2"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G8"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G8",
+      "type": "generator",
+      "label": "IR-G8",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G8-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 8,
+        "bus": "IR-B2",
+        "breaker": "IR-52G8",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit08/IF_Unit08_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G9",
+      "type": "breaker",
+      "label": "IR-52G9",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G9-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B2"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G9"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G9",
+      "type": "generator",
+      "label": "IR-G9",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G9-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 9,
+        "bus": "IR-B2",
+        "breaker": "IR-52G9",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit09/IF_Unit09_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G11",
+      "type": "breaker",
+      "label": "IR-52G11",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G11-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B3"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G11"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G11",
+      "type": "generator",
+      "label": "IR-G11",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G11-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 11,
+        "bus": "IR-B3",
+        "breaker": "IR-52G11",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit11/IF_Unit11_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G12",
+      "type": "breaker",
+      "label": "IR-52G12",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G12-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B3"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G12"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G12",
+      "type": "generator",
+      "label": "IR-G12",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G12-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 12,
+        "bus": "IR-B3",
+        "breaker": "IR-52G12",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit12/IF_Unit12_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-52G13",
+      "type": "breaker",
+      "label": "IR-52G13",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G13-TERMINAL"
+        },
+        {
+          "id": "2",
+          "nodeId": "IR-B3"
+        }
+      ],
+      "parameters": {
+        "openDelayMs": 400,
+        "closeDelayMs": 800,
+        "generatorRef": "IR-G13"
+      },
+      "initialState": {
+        "position": "open",
+        "reportedPosition": "open",
+        "remote": true,
+        "dc": true,
+        "lockout": false,
+        "mechanismHealthy": true,
+        "quality": "good"
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    },
+    {
+      "equipmentId": "IR-G13",
+      "type": "generator",
+      "label": "IR-G13",
+      "area": "iroquois",
+      "terminals": [
+        {
+          "id": "1",
+          "nodeId": "IR-G13-TERMINAL"
+        }
+      ],
+      "parameters": {
+        "station": "IR",
+        "unitNumber": 13,
+        "bus": "IR-B3",
+        "breaker": "IR-52G13",
+        "ratedMW": 5,
+        "ratedMVA": 6,
+        "inertiaSeconds": 4,
+        "droop": 0.04,
+        "rampMWPerS": 0.5,
+        "maxMvar": 3,
+        "blackStartCapable": false,
+        "startSeconds": 6,
+        "stopSeconds": 5,
+        "sourcePage": "Iroquois Falls/IF_GS/IF_Unit13/IF_Unit13_Control.UCBG"
+      },
+      "initialState": {
+        "sequenceState": "STOPPED",
+        "elapsed": 0,
+        "speedRpm": 0,
+        "voltagePu": 0,
+        "frequencyHz": 0,
+        "phaseDegrees": 20,
+        "activeMW": 0,
+        "mechanicalMW": 0,
+        "requestedMW": 1,
+        "requestedMvar": 0,
+        "reactiveMvar": 0,
+        "gate": 0,
+        "gateDemand": 0.2,
+        "flowM3S": 0,
+        "energyMWh": 0,
+        "governorMode": "power",
+        "excitationMode": "avr",
+        "syncMode": "auto",
+        "voltageTargetPu": 1,
+        "speedTrimHz": 0,
+        "blackStart": false,
+        "blackStartMode": "manual",
+        "forming": false,
+        "frequencySupport": true,
+        "remote": true,
+        "dc": true,
+        "lockout86": false,
+        "lockout94": false,
+        "tripCause": null,
+        "brakesApplied": true,
+        "auxLossSeconds": 0,
+        "frequencyFaultSeconds": 0
+      },
+      "sourceRefs": [
+        "h2o",
+        "assumptions"
+      ]
+    }
+  ],
+  "tags": [],
+  "sourceRefs": [
+    {
+      "sourceId": "h2o",
+      "description": "Recovered native controls, 388 Twin files equal February 2019 backup; refer to h2o-controls-reference.json"
+    },
+    {
+      "sourceId": "assumptions",
+      "description": "Illustrative terminal assignments except verified Twin line links; 5MW units, 0.6kV SS, 120kV nominal, dynamic and electrical settings are training assumptions."
+    }
+  ],
+  "assumptions": {
+    "baseMVA": 100,
+    "frequencyHz": 60,
+    "syncHz": 0.15,
+    "syncDegrees": 10,
+    "syncVoltagePu": 0.05,
+    "deadPu": 0.1,
+    "topology": "Source-linked illustrative complex; not a verified as-built netlist",
+    "voltageLabels": "Source has 115/120 and 230/240 labels; this model uses 120 and 230 kV nominal.",
+    "water": "Separate 100000 m2 ponds, constant tailwater, no calibrated river routing."
+  },
+  "fidelity": {
+    "solver": "linearized_multivoltage_islands_v1",
+    "limitations": [
+      "Source-inspired training network, not a validated as-built plant model.",
+      "Linearized P-angle / Q-voltage flow with reduced-order governor, excitation and frequency dynamics; no relay/transient certification.",
+      "Ratings, secondary voltages, loads, limits, delays and untraced terminals are explicit illustrative assumptions."
+    ]
+  }
+}

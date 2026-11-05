@@ -1,3 +1,20 @@
+## 20261105-r013-main-readiness
+
+Restored the missing Shelf mobile module, database schema and retired server
+redirect; updated stale regression fixtures without widening runtime permissions.
+Full Python suite: 628 passed, 21 optional integration skips, 347 subtests passed.
+Full JavaScript suite: 72 passed. The earlier r013 collection blocker is resolved.
+Skipped PostgreSQL/browser integrations and r013 as-built/native acceptance remain
+unverified. See packets/2026-11-05-r013-main-readiness.md.
+
+## 20261105-r013-island-cts
+
+Imported r013 into a separate 21-unit draft simulator, added Island, corrected
+CTS feeder topology, and blocked unresolved connections/controls. 54 simulator
+and standalone HTTP tests pass; browser control/feedback checks pass. Full-suite
+collection is blocked by main's missing `northstar_shelf_mobile` dependency.
+See packets/2026-11-05-r013-island-cts.md.
+
 ## 20261029-assistant-freshness
 
 Server-calculated saved forecast age, timezone regression coverage, and prompt version 9. 63 focused tests and synthetic provider age check pass. See packets/2026-10-29-assistant-freshness.md.
@@ -582,3 +599,10 @@ Persistent 16-group service controls under Tools, inflow and Codex monitor pause
 2026-11-03: Real default research navigation and collapsible NorthStar rail in AI across all builds.
 
 2026-11-03: Full-window AI chat with visible backend-enabled model selection.
+## 20261105-twin-iroquois-complex
+
+Recovered H2O control families now drive a separate 17-unit trainer with connected
+230/120/12/0.6 kV buses, switchgear, taps, station service, water/spill, Twin black
+start, generating islands and synchronization/reconnection. Isolated local entry
+path; native source bases retained separately. See
+[packet](packets/2026-11-05-twin-iroquois-complex.md).
