@@ -1,0 +1,9 @@
+/* The existing worker panel retains its canvas/popout frame in either view. */
+#overviewWorkerGraphic{display:contents}
+#overviewWorkerGraphic[hidden]{display:none!important}
+#overviewWorkerList[hidden]{display:none!important}
+#overviewWorkerList{box-sizing:border-box;min-width:0;max-width:100%;width:100%;overflow:auto;color:var(--text,#edf4f8)}
+body.ns-station-popout #nsStationWindow > #nsWebToolbar{position:sticky;top:0;left:0;z-index:11000;display:flex;flex:0 0 32px;height:32px;padding:2px 8px;box-sizing:border-box;background:var(--panel,#13212a)}
+body.ns-station-popout #nsWebToolbar .ns-web-toolbar-dropdown{top:100%;left:8px;max-height:calc(100dvh - 44px)}
+
+#overviewStaff[data-worker-display="list"]{background:var(--ns-roster-background)!important;border-color:var(--ns-roster-border)!important}

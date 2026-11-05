@@ -1,0 +1,38 @@
+#nsAlarmHistoryDialog{width:min(680px,calc(100vw - 28px));min-width:300px;min-height:44px;max-height:calc(100dvh - 28px);margin:auto;padding:0;border:1px solid #547587;border-radius:8px;background:#101d25;color:#e3edf2;box-shadow:0 18px 44px #000b;font:13px/1.45 Arial,sans-serif;resize:both;overflow:auto}
+#nsAlarmHistoryDialog::backdrop{background:#000a}
+#nsAlarmHistoryDialog header,#nsAlarmHistoryDialog footer{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#162a36}
+#nsAlarmHistoryDialog header{justify-content:space-between;border-bottom:1px solid #365160}
+#nsAlarmHistoryDialog .ns-alarm-window-bar{cursor:move;user-select:none}
+#nsAlarmHistoryDialog .ns-alarm-window-controls{display:flex;align-items:center;gap:3px}
+#nsAlarmHistoryDialog .ns-alarm-window-controls button,#nsAlarmHistoryDialog .ns-alarm-window-controls a{display:grid;place-items:center;width:28px;height:28px;padding:0;text-decoration:none;font-size:17px;line-height:1;cursor:pointer}
+#nsAlarmHistoryDialog .ns-alarm-window-controls a{border:1px solid #547587;border-radius:4px;background:#19303e;color:#e3edf2}
+#nsAlarmHistoryDialog .ns-alarm-window-controls a:hover{background:#254555}
+#nsAlarmHistoryDialog.ns-alarm-minimized{height:44px!important;min-height:44px;resize:none;overflow:hidden}
+#nsAlarmHistoryDialog.ns-alarm-minimized .ns-alarm-history-content,#nsAlarmHistoryDialog.ns-alarm-minimized footer{display:none}
+#nsAlarmHistoryDialog.ns-alarm-maximized{position:fixed;inset:14px!important;width:calc(100vw - 28px)!important;height:calc(100dvh - 28px)!important;max-height:none;max-width:none;margin:0!important;resize:none}
+#nsAlarmHistoryDialog.ns-alarm-maximized .ns-alarm-history-content{max-height:calc(100dvh - 116px)}
+#nsAlarmHistoryDialog footer{justify-content:flex-end;border-top:1px solid #365160}
+#nsAlarmHistoryDialog button{padding:6px 10px;border:1px solid #547587;border-radius:4px;background:#19303e;color:#e3edf2;font:600 12px Arial,sans-serif;cursor:pointer}
+#nsAlarmHistoryDialog button:hover{background:#254555}
+#nsAlarmHistoryDialog [data-alarm-close]{display:grid;place-items:center;width:28px;height:28px;padding:0;font-size:20px;line-height:1}
+#nsAlarmHistoryDialog .ns-alarm-history-content{max-height:min(620px,calc(100dvh - 148px));overflow:auto;padding:0 14px}
+#nsAlarmHistoryDialog .ns-alarm-current{padding:12px 0;border-bottom:1px solid #29404c}
+#nsAlarmHistoryDialog h2,#nsAlarmHistoryDialog h3{margin:0;color:#fff;font-size:15px}
+#nsAlarmHistoryDialog h3{font-size:13px}
+#nsAlarmHistoryDialog p{margin:5px 0;color:#d4e0e6;overflow-wrap:anywhere}
+#nsAlarmHistoryDialog small,#nsAlarmHistoryDialog time{display:block;color:#9db2bd;font-size:11px}
+#nsAlarmHistoryDialog .ns-alarm-history-list{padding:12px 0}
+#nsAlarmHistoryDialog ol{display:grid;gap:8px;margin:8px 0 0;padding:0;list-style:none}
+#nsAlarmHistoryDialog li{padding:8px 0;border-top:1px solid #29404c}
+#nsAlarmHistoryDialog li:first-child{border-top:0}
+#nsAlarmHistoryDialog li strong{display:block;margin-top:2px;color:#fff}
+#nsAlarmHistoryDialog li p{font-size:12px}
+.ns-alarm-acknowledged{opacity:.72}
+.ns-alarm-cleared{opacity:.55}
+.ns-alarm-pinned{box-shadow:inset 3px 0 #8fd4ae}
+[data-ns-alarm-id][data-alarm-new]{--alarm-accent:#75bfff;--alarm-tint:rgba(70,145,220,.16);background:var(--alarm-tint)!important;box-shadow:inset 3px 0 var(--alarm-accent);opacity:1}
+[data-ns-alarm-id][data-alarm-new][data-alarm-severity="warning"]{--alarm-accent:#ffd166;--alarm-tint:rgba(235,170,35,.18);animation:ns-alarm-attention 2s ease-in-out infinite}
+[data-ns-alarm-id][data-alarm-new][data-alarm-severity="critical"]{--alarm-accent:#ff766d;--alarm-tint:rgba(235,60,50,.22);animation:ns-alarm-attention 1.5s ease-in-out infinite}
+.ns-alarm-new-badge{display:inline-block!important;margin-left:6px;color:var(--alarm-accent)!important;font:700 9px/1.3 Arial,sans-serif;white-space:nowrap}
+@keyframes ns-alarm-attention{0%,100%{box-shadow:inset 3px 0 var(--alarm-accent)}50%{box-shadow:inset 5px 0 var(--alarm-accent),inset 0 0 18px var(--alarm-tint)}}
+@media(prefers-reduced-motion:reduce){[data-ns-alarm-id][data-alarm-new]{animation:none!important;outline:1px solid var(--alarm-accent);outline-offset:-1px}}

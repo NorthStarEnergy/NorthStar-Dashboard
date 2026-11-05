@@ -1,0 +1,29 @@
+/* FirstLight static single-line convention on a black drafting board:
+   thin unfilled device geometry, heavy bus bars, and square corners. */
+.one-line-canvas .node-shape {
+  fill: none;
+  stroke: #d7e2e5;
+  stroke-width: 1.5;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+.one-line-canvas .wire {
+  stroke: #d7e2e5;
+  stroke-width: 1.5;
+}
+.one-line-canvas .node-shape.symbol-heavy {
+  stroke-width: 6;
+}
+.one-line-canvas .node text {
+  font-family: Arial, sans-serif;
+  letter-spacing: .02em;
+}
+.one-line-canvas .node .node-type {
+  font-size: calc(8px * var(--ns-font-scale, 1));
+  letter-spacing: .04em;
+}
+@media print {
+  .one-line-canvas .node-shape,
+  .one-line-canvas .wire { stroke: #111; stroke-width: 1.1; }
+  .one-line-canvas .node-shape.symbol-heavy { stroke-width: 4; }
+}

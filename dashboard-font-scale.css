@@ -1,0 +1,3 @@
+/* Shared operator-console typography scale. Keep the multiplier in one place. */
+:root{--ns-font-scale:1.125;font-size:112.5%}
+html body.overview-canvas main #weatherStrip>.ns-weather-original .station-title strong{letter-spacing:-.02em!important}

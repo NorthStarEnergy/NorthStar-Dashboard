@@ -1,0 +1,117 @@
+﻿dataset,column,label,type,unit,required
+runtime,site,Station,text,,True
+runtime,equipment,Equipment,text,,False
+runtime,started_at,Started at,datetime,,True
+runtime,ended_at,Ended at,datetime,,False
+runtime,state,State,text,,False
+runtime,running_hours,Running hours,number,h,False
+runtime,source,Source reference,text,,False
+runtime,notes,Notes,text,,False
+runtime,_id,Record ID,text,,False
+runtime,_version,Revision,integer,,False
+runtime,_created_at,Created at,datetime,,False
+runtime,_updated_at,Updated at,datetime,,False
+runtime,_actor,Last edited by,text,,False
+power,site,Station,text,,True
+power,equipment,Equipment,text,,False
+power,observed_at,Observed at,datetime,,True
+power,power_mw,Active power,number,MW,False
+power,energy_mwh,Energy,number,MWh,False
+power,interval_hours,Interval duration,number,h,False
+power,voltage_kv,Voltage,number,kV,False
+power,quality,Quality,text,,False
+power,source,Source reference,text,,False
+power,_id,Record ID,text,,False
+power,_version,Revision,integer,,False
+power,_created_at,Created at,datetime,,False
+power,_updated_at,Updated at,datetime,,False
+power,_actor,Last edited by,text,,False
+water,site,Station,text,,True
+water,gauge,Gauge,text,,False
+water,observed_at,Observed at,datetime,,True
+water,level_m,Water level,number,m,False
+water,flow_m3s,Flow,number,m³/s,False
+water,temperature_c,Water temperature,number,°C,False
+water,datum,Level datum,text,,False
+water,quality,Quality,text,,False
+water,source,Source reference,text,,False
+water,_id,Record ID,text,,False
+water,_version,Revision,integer,,False
+water,_created_at,Created at,datetime,,False
+water,_updated_at,Updated at,datetime,,False
+water,_actor,Last edited by,text,,False
+weather,site,Station,text,,True
+weather,observed_at,Observed at,datetime,,True
+weather,kind,Observed / forecast,text,,True
+weather,issued_at,Forecast issued at,datetime,,False
+weather,temperature_c,Temperature,number,°C,False
+weather,precipitation_mm,Precipitation,number,mm,False
+weather,wind_kmh,Wind speed,number,km/h,False
+weather,quality,Quality,text,,False
+weather,source,Source reference,text,,False
+weather,_id,Record ID,text,,False
+weather,_version,Revision,integer,,False
+weather,_created_at,Created at,datetime,,False
+weather,_updated_at,Updated at,datetime,,False
+weather,_actor,Last edited by,text,,False
+operations,site,Station,text,,True
+operations,equipment,Equipment,text,,False
+operations,occurred_at,Occurred at,datetime,,True
+operations,category,Category,text,,False
+operations,status,Status,text,,False
+operations,summary,Summary,text,,True
+operations,source,Source reference,text,,False
+operations,notes,Notes,text,,False
+operations,_id,Record ID,text,,False
+operations,_version,Revision,integer,,False
+operations,_created_at,Created at,datetime,,False
+operations,_updated_at,Updated at,datetime,,False
+operations,_actor,Last edited by,text,,False
+generators,site,Station,text,,True
+generators,equipment,Generator,text,,True
+generators,manufacturer,Manufacturer,text,,False
+generators,model,Model,text,,False
+generators,rated_mw,Rated power,number,MW,False
+generators,rated_mva,Rated apparent power,number,MVA,False
+generators,voltage_kv,Rated voltage,number,kV,False
+generators,speed_rpm,Rated speed,number,rpm,False
+generators,source,Source reference,text,,False
+generators,notes,Notes,text,,False
+generators,_id,Record ID,text,,False
+generators,_version,Revision,integer,,False
+generators,_created_at,Created at,datetime,,False
+generators,_updated_at,Updated at,datetime,,False
+generators,_actor,Last edited by,text,,False
+equipment,site,Station,text,,True
+equipment,equipment,Designation,text,,True
+equipment,kind,Equipment type,text,,False
+equipment,manufacturer,Manufacturer,text,,False
+equipment,model,Model,text,,False
+equipment,serial_number,Serial number,text,,False
+equipment,commissioned_on,Commissioned on,date,,False
+equipment,status,Status,text,,False
+equipment,source,Source reference,text,,False
+equipment,notes,Notes,text,,False
+equipment,_id,Record ID,text,,False
+equipment,_version,Revision,integer,,False
+equipment,_created_at,Created at,datetime,,False
+equipment,_updated_at,Updated at,datetime,,False
+equipment,_actor,Last edited by,text,,False
+ecology,site,Station,text,,True
+ecology,reach,River reach,text,,False
+ecology,observed_at,Observed at,datetime,,True
+ecology,species,Species,text,,True
+ecology,life_stage,Life stage,text,,False
+ecology,spawning_stage,Spawning stage,text,,False
+ecology,measure,Fish / redd / egg / presence,text,,True
+ecology,count,Count,integer,,False
+ecology,presence,Presence,text,,False
+ecology,method,Survey method,text,,False
+ecology,effort_hours,Survey effort,number,h,False
+ecology,source,Source reference,text,,False
+ecology,notes,Notes,text,,False
+ecology,_id,Record ID,text,,False
+ecology,_version,Revision,integer,,False
+ecology,_created_at,Created at,datetime,,False
+ecology,_updated_at,Updated at,datetime,,False
+ecology,_actor,Last edited by,text,,False

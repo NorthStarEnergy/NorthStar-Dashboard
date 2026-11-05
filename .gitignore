@@ -1,0 +1,37 @@
+# Local credentials and operational data
+.env
+.env.*
+!.env.example
+data/
+.northstar-*
+cloudflared-config.yml
+*.pem
+*.key
+*.pfx
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Dependencies, builds, caches, logs, and private coordination
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+outputs/
+output/
+dist/
+desktop-build/
+desktop-dist/
+.coordinator-private/
+*.log
+*.zip
+*.7z
+*.bak
+
+# Generated dashboard screenshots
+/dashboard-screenshot*.png
+/*-check.png
+/theme-*.png

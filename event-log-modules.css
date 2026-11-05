@@ -1,0 +1,172 @@
+#eventLogs,#eventRegister{min-width:0;color:var(--text)}
+
+#eventLogs{display:grid;align-content:start;grid-auto-rows:max-content;gap:0;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+
+#eventLogs .el-title,#eventLogs .el-overview,#eventLogs .el-input-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+#eventLogs h2,#eventRegister .el-history-title h2{margin:0;font-size:22px}
+
+#eventLogs h3,#eventRegister .el-report h3{margin:0;font-size:16px}
+
+#eventLogs .el-title p,#eventRegister .el-history-title p,#eventRegister .el-report p{margin:2px 0;color:var(--muted)}
+
+#eventLogs button,#eventRegister .el-report button{padding:7px 10px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);color:var(--text);cursor:pointer}
+
+#eventLogs button:hover,#eventRegister .el-report button:hover{border-color:var(--blue)}
+
+#eventLogs button:disabled,#eventRegister .el-report button:disabled{opacity:.5;cursor:default}
+
+#eventLogs .el-overview{padding:9px;border:1px solid var(--line);border-radius:5px}
+
+#eventLogs .el-overview strong{color:var(--gold)}
+
+#eventLogs .el-views,#eventRegister .el-report-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+#eventLogs .el-views .is-active{border-color:var(--blue);color:var(--blue)}
+
+#eventLogs .el-search{display:grid;gap:4px;max-width:560px;color:var(--muted);font-size:12px}
+
+#eventLogs .el-search input{min-height:36px;padding:7px 9px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;color:var(--text);font:inherit}
+
+#eventLogs .el-rows{max-height:38vh;min-height:100px;overflow:auto;border:1px solid var(--line);border-radius:6px}
+
+#eventLogs .el-row{display:grid;grid-template-columns:minmax(130px,190px) minmax(0,1fr) auto;gap:12px;align-items:start;padding:9px 10px;border-bottom:1px solid var(--line)}
+
+#eventLogs .el-row:last-child{border-bottom:0}
+
+#eventLogs .el-row time,#eventLogs .el-row small{display:block;color:var(--muted);font-size:11px}
+
+#eventLogs .el-row a{color:var(--blue);font-weight:700;text-decoration:none}
+
+#eventLogs .el-row p{margin:3px 0 0;color:var(--muted);font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+
+#eventLogs .el-severity{display:inline-block;margin:4px 0;text-transform:uppercase;font-size:11px;font-weight:700}
+
+#eventLogs .el-critical{color:var(--red)}#eventLogs .el-warning{color:var(--gold)}
+
+#eventLogs .el-note,#eventLogs .el-empty{margin:0;color:var(--muted);font-size:12px}
+
+#eventLogs .el-input{padding:12px;border:1px solid var(--line);border-radius:6px}
+
+#eventLogs .el-input-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;cursor:move;user-select:none}#eventLogs .el-input-heading span{color:var(--muted);font-size:12px}
+#eventLogs .el-window-controls{display:flex;align-items:center;gap:7px;flex:none}
+#eventLogs .el-window-controls button{width:15px;height:15px;min-width:15px;padding:0;border:1px solid #0005;border-radius:50%;box-shadow:inset 0 1px #fff5;cursor:pointer}
+#eventLogs .el-window-controls .el-window-close{background:#ff5f57}
+#eventLogs .el-window-controls .el-window-minimize{background:#febc2e}
+#eventLogs .el-window-controls .el-window-maximize{background:#28c840}
+
+#eventLogs .logbook-card{width:100%;padding:0!important;background:none;border:0;box-shadow:none}
+
+#eventLogs #logList[hidden]{display:none!important}
+
+#eventLogs .logbook-fields{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+#eventLogs .logbook-fields label:first-child{grid-column:auto}
+
+#eventLogs .logbook-fields input,#eventLogs .logbook-fields select{font-size:12px;min-height:34px}
+
+#eventLogs .el-sources summary{cursor:pointer;color:var(--muted)}
+
+#eventLogs #elSources{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;padding:10px 0}
+
+#eventLogs #elSources>div{display:grid;gap:2px;padding:8px;border:1px solid var(--line);border-radius:5px;font-size:12px}
+
+#eventLogs #elSources small{color:var(--muted)}
+
+#eventRegister .el-history-title{padding:4px 8px 10px}
+
+#eventRegister .el-report{margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:7px;background:var(--panel)}
+
+#eventRegister .el-report-actions{margin:10px 0}
+
+#eventRegister #elReportSummary{display:flex;gap:16px;flex-wrap:wrap;padding:7px 0}
+
+#eventRegister #elReportStatus{font-size:12px}
+
+#eventRegister .el-chart{display:grid;gap:5px;max-height:250px;overflow:auto}
+
+#eventRegister .el-chart>div{display:grid;grid-template-columns:110px minmax(0,1fr) 70px;gap:8px;align-items:center;font-size:12px}
+
+#eventRegister .el-bar{display:block;width:var(--bar);height:12px;background:var(--blue);border-radius:3px}
+
+@media(max-width:700px){#eventLogs .el-row{grid-template-columns:1fr}#eventLogs .logbook-fields{grid-template-columns:1fr 1fr}#eventRegister .el-chart>div{grid-template-columns:80px minmax(0,1fr) 50px}}
+
+@media(max-width:480px){#eventLogs .logbook-fields{grid-template-columns:1fr}}
+
+
+
+/* Category landing: one main toolbar, optional smaller child toolbar, then records. */
+
+#eventLogs .el-categories{display:flex;flex-wrap:wrap;border:1px solid var(--line);flex-shrink:0}
+
+#eventLogs .el-categories button{flex:1;white-space:nowrap;padding:7px 8px;border:0;border-right:1px solid var(--line);border-radius:0;background:#19354b;color:#e0edfa;font-size:12px;font-weight:700}
+
+#eventLogs .el-categories button[aria-pressed="true"]{background:#347aaa;color:white}
+
+#eventLogs .el-categories #elNew{background:#243f50;color:#b7e7d9}
+
+#eventLogs .el-subcategories{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 10px;background:#202f2e;border:1px solid #4e7068}
+
+#eventLogs .el-subcategories[hidden],#eventLogs #elMore[hidden]{display:none!important}
+
+#eventLogs .el-subcategories span{font-size:11px;color:#a5c8bd}
+
+#eventLogs .el-subcategories button{padding:5px 11px;background:#314e47;color:#d3e9de;border-color:#557f6f;font-size:12px}
+
+#eventLogs .el-subcategories button[aria-pressed="true"]{background:#84b69e;color:#10251d}
+
+#eventLogs .el-events-heading,#eventLogs .el-footer{display:flex;gap:12px;justify-content:space-between;align-items:center}
+
+#eventLogs .el-events-heading{justify-content:flex-end;padding:6px 0;border-bottom:1px solid var(--line)}
+
+#eventLogs #elFreshness{font-size:11px;color:var(--muted)}
+
+#eventLogs .el-rows{max-height:none;min-height:280px;border:0;border-radius:0;overflow:visible}
+
+#eventLogs .el-row{box-sizing:border-box;min-height:32px;padding:2px 10px;gap:10px;line-height:13px;grid-template-columns:170px minmax(0,1fr) auto}
+#eventLogs .el-row>div{min-width:0}
+#eventLogs .el-row time,#eventLogs .el-row small{line-height:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#eventLogs .el-row a{display:block;font-size:12px;line-height:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#eventLogs .el-severity{margin:0;line-height:13px}
+#eventLogs .el-row-actions{line-height:13px}
+
+#eventLogs dialog.el-input{width:min(760px,94vw);max-height:88vh;overflow:auto;color:var(--text);background:var(--panel)}
+#eventLogs dialog.el-input.is-minimized{position:fixed;inset:auto auto 12px 12px;width:min(330px,calc(100vw - 24px));max-height:none;overflow:hidden;padding:8px 12px}
+#eventLogs dialog.el-input.is-minimized .logbook-card{display:none}
+#eventLogs dialog.el-input.is-minimized .el-input-heading{margin:0}
+#eventLogs dialog.el-input.is-maximized{position:fixed;inset:8px;width:auto;height:auto;max-width:none;max-height:none;margin:0;resize:none;border-radius:8px}
+
+#eventLogs dialog.el-input:not([open]){display:none!important}
+
+#eventLogs dialog::backdrop{background:#0009}
+
+#eventLogs .el-row-actions summary{cursor:pointer;font-size:11px;color:var(--muted)}
+
+#eventLogs .el-footer{font-size:12px}
+
+@media(max-width:700px){#eventLogs .el-categories button{flex:none;font-size:11px;padding:6px 7px}#eventLogs .el-row{grid-template-columns:1fr}#eventLogs .el-events-heading{flex-wrap:wrap}}
+
+/* Spreadsheet-style resizable columns for the event register. */
+#eventLogs{--el-time-width:180px;--el-severity-width:96px;--el-event-width:minmax(220px,1fr);--el-source-width:180px}
+#eventLogs .el-table-wrap{min-width:0;max-width:100%;overflow-x:auto}
+#eventLogs .el-table-head,#eventLogs .el-row{display:grid;grid-template-columns:var(--el-time-width) var(--el-severity-width) var(--el-event-width) var(--el-source-width) 74px;min-width:max-content;align-items:center}
+#eventLogs .el-table-head{position:sticky;top:0;z-index:2;min-width:900px;background:#142633;border-bottom:1px solid var(--line);color:#a8bdcb;font-size:10px;font-weight:700;letter-spacing:.06em}
+#eventLogs .el-table-head>span{position:relative;box-sizing:border-box;min-width:0;padding:8px 10px;white-space:nowrap}
+#eventLogs .el-table-head>span:not(:last-child){border-right:1px solid #344b59}
+#eventLogs .el-row{min-width:900px;min-height:32px;padding:2px 0;gap:0;line-height:13px;border-bottom:1px solid var(--line)}
+#eventLogs .el-row>*{box-sizing:border-box;min-width:0;padding:0 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#eventLogs .el-row time,#eventLogs .el-row a,#eventLogs .el-row-source{display:block;line-height:15px;font-size:11px}
+#eventLogs .el-row a{font-size:12px}
+#eventLogs .el-row .el-severity{margin:0;line-height:15px}
+#eventLogs .el-row-actions{align-self:center;overflow:visible}
+#eventLogs .el-row-actions summary{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#eventLogs .el-alarm-row{cursor:pointer}
+#eventLogs .el-alarm-row:hover{background:#162833}
+#eventLogs .el-pinned{display:inline;margin-left:6px;color:#8fd4ae;font:700 9px/1 Arial,sans-serif;letter-spacing:.06em}
+#eventLogs .el-column-grip{position:absolute;top:0;right:-4px;width:9px;height:100%;padding:0!important;border:0!important;background:transparent!important;cursor:col-resize;touch-action:none;z-index:3}
+#eventLogs .el-column-grip::after{content:"";position:absolute;top:20%;bottom:20%;left:4px;border-left:1px solid #7690a0}
+#eventLogs .el-column-grip:hover::after,#eventLogs .el-column-grip:focus-visible::after,#eventLogs .el-column-grip.is-dragging::after{border-left:2px solid #8fd4ae}
+
+/* Freshness shares the event column header instead of occupying a separate row. */
+#eventLogs .el-table-head>.el-event-heading{display:flex;align-items:center;gap:12px}
+#eventLogs .el-event-heading #elFreshness{min-width:0;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;letter-spacing:normal}

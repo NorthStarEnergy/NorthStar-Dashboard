@@ -1,0 +1,11 @@
+{
+  "url": "https://maximo.example.invalid/maximo/oslc",
+  "apiKey": "",
+  "username": "",
+  "password": "",
+  "assetObjectStructure": "mxapiasset",
+  "workOrderObjectStructure": "mxapiwo",
+  "sites": {
+    "site:iroquois-falls": { "siteid": "EAST", "location": "IROQUOIS FALLS" }
+  }
+}

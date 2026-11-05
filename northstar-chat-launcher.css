@@ -1,0 +1,23 @@
+.ns-shared-chat{position:fixed;right:18px;bottom:68px;width:min(520px,calc(100vw - 24px));height:min(700px,calc(100dvh - 90px));z-index:1001;display:flex;flex-direction:column;background:#101723;border:1px solid #52647d;border-radius:10px;overflow:hidden;box-shadow:0 12px 48px #0008}
+.ns-shared-chat[hidden]{display:none}.ns-shared-chat>header{display:flex;align-items:center;gap:12px;padding:10px 12px;color:#f2f5fa;font:14px system-ui}.ns-shared-chat>header a{margin-left:auto;color:#b8d8ff;font-size:12px}.ns-shared-chat>header button{background:none;border:0;color:inherit;font:24px system-ui;cursor:pointer}.ns-shared-chat iframe{width:100%;flex:1;min-height:0;border:0;background:#101723}.ns-shared-chat-toggle:focus-visible,.ns-shared-chat header :focus-visible{outline:2px solid #9fc8ff;outline-offset:2px}@media(max-width:600px){.ns-shared-chat{right:12px;bottom:62px}}
+.ns-inline-chat{display:block;width:100%;height:100%;min-height:280px;border:0;background:#101723}
+
+.ns-inline-chat.ns-inline-chat-compact{min-height:0}
+
+
+.ns-shared-chat-toggle,.ns-shared-avatar{position:static;display:block;border:1px solid #52647d;border-radius:6px;background:#182435;color:#f2f5fa;font:600 14px system-ui;cursor:pointer;padding:10px 12px;box-shadow:none}
+.ns-shared-chat-toggle{width:100%;text-align:left;margin-top:8px}
+.ns-shared-avatar{margin:8px 0;width:auto!important;min-height:54px}
+.ns-shared-avatar img{width:68px;height:46px;image-rendering:pixelated;object-fit:contain}
+.ns-menu-profile{padding:8px 0;border-top:1px solid #52647d;color:inherit;font:14px system-ui}
+.ns-menu-profile>summary{cursor:pointer;padding:8px 0;font-weight:600}
+.ns-menu-profile>small{display:block;max-width:220px;line-height:1.4}
+.ns-account-menu{position:relative;margin-left:auto;z-index:1100;color:#f2f5fa;font:14px system-ui}
+.ns-account-menu>summary{list-style:none;cursor:pointer;padding:8px 12px;border:1px solid #52647d;border-radius:6px;background:#182435;font-size:22px}
+.ns-account-menu>summary::-webkit-details-marker{display:none}
+.ns-account-menu-content{position:absolute;right:0;top:calc(100% + 6px);width:240px;max-width:calc(100vw - 32px);max-height:70dvh;overflow:auto;padding:12px;background:#182435;border:1px solid #52647d;border-radius:8px;box-shadow:0 8px 24px #0006}
+.ns-shared-avatar:focus-visible,.ns-menu-profile>summary:focus-visible,.ns-account-menu>summary:focus-visible{outline:2px solid #9fc8ff;outline-offset:2px}
+.ns-dashboard-chat.ns-shared-chat{bottom:76px;height:min(640px,calc(100dvh - 100px))}
+
+.table-top .table-menu[open]{z-index:100}
+.table-top .table-menu>nav{max-height:calc(100dvh - 120px);overflow:auto;min-width:220px}

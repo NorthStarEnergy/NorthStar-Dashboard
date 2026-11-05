@@ -1,0 +1,26 @@
+/* V3 removes controls from the original roster; its station and company palette stays in field-roster.css. */
+body.ns-build-v3 #fieldRoster .fr-toolbar{flex-wrap:nowrap;gap:6px;min-height:27px;margin-bottom:2px}
+body.ns-build-v3 #fieldRoster .fr-toolbar :is(h2,.fr-regions,select,.fr-columns){display:none!important}
+body.ns-build-v3 #fieldRoster .fr-v3-count{font-size:11px;color:var(--muted,#9cabbc);white-space:nowrap;flex:none}
+body.ns-build-v3 #fieldRoster [data-fr-add]{order:0;flex:none}
+body.ns-build-v3 #fieldRoster .fr-toolbar input{order:1;min-width:80px;max-width:180px;flex:1}
+body.ns-build-v3 #fieldRoster .fr-v3-count{order:2}
+body.ns-build-v3 #fieldRoster .fr-toolbar [role=status]{order:3;min-width:0;overflow:hidden;text-overflow:ellipsis;flex:1}
+body.ns-build-v3 #fieldRoster [data-fr-refresh]{order:4;flex:none}
+body.ns-build-v3 #fieldRoster :is(td,.fr-person,.fr-actions){white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+body.ns-build-v3 #fieldRoster .fr-person{height:23px!important;line-height:23px!important;font-size:12px!important}
+body.ns-build-v3 #fieldRoster tr[data-fr-id]{cursor:pointer}
+body.ns-build-v3 #fieldRoster .fr-actions{width:30px;padding-left:3px;padding-right:3px}
+body.ns-build-v3 #fieldRoster .fr-actions button{width:22px;height:22px;padding:0;margin:0;font-size:17px;line-height:18px}
+body.ns-build-v3 #fieldRoster thead th:first-child{width:24%}
+body.ns-build-v3 #fieldRoster thead th:nth-child(2){width:20%}
+body.ns-build-v3 #fieldRoster thead th:nth-child(3){width:22%}
+body.ns-build-v3 #fieldRoster thead th:nth-child(4){width:12%}
+body.ns-build-v3 #fieldRoster thead th:last-child{width:30px}
+body.ns-build-v3 #fieldRoster .fr-v3-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+body.ns-build-v3 #fieldRoster td[data-presence=help]{color:#ff8b82}
+body.ns-build-v3 #fieldRoster td[data-presence=overdue]{color:#e8c584}
+body.ns-build-v3 #fieldRoster .fr-v3-other{color:var(--muted,#9cabbc)}
+
+body.ns-build-v3 #overviewWorkerList .fr-toolbar h2{display:none!important}
+body.ns-build-v3 #overviewWorkerList [data-fr-action=out]{width:23px;padding:0;font-size:17px;line-height:19px}

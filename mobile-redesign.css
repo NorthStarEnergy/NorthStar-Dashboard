@@ -1,0 +1,117 @@
+/* Phone-first overview: preserve live data, replace desktop canvas geometry. */
+@media (max-width:700px) {
+  html { scroll-padding-top:124px; }
+
+  /* The live status area remains fixed, but each feed is a swipeable summary card. */
+  body.ns-has-status .app > main {
+    width:100% !important;
+    min-width:0 !important;
+    margin-top:124px !important;
+    padding:0 12px 28px !important;
+  }
+  #nsStatusBar {
+    left:0 !important;
+    right:0 !important;
+    top:0 !important;
+    display:flex !important;
+    height:116px !important;
+    min-height:116px !important;
+    gap:8px !important;
+    padding:8px 12px !important;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    scroll-snap-type:x mandatory;
+    scrollbar-width:none;
+  }
+  #nsStatusBar::-webkit-scrollbar { display:none; }
+  #nsStatusBar .ns-status-module {
+    flex:0 0 calc(100% - 28px) !important;
+    min-height:100px !important;
+    height:100px !important;
+    padding:9px 11px !important;
+    scroll-snap-align:start;
+  }
+  #nsStatusBar .ns-status-events { padding:8px 10px !important; }
+  #nsStatusBar .ns-status-events-head { gap:4px 8px !important; }
+  #nsStatusBar .ns-status-filters button { padding:2px 5px !important; font-size:9px !important; }
+  #nsStatusBar .ns-status-alarms { max-height:48px !important; }
+  #nsStatusBar .ns-status-alarm { min-height:22px !important; grid-template-columns:38px minmax(0,1fr) !important; gap:5px !important; }
+  #nsStatusBar .ns-status-alarm-site,
+  #nsStatusBar button.ns-status-alarm-mark { display:none !important; }
+  #nsStatusBar .ns-status-title { font-size:12px !important; }
+  #nsStatusBar strong { font-size:18px !important; }
+  #nsStatusBar .ns-status-value,
+  #nsStatusBar .ns-status-content > span { font-size:12px !important; }
+  #nsStatusBar .ns-status-meta,
+  #nsStatusBar small.ns-status-meta { font-size:10px !important; }
+
+  /* Canvas coordinates are valuable on desktop, but unusable on a narrow screen. */
+  body.overview-canvas main {
+    position:relative !important;
+    min-height:0 !important;
+    height:auto !important;
+  }
+  body.overview-canvas main .page-header {
+    display:block !important;
+    position:relative !important;
+    height:auto !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+  body.overview-canvas main .page-header > #weatherStrip {
+    display:grid !important;
+    position:relative !important;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:8px !important;
+    width:100% !important;
+    height:auto !important;
+    margin:0 0 12px !important;
+    padding:0 !important;
+  }
+  body.overview-canvas main #weatherStrip > [data-canvas-module] {
+    position:relative !important;
+    inset:auto !important;
+    transform:none !important;
+    width:auto !important;
+    min-width:0 !important;
+    height:auto !important;
+    min-height:126px !important;
+    margin:0 !important;
+  }
+  body.overview-canvas main #overview.active,
+  body.overview-canvas main #overviewModules {
+    display:block !important;
+    position:relative !important;
+    width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+  body.overview-canvas main #overviewModules > [data-canvas-module],
+  body.overview-canvas main #overviewGeneratingStations,
+  body.overview-canvas main #overviewGeneratingStations [data-canvas-module] {
+    position:relative !important;
+    inset:auto !important;
+    transform:none !important;
+    width:100% !important;
+    min-width:0 !important;
+    height:auto !important;
+    margin:0 0 12px !important;
+  }
+  body.overview-canvas main #overviewStaff {
+    min-height:0 !important;
+    max-height:none !important;
+    overflow:visible !important;
+  }
+  body.overview-canvas main #overviewStaff #staffGroups { max-height:420px !important; overflow:auto !important; }
+  body.overview-canvas main #overviewGeneratingStations .generating-stations-grid {
+    grid-template-columns:1fr !important;
+    gap:8px !important;
+  }
+  body.overview-canvas main #overviewGeneratingStations .gs-card {
+    min-height:92px !important;
+    margin:0 !important;
+  }
+  body.overview-canvas main .ns-summary { min-height:0 !important; }
+}

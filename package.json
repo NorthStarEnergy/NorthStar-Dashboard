@@ -1,0 +1,69 @@
+{
+  "name": "northstar-control-room",
+  "version": "1.0.6",
+  "private": true,
+  "type": "module",
+  "main": "desktop/main.cjs",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vinext dev",
+    "build": "vinext build && node scripts/prepare-sites.mjs",
+    "start": "vinext start",
+    "desktop:dev": "electron .",
+    "desktop:backend": "python scripts/build-desktop-backend.py",
+    "desktop:package": "node scripts/package-desktop.cjs",
+    "desktop:manager": "node scripts/package-manager.cjs"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "vinext": "0.0.50"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.37.1",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.26",
+    "electron": "44.4.3",
+    "electron-builder": "26.15.3",
+    "typescript": "5.9.3",
+    "vite": "8.0.13",
+    "wrangler": "4.92.0"
+  },
+  "build": {
+    "appId": "ca.northstarenergy.controlroom",
+    "productName": "NorthStar Control Room",
+    "copyright": "Copyright © 2026 NorthStar Energy",
+    "asar": true,
+    "directories": {
+      "output": "desktop-dist",
+      "buildResources": "desktop"
+    },
+    "files": [
+      "desktop/**",
+      "package.json"
+    ],
+    "win": {
+      "icon": "desktop/northstar.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "NorthStar-Control-Room-Setup-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

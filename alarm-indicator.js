@@ -1,0 +1,37 @@
+(function(){
+  'use strict';
+  document.addEventListener('DOMContentLoaded',function(){
+    const obsolete=document.querySelector('#eventsCard');
+    if(obsolete&&!window.NORTHSTAR_DEMO_HOME)obsolete.remove();
+    const bar=document.querySelector('#alarmBar');
+    if(!bar)return;
+    bar.className='alarm-bar alarm-indicator-bar';
+    bar.hidden=false;
+    bar.innerHTML='<button class="alarm-indicator" id="alarmIndicator" type="button"><span>Alarms</span> <span class="alarm-indicator-count">(0)</span></button>';
+    const button=bar.querySelector('#alarmIndicator');
+    const testAlarms=[];
+    button.addEventListener('click',function(){document.querySelector('[data-tab="logbook"]')?.click()});
+    button.setAttribute('aria-label','Alarms, 0 active. Open Events.');
+
+    renderAlarmBar=function(){
+      const market=typeof openAlerts!=='undefined'&&Array.isArray(openAlerts)?openAlerts:[];
+      const staff=typeof staffHelpAlerts!=='undefined'&&Array.isArray(staffHelpAlerts)?staffHelpAlerts:[];
+      const marketOpen=market.filter(function(item){return item&&item.state!=='cleared'});
+      const staffOpen=staff.filter(function(item){return item&&item.needsHelp&&item.helpState!=='resolved'});
+      const total=marketOpen.length+staffOpen.length+testAlarms.length;
+      window.dispatchEvent(new CustomEvent('northstar:alarms-updated',{detail:{count:total}}));
+      const feeds=window.NorthstarOverview?.feeds;
+      const known=!feeds || ['alarms','staff'].every(k=>feeds[k]?.checked && !feeds[k].error && Date.now()-feeds[k].checked<120000);
+      const unacknowledged=marketOpen.filter(function(item){return item.state==='active'}).length+
+        staffOpen.filter(function(item){return item.helpState==='requested'}).length+testAlarms.length;
+      button.querySelector('.alarm-indicator-count').textContent='('+ (total || (known ? 0 : '—')) +')';
+      button.classList.toggle('has-alarms',total>0);
+      button.classList.toggle('unacknowledged',unacknowledged>0);
+      button.setAttribute('aria-label',(known?'':'Alarm sources unavailable. Last received: ')+'Alarms, '+total+' active, '+unacknowledged+' unacknowledged. Open Events.');
+      button.title=unacknowledged?unacknowledged+' unacknowledged alarm'+(unacknowledged===1?'':'s'):'Open Events';
+    };
+    window.addEventListener('northstar:test-input',event=>{const test=event.detail||{};if(test.type!=='alarm')return;testAlarms.push({severity:test.severity||'info',target:test.target||'Test alarm'});renderAlarmBar();});
+    window.addEventListener('northstar:test-input-clear',()=>{testAlarms.length=0;renderAlarmBar();});
+    renderAlarmBar();
+  });
+})();

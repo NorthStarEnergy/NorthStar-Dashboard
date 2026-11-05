@@ -1,0 +1,18 @@
+#nsDevelopmentFolder { grid-row:99; margin:8px 0; color:var(--muted,#9eb0b9); }
+#nsDevelopmentFolder summary { display:flex; align-items:center; box-sizing:border-box; min-height:36px; padding:8px 10px; border-radius:7px; cursor:pointer; font:500 calc(13px * var(--ns-font-scale, 1))/1.3 Arial,sans-serif; text-transform:uppercase; letter-spacing:0; }
+#nsDevelopmentFolder summary:hover { background:#1b303d; }
+#nsDevelopmentFolder summary .nav-label { color:var(--blue,#8cc9e9); }
+#nsDevelopmentFolder[open] summary .nav-label { color:#eff8fc; }
+#nsDevelopmentFolder a,#nsDevelopmentFolder button { display:block; box-sizing:border-box; width:100%; padding:9px 12px 9px 28px; color:inherit; text-align:left; text-decoration:none; font:inherit; border:0; background:transparent; cursor:pointer; }
+#nsDevelopmentFolder a:hover,#nsDevelopmentFolder a[aria-current=page] { background:#23404e; }
+#nsDevelopmentFolder [data-development-export] { font-size:11px; opacity:.8; }
+#nsDemoOverview { display:none; padding:24px; }
+html[data-ns-development=demo] .page-header,
+html[data-ns-development=demo] #weatherStrip,
+html[data-ns-development=demo] #marketTopTiles,
+html[data-ns-development-fixed=true] .page-header,
+html[data-ns-development-fixed=true] #weatherStrip,
+html[data-ns-development-fixed=true] #marketTopTiles,
+html[data-ns-development-fixed=true] #overview { display:none!important; }
+
+html[data-ns-development=demo][data-ns-development-fixed=true] body main #overview.active{display:none!important}

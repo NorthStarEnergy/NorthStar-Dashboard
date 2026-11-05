@@ -1,0 +1,20 @@
+#live-status .live-status-test-inputs{margin-top:12px;border-color:#48677a}
+.live-status-test-inputs>header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.live-status-test-inputs h2{margin:3px 0 0}
+.live-status-test-scope{border:1px solid #5f94af;border-radius:999px;padding:4px 7px;color:#8ed3ef;font:700 8px monospace;letter-spacing:.7px;white-space:nowrap}
+.live-status-test-form{display:grid;grid-template-columns:1.1fr 1fr .7fr .85fr 1.5fr auto;gap:8px;align-items:end;margin-top:12px}
+.live-status-test-form label{display:grid;gap:4px;color:var(--muted);font:700 8px monospace;letter-spacing:.4px}
+.live-status-test-form input,.live-status-test-form select{box-sizing:border-box;min-width:0;width:100%;height:34px;border:1px solid var(--line);border-radius:4px;background:#091218;color:var(--text);padding:6px 8px;font:10px monospace}
+.live-status-test-form .primary-btn{height:34px;white-space:nowrap}
+.live-status-test-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.live-status-test-actions button{border:1px solid #355567;border-radius:4px;background:#132530;color:#b9dce9;padding:6px 8px;font:700 8px monospace;cursor:pointer}
+.live-status-test-actions .live-status-test-clear{margin-left:auto;border-color:#704244;color:#f3aeae}
+.live-status-test-state{display:block;margin-top:10px;color:#8ed3ef;font:9px monospace}
+.live-status-test-log{display:grid;gap:4px;margin-top:7px}
+.live-status-test-record{display:grid;grid-template-columns:75px 110px minmax(150px,1fr) minmax(150px,1.3fr);gap:8px;align-items:center;border-left:3px solid #4d88a0;background:#0b151c;padding:7px 8px;font:9px monospace}
+.live-status-test-record.warning{border-left-color:var(--gold)}
+.live-status-test-record.critical{border-left-color:var(--red)}
+.live-status-test-record time,.live-status-test-record small{color:var(--muted)}
+.live-status-test-record strong{color:#d7edf7}
+@media(max-width:1050px){.live-status-test-form{grid-template-columns:repeat(3,minmax(0,1fr))}.live-status-test-note{grid-column:span 2}.live-status-test-form .primary-btn{grid-column:span 1}.live-status-test-record{grid-template-columns:70px 100px 1fr}}
+@media(max-width:700px){.live-status-test-form{grid-template-columns:1fr 1fr}.live-status-test-note,.live-status-test-form .primary-btn{grid-column:auto}.live-status-test-actions .live-status-test-clear{margin-left:0}.live-status-test-record{grid-template-columns:65px 1fr}.live-status-test-record small{grid-column:2}}

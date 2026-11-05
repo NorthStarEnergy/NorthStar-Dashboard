@@ -1,0 +1,13 @@
+#alarmBar.alarm-indicator-bar{display:flex!important;align-items:center;min-height:34px;margin:0 0 10px;padding:0;background:transparent;border:0;pointer-events:none}
+#alarmBar.alarm-indicator-bar[hidden]{display:flex!important}
+.alarm-indicator{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;min-height:32px;padding:6px 12px;border:1px solid #40535c;border-radius:999px;background:#101c24;color:#c8d6dc;font:700 calc(12px * var(--ns-font-scale, 1))/1 monospace;letter-spacing:.15px;cursor:pointer;box-shadow:0 2px 8px #0004;transition:border-color .2s,background .2s,color .2s,box-shadow .2s}
+.alarm-indicator:hover,.alarm-indicator:focus-visible{border-color:var(--blue);color:#fff;outline:0}
+.alarm-indicator::before{content:'';width:7px;height:7px;border-radius:50%;background:#70828a;box-shadow:0 0 0 3px #70828a22}
+.alarm-indicator.has-alarms{border-color:#a07a3c;background:#211c14;color:#ffd37a}
+.alarm-indicator.has-alarms::before{background:var(--gold);box-shadow:0 0 0 3px #e6b85c22}
+.alarm-indicator.unacknowledged{border-color:#c85858;background:#2b1719;color:#ffd7d7;animation:alarm-indicator-pulse 2.4s ease-in-out infinite}
+.alarm-indicator.unacknowledged::before{background:#ff6577;box-shadow:0 0 0 3px #ff657733}
+.alarm-indicator-count{font-variant-numeric:tabular-nums}
+@keyframes alarm-indicator-pulse{0%,100%{box-shadow:0 2px 8px #0004,0 0 0 0 #ff657700}50%{box-shadow:0 2px 8px #0004,0 0 0 5px #ff65771f}}
+@media(prefers-reduced-motion:reduce){.alarm-indicator.unacknowledged{animation:none;box-shadow:0 0 0 2px #ff657733}}
+@media(max-width:700px){#alarmBar.alarm-indicator-bar{margin:0 0 7px}.alarm-indicator{min-height:30px;padding:6px 10px}}

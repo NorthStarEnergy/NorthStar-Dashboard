@@ -1,0 +1,37 @@
+#nsPhoneLineup[hidden] { display: none; }
+#nsPhoneLineup, #nsPhonePicker { color: #edf5f7; background: #0d1b22; font: 14px/1.4 system-ui, sans-serif; }
+#nsPhoneLineup button, #nsPhonePicker button { min-width: 44px; min-height: 44px; padding: 8px; border: 1px solid #3a6878; border-radius: 7px; background: #142631; color: #edf5f7; cursor: pointer; }
+#nsPhoneLineup button:disabled, #nsPhonePicker button:disabled { opacity: .4; }
+#nsPhoneLineup button:focus-visible, #nsPhonePicker :focus-visible { outline: 2px solid #75c7e6; }
+#nsPhonePicker { width: min(480px, calc(100vw - 20px)); max-height: calc(100dvh - 24px); border: 1px solid #3a6878; padding: 14px; border-radius: 10px; overflow: auto; }
+#nsPhonePicker::backdrop { background: #02090dcc; }
+#nsPhonePicker p { font-size: 12px; }
+#nsPhonePicker ol { list-style: none; padding: 0; }
+#nsPhonePicker li { display: flex; gap: 6px; margin: 8px 0; }
+#nsPhonePicker li button:first-child { flex: 1; text-align: left; }
+.ns-phone-options { display: grid; gap: 8px; }
+.ns-phone-options label { display: flex; gap: 10px; align-items: center; min-height: 48px; padding: 8px; border: 1px solid #2b4755; border-radius: 6px; }
+.ns-phone-options input { width: 20px; height: 20px; flex: none; }
+@media (max-width: 700px) {
+  body.ns-phone-lineup { overflow: hidden !important; }
+  #nsPhoneLineup { position: fixed; inset: 0 0 auto; z-index: 10020; height: 112px; padding: max(6px, env(safe-area-inset-top)) 8px 6px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 8px; border-bottom: 1px solid #2b4755; }
+  #nsPhoneLineup > span { align-self: center; font-size: 12px; overflow: hidden; max-height: 38px; }
+  #nsPhoneLineup > div { grid-column: 1 / -1; display: flex; justify-content: space-between; }
+  body.ns-phone-lineup .ns-phone-path > :not(.ns-phone-path):not(.ns-phone-module) { display: none !important; }
+  body.ns-phone-lineup .app, body.ns-phone-lineup .app > main { min-width: 0 !important; width: 100% !important; margin: 0 !important; }
+  body.ns-phone-lineup .app > main { position: fixed !important; inset: 112px 0 max(0px, env(safe-area-inset-bottom)) !important; height: auto !important; min-height: 0 !important; padding: 8px !important; overflow: auto !important; overscroll-behavior: contain; }
+  body.ns-phone-lineup main .ns-phone-path { display: block !important; position: static !important; transform: none !important; min-width: 0 !important; min-height: 0 !important; width: 100% !important; height: auto !important; padding: 0 !important; margin: 0 !important; }
+  body.ns-phone-lineup .ns-phone-module { max-width: 100% !important; box-sizing: border-box; overflow-wrap: anywhere; }
+  body.ns-phone-lineup .ns-phone-module .ns-window-handle, body.ns-phone-lineup .ns-phone-module .module-resize-handle, body.ns-phone-lineup .ns-phone-module > .ns-window-controls { display: none !important; }
+  body.ns-phone-lineup .layout-toolbar, body.ns-phone-lineup .layout-edit-toggle, body.ns-phone-lineup #nsStatusBar, body.ns-phone-lineup #sideNav, body.ns-phone-lineup .page-header, body.ns-phone-lineup #nsSectionModuleMenu { display: none !important; }
+  body.ns-phone-lineup .ns-phone-module :is(.summary-grid, .detail-grid, .generating-stations-grid) { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
+.ns-phone-checkin-areas > div { display: flex; flex-wrap: wrap; gap: 6px; }
+
+@media (max-width: 700px) {
+  /* Override desktop resize-handle rules, including persisted edit mode. */
+  body.ns-phone-lineup .app > main .ns-phone-module.ns-module-window > .ns-window-controls[data-section-resize="1"] .ns-window-handle {
+    display: none !important; pointer-events: none !important;
+  }
+}

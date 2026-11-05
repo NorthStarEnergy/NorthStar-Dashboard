@@ -1,0 +1,106 @@
+#overviewGeneratingStations .generating-stations-grid{display:grid;grid-template-columns:repeat(auto-fill,150px);gap:8px;align-content:start}
+#overviewGeneratingStations .gs-card-body{display:flex;flex-direction:column;gap:3px;width:100%;min-width:0}
+body.overview-canvas #overviewGeneratingStations:not([hidden]),body.overview-canvas #overviewGeneratingStations .generating-stations-grid{display:contents!important}
+body.overview-canvas #overviewGeneratingStations> :not(.generating-stations-grid){display:none!important}
+#overviewGeneratingStations .gs-card,#scada .gs-card{box-sizing:border-box;display:flex;flex-direction:column;gap:4px;min-width:0;padding:var(--ov-frame-padding,4px);border:1px solid var(--line,#344955);border-radius:7px;background:var(--panel2,#14212b);color:var(--text,#eef6fc);text-align:center;cursor:pointer;font:12px/1.3 Arial,sans-serif}
+#overviewGeneratingStations .gs-card{padding:2px 3px!important;justify-content:center}
+#overviewGeneratingStations .gs-card:has(.gs-name>span:nth-child(2)) .gs-card-body{gap:0}
+#overviewGeneratingStations .gs-card:has(.gs-name>span:nth-child(2)) strong.gs-name{line-height:1}
+#overviewGeneratingStations .gs-card:has(.gs-name>span:nth-child(2)) .gs-generation{margin-top:0}
+#overviewGeneratingStations .gs-card:hover,#overviewGeneratingStations .gs-card:focus-visible,#scada .gs-card:hover,#scada .gs-card:focus-visible{border-color:#78b6d8;outline:2px solid #78b6d850;outline-offset:1px}
+#overviewGeneratingStations .gs-card-body,#scada .gs-card-body{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;min-width:0}
+#overviewGeneratingStations .gs-card strong.gs-name,#scada .gs-card strong.gs-name{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:1.3em;margin:0;font-size:12px;line-height:1.3;white-space:normal;text-align:center}
+.gs-generation{display:flex;align-items:flex-start;justify-content:center;gap:7px;min-height:35px;margin:1px 0 0}.gs-generation-metrics{display:grid;grid-template-columns:max-content;justify-items:start;align-content:start;gap:1px;min-width:0;text-align:left;transform:translateY(3px)}.gs-generation .gs-output{font:700 11.2px/1 monospace;color:var(--red,#ff7169)}.gs-generation em{font:7px Arial,sans-serif;color:#fff;margin-left:0;font-style:normal}.gs-generation .gs-level{font:700 11.2px/1 monospace;color:#9bd8f4;font-variant-numeric:tabular-nums}
+.gs-units-line{display:flex;justify-content:flex-start;align-items:baseline;margin:0;font:700 11.2px/1 monospace;white-space:nowrap;font-variant-numeric:tabular-nums}.gs-unit-count{font:600 12px/1.1 "Segoe UI",Arial,sans-serif;color:var(--text,#eef6fc)}.gs-flow{color:#9bd8f4}.gs-flow em{font:8px Arial,sans-serif;color:#fff;font-style:normal;margin-left:1px}.gs-flow i{font-style:normal}.gs-flow .gs-spill{color:#ff4b4b}
+.gs-generator{width:25.6px;height:25.6px;flex:none;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+#overviewGeneratingStations .gs-generator path,#scada .gs-generator path{transform:translateX(1px) scaleX(.94);transform-origin:center}
+#overviewGeneratingStations .gs-generator-stack,#scada .gs-generator-stack{display:flex;flex-direction:column;align-items:center;gap:1px}
+#overviewGeneratingStations .gs-unit-count,#scada .gs-unit-count{position:relative;left:1px;font:600 12px/1.1 "Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;color:var(--text,#eef6fc)}
+.gs-generating{color:#20bb55}.gs-offline{color:#f04f55}.gs-available{color:#b5f5ad}.gs-unknown{color:#a5b4c4}
+.gs-water{display:flex;justify-content:center;align-items:center;gap:5px;font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap;padding-top:6px;border-top:1px solid #ffffff18}.gs-water>span{display:flex;flex-direction:column;align-items:center}.gs-water b{font-size:11px}.gs-water em{font-size:9px;font-style:normal;margin-left:2px}.gs-headwater{display:flex;justify-content:space-between;gap:4px;font-size:10px}.gs-headwater>span{white-space:nowrap}.gs-headwater>span>b{font:700 11px monospace}
+#overviewGeneratingStations .gs-card .gs-state,#scada .gs-card .gs-state{font-size:9px;line-height:1.25;white-space:normal;margin:0;min-height:2.6em;text-align:center}
+.gs-popup[hidden]{display:none!important}.gs-popup{position:fixed;z-index:2147483000;width:min(880px,calc(100vw - 16px));min-width:min(420px,calc(100vw - 16px));min-height:280px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);height:auto;resize:both;overflow:auto;box-sizing:border-box;padding:18px;border:1px solid #59758a;border-radius:10px;background:var(--panel,#101c27);color:var(--text,#eef6fc);box-shadow:0 18px 55px #000b;font:13px/1.4 Arial,sans-serif}
+.gs-popup.gs-window-maximized{left:8px!important;top:8px!important;width:calc(100vw - 16px)!important;height:calc(100dvh - 16px)!important;max-width:none;max-height:none;resize:none}
+.gs-popup.gs-window-minimized{width:270px!important;height:auto!important;min-width:270px;min-height:0;max-height:36px;resize:none;overflow:hidden;padding:7px 10px}
+.gs-popup.gs-window-minimized>:not(.ns-hover-window-bar){display:none!important}
+.gs-popup.gs-window-minimized .gs-window-toolbar{top:-7px;height:22px;margin:-7px -10px 0;padding:1px 6px}
+.gs-popup .gs-window-toolbar{position:sticky;top:-18px;z-index:2;display:flex;align-items:center;gap:5px;height:22px;margin:-18px -18px 8px;padding:1px 7px;background:linear-gradient(180deg,#172934,#111f28);color:#eef6fc;border-bottom:1px solid #344955;box-sizing:border-box}
+.gs-popup .gs-window-toolbar>span{flex:1;min-width:0}
+.gs-popup .gs-window-toolbar>button{display:grid;place-items:center;flex:0 0 27px;width:27px;height:20px;padding:0;border:1px solid #405a68;border-radius:4px;background:linear-gradient(180deg,#203642,#182a34);color:#d8eaf3;box-shadow:inset 0 1px #ffffff12,0 1px 2px #0005;cursor:pointer;transition:background .14s,border-color .14s,color .14s}
+.gs-popup .gs-window-toolbar>button:hover{border-color:#6ba9c1;background:linear-gradient(180deg,#2a4653,#1d3440);color:#fff}
+.gs-popup .gs-window-toolbar>button:active{background:#10202a;box-shadow:inset 0 1px 3px #0008}
+.gs-popup .gs-window-toolbar>button svg{display:block;width:14px;height:14px;overflow:visible}
+.gs-popup .gs-window-toolbar>button:not(.gs-window-save) svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:square;stroke-linejoin:miter}
+.gs-popup .gs-window-toolbar>.gs-window-save .gs-icon-disk{fill:#9bd8f4;stroke:#d7eff9;stroke-width:.7}
+.gs-popup .gs-window-toolbar>.gs-window-save .gs-icon-label{fill:#254b60;stroke:#8fc6df;stroke-width:.5}
+.gs-popup .gs-window-toolbar>.gs-window-save .gs-icon-paper{fill:#eaf4f8;stroke:#fff;stroke-width:.5}
+.gs-popup .gs-window-toolbar>.gs-window-save .gs-icon-slot{fill:#315d74;stroke:#24485c;stroke-width:.5}
+.gs-popup .gs-window-toolbar>.gs-window-save.is-saved{border-color:#4c9c77;color:#b5f0cb;background:linear-gradient(180deg,#244b3e,#1a382f)}
+.gs-popup .gs-window-toolbar>button[aria-invalid=true]{border-color:#bd6464;background:#482b30}
+.gs-popup header{display:flex;justify-content:space-between;align-items:center;gap:15px}.gs-popup h2{margin:3px 0;font-size:21px}.gs-popup-title-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.gs-jump{min-height:25px;padding:3px 8px;border:1px solid #5686a0;border-radius:4px;background:#173649;color:#bfe8fb;font:700 10px/1.2 system-ui;letter-spacing:.05em;cursor:pointer}.gs-jump:hover{border-color:#8dd7f6;background:#214b61;color:#fff}.gs-popup small,.gs-source{font-size:11px;color:#a5b4c4}.gs-close{border:1px solid #59758a;border-radius:5px;color:inherit;background:transparent;font-size:22px;width:32px;height:32px;cursor:pointer}.gs-plant{border:1px solid #344955;border-radius:7px;padding:12px;text-align:center;background:#ffffff04}.gs-reservoir{padding:8px;border-bottom:3px solid #54a6cc;color:#9bd8f4}.gs-reservoir b{margin-left:10px}.gs-units{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;padding:14px 0}.gs-unit{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:110px;max-width:170px}.gs-unit>span{font-size:11px;text-transform:capitalize}.gs-breaker{border:1px solid #59758a;padding:4px 7px;border-radius:3px}.gs-main-breaker{border-top:2px solid #59758a;padding:10px;text-transform:capitalize}.gs-detail-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.gs-detail-metrics dt{font-size:11px;color:#a5b4c4}.gs-detail-metrics dd{margin:3px 0;font-weight:700}.gs-point{display:grid;grid-template-columns:1fr auto;gap:4px;padding:8px 0;border-bottom:1px solid #344955}.gs-point small{grid-column:1/-1}.gs-popup summary{cursor:pointer}.gs-popup button:focus-visible,.gs-popup summary:focus-visible{outline:2px solid #78b6d8;outline-offset:3px}
+@media(max-width:400px){.gs-detail-metrics{grid-template-columns:repeat(2,1fr)}}
+
+#overviewGeneratingStations .gs-water>span{color:#9bd8f4}
+.gs-history{margin:14px 0;padding:10px;border:1px solid #344955;border-radius:7px}.gs-history>header{display:flex;justify-content:space-between;align-items:center}.gs-history h3,.gs-aux-grid h3{margin:0 0 8px;font-size:14px}.gs-range{margin-left:5px;background:#14212b;color:inherit;border:1px solid #59758a;padding:4px}.gs-toggle{display:block;color:#a5b4c4;font-size:11px}.gs-chart svg{display:block;width:100%;height:116px;color:#54a6cc}.gs-chart svg text{fill:#a5b4c4;font:10px Arial}.gs-output-path{fill:none;stroke:currentColor;stroke-width:2}.gs-run-track{position:relative;height:16px;margin:5px 0 2px;border-top:1px solid #59758a}.gs-run-track small{font-size:10px;color:#a5b4c4}.gs-run{position:absolute;top:3px;height:8px;background:#20bb55;border-radius:3px}.gs-aux-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gs-aux-grid>section{padding:10px;border:1px solid #344955;border-radius:7px}.gs-aux-grid p{margin:6px 0;padding-bottom:5px;border-bottom:1px solid #ffffff18}.gs-aux-grid p>span{float:right}.gs-aux-grid small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:520px){.gs-aux-grid{grid-template-columns:1fr}}
+
+#operationsSites .gs-operations-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+#operationsSites .gs-operations-stations,#operationsSites .gs-operations-lists{min-width:0}
+#operationsSites .gs-sites-list{grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;margin-top:12px}
+#operationsSites .gs-operations-card{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;min-height:164px;padding:16px 12px;text-align:center;background:var(--panel2,#14212b);color:var(--text,#eef6fc)}
+#operationsSites .gs-operations-card .gs-name{display:flex;flex-direction:column;font-size:17px;line-height:1.2;text-align:center;color:inherit}
+#operationsSites .gs-operations-card span{color:inherit;font-size:inherit;text-align:inherit}
+#operationsSites .gs-generation{gap:15px;align-items:center}
+#operationsSites .gs-generator{width:58px;height:58px}
+#operationsSites .gs-generation-metrics{gap:6px;text-align:left;transform:none}
+#operationsSites .gs-generation .gs-output,#operationsSites .gs-generation .gs-level{font-size:20px}
+#operationsSites .gs-flow{font-size:17px}#operationsSites .gs-generation em{font-size:11px}
+#operationsSites .gs-unit-count{font-size:14px}
+#operationsSites .gs-operations-lists{display:grid;gap:20px}
+#operationsSites .gs-operations-lists>section{border:1px solid var(--line,#344955);border-radius:9px;padding:16px;background:var(--panel2,#14212b)}
+#operationsSites h2{margin:0 0 12px;font-size:18px}
+#operationsSites .gs-activity-list{max-height:360px;overflow:auto}
+#operationsSites .gs-outages-list{max-height:520px;overflow:auto}
+#operationsSites .gs-operations-row{display:grid;gap:5px;padding:12px 2px;border-bottom:1px solid var(--line,#344955);overflow-wrap:anywhere}
+#operationsSites .gs-operations-row:last-child{border-bottom:0}
+#operationsSites .gs-operations-row header{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+#operationsSites .gs-operations-row p{margin:0}#operationsSites .gs-operations-row time,#operationsSites .gs-operations-row>span{font-size:12px;color:#a8becb}
+#operationsSites .gs-operations-row a{color:#9bd8f4;font-size:12px}
+#operationsSites .gs-outage-phase{font-size:12px;color:#ffba8a;white-space:nowrap}
+#operationsSites .gs-outage-upcoming .gs-outage-phase{color:#9bd8f4;font-style:italic}
+#operationsSites .gs-outage-upcoming{border-left:3px solid #6daece;padding-left:10px}
+#operationsSites .gs-outage-past .gs-outage-phase{color:#a8becb}
+#operationsSites .gs-outage-filters{display:flex;gap:6px;margin-bottom:6px}
+#operationsSites .gs-outage-filters button{padding:7px 15px;border:1px solid #35576a;border-radius:6px;background:#10232e;color:#e8f4fa;cursor:pointer}
+#operationsSites .gs-outage-filters button[aria-pressed=true]{background:#24516a;border-color:#9bd8f4}
+@media(max-width:900px){#operationsSites .gs-operations-layout{grid-template-columns:minmax(0,1fr)}}
+
+.gs-code{color:#ffd675!important;text-align:center;letter-spacing:.05em}
+.gs-generation>b small{display:inline;font:9px Arial,sans-serif;color:#a5b4c4;white-space:normal}
+.gs-water small{margin-top:2px;color:#a5b4c4;font-size:8px}
+.gs-no-water{color:#a5b4c4;text-align:center;white-space:normal}
+.gs-reservoir small{display:block;margin-top:4px}
+
+
+
+.gs-output-gauge .gs-output-track{opacity:.28}.gs-output-gauge .gs-output-arc{stroke-width:3.8;stroke-linecap:butt}
+/* Station single-line preview, shared with full station details. */
+.gs-popup{width:min(1180px,calc(100vw - 16px))}
+.gs-station-mimic{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:16px;align-items:stretch}
+.gs-station-title{margin:0 0 8px;font-size:18px;line-height:1.15}.gs-sld-designation{font-weight:700}.gs-sld-equipment{font-size:15px;font-weight:700}
+.gs-sld-panel,.gs-station-totals{min-width:0;border:1px solid #344955;border-radius:7px;padding:10px;background:#ffffff03}
+.gs-sld-scroll{overflow:auto}.gs-sld{display:block;width:100%;min-width:440px;color:#c2d9e8}
+.gs-sld path,.gs-sld circle,.gs-sld rect,.gs-sld-legend path,.gs-sld-legend circle,.gs-sld-legend rect{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.gs-sld text,.gs-sld-legend text{fill:currentColor;stroke:none;font:12px Arial,sans-serif}.gs-sld text.gs-sld-unit{font-weight:700;font-size:15px}.gs-sld text.gs-sld-state{font-size:12px;fill:#a5b4c4}
+.gs-sld-device[data-state=closed]{color:#20bb55}.gs-sld-device[data-state=open]{color:#f04f55}.gs-sld-device[data-state=unknown]{color:#a5b4c4}
+.gs-sld-generator[data-state=generating] .gs-sld-generator-symbol{color:#20bb55}.gs-sld-generator[data-state=available] .gs-sld-generator-symbol,.gs-sld-generator[data-state=offline] .gs-sld-generator-symbol{color:#f04f55}.gs-sld-generator[data-state=unknown] .gs-sld-generator-symbol{color:#a5b4c4}.gs-sld-legend{display:flex;flex-wrap:wrap;gap:5px 12px;border-top:1px solid #344955;padding-top:8px}.gs-sld-legend span{display:flex;align-items:center;font-size:10px;color:#a5b4c4}.gs-sld-legend svg{width:25px;height:25px}
+.gs-station-totals h3{font-size:13px;margin:0 0 10px}.gs-station-totals h3:first-child{text-align:center}.gs-station-totals dl{margin:0 0 22px}.gs-station-totals dl>div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #ffffff12}.gs-station-totals dt{color:#a5b4c4}.gs-station-totals dd{margin:0;font-weight:700;white-space:nowrap}.gs-station-totals table{width:100%;border-collapse:collapse;font-size:10px}.gs-station-totals th,.gs-station-totals td{text-align:left;padding:7px 2px;border-bottom:1px solid #ffffff12}
+.gs-station-notes{margin:0 0 22px;padding-top:2px;border-top:1px solid #ffffff12}.gs-station-notes h3{margin:10px 0 6px;text-align:left}.gs-station-notes p{display:grid;gap:3px;margin:0;padding:7px 0;border-bottom:1px solid #ffffff12;font-size:11px;line-height:1.35}.gs-station-notes p b{color:#bfe8fb;font-size:10px;text-transform:uppercase;letter-spacing:.04em}.gs-station-notes p span{overflow-wrap:anywhere}.gs-station-notes p small{color:#a5b4c4;font-size:10px}
+.gs-sld-panel{overflow:hidden;padding:6px}.gs-station-heading{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:26px;padding:2px 4px 7px}.gs-station-heading h2{margin:0;font-size:18px;line-height:1.15}.gs-sld-scroll{overflow:hidden}.gs-sld{min-width:0;height:auto;max-height:500px}.gs-station-totals{align-self:start}.gs-sld .gs-sld-grid-feed{stroke-dasharray:5 4}.gs-sld .gs-sld-grid-line{stroke:#72c8e8;stroke-width:1}
+.gs-popup :is(.gs-layout-note,.gs-more){display:none!important}
+@media(max-width:700px){.gs-station-mimic{grid-template-columns:1fr}.gs-station-totals dl{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}}
+.gs-sites-directory{width:100%;box-sizing:border-box}.gs-sites-directory>h2{margin-bottom:4px}.gs-sites-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:14px}.gs-sites-list button{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:9px 11px;border:1px solid #35576a;border-radius:6px;background:#10232e;color:#e8f4fa;text-align:left;cursor:pointer}.gs-sites-list button:hover,.gs-sites-list button:focus-visible{border-color:#78c5e7;background:#173445;outline:0}.gs-sites-list button strong{font-size:12px}.gs-sites-list button span{color:#91adbd;font-size:10px;text-align:right}.gs-full-detail{width:100%;box-sizing:border-box}.gs-full-detail>.gs-station-mimic{margin-top:8px}
+
+/* Five compact Overview columns; keep the assets centered in each frame. */
+#overviewGeneratingStations .gs-card .gs-card-body{zoom:.94;width:100%;align-self:center}
+#overviewGeneratingStations .gs-card .gs-generation{gap:5px}

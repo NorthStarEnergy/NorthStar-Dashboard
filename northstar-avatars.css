@@ -1,0 +1,11 @@
+.ns-avatar-profile-button{display:inline-flex;align-items:center;gap:10px;cursor:pointer}
+.ns-avatar-profile-button img,.ns-avatar-grid img,.ns-chat-avatar{image-rendering:pixelated;object-fit:contain;flex-shrink:0}
+.ns-avatar-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 24px));max-height:85vh;overflow:auto;border:1px solid #526779;border-radius:12px;padding:20px;background:#16222c;color:#edf3f5;font:14px/1.5 Arial,sans-serif;box-shadow:0 18px 70px #0008}
+.ns-avatar-dialog::backdrop{background:#0008}
+.ns-avatar-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0}
+.ns-avatar-heading h2{margin:0;font-size:21px}.ns-avatar-heading button{background:transparent;border:0;color:inherit;font-size:28px;cursor:pointer;min-width:44px;min-height:44px}
+.ns-avatar-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:8px}
+.ns-avatar-grid button{display:grid;place-items:center;min-height:66px;padding:8px;border:2px solid transparent;border-radius:7px;background:#263845;cursor:pointer}
+.ns-avatar-grid button:hover{background:#354e60}.ns-avatar-grid button[aria-pressed=true]{border-color:#f2b84b;background:#354756}
+.ns-avatar-grid button:focus-visible,.ns-avatar-profile-button:focus-visible{outline:3px solid #75c9ff;outline-offset:2px}
+.ns-avatar-grid button:disabled{opacity:.55;cursor:wait}.ns-avatar-dialog [role=status]{min-height:21px;color:#c7d6df;margin-bottom:0}

@@ -1,0 +1,44 @@
+/* Library content sits inside the existing shell, not a second navigation system. */
+html body.ns-library-shell.ns-library-shell .app>main .section{visibility:hidden!important;pointer-events:none!important}
+#nsLibraryHost{display:none}
+html body.ns-library-shell.ns-library-shell #nsLibraryHost{display:block!important;position:fixed;right:0;bottom:0;min-width:0;overflow:auto;background:#0d1820;z-index:900}
+html body.ns-library-shell.ns-library-shell #nsSectionModuleMenu,html body.ns-library-shell.ns-library-shell #buildViewV3Menu{display:none!important}
+#nsAiNavToggle[hidden]{display:none!important}
+#nsAiNavToggle{position:fixed;inset:0 auto 0 0;width:14px;padding:0;border:0;border-right:1px solid #47616e;border-radius:0;background:#20313b;color:#a9d5ef;font:24px system-ui;z-index:1102;cursor:pointer}
+#nsAiNavToggle:hover,#nsAiNavToggle:focus-visible{background:#345568;color:white;outline:1px solid #86c8ed;outline-offset:-1px}
+html body.ns-ai-mode.ns-ai-mode.ns-ai-nav-open #nsAiNavToggle{left:var(--ns-default-rail,148px)}
+html body.ns-ai-mode.ns-ai-mode .app{grid-template-columns:var(--ns-default-rail,148px) minmax(0,1fr)!important}
+html body.ns-ai-mode.ns-ai-mode .app>main{grid-column:2!important;min-width:0}
+html body.ns-ai-mode.ns-ai-mode .app>aside{position:fixed!important;left:0!important;top:0!important;bottom:0!important;width:var(--ns-default-rail,148px)!important;height:100dvh!important;transform:translateX(-100%)!important;visibility:hidden!important;pointer-events:none!important;z-index:1101!important;background:var(--rail,#142127)!important}
+html body.ns-ai-mode.ns-ai-mode.ns-ai-nav-open .app>aside{transform:none!important;visibility:visible!important;pointer-events:auto!important;overflow-y:auto!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-layout{grid-template-columns:minmax(0,1fr)!important;gap:0!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-sidebar{display:flex!important;position:fixed!important;inset:0 auto 0 14px!important;margin:0!important;width:calc(var(--ns-default-rail,148px) - 14px)!important;min-width:0!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;padding:12px 6px!important;gap:6px!important;border:0!important;border-right:1px solid #344952!important;border-radius:0!important;background:var(--rail,#142127)!important;color:var(--text,#dce9ef)!important;overflow:auto!important;z-index:1000!important;box-sizing:border-box!important}
+html body.ns-ai-mode.ns-ai-mode.ns-ai-nav-open #assistantWorkspace .ai-assistant-sidebar{visibility:hidden!important;pointer-events:none!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-sidebar :is(button,input){max-width:100%!important;box-sizing:border-box!important;font:12px/1.4 system-ui!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-sidebar .ai-assistant-new{width:100%!important;background:#233b49!important;border:1px solid #4b6471!important;color:#d9ebf7!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace [data-ai-back]{display:none!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-sidebar .ai-assistant-section-label{display:block!important;color:#9fbbc9!important;margin:12px 6px 4px!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-sidebar summary{color:#a5c2d3!important;font:12px/1.4 system-ui!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-sidebar [data-ai-new]::before{content:none!important}
+
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-sidebar:not(:popover-open){display:none!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-sidebar::backdrop{display:none}
+html body.ns-library-shell.ns-library-shell{overflow:hidden!important}
+html body.ns-library-shell.ns-library-shell .app>main{min-width:0!important;max-width:100%!important;overflow:hidden!important}
+html body.ns-library-shell.ns-library-shell .app>main{box-sizing:border-box!important}
+
+html body.ns-library-shell.ns-library-shell .app>main{max-width:calc(100% - 20px)!important}
+html body.ns-ai-mode.ns-ai-mode #nsStatusBar{left:var(--ns-default-rail,148px)!important;right:0!important;width:auto!important}
+/* Chat fills the window beside the navigation and below the fixed dashboard. */
+html body.ns-ai-mode.ns-ai-mode{overflow:hidden!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace{position:fixed!important;inset:var(--ns-ai-top,115px) 0 0 var(--ns-default-rail,148px)!important;width:auto!important;height:auto!important;min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;transform:none!important;translate:none!important;z-index:500!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-shell{width:100%!important;max-width:none!important;height:100%!important;min-height:0!important;border-radius:0!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-layout{height:100%!important;min-height:0!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-panel{display:flex!important;flex-direction:column!important;min-width:0!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-log{flex:1 1 0!important;min-height:0!important;height:auto!important;overflow-y:auto!important}
+html body.ns-ai-mode.ns-ai-mode #assistantWorkspace :is(.ai-assistant-conversation-head,.ai-assistant-compose){flex:0 0 auto!important}
+#assistantWorkspace .ai-assistant-model-picker{display:flex;align-items:center;gap:8px;min-width:0;max-width:65%;margin-left:auto;white-space:nowrap;color:#b9cbd5;font:12px/1.4 system-ui}
+#assistantWorkspace .ai-assistant-model-picker select{width:220px;max-width:100%;min-width:0;height:30px;padding:3px 8px;border:1px solid #4b6471;background:#20313b;color:#e4edf1;border-radius:5px;font:12px system-ui;text-overflow:ellipsis}
+#assistantWorkspace .ai-assistant-model-picker select:disabled{color:#a5b4bd}
+@media(max-width:700px){#assistantWorkspace .ai-assistant-model-picker{gap:4px;max-width:75%}#assistantWorkspace .ai-assistant-model-picker select{width:155px}html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-compose{gap:4px;margin:6px;padding:5px}html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-compose button{min-width:28px;padding:6px}html body.ns-ai-mode.ns-ai-mode #assistantWorkspace .ai-assistant-compose input{width:0}}
+html body.ns-ai-mode.ns-ai-mode .layout-toolbar{display:none!important}

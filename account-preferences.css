@@ -1,0 +1,22 @@
+#sideNav [data-tab="account"] .health-light{display:none}
+.account-settings{max-width:900px;padding:24px}
+.account-settings>label{color:var(--blue);font:700 10px monospace;letter-spacing:1px}
+.account-settings h2{margin:7px 0 20px}
+.account-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.account-settings-card{padding:18px;background:var(--panel2);border:1px solid var(--line);border-radius:8px}
+.account-settings-card h3{margin:0 0 16px;font-size:16px}
+.account-settings-card dl{display:grid;grid-template-columns:110px 1fr;gap:10px;margin:0 0 20px;font:12px monospace}
+.account-settings-card dt{color:var(--muted)}
+.account-settings-card dd{margin:0;overflow-wrap:anywhere}
+.account-settings-card button{padding:8px 12px;background:var(--panel);border:1px solid var(--line);border-radius:5px;color:var(--text);cursor:pointer}
+.account-settings-card button[hidden]{display:none}
+.account-switch{display:flex;align-items:center;justify-content:space-between;gap:20px;cursor:pointer}
+.account-switch strong,.account-switch small{display:block}
+.account-switch strong{font-size:13px}
+.account-switch small{margin-top:5px;color:var(--muted);font:11px/1.5 monospace}
+.account-switch input{flex:none;width:18px;height:18px;accent-color:var(--blue);cursor:pointer}
+#accountPreferenceStatus{margin:18px 0 0;color:var(--muted);font:10px monospace}
+.ns-hover-previews-off #weatherStrip .weather-card:hover .periods{display:none!important}
+.ns-hover-previews-off aside .watchdog:hover:not(.open):not(:focus-within) .watchdog-diagnostics{display:none!important}
+@media(min-width:1051px){.ns-hover-previews-off .overview>.quick-log:hover:not(:focus-within){width:calc(18% - 8px)!important;height:72px!important;overflow:hidden;box-shadow:none;border-color:var(--line)!important}}
+@media(max-width:700px){.account-settings-grid{grid-template-columns:1fr}}

@@ -1,0 +1,71 @@
+:is(#fieldRoster,#overviewWorkerList){padding:8px;min-width:0;color:var(--text,#e4eaf1);background:var(--panel,#101822)}
+:is(#fieldRoster,#overviewWorkerList) .fr-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;min-height:32px;overflow:visible;margin-bottom:6px}
+:is(#fieldRoster,#overviewWorkerList) .fr-toolbar h2{font-size:13px;margin:0 8px 0 0;white-space:nowrap;letter-spacing:0}
+:is(#fieldRoster,#overviewWorkerList) .fr-toolbar input[type=search]{width:165px;min-width:100px}
+:is(#fieldRoster,#overviewWorkerList) :is(input,select,button,summary){font:12px Arial,sans-serif;color:inherit}
+:is(#fieldRoster,#overviewWorkerList) :is(input,select,button){border:1px solid var(--line,#304050);border-radius:3px;background:transparent;padding:4px 7px;height:27px}
+:is(#fieldRoster,#overviewWorkerList) select{max-width:175px}:is(#fieldRoster,#overviewWorkerList) select option{background:var(--panel,#101822)}
+:is(#fieldRoster,#overviewWorkerList) button,:is(#fieldRoster,#overviewWorkerList) summary{cursor:pointer;white-space:nowrap}
+:is(#fieldRoster,#overviewWorkerList) [role=status]{font-size:11px;color:var(--muted,#9cabbc);margin-left:auto;white-space:nowrap}
+:is(#fieldRoster,#overviewWorkerList) .fr-scroll{overflow:auto;max-height:calc(100vh - 190px)}
+:is(#fieldRoster,#overviewWorkerList) table{border-collapse:collapse;width:100%;min-width:0;table-layout:fixed;font:12px Arial,sans-serif}
+:is(#fieldRoster,#overviewWorkerList) th,:is(#fieldRoster,#overviewWorkerList) td{height:30px;padding:3px 8px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;border-bottom:1px solid var(--line,#293543)}
+:is(#fieldRoster,#overviewWorkerList) thead th{position:sticky;top:0;z-index:1;color:var(--muted,#9cabbc);background:var(--panel,#101822);font-weight:500;font-size:11px}
+:is(#fieldRoster,#overviewWorkerList) th:first-child{width:29%}:is(#fieldRoster,#overviewWorkerList) th:last-child{width:155px}:is(#fieldRoster,#overviewWorkerList) th[data-fr-col=company]{width:15%}
+:is(#fieldRoster,#overviewWorkerList) .fr-station th{height:29px;background:rgba(135,155,180,.07);font-size:12px;font-weight:600;border-top:1px solid var(--line,#304050)}
+:is(#fieldRoster,#overviewWorkerList) .fr-station span{color:var(--muted,#9cabbc);font-weight:400;margin-left:7px}
+:is(#fieldRoster,#overviewWorkerList) .fr-person{display:block;width:100%;text-align:left;border:0;padding:0;height:23px;overflow:hidden;text-overflow:ellipsis}
+:is(#fieldRoster,#overviewWorkerList) .fr-person span{color:var(--muted,#9cabbc)}
+:is(#fieldRoster,#overviewWorkerList) .fr-actions{white-space:normal;overflow-wrap:anywhere}:is(#fieldRoster,#overviewWorkerList) .fr-actions button{font-size:11px;height:23px;padding:2px 6px;margin-right:4px;max-width:100%}
+:is(#fieldRoster,#overviewWorkerList) [data-fr-action=in]{color:#83cfab}:is(#fieldRoster,#overviewWorkerList) [data-fr-action=out]{color:#edaca8}
+:is(#fieldRoster,#overviewWorkerList) button:disabled{opacity:.45;cursor:wait}:is(#fieldRoster,#overviewWorkerList) :focus-visible{outline:2px solid #92c7eb;outline-offset:1px}
+:is(#fieldRoster,#overviewWorkerList) .fr-help .fr-person{color:#ff8b82}:is(#fieldRoster,#overviewWorkerList) .fr-overdue .fr-person{color:#e8c584}:is(#fieldRoster,#overviewWorkerList) .fr-empty{color:var(--muted,#9cabbc)}
+:is(#fieldRoster,#overviewWorkerList) .fr-columns{position:relative;flex:none}:is(#fieldRoster,#overviewWorkerList) summary{padding:5px}
+:is(#fieldRoster,#overviewWorkerList) .fr-columns>div{position:absolute;z-index:5;right:0;top:28px;min-width:130px;padding:8px;background:var(--panel,#101822);border:1px solid var(--line,#304050)}
+:is(#fieldRoster,#overviewWorkerList) .fr-columns label{display:flex;align-items:center;gap:6px;white-space:nowrap}:is(#fieldRoster,#overviewWorkerList) input[type=checkbox]{height:18px}
+:is(#fieldRoster,#overviewWorkerList) [hidden]{display:none!important}
+:is(#fieldRoster,#overviewWorkerList) .fr-toolbar{flex-wrap:wrap}
+
+/* Keep the roster controls compact inside Overview and the fixed-panel popout. */
+:is(#fieldRoster,#overviewWorkerList) :is(input,select,button){min-height:0!important}
+:is(#fieldRoster,#overviewWorkerList) .fr-toolbar h2{font-size:14px!important;line-height:1.3!important}
+
+/* List panels need a small inset even when the station-card theme is active. */
+body :is(#fieldRoster,#overviewWorkerList.field-roster){padding:6px!important;box-sizing:border-box;min-width:0}
+body #crew.checkins-overview:not(.site-detail-open)>#fieldRoster{padding:6px!important}
+:is(#fieldRoster,#overviewWorkerList) .fr-scroll{min-width:0;max-width:100%;overflow-x:hidden;overflow-y:auto}
+:is(#fieldRoster,#overviewWorkerList) thead th:last-child{width:170px}
+
+/* Readable overview names and station headings; alone remains visible beside status. */
+#overviewWorkerList .fr-person{font-size:13px!important;font-weight:600;height:auto;min-height:22px!important;white-space:normal;line-height:1.35}
+#overviewWorkerList .fr-station th{font-size:13px!important;line-height:1.35;height:30px}
+#overviewWorkerList .fr-alone{display:inline-block;font:700 11px/1.3 Arial,sans-serif;vertical-align:middle;margin-left:6px;padding:2px 5px;border:1px solid #d9b662;border-radius:3px;color:#f4d58a;background:#302713}
+
+/* Geographic sections mirror the fixed worker dashboard; company colors are stable. */
+:is(#fieldRoster,#overviewWorkerList) .fr-area th{border:3px solid #718a9d;background:#23313c;color:#edf4fa;padding:9px 10px;font-size:12px;font-weight:700;white-space:normal;line-height:1.4}
+:is(#fieldRoster,#overviewWorkerList) .fr-station th{border:0;border-top:1px solid #34434c;border-bottom:1px solid #34434c;background:#18242d;padding:6px 9px}
+:is(#fieldRoster,#overviewWorkerList) .fr-company-0{--company-rgb:69,168,142}
+:is(#fieldRoster,#overviewWorkerList) .fr-company-1{--company-rgb:99,158,218}
+:is(#fieldRoster,#overviewWorkerList) .fr-company-2{--company-rgb:174,134,211}
+:is(#fieldRoster,#overviewWorkerList) .fr-company-3{--company-rgb:211,163,93}
+:is(#fieldRoster,#overviewWorkerList) .fr-company-4{--company-rgb:91,175,192}
+:is(#fieldRoster,#overviewWorkerList) .fr-company-5{--company-rgb:205,130,154}
+:is(#fieldRoster,#overviewWorkerList) tr[data-fr-id] td{background:rgba(var(--company-rgb),.10)}
+:is(#fieldRoster,#overviewWorkerList) tr[data-fr-id] td:first-child{border-left:1px solid rgba(var(--company-rgb),.35)}
+:is(#fieldRoster,#overviewWorkerList) tr[data-fr-id] td:last-child{border-right:1px solid rgba(var(--company-rgb),.35)}
+:is(#fieldRoster,#overviewWorkerList) .fr-company-start td{border-top:1px solid rgba(var(--company-rgb),.35)}
+:is(#fieldRoster,#overviewWorkerList) .fr-company-end td{border-bottom:1px solid rgba(var(--company-rgb),.35)}
+
+/* Geographic outlines keep grouped stations together without a repeated heading. */
+:is(#fieldRoster,#overviewWorkerList) .fr-regions{display:flex;gap:3px;flex-wrap:wrap}
+:is(#fieldRoster,#overviewWorkerList) .fr-regions button[aria-pressed=true]{background:#294c63;border-color:#79c7ed;color:#fff}
+:is(#fieldRoster,#overviewWorkerList) tbody tr[data-fr-group]>:first-child{border-left:1px solid color-mix(in srgb, var(--group-color) 38%, #26333a)}
+:is(#fieldRoster,#overviewWorkerList) tbody tr[data-fr-group]>:last-child{border-right:1px solid color-mix(in srgb, var(--group-color) 38%, #26333a)}
+:is(#fieldRoster,#overviewWorkerList) tbody tr.fr-group-start>*{border-top:1px solid color-mix(in srgb, var(--group-color) 38%, #26333a)}
+:is(#fieldRoster,#overviewWorkerList) tbody tr.fr-group-end>*{border-bottom:1px solid color-mix(in srgb, var(--group-color) 38%, #26333a)}
+
+/* Person names follow the stable crew/company palette in both roster views. */
+:is(#fieldRoster,#overviewWorkerList) tr[data-fr-id] .fr-person{color:rgb(var(--company-rgb))}
+
+:is(#fieldRoster,#overviewWorkerList) .fr-site-add{display:inline-flex;align-items:center;justify-content:center;width:23px;height:23px;padding:0;color:var(--blue,#69b7e8);vertical-align:middle;margin-left:4px}
+#staffGroups [data-worker-profile]{color:var(--crew-color)!important}

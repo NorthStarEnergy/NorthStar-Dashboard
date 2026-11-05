@@ -1,0 +1,56 @@
+'use strict';
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const path=require('node:path');
+const fs=require('node:fs');
+(async()=>{
+ const base=process.env.NORTHSTAR_DATA_TEST_URL;
+ assert(base&&process.env.NORTHSTAR_DATA_TEST_COOKIE,'Use the disposable Python integration harness');
+ const browser=await chromium.launch({...(process.env.CI?{}:{channel:'msedge'}),headless:true});
+ try{
+  const context=await browser.newContext({viewport:{width:1440,height:1000}});
+  const cookie=process.env.NORTHSTAR_DATA_TEST_COOKIE;const i=cookie.indexOf('=');
+  await context.addCookies([{name:cookie.slice(0,i),value:cookie.slice(i+1),url:base,httpOnly:true,sameSite:'Lax'}]);
+  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(base+'/data-workspace.html');
+  await page.locator('#connection.ready').waitFor();
+  await page.getByRole('heading',{name:'No records yet',exact:true}).waitFor();
+  assert.equal(await page.locator('[data-dataset]').count(),8);
+  assert.equal(await page.locator('#filtersPanel').isVisible(),false);
+  const out=process.env.NORTHSTAR_DATA_SCREENSHOTS;
+  if(out){fs.mkdirSync(out,{recursive:true});await page.screenshot({path:path.join(out,'data-workspace-empty-desktop.png'),fullPage:true});}
+  await page.setViewportSize({width:390,height:844});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Mobile page must not overflow horizontally');
+  if(out)await page.screenshot({path:path.join(out,'data-workspace-empty-mobile.png'),fullPage:true});
+  await page.setViewportSize({width:1440,height:1000});
+  await page.locator('#newRecord').click();
+  for(const [field,value]of Object.entries({site:'Browser fixture',equipment:'Fixture G1',observed_at:'2026-01-01T12:00',power_mw:'2',interval_hours:'3'}))await page.locator('#rec-'+field).fill(value);
+  await page.locator('#recordForm [type=submit]').click();
+  await page.locator('#recordMeta').filter({hasText:'Revision 1'}).waitFor();
+  await page.locator('#rec-power_mw').fill('4');await page.locator('#recordForm [type=submit]').click();
+  await page.locator('#recordMeta').filter({hasText:'Revision 2'}).waitFor();
+  await page.locator('#recordHistory [data-restore]').click();await page.locator('#recordForm [type=submit]').click();
+  await page.locator('#recordMeta').filter({hasText:'Revision 3'}).waitFor();assert.equal(await page.locator('#rec-power_mw').inputValue(),'2');
+  await page.locator('#closeInspector').click();
+  await page.locator('[data-tab=formulas]').click();await page.locator('#newFormula').click();
+  await page.locator('#formulaKey').fill('calculated_energy');await page.locator('#formulaLabel').fill('Calculated energy');await page.locator('#formulaExpression').fill('ROUND(power_mw * interval_hours, 3)');
+  await page.locator('#formulaForm [type=submit]').click();await page.locator('#formulaDialog').waitFor({state:'hidden'});
+  await page.locator('[data-tab=data]').click();assert.equal(await page.locator('.formula-cell').first().textContent(),'6');
+  await page.locator('#filterToggle').click();await page.locator('#addFilter').click();
+  await page.locator('[aria-label="Filter value"]').fill('Missing fixture');await page.locator('#applyFilters').click();
+  await page.getByRole('heading',{name:'No matching records'}).waitFor();
+  await page.locator('[aria-label="Filter value"]').fill('Browser fixture');await page.locator('#applyFilters').click();
+  await page.locator('#dataGrid tbody tr').waitFor();
+  await page.locator('#viewName').fill('Fixture view');await page.locator('#saveView').click();await page.locator('#notice').filter({hasText:'View saved'}).waitFor();
+  await page.locator('[data-tab=scripts]').click();await page.locator('#scriptSource').fill('SET energy_mwh = power_mw * interval_hours');
+  await page.locator('#scriptName').fill('Fixture workflow');await page.locator('#saveScript').click();await page.locator('#notice').filter({hasText:'Script saved'}).waitFor();
+  await page.locator('#previewScript').click();await page.locator('#scriptPreview').filter({hasText:'1 matching records'}).waitFor();
+  await page.locator('#applyScript').click();await page.locator('.job-status').filter({hasText:'completed'}).waitFor({timeout:15000});
+  await page.locator('[data-tab=charts]').click();await page.locator('#chartMetric').selectOption('energy_mwh');await page.locator('#drawChart').click();
+  await page.locator('#chartCanvas svg').waitFor();assert.match(await page.locator('#chartSummary').textContent(),/1 source records/);
+  await page.locator('#chartName').fill('Fixture chart');await page.locator('#saveChart').click();await page.locator('#notice').filter({hasText:'Chart saved'}).waitFor();
+  await page.reload();await page.locator('#connection.ready').waitFor();await page.locator('#savedView option').filter({hasText:'Fixture view'}).waitFor({state:'attached'});
+  await page.locator('[data-tab=activity]').click();await page.locator('#activityList').filter({hasText:'formula'}).waitFor();
+  assert.deepEqual(errors,[]);console.log('Rendered integration passed: empty desktop/mobile, edit/history, formula, filters, views, script preview/run, chart, persistence and activity.');
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

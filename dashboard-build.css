@@ -1,0 +1,148 @@
+/* Build badge, overview shortcut, and release-history dialog. */
+/* Build details use the shared delayed, pinnable preview. */
+body .app>aside .brand .dashboard-build-label::after{display:none!important}
+body .app .ai-launch,body .app>aside .ai-launch{display:none!important}
+body .ai-launch #aiOpen{display:grid;place-items:center}
+body .ai-launch #aiOpen .northstar-ai-icon{display:block;width:18px;height:18px;object-fit:contain;transition:filter .18s ease}
+body .ai-launch #aiOpen.is-thinking .northstar-ai-icon{animation:northstar-ai-thinking-spin 2.2s linear infinite;filter:drop-shadow(0 0 3px #b6e4ff)}
+@keyframes northstar-ai-thinking-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){body .ai-launch #aiOpen.is-thinking .northstar-ai-icon{animation:none}}
+body .app>aside .brand.brand-home{grid-template-columns:30px minmax(0,1fr) auto!important;grid-template-rows:auto auto!important;column-gap:8px!important}
+body .app>aside .brand .brand-home-control{display:grid;grid-column:1 / 3;grid-row:1 / 3;grid-template-columns:30px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:0 8px;min-width:0;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+body .app>aside .brand .brand-home-control:focus-visible{outline:2px solid var(--blue);outline-offset:5px;border-radius:5px}
+body .app>aside .brand .brand-home-control img{display:block!important;grid-column:1!important;grid-row:1 / 3!important;width:28px!important;height:28px!important;margin:0!important}
+body .app>aside .brand .brand-home-control img.is-ai-thinking{animation:northstar-logo-thinking-turn 4s ease-in-out infinite;transform-origin:50% 50%}
+@keyframes northstar-logo-thinking-turn{0%,100%{transform:rotate(0)}50%{transform:rotate(18deg)}}
+@media(prefers-reduced-motion:reduce){body .app>aside .brand .brand-home-control img.is-ai-thinking{animation:none}}
+body .app>aside .brand .brand-home-control .brand-name{display:block!important;grid-column:2!important;grid-row:1!important;margin:0!important;font:700 calc(18px * var(--ns-font-scale, 1))/1.2 Arial,sans-serif!important;letter-spacing:-.4px!important}
+body .app>aside .brand .brand-home-control small{display:block!important;grid-column:2!important;grid-row:2!important;margin:0!important;font:calc(9px * var(--ns-font-scale, 1))/1.4 Arial,sans-serif!important;letter-spacing:.6px!important;text-align:left!important}
+body .app>aside .brand .dashboard-build-label{position:relative!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:20px!important;cursor:pointer!important}
+body .app>aside .brand>.dashboard-build-label{grid-column:3!important;grid-row:1!important;visibility:visible!important;opacity:1!important}
+body .app>aside .brand .dashboard-build-label:focus-visible{outline:1px solid var(--blue);outline-offset:2px}
+body .app>aside:has(.dashboard-build-label:is(:hover,:focus-visible)){z-index:720!important}
+body .app>aside .brand .dashboard-build-label::after{content:attr(data-build-date)!important;position:absolute;z-index:800;left:0;top:calc(100% + 7px);bottom:auto!important;width:max-content;max-width:220px;padding:8px 10px;border:1px solid var(--line);border-radius:5px;background:#14232c;color:var(--text);font:800 calc(10px * var(--ns-font-scale, 1)) monospace;letter-spacing:.2px;box-shadow:0 8px 22px #0009;opacity:0;visibility:hidden;transform:translateY(4px) scale(.98);transform-origin:top left;transition:opacity .15s ease,transform .15s ease,visibility .15s ease;pointer-events:none}
+body .app>aside .brand .dashboard-build-label:hover::after,body .app>aside .brand .dashboard-build-label:focus-visible::after{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
+.northstar-build-history{width:min(620px,calc(100vw - 28px));max-height:min(700px,calc(100vh - 28px));margin:auto;padding:0;border:1px solid var(--line);border-radius:10px;background:#0d1a21;color:var(--text);box-shadow:0 20px 70px #000c}
+.northstar-build-history::backdrop{background:#000a}
+.northstar-build-history-panel{display:flex;flex-direction:column;max-height:inherit;padding:18px}
+.northstar-build-history header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+.northstar-build-history h2{margin:0;color:#fff;font:800 calc(15px * var(--ns-font-scale, 1))/1.2 Arial,sans-serif}
+.northstar-build-history-close{width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:5px;background:#152933;color:var(--muted);font:calc(24px * var(--ns-font-scale, 1))/1 Arial,sans-serif;cursor:pointer}
+.northstar-build-history-close:hover,.northstar-build-history-close:focus-visible{border-color:var(--blue);color:#fff}
+.northstar-build-history-list{display:grid;gap:0;max-height:calc(100vh - 180px);margin:0;padding:0;overflow:auto;list-style:none;border-top:1px solid var(--line)}
+.northstar-build-history-list li{display:grid;grid-template-columns:145px minmax(0,1fr);gap:12px;padding:10px 2px;border-bottom:1px solid #263842}
+.northstar-build-history-list li>div{display:grid;align-content:start;gap:3px}
+.northstar-build-history-list strong{color:var(--blue);font:800 calc(11px * var(--ns-font-scale, 1)) monospace}
+.northstar-build-history-list time{color:var(--muted);font:calc(10px * var(--ns-font-scale, 1)) Arial,sans-serif}
+.northstar-build-history-list p{margin:0;overflow:hidden;color:#d8e3e8;font:calc(11px * var(--ns-font-scale, 1))/1.35 Arial,sans-serif;text-overflow:ellipsis;white-space:nowrap}
+.northstar-build-history-note{margin:12px 0 0;color:var(--muted);font:calc(10px * var(--ns-font-scale, 1))/1.4 Arial,sans-serif}
+@media(max-width:1050px){
+  body .app>aside .brand.brand-home{display:grid!important;grid-template-columns:1fr!important;grid-template-rows:auto auto!important;justify-items:center!important;gap:2px!important;min-height:45px!important}
+  body .app>aside .brand .brand-home-control{display:grid!important;grid-column:1!important;grid-row:1!important;grid-template-columns:1fr!important;grid-template-rows:1fr!important;gap:0!important}
+  body .app>aside .brand .brand-home-control img{grid-column:1!important;grid-row:1!important;width:28px!important;height:28px!important}
+  body .app>aside .brand .brand-home-control :is(.brand-name,small){display:none!important}
+  body .app>aside .brand .dashboard-build-label{display:inline-flex!important;grid-column:1!important;grid-row:2!important;min-height:12px!important;font-size:calc(7px * var(--ns-font-scale, 1))!important}
+  body .app>aside .brand .dashboard-build-label::after{left:0;bottom:auto;top:calc(100% + 5px);transform-origin:top left}
+  body .app>aside .brand .dashboard-build-label:hover::after,body .app>aside .brand .dashboard-build-label:focus-visible::after{transform:translateY(0) scale(1)}
+}
+@media(max-width:520px){
+  .northstar-build-history-panel{padding:14px}
+  .northstar-build-history-list li{grid-template-columns:112px minmax(0,1fr);gap:8px}
+}
+
+/* AGENT control: a stable icon button that reads cleanly on every dashboard surface. */
+body .ai-launch{display:inline-flex!important;flex:0 0 44px!important;align-items:center!important;justify-content:center!important;width:44px!important;min-width:44px!important;height:44px!important;box-sizing:border-box!important;padding:4px!important;border:1px solid #426273!important;border-radius:12px!important;background:rgba(10,24,32,.86)!important;box-shadow:0 6px 18px rgba(0,0,0,.18)!important}
+body .ai-launch.sidebar-search{align-self:center!important;margin:8px 0 12px!important}
+body .ai-launch button#aiOpen{display:grid!important;place-items:center!important;width:100%!important;height:100%!important;padding:0!important;border:1px solid rgba(164,220,245,.24)!important;border-radius:8px!important;background:linear-gradient(145deg,rgba(34,68,84,.95),rgba(18,35,47,.95))!important;color:#fff!important;cursor:pointer!important;transition:background .18s ease,border-color .18s ease,transform .18s ease,box-shadow .18s ease!important}
+body .ai-launch button#aiOpen:hover{border-color:#8ed7f5!important;background:linear-gradient(145deg,rgba(47,94,113,.98),rgba(25,47,61,.98))!important;box-shadow:0 0 0 3px rgba(111,205,242,.12)!important;transform:translateY(-1px)}
+body .ai-launch button#aiOpen:focus-visible{outline:2px solid #a8e5ff!important;outline-offset:3px}
+body .ai-launch button#aiOpen .northstar-ai-icon{display:block!important;width:28px!important;height:28px!important;object-fit:contain!important;filter:drop-shadow(0 2px 4px rgba(0,0,0,.42))!important;transition:filter .18s ease,transform .18s ease!important}
+body .ai-launch button#aiOpen:hover .northstar-ai-icon{filter:drop-shadow(0 0 5px rgba(161,229,255,.72))!important}
+body .ai-launch button#aiOpen.is-thinking .northstar-ai-icon{filter:drop-shadow(0 0 5px #b6e4ff)!important}
+body .ai-launch button#aiOpen.has-answer .northstar-ai-icon{filter:sepia(1) saturate(5) hue-rotate(75deg) brightness(1.1) drop-shadow(0 0 5px #66e39a)!important}
+@media(max-width:700px){body .ai-launch,body .ai-launch.sidebar-search{flex-basis:42px!important;width:42px!important;min-width:42px!important;height:42px!important;margin-top:0!important}body .ai-launch button#aiOpen .northstar-ai-icon{width:26px!important;height:26px!important}}
+
+/* The NorthStar mark opens the assistant's own chat menu in the dashboard rail. */
+body .app>aside .brand.brand-home{grid-template-columns:30px minmax(0,1fr) auto!important}
+/* Nudge the top-left NorthStar menu mark toward the rail edge and lower in its bar. */
+body .app>aside .brand .northstar-ai-menu-toggle{display:grid;place-items:center;grid-column:1;grid-row:1 / 3;width:30px;height:32px;padding:0;border:1px solid rgba(220,240,255,.14);border-radius:7px;background:rgba(205,230,248,.10);cursor:pointer;transform:translate(-3px,4px)}
+body .app>aside .brand .northstar-ai-menu-toggle:hover{background:#1b303d}
+body .app>aside .brand .northstar-ai-menu-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+body .app>aside .brand .northstar-ai-menu-toggle img{display:block!important;width:25px!important;height:25px!important;margin:0!important;object-fit:contain!important;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+body .app>aside .brand.brand-home{position:relative!important}
+body.ns-web-toolbar .app>aside .brand .brand-home-control{grid-area:1 / 2 / 2 / -1!important;justify-self:stretch!important;grid-template-columns:minmax(0,1fr) 24px!important;grid-template-rows:28px!important;gap:8px!important;padding:0!important}
+body .app>aside .brand .brand-home-control img{position:absolute!important;top:0!important;right:0!important;z-index:1;grid-column:auto!important;grid-row:auto!important}
+body .app>aside .brand .brand-home-control .brand-name,body .app>aside .brand .brand-home-control small{grid-column:1!important}
+body .app>aside .brand .brand-home-control .brand-name{font-size:calc(16px * var(--ns-font-scale,1))!important;letter-spacing:-.3px!important;white-space:nowrap}
+/* Keep each header control in its own track, including at enlarged UI scales. */
+body.ns-web-toolbar .app>aside .brand.brand-home{grid-template-columns:28px minmax(0,1fr)!important;grid-template-rows:28px 16px!important;gap:2px 8px!important;align-items:center!important;justify-items:stretch!important;padding:4px 0 8px!important;min-height:46px!important}
+body.ns-web-toolbar .app>aside .brand.brand-home .brand-home-control img{position:static!important;grid-column:2!important;grid-row:1!important;width:24px!important;height:24px!important;justify-self:end}
+body.ns-web-toolbar .app>aside .brand.brand-home .brand-home-control .brand-name{font:700 14px/1.2 Arial,sans-serif!important;letter-spacing:-.2px!important;overflow:hidden;text-overflow:ellipsis}
+body.ns-web-toolbar .app>aside .brand.brand-home>.dashboard-build-label{grid-column:2!important;grid-row:2!important;justify-self:start!important;min-height:16px!important;height:16px!important;padding:0!important;border:0!important;background:transparent!important;color:var(--muted)!important;font:500 9px/16px Arial,sans-serif!important;letter-spacing:.3px!important}
+body.ns-web-toolbar .app>aside .brand.brand-home .brand-home-control>.ns-app-notification{left:auto;right:-4px;top:-4px;bottom:auto;min-width:14px;height:14px;padding:0 3px;font-size:9px;line-height:12px;box-shadow:0 0 0 2px #0b161d}
+body.ns-web-toolbar .app>aside .brand.brand-home #nsWebToolbar{grid-row:1;align-self:center}
+body.ns-web-toolbar .app>aside .brand.brand-home .brand-home-control:hover .brand-name{color:var(--blue)}
+body.ns-web-toolbar .app>aside .brand.brand-home>.dashboard-build-label:hover{color:var(--blue)!important}
+body.ns-web-toolbar .app>aside .brand.brand-home:has(.northstar-ai-menu-toggle){grid-template-columns:28px fit-content(100%) 28px!important;justify-content:start!important}
+body.ns-web-toolbar .app>aside .brand.brand-home:has(.northstar-ai-menu-toggle) .brand-home-control{grid-area:1 / 2 / 2 / 3!important;grid-template-columns:minmax(0,1fr)!important}
+body.ns-web-toolbar .app>aside .brand.brand-home .northstar-ai-menu-toggle{grid-column:3!important;grid-row:1!important;transform:none;width:28px;height:28px;align-self:center}
+body.ns-web-toolbar .app>aside .brand.brand-home .northstar-ai-menu-toggle>.ns-app-notification{left:auto;right:-4px;top:-4px;bottom:auto;min-width:14px;height:14px;padding:0 3px;font-size:9px;line-height:12px;box-shadow:0 0 0 2px #0b161d}
+body .app>aside .brand .northstar-ai-menu-toggle{position:relative}
+body .app>aside .brand .northstar-ai-menu-toggle img{transform:translateY(1px)}
+body .app>aside .brand .northstar-ai-menu-toggle>.ns-app-notification{left:auto!important;right:-4px!important;top:auto!important;bottom:-4px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important;min-width:14px!important;width:14px!important;height:14px!important;padding:0!important;font-size:9px!important;line-height:1!important;text-align:center!important}
+body.ns-web-toolbar .app>aside .brand.brand-home .northstar-ai-menu-toggle>.ns-app-notification{left:auto!important;right:-4px!important;top:auto!important;bottom:-4px!important;display:grid!important;place-items:center!important;box-sizing:border-box!important;min-width:14px!important;width:14px!important;height:14px!important;padding:0!important;font:700 9px/14px Arial,sans-serif!important;text-indent:0!important}
+body.ns-web-toolbar .app>aside .brand.brand-home #nsWebToolbar{width:22.68px!important;height:25.92px!important;justify-self:center!important}
+body.ns-web-toolbar #nsWebToolbar .ns-web-toolbar-menu{box-sizing:border-box!important;width:22.68px!important;min-width:22.68px!important;height:25.92px!important;padding:0!important;font-size:14.58px!important}
+body.ns-web-toolbar .app>aside .brand.brand-home .northstar-ai-menu-toggle{box-sizing:border-box!important;width:22.68px!important;height:25.92px!important;justify-self:center!important}
+body.ns-web-toolbar .app>aside .brand.brand-home .northstar-ai-menu-toggle img{width:20.25px!important;height:20.25px!important}
+/* The launch bar contains external Microsoft application links; it is intentionally unavailable in the dashboard. */
+body .app>aside .app-launchers{display:none!important}
+body .app>aside .northstar-ai-menu-back{display:none}
+body.northstar-ai-menu-open .app>aside>:not(.northstar-ai-menu-back):not(.ai-assistant-sidebar){display:none!important}
+body.northstar-ai-menu-open .app>aside #sideNav{display:none!important}
+body.northstar-ai-menu-open .app>aside{padding-top:8px!important}
+body.northstar-ai-menu-open .app>aside .northstar-ai-menu-back{display:flex;align-items:center;gap:8px;width:100%;min-height:32px;margin:0 0 6px;padding:4px 8px;border:0;border-radius:7px;background:transparent;color:#e5f0f5;text-align:left;font:600 calc(12px * var(--ns-font-scale, 1)) Arial,sans-serif;cursor:pointer}
+body.northstar-ai-menu-open .app>aside .northstar-ai-menu-back:hover,body.northstar-ai-menu-open .app>aside .northstar-ai-menu-back:focus-visible{background:#1b303d}
+body.northstar-ai-menu-open .app>aside .northstar-ai-menu-back span:first-child{font-size:20px;line-height:1}
+body.northstar-ai-menu-open .app>aside .ai-assistant-sidebar{display:grid;flex:1 1 auto;width:100%;min-width:0;max-height:none;margin:0;padding:0;overflow-y:auto;border:0;border-radius:0;background:transparent;box-shadow:none}
+body.northstar-ai-menu-open .ai-assistant-layout{grid-template-columns:minmax(0,1fr)}
+body.northstar-ai-menu-open .app>aside .ai-assistant-sidebar :is(.ai-assistant-projects button,.ai-assistant-history button){white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+@media(max-width:1050px){
+  body .app>aside .brand.brand-home{display:grid!important;grid-template-columns:1fr!important;justify-items:center!important}
+  body .app>aside .brand .northstar-ai-menu-toggle{grid-column:1;grid-row:1}
+  body .app>aside .brand .brand-home-control{display:none!important}
+  body.northstar-ai-menu-open .app{grid-template-columns:180px minmax(0,1fr)!important}
+}
+@media(max-width:700px){body.northstar-ai-menu-open .app>aside{display:flex!important}}
+
+/* Align the title controls and keep the release beside Systems. */
+body.ns-web-toolbar .app>aside .brand.brand-home{grid-template-rows:32px!important;min-height:32px!important;padding:4px 0 8px!important;align-items:center!important}
+body.ns-web-toolbar .app>aside .brand.brand-home .brand-home-control{grid-template-rows:32px!important;align-items:center!important;align-self:center!important;padding:0!important;min-height:32px!important}
+body.ns-web-toolbar .app>aside .brand.brand-home .brand-home-control .brand-name{grid-row:1!important;align-self:center!important;margin:0!important}
+body.ns-web-toolbar .app>aside .brand.brand-home #nsWebToolbar,body.ns-web-toolbar .app>aside .brand.brand-home .northstar-ai-menu-toggle{height:25.92px!important;align-self:center!important;transform:none!important;margin:0!important}
+body.ns-web-toolbar #nsWebToolbar .ns-web-toolbar-menu{height:25.92px!important;padding-top:0!important;padding-bottom:0!important}
+body .app>aside .northstar-systems-row{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:12px!important}
+body .app>aside .northstar-systems-row>.dashboard-build-label{display:inline-flex!important;position:relative!important;align-items:center!important;min-height:24px!important;height:auto!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;color:var(--muted)!important;font:500 10px/1.2 Arial,sans-serif!important;letter-spacing:.3px!important;cursor:pointer!important}
+body .app>aside .northstar-systems-row>.dashboard-build-label:hover{color:var(--blue)!important}
+body .app>aside .northstar-systems-row>.dashboard-build-label:focus-visible{outline:1px solid var(--blue);outline-offset:3px}
+
+/* Compact brand row centered over the narrower navigation. */
+body.ns-web-toolbar .app>aside .brand.brand-home:has(.northstar-ai-menu-toggle){column-gap:3px!important;grid-template-columns:25px fit-content(100%) 25px!important}
+
+/* Desktop account menu: each header control owns one non-overlapping cell. */
+body .app>aside .brand.brand-home:has(>.ns-account-menu){grid-template-columns:26px minmax(0,1fr) 28px!important;grid-template-rows:32px!important;gap:0 4px!important;align-items:center!important;min-height:32px!important;padding:0 4px 4px 0!important;margin:0!important}
+body .app>aside .brand.brand-home:has(>.ns-account-menu)>.northstar-ai-menu-toggle{grid-area:1 / 1 / 2 / 2!important;width:26px;height:28px;transform:none;box-sizing:border-box}
+body .app>aside .brand.brand-home:has(>.ns-account-menu)>.brand-home-control{display:block!important;grid-area:1 / 2 / 2 / 3!important;min-width:0;padding:0;align-self:center}
+body .app>aside .brand.brand-home:has(>.ns-account-menu)>.brand-home-control .brand-name{display:block!important;font:700 13px/1.2 Arial,sans-serif!important;letter-spacing:-.3px!important;white-space:nowrap}
+body .app>aside .brand.brand-home>.ns-account-menu{grid-area:1 / 3 / 2 / 4;margin:0;min-width:0;align-self:center}
+body .app>aside .brand.brand-home>.ns-account-menu>summary{display:grid;place-items:center;box-sizing:border-box;width:28px;height:28px;padding:0;font:20px/1 Arial,sans-serif}
+body .app>aside .brand.brand-home>.ns-account-menu>.ns-account-menu-content{left:0;right:auto;box-sizing:border-box}
+body .app>aside .brand.brand-home .ns-menu-profile>small{font:12px/1.4 Arial,sans-serif!important;letter-spacing:normal!important}
+@media(max-width:1050px){
+ body .app>aside .brand.brand-home:has(>.ns-account-menu){grid-template-columns:1fr!important;grid-template-rows:28px 28px!important;min-height:66px!important;gap:6px!important;padding-right:0!important;justify-items:center!important}
+ body .app>aside .brand.brand-home:has(>.ns-account-menu)>.brand-home-control{display:none!important}
+ body .app>aside .brand.brand-home>.ns-account-menu{grid-area:2 / 1 / 3 / 2!important}
+}
+
+body .app>aside .brand.brand-home .ns-menu-profile .ns-shared-avatar img{width:68px!important;height:46px!important;position:static!important;margin:0!important}
+body.ns-has-status .app>aside:has(.ns-account-menu[open]){z-index:801!important}

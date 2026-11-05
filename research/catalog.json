@@ -1,0 +1,221 @@
+{
+  "version": 1,
+  "updated": "2026-10-19",
+  "driveFolder": "https://drive.google.com/drive/folders/1BiAgXe85WjmI4HOo_H7uQERuXrqhHdDN",
+  "projects": [
+    {
+      "id": "inflow-coverage",
+      "title": "River inflow and precipitation coverage",
+      "category": "Hydrology",
+      "date": "2026-10-19",
+      "status": "Research complete",
+      "summary": "Tributary and weather gaps across 17 hydro sites, with a Black River / Iroquois pilot.",
+      "note": "Revised v2 report replaces the earlier screening. Forecast gains and travel times have not been calibrated.",
+      "tags": [
+        "Black River",
+        "Matheson",
+        "Abitibi",
+        "precipitation",
+        "snow",
+        "inflows"
+      ],
+      "files": [
+        {
+          "name": "inflow-coverage-deep-review-v2.md",
+          "label": "Revised report",
+          "source": "outputs/inflow-precipitation-gap-analysis/inflow-coverage-deep-review-v2.md",
+          "sourceSha256": "59d97a05e7e0b4ccd562221586785270c6cdb6816a2a576f3eda826c80dcf714"
+        },
+        {
+          "name": "inflow-coverage-evidence-v2.zip",
+          "label": "Source evidence archive",
+          "source": "outputs/inflow-precipitation-gap-analysis/inflow-coverage-evidence-v2.zip",
+          "sourceSha256": "5437f4b6d75239330d7024951c5163eae4531c0c66dd5ee8166733f115f8f9d7"
+        }
+      ],
+      "driveFolder": "https://drive.google.com/drive/folders/1dF1NguyqeoKeWD_6i4AEKwAJkmRpPTeg"
+    },
+    {
+      "id": "west-water-automation",
+      "title": "West water workbook automation",
+      "category": "Data collection",
+      "date": "2026-10-17",
+      "status": "Analysis and source clarification",
+      "summary": "Input mapping, public feeds and remaining manual or email sources for the West water workbook.",
+      "note": "Read the source clarification alongside the analysis: Cogen reports arrive as PDFs and International Falls data by email. No automatic workbook writeback is implied.",
+      "tags": [
+        "WaterDB",
+        "Cogen",
+        "International Falls",
+        "Excel"
+      ],
+      "files": [
+        {
+          "name": "ANALYSIS.md",
+          "label": "Automation analysis",
+          "source": "outputs/west-water-2026-analysis-20261017/ANALYSIS.md",
+          "sourceSha256": "26278818a967d60b390411dbeb455b634e5c0f0de9f9d2cdaf51aeae856fea2e"
+        },
+        {
+          "name": "SOURCE-CLARIFICATION.md",
+          "label": "Source clarification",
+          "source": "outputs/west-water-2026-analysis-20261017/SOURCE-CLARIFICATION.md",
+          "sourceSha256": "f5956b52c28cd4ee3ae0a2f6b5aed670a3ef8135882ab1582a5131e99dba5010"
+        },
+        {
+          "name": "input-field-map.csv",
+          "label": "Input field map",
+          "source": "outputs/west-water-2026-analysis-20261017/input-field-map.csv",
+          "sourceSha256": "d2e6d66dd93a665e85f77c166f0ecabaaad1880364f1ae5f79e62f027b5eeea7"
+        },
+        {
+          "name": "automation-contract.json",
+          "label": "Automation contract",
+          "source": "outputs/west-water-2026-analysis-20261017/automation-contract.json",
+          "sourceSha256": "04a940e646e20dbe578356d38ea146da9771102e3bfc1211c8e17ae86093dabb"
+        },
+        {
+          "name": "scada-linked-inputs.csv",
+          "label": "SCADA-linked field map",
+          "source": "outputs/west-water-2026-analysis-20261017/scada-linked-inputs.csv",
+          "sourceSha256": "57c093c1dc97e44054b17776e5fc5cf4dc36153622116c295ba9198185411f50"
+        }
+      ],
+      "driveFolder": "https://drive.google.com/drive/folders/1RF95oZ6MkQ7tctEbDh0ey8IHTrD6yWHc"
+    },
+    {
+      "id": "public-water-sources",
+      "title": "Public water sources and collection",
+      "category": "Data collection",
+      "date": "2026-10-17",
+      "status": "Reference snapshot",
+      "summary": "Configured WSC, USGS and CEHQ sources, parameters, collection schedules and mapping notes.",
+      "note": "Historical configuration snapshot. The Oct 19 inflow review identifies newer station-status findings; a configured source is not proof of current availability.",
+      "tags": [
+        "WSC",
+        "USGS",
+        "CEHQ",
+        "gauges",
+        "schedules"
+      ],
+      "files": [
+        {
+          "name": "USER-GUIDE.md",
+          "label": "Collection guide",
+          "source": "outputs/public-water-collection-20261017/USER-GUIDE.md",
+          "sourceSha256": "51eab95fded1f33da75e37251a996d542e0dc69d7ea8e79f5f036f6e1eaac3ce"
+        },
+        {
+          "name": "public-water-sources.csv",
+          "label": "Source register",
+          "source": "outputs/public-water-collection-20261017/public-water-sources.csv",
+          "sourceSha256": "3d999306760cdada5e879f66e96c43c863bf5af8d860a3469e69cd09703a166f"
+        }
+      ],
+      "driveFolder": "https://drive.google.com/drive/folders/1ccBxCwMYnGEW_6aWLVJC0-l6sjHJ2s6j"
+    },
+    {
+      "id": "west-water-api",
+      "title": "West water elevation API mapping",
+      "category": "Hydrology",
+      "date": "2026-09-22",
+      "status": "Historical reference",
+      "summary": "Workbook-to-gauge cross-reference, units, datums and unresolved water-elevation mappings.",
+      "note": "Retained for source provenance. Check the newer inflow review and current provider metadata before relying on station availability.",
+      "tags": [
+        "water levels",
+        "datum",
+        "gauge",
+        "API",
+        "LFLOWS"
+      ],
+      "files": [
+        {
+          "name": "West_Water_Elevation_API_Cross_Reference.md",
+          "label": "API cross-reference",
+          "source": "outputs/west-water-api-20260922/West_Water_Elevation_API_Cross_Reference.md",
+          "sourceSha256": "ef8a5ed5298e9bf7b641c1d0ab6a9bbb9bbe2999a117585f99bd89cc3ecd4ab5"
+        }
+      ],
+      "driveFolder": "https://drive.google.com/drive/folders/1YiOMwU4yUwHml5XLl_16h17PwQb6g7gs"
+    },
+    {
+      "id": "data-workspace",
+      "title": "Data workspace reference",
+      "category": "Data infrastructure",
+      "date": "2026-10-17",
+      "status": "Reference snapshot",
+      "summary": "Dataset structure, filtering, calculations and records workflow for the shared data workspace.",
+      "note": "This guide describes the released workspace. It is not evidence that operational tables have been populated.",
+      "tags": [
+        "PostgreSQL",
+        "datasets",
+        "data dictionary",
+        "charts"
+      ],
+      "files": [
+        {
+          "name": "USER-GUIDE.md",
+          "label": "Workspace guide",
+          "source": "outputs/postgres-data-workspace-20261017/USER-GUIDE.md",
+          "sourceSha256": "1f5192318faedb9a367b32a66adda1a8ad083ab0d0f5e2f2a411c188273107b1"
+        },
+        {
+          "name": "data-dictionary.csv",
+          "label": "Data dictionary",
+          "source": "outputs/postgres-data-workspace-20261017/data-dictionary.csv",
+          "sourceSha256": "a1005e138740ec9255e93d5785891e17886178839ca72b9cd3dfcb9de4f38bee"
+        }
+      ],
+      "driveFolder": "https://drive.google.com/drive/folders/1vhO-Bnlc98YJR-35ix73O8dBzWlytsMn"
+    },
+    {
+      "id": "database-foundation",
+      "title": "Database foundation design",
+      "category": "Data infrastructure",
+      "date": "2026-10-17",
+      "status": "Design reference",
+      "summary": "Eight linked data areas and the earlier separate database foundation.",
+      "note": "The foundation is separate from the operational SQLite store and the PostgreSQL data workspace. Structure does not imply imported observations.",
+      "tags": [
+        "schema",
+        "historian",
+        "equipment",
+        "weather"
+      ],
+      "files": [
+        {
+          "name": "README.md",
+          "label": "Foundation design",
+          "source": "database-foundation/README.md",
+          "sourceSha256": "20221c7eda018d1e852a1a7ef6f2cf24d591d5391d582565cdb2f28ac141b571"
+        }
+      ],
+      "driveFolder": "https://drive.google.com/drive/folders/1Aq2v9B698EYIHU-pglIav22H0y_MpiVe"
+    },
+    {
+      "id": "daily-report-automation",
+      "title": "Daily report collection and preparation",
+      "category": "Data collection",
+      "date": "2026-10-17",
+      "status": "Reference snapshot",
+      "summary": "Scheduled public-data collection and preparation of the morning operating report.",
+      "note": "Report preparation and collection status are separate from native workbook writeback. Source access and missing fields remain explicit in the guide.",
+      "tags": [
+        "daily report",
+        "07:00",
+        "precipitation",
+        "water"
+      ],
+      "files": [
+        {
+          "name": "README.md",
+          "label": "Daily report guide",
+          "source": "outputs/daily-report-automation-20261017/README.md",
+          "sourceSha256": "d339b3ad8d000ec37aa2f50cb628675bb708f606a9da0b2fdb287d36b74433a6"
+        }
+      ],
+      "driveFolder": "https://drive.google.com/drive/folders/1ZrI7cnvTyGaFAGi9xhPkm_qVPtlTwJQN"
+    }
+  ]
+}

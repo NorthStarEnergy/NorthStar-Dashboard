@@ -1,0 +1,10 @@
+html[data-ns-demo-mode="true"] #nsDevelopmentFolder,
+html[data-ns-demo-mode="true"] #sideNav [data-tab="switching"],
+html[data-ns-demo-mode="true"] #sideNav [data-tab="outages"],
+html[data-ns-demo-mode="true"] #sideNav [data-tab="games"]{display:none!important}
+html[data-ns-ryan-view="true"] #sideNav .ns-demo-restricted,
+html[data-ns-ryan-view="true"] #nsSectionModuleMenu .ns-demo-restricted,
+html[data-ns-ryan-view="true"] #nsDevelopmentFolder.ns-demo-restricted{border-color:#d95b62!important;background:#3a171b!important;color:#ffb4b8!important;box-shadow:inset 3px 0 #ef6b72!important}
+html[data-ns-ryan-view="true"] #sideNav .ns-demo-partial{border-color:#a94a50!important;box-shadow:inset 3px 0 #c8555c!important}
+
+html[data-ns-demo-mode="true"] #staffGroups .staff-row .staff-actions{display:none!important}

@@ -1,0 +1,64 @@
+/* Dispatch has its own responsive surface; each asset owns one field. */
+#dispatchClient {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(140px, .55fr);
+  gap: 12px 18px;
+  flex: 1 1 530px;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  margin: 0;
+  padding: 13px 16px;
+  border: 1px solid #315866;
+  border-radius: 8px;
+  background: #14242b;
+  color: #eef5f6;
+  box-shadow: none;
+}
+#dispatchClient[hidden] { display: none !important; }
+#dispatchClient.or-active { border-color: #da775b; }
+#dispatchClient .dispatch-header { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 14px; }
+#dispatchClient .dispatch-client-title { display: flex; align-items: center; gap: 8px; color: #84d7ea; font: 700 12px/1.3 monospace; letter-spacing: .7px; }
+#dispatchClient .dispatch-delta { color: #9fb8c1; font: 700 10px/1.3 monospace; }
+#dispatchClient .dispatch-delta.on-target { color: #6fd7a8; }
+#dispatchClient .dispatch-delta.minor-deviation { color: #ffc267; }
+#dispatchClient .dispatch-delta.off-target { color: #ff8d7d; }
+#dispatchClient .dispatch-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; margin: 0; padding: 0; border: 0; }
+#dispatchClient .dispatch-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; min-height: 0; padding: 0 0 0 12px; border: 0; border-left: 2px solid #446473; border-radius: 0; background: transparent; text-align: left; }
+#dispatchClient .dispatch-field:first-child { padding-left: 0; border-left: 0; }
+#dispatchClient .dispatch-field span, #dispatchClient .dispatch-reserve-title { color: #9fb8c1; font: 700 9px/1.3 monospace; letter-spacing: .5px; }
+#dispatchClient .dispatch-field b { color: #fff; font: 700 20px/1.1 monospace; overflow-wrap: anywhere; }
+#dispatchClient .dispatch-field b span { color: inherit; font: inherit; letter-spacing: inherit; }
+#dispatchClient .dispatch-field small { color: #9fb8c1; font: 700 10px monospace; }
+#dispatchClient .dispatch-field.activation b { color: #ffc267; font-size: 13px; }
+#dispatchClient .dispatch-field.activation.active b { color: #ff9776; }
+#dispatchClient .dispatch-reserve { display: flex; flex-direction: column; gap: 6px; align-self: start; min-width: 0; padding: 0; border: 0; background: transparent; }
+#dispatchClient .dispatch-reserve-values { display: flex; flex-wrap: wrap; gap: 7px 14px; color: #fff; font: 700 13px monospace; }
+#dispatchClient .dispatch-reserve-values > span { display: inline-flex; gap: 5px; }
+#dispatchClient .dispatch-reserve-values b { color: #8fe8c8; font: inherit; }
+#dispatchClient .dispatch-chart { grid-column: 1 / -1; display: grid; gap: 4px; padding: 8px 0 0; border: 0; border-top: 1px solid #31505a; background: transparent; }
+#dispatchClient .dispatch-chart svg { display: block; width: 100%; height: 38px; }
+#dispatchClient .dispatch-chart-legend { display: flex; gap: 16px; color: #9fb8c1; font: 700 8px monospace; }
+#dispatchClient .dispatch-chart-legend .output::before, #dispatchClient .dispatch-chart-legend .dispatch::before { content: ''; display: inline-block; width: 9px; height: 2px; margin-right: 5px; vertical-align: middle; }
+#dispatchClient .dispatch-chart-legend .output::before { background: #58d7b0; }
+#dispatchClient .dispatch-chart-legend .dispatch::before { background: #ff9b73; }
+#dispatchClient .dispatch-health.stale { background: #d7a243; box-shadow: 0 0 8px #d7a243; }
+#dispatchClient .dispatch-health.fault { background: #e05b4f; box-shadow: 0 0 8px #e05b4f; }
+#dispatchClient .dispatch-health-popover { position: absolute; top: 30px; left: 12px; z-index: 120; width: min(270px, calc(100% - 24px)); padding: 11px; background: #172b34; border: 1px solid #4a7886; border-radius: 6px; box-shadow: 0 12px 24px #0008; color: #d7e4e8; font: 10px/1.5 monospace; }
+#dispatchClient .dispatch-health-popover[hidden] { display: none !important; }
+#dispatchClient .dispatch-health-popover strong { display: block; margin-bottom: 5px; color: #70dda0; }
+.page-header:has(> #dispatchClient) { display: flex; flex-wrap: wrap; align-items: flex-start; min-height: 0; }
+.page-header > #marketTopTiles { position: static; flex: 1 1 340px; min-width: 0; }
+.page-header > #weatherStrip { flex: 1 1 100%; width: 100%; min-width: 0; padding-top: 0; }
+.page-header > .header-actions { flex: 0 1 auto; }
+@media (max-width: 700px) {
+  #dispatchClient { grid-template-columns: minmax(0, 1fr); flex-basis: 100%; }
+  #dispatchClient .dispatch-header, #dispatchClient .dispatch-chart { grid-column: 1; }
+  #dispatchClient .dispatch-values { gap: 8px; }
+  #dispatchClient .dispatch-field { padding-left: 8px; }
+  #dispatchClient .dispatch-field b { font-size: 16px; }
+  #dispatchClient .dispatch-field.activation b { font-size: 11px; }
+}

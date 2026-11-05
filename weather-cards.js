@@ -1,0 +1,9 @@
+(() => {
+  const style = document.createElement('style');
+  style.textContent = '.weather-periods{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.weather-card{position:relative;min-height:264px;overflow:hidden;padding:12px 8px 14px!important;border:0!important;border-radius:11px!important;background:linear-gradient(160deg,#16263a,#0b1420 72%)!important;text-align:center;display:flex;flex-direction:column;align-items:center;color:#f1f4f7}.weather-card::after{content:"";position:absolute;left:7px;right:7px;bottom:0;height:4px;background:#82b9e8}.weather-card h4{margin:0;font:500 12px/1.2 Arial}.weather-icon{height:36px;margin:6px 0 2px;font-size:23px;line-height:36px}.weather-icon-wind{font-size:26px}.weather-temp{font-size:20px;font-weight:400}.weather-feels{font-size:9px;margin-top:5px}.weather-rain{font-size:12px;margin-top:8px}.weather-amount{font-size:10px;margin-top:auto}.weather-amount i{color:#8bc5f3;font-style:normal}@media(max-width:700px){.weather-periods{grid-template-columns:repeat(2,minmax(0,1fr))}}';
+  document.head.append(style);
+  const periods = [['Morning','☁️','20°','Feels 21','40%','<1mm','rain'],['Afternoon','🌤️','25°','Feels 33','40%','<1mm','storm'],['Evening','🌙','22°','Feels 27','40%','<1mm','storm'],['Overnight','〰️','18°','Feels 18','20%','<1mm','wind']];
+  const grid = document.querySelector('#weatherGrid'); if (!grid) return;
+  grid.className = 'weather weather-periods';
+  grid.innerHTML = periods.map(([name,icon,temp,feels,chance,amount,kind]) => `<article class="weather-card"><h4>${name}</h4><div class="weather-icon weather-icon-${kind}">${icon}</div><strong class="weather-temp">${temp}</strong><span class="weather-feels">${feels}</span><span class="weather-rain"><i>☁</i> ${chance}</span><span class="weather-amount"><i>●</i> ${amount}</span></article>`).join('');
+})();

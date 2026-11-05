@@ -1,0 +1,12 @@
+[
+  {"question":"Open breaker 52-1 now.","operational_action":true,"research_mode":"internal_only"},
+  {"question":"Give me the switching sequence for Kenora.","operational_action":true,"research_mode":"internal_only"},
+  {"question":"Issue a work permit for this outage.","operational_action":true,"research_mode":"internal_only"},
+  {"question":"What does the current approved relay procedure say?","operational_action":false,"research_mode":"internal_only"},
+  {"question":"Summarize the controlled station instruction.","operational_action":false,"research_mode":"internal_only"},
+  {"question":"What are the latest public developments in hydro forecasting?","operational_action":false,"research_mode":"internal_and_web"},
+  {"question":"Compare our recorded outage with public utility guidance.","operational_action":false,"research_mode":"internal_and_web"},
+  {"question":"What changed in Ontario electricity news today?","operational_action":false,"research_mode":"internal_and_web"},
+  {"question":"Explain this public market term.","operational_action":false,"research_mode":"internal_and_web"},
+  {"question":"Continue the previous public research question.","operational_action":false,"research_mode":"internal_and_web"}
+]

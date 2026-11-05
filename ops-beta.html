@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NorthStar Ops Beta</title>
+  <link rel="stylesheet" href="ops-beta.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div><div class="brand">◆ NORTHSTAR</div><div class="eyebrow">OPS BETA · LIVE OPERATIONS VIEW</div></div>
+      <div class="connection"><span class="dot"></span><span id="lastUpdate">CONNECTING</span></div>
+    </header>
+
+    <section class="intro">
+      <div><div class="eyebrow">FIELD OPERATIONS</div><h1>What needs attention now?</h1><p>Live weather, Ontario market conditions, and WORKERS ON-SITE status.</p></div>
+      <div class="beta-badge">BETA · OPS TEAM</div>
+    </section>
+
+    <section class="section-block"><div class="section-title"><h2>Weather</h2><span id="weatherMeta">UPDATING</span></div><div id="weatherGrid" class="weather-grid"><div class="loading">Loading current conditions…</div></div></section>
+
+    <section class="section-block"><div class="section-title"><h2>Market prices</h2><span id="marketMeta">UPDATING</span></div><div id="marketGrid" class="market-grid"><div class="loading">Loading IESO prices…</div></div></section>
+
+    <section class="section-block staff-section"><div class="section-title"><div><h2>WORKERS ON-SITE</h2><p class="section-note">Current check-ins and last heartbeat</p></div><button id="refreshStaff" class="secondary">REFRESH</button></div><div id="staffGrid" class="staff-grid"><div class="loading">Loading field status…</div></div></section>
+
+    <section class="checkin-panel"><div><div class="eyebrow">QUICK CHECK-IN</div><h2>Check in a field worker</h2><p>Records the worker as on site and keeps the status visible to the ops team.</p></div><form id="checkinForm"><input id="workerName" required maxlength="80" placeholder="Worker name"><select id="workerSite"><option>Iroquois Falls</option><option>Fort Frances</option><option>Atikokan</option><option>Kenora</option></select><label class="alone"><input id="workerAlone" type="checkbox"> Working alone</label><button class="primary" type="submit">CHECK IN</button><div id="checkinReply" role="status"></div></form></section>
+
+    <footer>NorthStar beta · Data sources: IESO Public Reports and Open-Meteo · Staff status refreshes every 30 seconds</footer>
+  </main>
+  <script src="ops-beta.js"></script>
+</body>
+</html>

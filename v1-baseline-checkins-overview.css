@@ -1,0 +1,98 @@
+/* Scoped to the check-ins landing page; station detail keeps its existing layout. */
+:is(#crew,#overviewWorkerList).checkins-overview:not(.site-detail-open)>.panel{background:var(--bg,#0d151b)!important;padding:22px!important;box-sizing:border-box}
+:is(#crew,#overviewWorkerList).checkins-overview>.panel>h2{font:650 24px/1.3 system-ui,sans-serif!important;margin:4px 0 18px!important}
+:is(#crew,#overviewWorkerList).checkins-overview>.panel>label{font:600 10px/1.4 system-ui,sans-serif!important;color:var(--muted);letter-spacing:1.4px}
+:is(#crew,#overviewWorkerList).checkins-overview .crew-layout{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:16px!important;width:100%;--muted:#9fb1bd;--line:#304652;--blue:#8bcced;--text:#edf4f8}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-toolbar h3{font:650 18px/1.3 system-ui,sans-serif!important;margin:0 0 5px}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-toolbar p{font:12px/1.5 system-ui,sans-serif;color:var(--muted);margin:0}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-toolbar button,:is(#crew,#overviewWorkerList).checkins-overview #toggleCrewEntry{width:auto!important;height:36px!important;min-height:36px!important;align-self:center;padding:8px 14px!important;font:600 12px/1.4 system-ui,sans-serif!important;border-radius:6px}
+:is(#crew,#overviewWorkerList).checkins-overview #crewEntryForm{grid-column:1/-1;max-width:520px;width:100%;box-sizing:border-box}
+:is(#crew,#overviewWorkerList).checkins-overview #crewEntryForm[hidden]{display:none!important}
+:is(#crew,#overviewWorkerList).checkins-overview .crew-board{grid-column:1/-1;height:auto!important;min-height:0!important;max-height:none!important;display:block!important;overflow:visible!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+:is(#crew,#overviewWorkerList).checkins-overview .crew-board>.crew-row.head{display:none!important}
+:is(#crew,#overviewWorkerList).checkins-overview #crewRows{overflow:visible!important;padding:0!important;scrollbar-gutter:auto;min-width:0}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line,#30444e);border:1px solid var(--line,#30444e);border-radius:9px;overflow:hidden;margin:0 0 22px}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary>div{background:var(--panel,#14212b);padding:14px 18px}
+:is(#crew,#overviewWorkerList).checkins-overview .crew-layout dt{font:11px/1.5 system-ui,sans-serif!important;color:var(--muted,#9fb1bd);margin:0}
+:is(#crew,#overviewWorkerList).checkins-overview .crew-layout dd{font:650 17px/1.5 system-ui,sans-serif!important;margin:2px 0 0;color:var(--text,#eef4f7)}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary dd{font-size:26px!important}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-area{margin-bottom:24px}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-area>header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-area h3{font:650 15px/1.4 system-ui,sans-serif!important;margin:0!important}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-area>header>span{font:11px system-ui,sans-serif;color:var(--muted)}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+:is(#crew,#overviewWorkerList).checkins-overview button.checkins-station{display:block;min-width:0;width:100%;height:auto!important;max-height:none!important;padding:16px!important;text-align:left;white-space:normal!important;background:var(--panel,#14212b)!important;color:var(--text,#eef4f7)!important;border:1px solid #ebbb64!important;border-top:3px solid #ebbb64!important;border-radius:8px!important;cursor:pointer;box-shadow:none!important;transform:none!important;font:12px/1.4 system-ui,sans-serif!important}
+:is(#crew,#overviewWorkerList).checkins-overview button.checkins-station:hover{border-color:#ebbb64!important;background:var(--panel2,#1b2e3b)!important}
+:is(#crew,#overviewWorkerList).checkins-overview button.checkins-station:focus-visible{outline:2px solid var(--blue,#80c8e9);outline-offset:3px}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-alert-dot{display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:#ff555d;box-shadow:0 0 0 0 #ff555d80;vertical-align:middle;animation:checkins-alert-flash 1s steps(2,end) infinite}
+@keyframes checkins-alert-flash{50%{opacity:.18;box-shadow:0 0 0 5px #ff555d22}}
+@media(prefers-reduced-motion:reduce){:is(#crew,#overviewWorkerList).checkins-overview .checkins-alert-dot{animation:none}}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-card-head{display:flex;align-items:start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-card-head>strong{font:650 15px/1.4 system-ui,sans-serif!important}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-status{font:600 10px/1.5 system-ui,sans-serif;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:2px 6px}
+:is(#crew,#overviewWorkerList).checkins-overview [data-state=help] .checkins-status{color:#ffadb0}
+:is(#crew,#overviewWorkerList).checkins-overview [data-state=late] .checkins-status,:is(#crew,#overviewWorkerList).checkins-overview [data-state=pending] .checkins-status{color:#f0c980}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-headcount{display:block;margin:12px 0;color:var(--muted)}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-headcount>b{font:650 28px/1 system-ui,sans-serif!important;color:var(--text);margin-right:5px}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-station dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0;padding:12px 0;border-top:1px solid var(--line)}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-companies{display:block;min-height:18px;color:var(--muted);overflow-wrap:anywhere}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-card-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:10px;color:var(--muted)}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-card-foot>span:last-child{color:var(--blue)}
+.checkins-area-menu{display:grid;gap:2px;padding:4px 0 8px 14px;border-left:1px solid var(--line);margin-left:12px}
+.checkins-area-menu button{text-align:left;padding:8px!important;border:0;background:transparent;color:var(--muted);font:12px/1.4 system-ui,sans-serif!important;cursor:pointer}
+.checkins-area-menu button.active{background:var(--panel2);color:var(--text)}
+@media(max-width:700px){:is(#crew,#overviewWorkerList).checkins-overview:not(.site-detail-open)>.panel{padding:14px!important}:is(#crew,#overviewWorkerList).checkins-overview .crew-layout{grid-template-columns:minmax(0,1fr)!important}:is(#crew,#overviewWorkerList).checkins-overview #toggleCrewEntry{justify-self:start}:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary{grid-template-columns:repeat(2,minmax(0,1fr))}:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary>div{padding:10px 12px}:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary>div:last-child{grid-column:1/-1}}
+
+:is(#crew,#overviewWorkerList).checkins-overview{width:100%!important;max-width:none!important}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary>div,:is(#crew,#overviewWorkerList).checkins-overview button.checkins-station{background:#13212a!important}
+:is(#crew,#overviewWorkerList).checkins-overview button.checkins-station:hover{background:#1b2c37!important}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,245px),1fr))}
+:is(#crew,#overviewWorkerList).checkins-overview button.checkins-station{padding:12px!important;color:#edf4f8!important}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-card-head>strong{font-size:14px!important}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-card-area{display:block;font:10px/1.4 system-ui,sans-serif;color:#9aaebc;margin-top:2px}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-headcount{margin:7px 0}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-headcount>b{font-size:24px!important}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-station dl{gap:5px;padding:7px 0}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-station dt{font-size:10px!important;color:#9aaebc}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-station dd{font-size:15px!important;color:#edf4f8}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-companies{font-size:10px;min-height:14px;color:#9aaebc}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-card-foot{margin-top:7px;padding-top:7px;color:#9aaebc}
+
+/* Compact Check Ins totals; keep all five live metrics. */
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary{display:flex;flex-wrap:wrap;gap:0;background:#13212a;border-radius:6px;margin:0 0 12px;padding:4px 0}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary>div{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;flex:0 1 auto;min-width:0;width:auto!important;height:auto!important;min-height:0!important;padding:4px 14px!important;border:0;border-right:1px solid var(--line,#30444e);position:static!important;transform:none!important;box-shadow:none!important}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary>div:last-child{border-right:0}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary dt{font:11px/18px system-ui,sans-serif!important;white-space:nowrap}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary dd{font:650 16px/20px system-ui,sans-serif!important;margin:0!important;white-space:nowrap}
+@media(max-width:700px){:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary>div{padding:4px 10px!important}}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary dt,:is(#crew,#overviewWorkerList).checkins-overview .checkins-summary dd{position:static!important;inset:auto!important;float:none!important;margin:0!important;padding:0!important;transform:none!important;translate:none!important;rotate:none!important;scale:none!important;animation:none!important;flex:0 0 auto!important}
+
+/* Active Workers landing: compact site headers with worker details on demand. */
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-site{min-width:0;border:1px solid #ebbb64;border-radius:8px;background:#13212a;overflow:hidden}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-site>button.checkins-station{border:0!important;border-radius:0!important;border-top:3px solid #ebbb64!important;padding:12px 14px!important}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-site-details{padding:0 14px 12px;border-top:1px solid var(--line,#304652);font:12px/1.45 system-ui,sans-serif;color:var(--text,#edf4f8)}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-site-details[hidden]{display:none!important}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-worker-list{padding:5px 0}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-worker{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line,#304652)}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-worker span{min-width:0;overflow-wrap:anywhere}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-worker strong,:is(#crew,#overviewWorkerList).checkins-overview .checkins-worker small{display:block}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-worker small{color:var(--muted,#9fb1bd);font-size:10px}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-worker b{flex-shrink:0;color:var(--blue,#8bcced);font-size:10px}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-worker-list p{margin:10px 0;color:var(--muted,#9fb1bd)}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-site-details dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:5px 0;padding:9px 0;border-top:1px solid var(--line,#304652)}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-chevron{float:right;font-size:17px;color:var(--blue,#8bcced)}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-card-foot button{border:0;background:none;padding:4px;color:var(--blue,#8bcced);cursor:pointer;font:600 11px system-ui,sans-serif}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-card-foot button:focus-visible{outline:2px solid var(--blue,#8bcced);outline-offset:2px}
+:is(#crew,#overviewWorkerList).checkins-overview .checkins-grid{align-items:start}
+
+/* Sites keeps the catalog in compact, full-width disclosure rows. */
+.checkins-view-buttons{display:flex;gap:8px}
+#checkinsSites[aria-pressed=true]{background:var(--panel2);color:var(--blue)}
+:is(#crew,#overviewWorkerList).checkins-sites-view .checkins-grid{grid-template-columns:minmax(0,1fr)}
+:is(#crew,#overviewWorkerList).checkins-sites-view .checkins-site>button.checkins-station{display:grid!important;grid-template-columns:minmax(0,1fr) 120px 180px;align-items:center;gap:12px;border-top:0!important;padding:10px 14px!important}
+:is(#crew,#overviewWorkerList).checkins-sites-view .checkins-card-head{display:flex;align-items:center;gap:12px}
+:is(#crew,#overviewWorkerList).checkins-sites-view .checkins-headcount{margin:0}
+:is(#crew,#overviewWorkerList).checkins-sites-view .checkins-headcount>b{font-size:18px!important}
+:is(#crew,#overviewWorkerList).checkins-sites-view .checkins-card-area{margin:0}
+@media(max-width:700px){:is(#crew,#overviewWorkerList).checkins-sites-view .checkins-site>button.checkins-station{grid-template-columns:minmax(0,1fr) auto;gap:5px 10px}:is(#crew,#overviewWorkerList).checkins-sites-view .checkins-card-head{flex-wrap:wrap;gap:4px}:is(#crew,#overviewWorkerList).checkins-sites-view .checkins-card-area{grid-column:1;grid-row:2}:is(#crew,#overviewWorkerList).checkins-sites-view .checkins-headcount{grid-column:2;grid-row:1 / span 2;font-size:10px}}

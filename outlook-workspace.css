@@ -1,0 +1,219 @@
+:root {
+  --outlook-line: #31526b;
+  --outlook-panel: #101b26;
+  --outlook-panel-2: #0b141d;
+  --outlook-muted: #8ca0b0;
+  --outlook-blue: #67b8ef;
+  --outlook-ok: #73d4a1;
+  --outlook-gold: #f2be59;
+}
+
+#tools > .panel > #outlookWorkspace {
+  margin-top: 16px;
+}
+
+.outlook-workspace {
+  overflow: hidden;
+  padding: 0;
+  border-color: var(--outlook-line);
+  background: linear-gradient(135deg, #122434, #0b141c 64%);
+}
+
+.outlook-head,
+.outlook-content,
+.outlook-draft-head,
+.outlook-connection-head,
+.outlook-draft-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.outlook-head {
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px;
+  border-bottom: 1px solid var(--outlook-line);
+}
+
+.outlook-head label,
+.outlook-draft label,
+.outlook-connection label {
+  display: block;
+  color: var(--outlook-muted);
+  font: 800 calc(9px * var(--ns-font-scale, 1)) monospace;
+  letter-spacing: .65px;
+}
+
+.outlook-head h2,
+.outlook-draft h3,
+.outlook-connection h3 {
+  color: #edf5fa;
+}
+
+.outlook-head h2 {
+  margin: 4px 0;
+  font-size: calc(18px * var(--ns-font-scale, 1));
+}
+
+.outlook-head p,
+.outlook-connection p {
+  margin: 0;
+  color: var(--outlook-muted);
+  font: calc(10px * var(--ns-font-scale, 1))/1.45 Arial, sans-serif;
+}
+
+.outlook-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.outlook-status,
+.outlook-open,
+.outlook-secondary {
+  border: 1px solid #416781;
+  border-radius: 5px;
+  padding: 7px 9px;
+  color: #dceaf4;
+  background: #172c3c;
+  font: 800 calc(9px * var(--ns-font-scale, 1)) monospace;
+  letter-spacing: .35px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.outlook-status.not_configured,
+.outlook-status.awaiting_authorization {
+  color: var(--outlook-gold);
+  border-color: #735d30;
+  background: #2a2416;
+}
+
+.outlook-status.draft_only {
+  color: var(--outlook-blue);
+}
+
+.outlook-open:hover,
+.outlook-secondary:hover {
+  border-color: var(--outlook-blue);
+  color: #fff;
+}
+
+.outlook-secondary {
+  cursor: pointer;
+}
+
+.outlook-content {
+  align-items: stretch;
+  padding: 14px;
+}
+
+.outlook-draft,
+.outlook-connection {
+  min-width: 0;
+  border: 1px solid var(--outlook-line);
+  border-radius: 7px;
+  background: var(--outlook-panel);
+}
+
+.outlook-draft {
+  flex: 1 1 60%;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.outlook-connection {
+  flex: 1 1 40%;
+  padding: 14px;
+}
+
+.outlook-draft-head,
+.outlook-connection-head,
+.outlook-draft-actions {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.outlook-draft h3,
+.outlook-connection h3 {
+  margin: 3px 0 0;
+  font-size: calc(14px * var(--ns-font-scale, 1));
+}
+
+.outlook-draft input,
+.outlook-draft textarea {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 5px;
+  padding: 9px 10px;
+  border: 1px solid #3b596e;
+  border-radius: 5px;
+  color: #fff;
+  background: #09131b;
+  font: calc(12px * var(--ns-font-scale, 1))/1.4 Arial, sans-serif;
+}
+
+.outlook-draft textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.outlook-notice {
+  color: var(--outlook-muted);
+  font: calc(9px * var(--ns-font-scale, 1))/1.35 monospace;
+}
+
+.outlook-capabilities {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.outlook-capabilities div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid #284154;
+}
+
+.outlook-capabilities dt,
+.outlook-capabilities dd {
+  margin: 0;
+  font: calc(9px * var(--ns-font-scale, 1)) monospace;
+}
+
+.outlook-capabilities dt {
+  color: var(--outlook-muted);
+}
+
+.outlook-capabilities dd {
+  color: var(--outlook-gold);
+  text-align: right;
+}
+
+.outlook-guardrail {
+  padding-top: 11px;
+  border-top: 1px solid #284154;
+}
+
+@media (max-width: 860px) {
+  .outlook-head,
+  .outlook-content,
+  .outlook-draft-actions {
+    flex-direction: column;
+  }
+
+  .outlook-head-actions,
+  .outlook-draft-actions {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .outlook-status,
+  .outlook-open,
+  .outlook-draft-actions .primary-btn {
+    text-align: center;
+  }
+}

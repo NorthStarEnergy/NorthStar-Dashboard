@@ -1,0 +1,320 @@
+/* Main-page layout: one responsive flow, shared with the layout editor. */
+body main #weatherStrip:empty::before {content:'Loading station weather…';grid-column:1 / -1;padding:20px;color:var(--muted);font-size:calc(14px * var(--ns-font-scale, 1));}
+body main #marketTopTiles:empty::before {content:'Loading IESO / APIROQ market data…';grid-column:1 / -1;padding:20px;color:var(--muted);font-size:calc(14px * var(--ns-font-scale, 1));}
+body main .page-header {
+  position:relative!important; top:auto!important; display:flex!important;
+  flex-wrap:wrap!important; align-items:stretch!important; gap:16px!important;
+  height:auto!important; min-height:0!important; padding:0!important;
+  overflow:visible!important; z-index:20!important;
+}
+body main .page-header > :is(#eventsCard,#dispatchClient,#marketTopTiles,#weatherStrip) {
+  position:relative!important; inset:auto!important; transform:none!important;
+  margin:0!important; width:auto!important; max-width:100%!important;
+  height:auto!important; max-height:none!important; min-width:0!important;
+  box-sizing:border-box!important; pointer-events:auto!important;
+}
+body main .page-header > .header-actions {position:relative!important; inset:auto!important; order:-2; flex:1 1 100%; justify-content:flex-end;}
+body main .page-header > .weather-carousel-frame {order:-1!important;position:relative!important;flex:0 0 360px!important;width:360px!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;padding:5px 30px!important;overflow:hidden!important;border:1px solid var(--line,#293b44)!important;border-radius:8px!important;background:var(--panel2,#17232b)!important}
+body main .weather-carousel-viewport {display:flex!important;align-items:stretch!important;gap:6px!important;min-width:0!important;min-height:0!important;overflow:hidden!important}
+body main .page-header > .weather-carousel-frame #weatherStrip {display:flex!important;flex:1 1 auto!important;align-items:stretch!important;gap:6px!important;width:100%!important;max-width:none!important;min-width:0!important;padding:0!important;min-height:0!important;overflow:visible!important;position:relative!important;border:0!important;border-radius:0!important;background:transparent!important;box-sizing:border-box!important}
+body main #weatherStrip > .weather-card {
+  flex:0 0 calc((100% - 12px)/3)!important; width:calc((100% - 12px)/3)!important; min-width:0!important; max-width:none!important; height:auto!important;
+  min-height:132px!important; padding:12px 6px!important; border-radius:10px!important;
+  background:var(--panel)!important; box-sizing:border-box!important;
+}
+body main #weatherStrip > .weather-card[hidden] {display:none!important}
+body main .weather-carousel-arrow {position:absolute!important;top:50%!important;z-index:10!important;transform:translateY(-50%)!important;width:22px!important;height:30px!important;min-height:30px!important;padding:0!important;border:1px solid var(--line,#293b44)!important;border-radius:5px!important;background:var(--panel,#111a21)!important;color:var(--blue,#69b7e8)!important;font:700 17px/1 Arial,sans-serif!important;cursor:pointer!important}
+body main .weather-carousel-prev {left:3px!important}
+body main .weather-carousel-next {right:3px!important}
+body main .weather-carousel-arrow:disabled {opacity:.3!important;cursor:default!important}
+body main #weatherStrip .station-title strong {font-size:calc(14px * var(--ns-font-scale, 1))!important; white-space:normal!important; min-height:32px;}
+body main #weatherStrip .weather-current b {font-size:calc(28px * var(--ns-font-scale, 1))!important;}
+body main #weatherStrip>.weather-card.weather-card-icon-fix {display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:32px 24px auto auto auto auto auto!important;align-content:start!important;justify-items:center!important;gap:0!important;}
+body main #weatherStrip>.weather-card.weather-card-icon-fix>header {grid-row:1!important;align-self:center!important;width:100%!important;margin:0!important;}
+body main #weatherStrip>.weather-card.weather-card-icon-fix>.weather-icon {grid-row:2!important;display:grid!important;place-items:center!important;position:static!important;inset:auto!important;transform:none!important;align-self:center!important;width:100%!important;height:24px!important;margin:0!important;}
+body main #weatherStrip>.weather-card.weather-card-icon-fix>.weather-current {grid-row:3!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:0!important;}
+body main #weatherStrip>.weather-card.weather-card-icon-fix>.weather-extra-line.weather-wind {grid-row:4!important;}
+body main #weatherStrip>.weather-card.weather-card-icon-fix>.weather-extra-line.precip-prob {grid-row:5!important;}
+body main #weatherStrip>.weather-card.weather-card-icon-fix>.weather-extra-line.precip-amount {grid-row:6!important;}
+body main #weatherStrip>.weather-card.weather-card-icon-fix>.periods {grid-row:7!important;}
+body main #weatherStrip :is(.weather-extra-line,.weather-current span) {font-size:calc(12px * var(--ns-font-scale, 1))!important; line-height:1.4!important;}
+body main #weatherStrip .details-btn {width:24px!important;height:24px!important;font-size:calc(14px * var(--ns-font-scale, 1))!important;}
+body main #weatherStrip>.weather-card>:not(.weather-rain-collector){position:relative;z-index:1}
+body main #weatherStrip>.weather-card>.weather-rain-collector{position:absolute;z-index:0;left:0;right:0;bottom:0;display:flex;align-items:flex-end;justify-content:center;height:var(--weather-rain-level,0%);min-height:0;padding:0 0 3px;box-sizing:border-box;overflow:hidden;background:linear-gradient(180deg,#93d5ff70,#64bfff9c);border-top:1px solid #b0e2ff8c;box-shadow:inset 0 6px 12px #d8f1ff22;transition:height .35s ease;color:#effaff}
+body main #weatherStrip .weather-rain-collector>strong{font:700 9px/1 Arial,sans-serif;white-space:nowrap;text-shadow:0 1px 2px #153d5e}
+body main #weatherStrip .weather-card:focus-within .periods {display:grid!important;}
+body main .page-header > #dispatchClient {order:0!important;flex:0 1 360px!important;min-height:0!important;padding:12px!important;align-self:flex-start!important;}
+body main .page-header > #marketTopTiles {
+  order:1!important;flex:2 1 520px!important;display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:12px!important;
+  overflow:visible!important;min-height:160px!important;z-index:1!important;
+}
+body main #marketTopTiles > :is(.node-card.featured,.ontario-market) {
+  position:relative!important;inset:auto!important;transform:none!important;
+  width:100%!important;min-width:0!important;max-width:none!important;
+  height:auto!important;min-height:160px!important;margin:0!important;
+  box-sizing:border-box!important;border-radius:10px!important;
+}
+body main #marketTopTiles .node-card.featured .node-head {height:auto!important;min-height:26px!important;}
+body main #marketTopTiles .node-card.featured .price-row {height:auto!important;min-height:54px!important;grid-template-rows:auto auto!important;padding:6px 0!important;}
+body main #marketTopTiles .node-card.featured .price-row > span,
+body main #marketTopTiles .node-card.featured .row-commit-label {font-size:calc(12px * var(--ns-font-scale, 1))!important;height:auto!important;line-height:1.3!important;}
+body main #marketTopTiles .node-card.featured .price-row > strong {font-size:calc(22px * var(--ns-font-scale, 1))!important;line-height:1.3!important;}
+body main #marketTopTiles .node-card.featured .row-commit-value {font-size:calc(14px * var(--ns-font-scale, 1))!important;line-height:1.4!important;}
+body main #marketTopTiles .node-card.featured .or-item span {font-size:calc(12px * var(--ns-font-scale, 1))!important;}
+body main #marketTopTiles .node-card.featured .or-item b {font-size:calc(14px * var(--ns-font-scale, 1))!important;}
+/* Compact dispatch summary: identity, output and a quiet inline OR status. */
+body main #dispatchClient {display:grid!important;grid-template-columns:minmax(90px,1fr) auto!important;gap:10px 14px!important;border-radius:10px!important;}
+body main #dispatchClient :is(.dispatch-client-main,.dispatch-values,.dispatch-reserve) {padding:0!important;border:0!important;min-width:0!important;}
+body main #dispatchClient .dispatch-client-main {grid-column:1!important;grid-row:1!important;}
+body main #dispatchClient .dispatch-client-title {font-size:calc(16px * var(--ns-font-scale, 1))!important;line-height:1.2!important;}
+body main #dispatchClient .dispatch-client-label {font-size:calc(12px * var(--ns-font-scale, 1))!important;margin-top:4px!important;}
+body main #dispatchClient .dispatch-mw {display:none!important;}
+body main #dispatchClient .dispatch-values {grid-column:2!important;grid-row:1!important;display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:6px!important;}
+body main #dispatchClient .dispatch-values > .dispatch-field:first-child {display:none!important;}
+body main #dispatchClient .dispatch-field > span {font-size:calc(12px * var(--ns-font-scale, 1))!important;letter-spacing:0!important;}
+body main #dispatchClient .dispatch-field > b {font-size:calc(20px * var(--ns-font-scale, 1))!important;margin:0!important;line-height:1.2!important;}
+body main #dispatchClient .dispatch-field.activation {display:inline-flex!important;align-items:center!important;gap:5px!important;width:max-content!important;max-width:100%!important;padding:3px 7px!important;border:1px solid var(--line)!important;border-radius:20px!important;background:var(--panel2)!important;}
+body main #dispatchClient .dispatch-field.activation > :is(span,b) {display:inline!important;font-size:calc(12px * var(--ns-font-scale, 1))!important;line-height:1.2!important;margin:0!important;color:var(--muted)!important;letter-spacing:0!important;}
+body main #dispatchClient .dispatch-reserve {grid-column:1 / -1!important;grid-row:2!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;border-top:1px solid var(--line)!important;padding-top:8px!important;margin:0!important;white-space:normal!important;}
+body main #dispatchClient .dispatch-reserve > span {font-size:calc(12px * var(--ns-font-scale, 1))!important;white-space:normal!important;}
+body main #dispatchClient .dispatch-reserve > b {font-size:calc(14px * var(--ns-font-scale, 1))!important;margin:0!important;}
+body main .page-header > #eventsCard {order:2!important;flex:1 1 100%!important;min-height:0!important;padding:16px 6px 4px 16px!important;overflow:visible!important;}
+body main #eventsCard .events-stream {max-height:240px!important;overflow:auto!important;}
+body main #eventsCard .events-log-entry {display:block!important;}
+body main #overviewModules {
+  display:grid!important;grid-template-columns:minmax(0,2fr) minmax(300px,1fr);
+  gap:16px!important;position:relative!important;height:auto!important;min-height:0!important;align-items:start!important;
+}
+body main #overviewModules > [data-overview-module] {
+  position:relative!important;inset:auto!important;transform:none!important;
+  width:100%!important;min-width:0!important;max-width:none!important;height:auto!important;
+  max-height:none!important;box-sizing:border-box!important;grid-column:auto;grid-row:auto;
+  border-radius:12px!important;padding:18px!important;
+}
+body main #overviewModules > #overviewStaff {grid-column:1;grid-row:1;}
+body main #overviewModules > #overviewFieldTracker {grid-column:2;grid-row:1;}
+body main #overviewModules > #overviewGeneratingStations {grid-column:1 / -1;}
+body main #dispatchDetail.dispatch-workspace {box-sizing:border-box!important;width:100%!important;min-width:0!important;margin:16px 0!important;padding:20px!important;border:1px solid #315866!important;border-radius:10px!important;background:linear-gradient(145deg,#14242b,#0e1a21)!important;color:#eef5f6!important;}
+body main #dispatchDetail.dispatch-workspace h2 {margin:0 0 16px!important;color:#84d7ea!important;font:700 calc(18px * var(--ns-font-scale,1))/1.3 monospace!important;letter-spacing:.5px;}
+body main .dispatch-workspace-grid {display:grid;grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr);gap:14px;}
+body main .dispatch-workspace-panel {min-width:0;padding:16px;border:1px solid #31505a;border-radius:8px;background:#101d25;}
+body main .dispatch-workspace-panel h3 {margin:0 0 14px;color:#84d7ea;font:700 calc(12px * var(--ns-font-scale,1))/1.3 monospace;letter-spacing:.4px;text-transform:uppercase;}
+body main .dispatch-workspace-panel .ov-metrics {gap:12px;}
+body main .dispatch-workspace-panel .ov-metric {padding:12px;border:1px solid #29414d;border-radius:6px;background:#0b161d;}
+body main .dispatch-workspace-panel .ov-metric span {font-size:calc(10px * var(--ns-font-scale,1));}
+body main .dispatch-workspace-panel .ov-metric strong {font-size:clamp(20px,2.4vw,30px);}
+body main .dispatch-workspace-state {display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid #29414d;font:700 calc(10px * var(--ns-font-scale,1)) monospace;}
+body main .dispatch-workspace-state span {color:#9fb8c1;}
+body main .dispatch-workspace-state strong {color:#fff;text-transform:uppercase;}
+body main .dispatch-workspace-state strong.on-target {color:#6fd7a8;}.dispatch-workspace-state strong.minor-deviation {color:#ffc267;}.dispatch-workspace-state strong.off-target {color:#ff8d7d;}
+body main .dispatch-workspace-reserves {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+body main .dispatch-workspace-reserves div {padding:12px;border:1px solid #29414d;border-radius:6px;background:#0b161d;}
+body main .dispatch-workspace-reserves span,body main .dispatch-workspace-reserves strong {display:block;font-family:monospace;}
+body main .dispatch-workspace-reserves span {color:#9fb8c1;font-size:calc(10px * var(--ns-font-scale,1));}
+body main .dispatch-workspace-reserves strong {margin-top:9px;color:#fff;font-size:calc(19px * var(--ns-font-scale,1));}
+body main .dispatch-workspace-note {margin:12px 0 0;color:var(--muted);font:calc(10px * var(--ns-font-scale,1))/1.5 monospace;}
+body main .dispatch-workspace-wide {grid-column:1/-1;}
+body main .dispatch-workspace-chart .ov-trend {min-height:180px;margin:0;color:#58d7b0;}
+body main .dispatch-workspace-chart .ov-trend svg {height:150px;}
+@media(max-width:800px){body main .dispatch-workspace-grid{grid-template-columns:minmax(0,1fr)}body main .dispatch-workspace-wide{grid-column:auto}body main .dispatch-workspace-reserves{grid-template-columns:1fr;}}
+body main #overviewStaff #staffGroups {grid-template-columns:repeat(auto-fit,minmax(250px,1fr))!important;gap:12px!important;}
+body main #overviewStaff .staff-group {height:auto!important;min-height:100px!important;}
+body main #overview :is(h2,.staff-group h3) {font-size:calc(16px * var(--ns-font-scale, 1))!important;line-height:1.4!important;}
+body main #overview :is(.staff-row,.staff-empty,.overview-tracker-workers) {font-size:calc(14px * var(--ns-font-scale, 1))!important;line-height:1.5!important;}
+body main #overview :is(button,input) {font-size:calc(14px * var(--ns-font-scale, 1))!important;min-height:32px;}
+body main :is(#overviewModules,.page-header) > [hidden],body main #marketTopTiles[hidden] {display:none!important;}
+body main :is(button,a,input):focus-visible {outline:2px solid var(--blue);outline-offset:3px;}
+@media(max-width:1200px) {
+  body main .page-header > .weather-carousel-frame {flex-basis:360px!important;}
+  body main #overviewModules {grid-template-columns:minmax(0,1fr);}
+  body main #overviewModules > :is(#overviewStaff,#overviewFieldTracker,#overviewGeneratingStations) {grid-column:1;grid-row:auto;}
+}
+@media(max-width:600px) {
+  body main .page-header > .weather-carousel-frame {flex-basis:100%!important;width:100%!important;}
+  body main .page-header > #marketTopTiles {grid-template-columns:minmax(0,1fr);flex-basis:100%!important;}
+  body main #overviewStaff #staffGroups {grid-template-columns:minmax(0,1fr)!important;}
+  body main #overviewStaff .staff-panel-head {flex-wrap:wrap!important;gap:12px;}
+  body main #weatherStrip .periods {width:min(340px,85vw)!important;min-width:0!important;}
+}
+
+.events-integration-status{padding:8px 0;color:var(--muted);font-size:calc(12px * var(--ns-font-scale, 1));line-height:1.4}.events-filters{flex-wrap:wrap}
+
+/* Shared overview canvas. Containers remain only as feed-rendering anchors. */
+body.overview-canvas main {position:relative!important;overflow:visible!important;}
+body.overview-canvas main .page-header,
+body.overview-canvas main .page-header > #marketTopTiles,
+body.overview-canvas main #overview.active,
+body.overview-canvas main #overviewModules {
+  display:contents!important;position:static!important;transform:none!important;
+  padding:0!important;margin:0!important;border:0!important;min-height:0!important;
+  height:auto!important;width:auto!important;overflow:visible!important;
+}
+body.overview-canvas main #overviewStaff > .overview-module-close {display:none!important;}
+body.overview-canvas main [data-canvas-module] {box-sizing:border-box!important;overflow:auto!important;align-self:auto!important;}
+body.overview-canvas main #weatherStrip > [data-canvas-module] {overflow:visible!important;}
+body.overview-canvas main #overviewStaff > .staff-panel-head {background:none;border:0;border-radius:0;padding:0!important;align-items:center!important;gap:8px!important;}
+body.overview-canvas main .staff-panel-head #staffHeading {font-size:calc(16px * var(--ns-font-scale, 1))!important;}
+body.overview-canvas main #marketTopTiles .node-card.featured .price-row {grid-template-columns:minmax(0,1fr) minmax(90px,1fr)!important;}
+body.overview-canvas main #marketTopTiles .node-card.featured .price-row > span {white-space:normal!important;}
+body.overview-canvas main [data-canvas-module] > .module-resize-handle {display:none!important;}
+body.overview-canvas.layout-edit main [data-canvas-module] {outline:1px dashed var(--blue);outline-offset:3px;}
+body.overview-canvas.layout-edit.overview-grid-hidden main [data-canvas-module] {outline:none!important;}
+body main :is(.canvas-move-handle,.canvas-resize-handle) {display:none!important;}
+body.overview-canvas.layout-edit main .canvas-move-handle {
+  display:grid!important;place-items:center!important;position:absolute!important;
+  width:26px!important;height:26px!important;min-height:0!important;padding:0!important;
+  z-index:100!important;background:var(--panel2)!important;color:var(--blue)!important;
+  border:1px solid var(--blue)!important;border-radius:5px!important;line-height:1!important;
+  font-size:calc(18px * var(--ns-font-scale, 1))!important;touch-action:none;user-select:none;
+}
+body.overview-canvas.layout-edit main .canvas-move-handle {left:50%;top:3px;transform:translateX(-50%);width:36px!important;height:26px!important;cursor:grab;}
+body.overview-canvas.layout-edit main .canvas-resize-handle {
+  display:block!important;
+  /* The shared window stylesheet makes resize targets transparent.  Overview
+     edit mode needs visible corner grips so the pointer resize path is usable. */
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+body.overview-canvas main [hidden] {display:none!important;}
+body.overview-canvas main :is(#overviewModules #overviewStaff,#marketTopTiles,#weatherStrip,#overview)[hidden] {display:none!important;}
+
+/* Keep roster cards in their parent; only the outer panel uses canvas coordinates. */
+body.overview-canvas main #overviewModules > #overviewStaff {display:block!important;overflow:auto!important;padding:4px 4px 12px 6px!important;}
+body.overview-canvas main #overviewStaff > .ns-module-content:not(:has(.ns-module-notes,.ns-content-block)){display:none!important;}
+body.overview-canvas main #overviewStaff #staffGroups {display:block!important;columns:3!important;column-gap:4px!important;column-fill:balance!important;width:1034px!important;max-width:none!important;position:relative!important;margin-top:0!important;}
+body.overview-canvas main #overviewStaff #staffGroups > .staff-group {position:relative!important;inset:auto!important;transform:none!important;flex:0 0 342px!important;width:342px!important;min-width:0!important;max-width:342px!important;height:auto!important;min-height:0!important;padding:8px 4px 8px 4px!important;box-sizing:border-box!important;overflow:hidden!important;margin:0 0 4px!important;break-inside:avoid!important;display:inline-block!important;vertical-align:top!important;}
+body.overview-canvas main #overviewStaff .staff-panel-head {padding:0!important;flex-wrap:wrap!important;gap:6px!important;margin-bottom:2px!important;}
+body.overview-canvas main #overviewStaff #staffHeading {white-space:normal!important;overflow-wrap:anywhere;font-size:calc(14px * var(--ns-font-scale,1))!important;}
+body.overview-canvas main #overviewStaff > .staff-panel-head {
+  translate:0 0!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;
+  box-sizing:border-box!important;
+}
+body.overview-canvas main #overviewStaff > .staff-panel-head .primary-btn {
+  width:auto!important;max-width:none!important;min-height:0!important;height:24px!important;padding:4px 6px!important;
+}
+body.overview-canvas main #overviewStaff .staff-row {width:332px!important;min-width:0!important;max-width:none!important;height:40px!important;min-height:0!important;grid-template-columns:182.019px 42px 51.9963px 43.9925px!important;gap:4px!important;padding:4px 0!important;font-size:11px!important;line-height:16.5px!important;}
+body.overview-canvas.layout-edit main #overviewStaff #staffGroups > .staff-group > .module-resize-handle {display:block!important;z-index:110;touch-action:none;}
+body.overview-canvas.layout-edit:not(.ns-asset-editing) main #overviewStaff > .canvas-resize-handle:is([data-corner="nw"],[data-corner="ne"],[data-corner="sw"],[data-corner="se"]) {
+  opacity:1!important;background:#142b39!important;border:1px solid #8cc9e9!important;border-radius:3px!important;
+}
+/* Evenly spaced, adjustable guide grid for dashboard edit mode. */
+.ns-edit-grid-overlay { display:none; position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.2; background-image:linear-gradient(to right,#f2c14e 1px,transparent 1px),linear-gradient(to bottom,#f2c14e 1px,transparent 1px); background-size:var(--ns-edit-grid-step,5px) var(--ns-edit-grid-step,5px); }
+body.layout-edit .ns-edit-grid-overlay { display:block; }
+body.ns-edit-grid-outline-mode .ns-edit-grid-overlay { display:none!important; }
+body.ns-edit-grid-even-mode.layout-edit main [data-canvas-module] { outline:none!important; }
+.layout-snap-toggle input[data-layout-grid-step] { width:48px; min-height:22px; padding:2px 4px; }
+
+/* Fort Frances is the operator-edited reference for every Overview check-in card. */
+body main #overviewStaff #staffGroups > .staff-group {
+  flex:0 0 342px!important;width:342px!important;max-width:342px!important;
+  height:auto!important;min-height:0!important;padding:8px 4px 8px 4px!important;
+  border-width:1px!important;overflow:hidden!important;
+}
+body main #overviewStaff .staff-group > h3 {
+  translate:0 0!important;width:332px!important;height:25.1978px!important;
+  min-height:0!important;margin:0 0 5px!important;font-size:18px!important;
+  font-weight:800!important;line-height:25.2px!important;letter-spacing:.3px!important;
+}
+body main #overviewStaff .staff-group > h3 .station-status-icon {
+  width:10px!important;height:10px!important;flex:0 0 10px!important;margin-right:8px!important;
+}
+body main #overviewStaff .staff-group > h3 .station-quick-add {
+  translate:0 0!important;flex:0 0 24px!important;width:24px!important;height:21.9925px!important;
+  min-height:0!important;font-size:14px!important;line-height:18px!important;
+}
+body main #overviewStaff .contractor-heading {
+  translate:0 0!important;width:205.53px!important;height:21.6045px!important;
+  min-height:0!important;margin:7px 0 1px!important;padding:4px 6px!important;
+  font-size:12px!important;font-weight:700!important;border-radius:3px!important;
+}
+body main #overviewStaff .staff-row {
+  width:332px!important;max-width:none!important;height:40px!important;min-height:0!important;
+  grid-template-columns:182.019px 42px 51.9963px 43.9925px!important;
+  gap:4px!important;padding:4px 0!important;font-size:11px!important;line-height:16.5px!important;
+}
+body main #overviewStaff .staff-row > span:nth-child(1) {
+  translate:0 0!important;width:170.582px!important;height:31.4776px!important;
+  min-width:0!important;font-size:12px!important;line-height:18px!important;overflow:hidden!important;
+}
+body main #overviewStaff .staff-row > span:nth-child(1) > small {
+  translate:0 0!important;width:165.582px!important;height:13.4888px!important;
+  min-width:0!important;font-size:10px!important;line-height:13.5px!important;overflow:hidden!important;
+}
+body main #overviewStaff .staff-row > .staff-time:nth-child(2) {
+  translate:6px 0!important;width:38px!important;height:27.2873px!important;
+  min-width:0!important;font-size:11px!important;line-height:12.65px!important;
+  color:#e5ffea!important;border-color:#25cb46!important;overflow:hidden!important;
+}
+body main #overviewStaff .staff-row > .staff-time:nth-child(2) > small {
+  translate:0 2px!important;width:38px!important;height:13px!important;
+  font-size:10px!important;line-height:13.5px!important;overflow:hidden!important;
+}
+body main #overviewStaff .staff-row > .staff-time.status-due {
+  translate:0 1px!important;width:51.9963px!important;height:27.2873px!important;
+  min-width:0!important;font-size:10px!important;line-height:11.5px!important;overflow:hidden!important;
+}
+body main #overviewStaff .staff-row > .staff-time.status-due > small {
+  translate:0 0!important;width:52px!important;height:13px!important;
+  font-size:10px!important;line-height:13.5px!important;overflow:hidden!important;
+}
+body main #overviewStaff .staff-actions {
+  width:43.9925px!important;height:21.9925px!important;gap:4px!important;overflow:hidden!important;
+}
+body main #overviewStaff .staff-row :is(.staff-checkin,.staff-checkout) {
+  translate:0 0!important;width:20.0037px!important;height:21.9925px!important;
+  min-width:0!important;min-height:0!important;padding:0!important;font-size:10px!important;
+}
+body main #overviewStaff .staff-row .alone-badge {width:31px!important;height:9px!important;}
+
+/* Shared worker readability in Overview and the detached worker tracker.
+   Keep station headings and module geometry; spend less space between lines. */
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row {
+  grid-template-columns:minmax(0,1fr) 40px 60px 44px!important;
+  width:100%!important;min-width:0!important;max-width:100%!important;
+  height:40px!important;min-height:0!important;gap:3px!important;
+  padding:2px 3px!important;box-sizing:border-box!important;font-size:13px!important;line-height:14px!important;
+}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row:not(.help-request) {
+  background:transparent!important;color:#e4edf3!important;
+  box-shadow:none!important;
+}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row > span:first-child {
+  translate:none!important;width:auto!important;min-width:0!important;height:30px!important;
+  font-size:14px!important;line-height:15px!important;overflow:hidden!important;
+}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row > span:first-child > small {
+  translate:none!important;width:auto!important;height:13px!important;font-size:11px!important;line-height:12px!important;
+}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row .staff-time {
+  translate:none!important;width:auto!important;min-width:0!important;height:28px!important;font-size:12px!important;line-height:14px!important;
+}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row .staff-time > small {
+  translate:none!important;width:auto!important;height:12px!important;font-size:11px!important;line-height:12px!important;
+}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row:not(.help-request) :is(small,.staff-time) {color:#becbd3!important;}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row:not(.help-request) :is(.status-due,.alone-badge) {color:#edc78c!important;}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row :is(.alone-badge,.help-badge) {width:auto!important;height:auto!important;font-size:11px!important;line-height:12px!important;}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-actions {width:44px!important;height:21px!important;gap:2px!important;align-items:center!important;}
+body #overviewStaff .staff-group .staff-row :is(.staff-checkin,.staff-checkout) {
+  box-sizing:border-box!important;flex:0 0 21px!important;
+  width:21px!important;height:21px!important;min-width:21px!important;min-height:21px!important;
+  padding:0!important;display:inline-grid!important;place-items:center!important;
+}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row button {font-size:12px!important;line-height:14px!important;}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .contractor-heading {
+  width:auto!important;height:auto!important;min-height:0!important;margin:0!important;padding:4px 5px!important;
+  font-size:13px!important;line-height:14px!important;background:color-mix(in srgb,var(--crew-color) 17%,transparent)!important;color:var(--crew-color)!important;
+  border-left:0!important;
+}
+
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row:not(.help-request) > span:first-child {color:#e4edf3!important;}
+
+/* A distinct matching frame and tinted title separate each crew. */
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-crew {
+  position:relative;min-width:0;margin:5px 0;padding:2px;background:transparent!important;
+  box-shadow:inset 0 0 0 2px var(--crew-color);border-radius:4px;
+}
+body:is(.overview-canvas,.ns-status-window) #overviewStaff .staff-group .staff-row .staff-company {
+  color:var(--crew-color)!important;font:inherit!important;
+}

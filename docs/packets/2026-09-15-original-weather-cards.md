@@ -1,0 +1,7 @@
+# Restore pre-redesign weather cards — 2026-09-15
+
+Reference: commit b766d9f, before the module-section and Overview redesigns. Its native weatherCard, weatherPeriodHtml and forecast-dialog renderers are still present in northstar-clean.html. The original weather-specific stylesheet blocks also remain. Overview now bypasses the replacement summary for weather and displays those native nodes directly: centred abbreviated station heading, original artwork, temperature/condition, precipitation lines, and the forecast periods with apparent temperature and precipitation amounts. The original compact card deliberately hides its direct Feels line; the forecast periods retain it.
+
+Module identity, content editor, free positioning, four-corner resizing and one-pixel size floor are retained. Default automatic weather rows use 180px height so native content fits; automatic profiles adopt that row once. Manual profiles remain intact. Forecast popovers clamp horizontally to the viewport and are hidden until hover/focus. Module editor custom content remains available without duplicating the station heading.
+
+The fixture test uses 48 hours of forecast data and checks native artwork, precipitation/forecast content, hover display, keyboard editing, resizing and persistence across six widths. Screenshot evidence uses isolated fixtures. 261 Python tests passed. Browser, Node and clean-release results accompany the package. Static assets require reload only.

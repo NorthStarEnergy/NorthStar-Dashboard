@@ -1,0 +1,158 @@
+/* Compact presentations share a frame; geometry remains in module-layout.js. */
+#overviewArrangementTools{display:none}
+body.overview-canvas main .header-actions,body.overview-canvas #staffGroups>.staff-empty{display:none!important}
+body.overview-canvas main [data-canvas-module].ov-managed{display:flex!important;flex-direction:column!important;gap:12px!important;padding:16px!important;border:1px solid var(--line,#29404c)!important;border-radius:12px!important;background:var(--panel,#0f1c25)!important;overflow:auto!important;text-align:left!important;box-shadow:0 3px 12px #0002!important;font:calc(14px * var(--ns-font-scale, 1))/1.4 Arial,sans-serif!important;color:var(--text,#e3edf2)!important}
+body.overview-canvas main .ov-managed>.ns-module-content{flex:0 0 auto!important;padding:0!important;margin:0!important;min-width:0;border:0!important}
+body.overview-canvas main .ov-managed .ns-module-caption{font:600 calc(14px * var(--ns-font-scale, 1))/1.4 Arial,sans-serif!important;letter-spacing:0!important;text-transform:none!important;color:var(--text)!important;padding:0 30px 0 0!important;min-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.overview-canvas.layout-edit main .ov-managed .ns-module-caption{padding-right:88px!important}
+body.overview-canvas main .ov-managed .ns-module-notes{font:calc(13px * var(--ns-font-scale, 1))/1.4 Arial,sans-serif;margin:6px 0;color:var(--muted)}
+body.overview-canvas main .ov-managed .ns-content-blocks:empty{display:none}
+body.overview-canvas main .ov-managed>.ov-summary{display:flex;flex:1 1 auto;flex-direction:column;justify-content:space-between;min-height:0;gap:12px}
+body.overview-canvas main .ov-managed>.ov-summary[hidden]{display:none!important}
+.ov-summary-body{min-width:0}
+.ov-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ov-metrics.ov-three{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ov-metric{min-width:0;display:flex;flex-direction:column;gap:6px}
+.ov-metric>span{font:calc(12px * var(--ns-font-scale, 1))/1.4 Arial,sans-serif;color:var(--muted);white-space:nowrap}
+.ov-metric>strong{font:600 clamp(calc(18px * var(--ns-font-scale, 1)),calc(2vw * var(--ns-font-scale, 1)),calc(26px * var(--ns-font-scale, 1)))/1.15 Arial,sans-serif;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ov-secondary,.ov-expanded{font:calc(12px * var(--ns-font-scale, 1))/1.4 Arial,sans-serif;color:var(--muted);margin-top:12px;overflow-wrap:anywhere}
+.ov-freshness{font:calc(11px * var(--ns-font-scale, 1))/1.35 Arial,sans-serif;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;flex:0 0 auto}
+.ov-freshness.stale{color:var(--gold,#e4be70)}
+.ov-weather-value{font:600 calc(30px * var(--ns-font-scale, 1))/1 Arial,sans-serif;margin:0 0 6px}
+.ov-weather-condition{font:calc(13px * var(--ns-font-scale, 1))/1.4 Arial,sans-serif;color:var(--text)}
+.ov-empty,.ov-chat-message{margin:0;font:calc(14px * var(--ns-font-scale, 1))/1.6 Arial,sans-serif;color:var(--muted)}
+.ov-chat-message{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;color:var(--text)}
+.ov-events{display:grid;gap:0}
+.ov-events>a{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:start;gap:12px;border-bottom:1px solid var(--line);padding:8px 0;text-decoration:none;color:var(--text);font:calc(13px * var(--ns-font-scale, 1))/1.4 Arial,sans-serif;margin:0}
+.ov-events>a:first-child{padding-top:0}.ov-events>a:last-child{border:0}
+.ov-events time,.ov-events small,.ov-events b{font:calc(11px * var(--ns-font-scale, 1))/1.5 Arial,sans-serif;color:var(--muted)}
+.ov-events small{display:block}.ov-events>a>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.overview-canvas main [data-ov-size="compact"] .ov-secondary,body.overview-canvas main [data-ov-size]:not([data-ov-size="expanded"]) .ov-expanded{display:none!important}
+body.overview-canvas main .ov-managed>.ns-open-module{position:absolute!important;top:0!important;right:0!important;left:auto!important;bottom:auto!important;width:11px!important;height:11px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;font-size:0!important;line-height:0!important;color:transparent!important;background:transparent!important;overflow:hidden!important;cursor:pointer;z-index:101!important}
+body.overview-canvas main .ov-managed>.ns-open-module::after{content:''!important;position:absolute;inset:0;background:#527181;clip-path:polygon(100% 0,100% 100%,0 0);transition:background .12s ease}
+body.overview-canvas main .ov-managed>.ns-open-module:hover::after{background:#6a8b98}
+body.overview-canvas main .ov-managed>.ns-open-module:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+body.overview-canvas main .ov-managed>.ns-edit-module{position:absolute!important;top:12px!important;right:44px!important;left:auto!important;bottom:auto!important;width:26px!important;height:26px!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;border-radius:5px!important;font:calc(18px * var(--ns-font-scale, 1))/26px Arial,sans-serif!important;color:var(--blue)!important;background:transparent!important;z-index:101!important;display:none!important}
+body.overview-canvas.layout-edit main .ov-managed>.ns-edit-module{display:none!important}
+body.overview-canvas.layout-edit main .ov-managed>.ns-module-theme{display:block!important;position:absolute!important;top:12px!important;right:76px!important;left:auto!important;z-index:103!important}
+body.overview-canvas.layout-edit main .ov-managed>.ns-module-theme>.ns-module-theme-toggle{width:26px;height:26px;border:0;border-radius:5px;background:transparent;color:var(--blue);font-size:15px}
+body.overview-canvas.layout-edit main .ov-managed>.ns-module-theme>.ns-module-theme-menu{top:30px;right:0;left:auto}
+body main #overviewModules>[data-overview-module]:not(#eventsCard)>.overview-module-close{display:none!important}
+body.overview-canvas.layout-edit main #eventsCard>.overview-module-close{display:grid!important;place-items:center!important;top:12px!important;right:108px!important;width:26px!important;height:26px!important;border-color:var(--red,#e87979)!important;border-radius:5px!important;background:var(--panel2,#132530)!important;color:var(--red,#e87979)!important;font:600 calc(18px * var(--ns-font-scale, 1))/24px Arial,sans-serif!important;z-index:102!important}
+body.overview-canvas.layout-edit main .ov-managed>.canvas-move-handle{right:76px!important;top:12px!important}
+body.overview-canvas.layout-edit #overviewArrangementTools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;max-width:630px;font:calc(12px * var(--ns-font-scale, 1))/1.4 Arial,sans-serif}
+#overviewArrangementTools button{font:calc(12px * var(--ns-font-scale, 1))/1.4 Arial,sans-serif;padding:6px 8px}#overviewArrangementTools label{display:flex;align-items:center;gap:4px}.ov-profile-label{text-transform:capitalize;color:var(--muted)}
+body.overview-canvas .layout-toolbar{max-width:calc(100vw - 48px);flex-wrap:wrap}
+@media(max-width:650px){.ov-events>a{grid-template-columns:54px minmax(0,1fr)}.ov-events b{display:none}}
+
+.ov-trend{margin:10px 0 0;color:var(--blue);min-width:0}
+.ov-trend figcaption,.ov-trend-empty{font:calc(10px * var(--ns-font-scale, 1))/1.3 Arial,sans-serif;color:var(--muted)}
+html body.overview-canvas main .ov-managed .ov-trend svg{display:block!important;width:100%!important;height:48px!important;max-width:none!important;margin-top:4px;position:static!important}
+body.overview-canvas main [data-ov-size=compact] .ov-trend{display:none!important}
+
+html body.overview-canvas main .ov-managed .ov-weather-art{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;width:26px;height:26px;font:calc(21px * var(--ns-font-scale, 1))/1 "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif;color:initial}
+
+/* Native weather markup/styles retained from b766d9f, before the module redesign.
+   September 15 card proportions restored; wind replaces the removed humidity row. */
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:space-evenly!important;text-align:center!important;box-sizing:border-box!important;padding:7px 3px!important;overflow:hidden!important;gap:2px!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original:is([data-module-id="White Otter Falls"],[data-module-id="Camp Three Rapids"],[data-module-id="Big Beaver Falls"],[data-module-id="Old Women Falls"]){height:auto!important;min-height:0!important;padding-bottom:2px!important;overflow:hidden!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.ns-module-content .ns-module-caption{display:none!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.ns-module-content:has(.ns-content-blocks:empty):not(:has(.ns-module-notes)){display:none!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.ns-open-module{display:none!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.ns-edit-module{display:none!important}
+html body.overview-canvas.layout-edit :is(main,#nsStatusBar) #weatherStrip>.ns-weather-original>.ns-edit-module{display:none!important}
+html body.overview-canvas.layout-edit :is(main,#nsStatusBar) #weatherStrip>.ns-weather-original>.ns-edit-module::after{content:'✎';font-size:calc(14px * var(--ns-font-scale, 1))}
+html body.overview-canvas.layout-edit :is(main,#nsStatusBar) #weatherStrip>.ns-weather-original>.ns-module-theme{display:block!important;position:absolute!important;top:1px!important;right:49px!important;left:auto!important;z-index:111!important}
+html body.overview-canvas.layout-edit :is(main,#nsStatusBar) #weatherStrip>.ns-weather-original>.ns-module-theme>.ns-module-theme-toggle{width:22px;height:22px;padding:0;border:0;background:transparent;color:var(--blue);font-size:12px}
+html body.overview-canvas.layout-edit :is(main,#nsStatusBar) #weatherStrip>.ns-weather-original>.ns-module-theme>.ns-module-theme-menu{top:24px;right:0;left:auto}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>header{display:block!important;margin:0!important;padding:0!important;min-height:0!important;width:100%!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original .station-title{display:block!important;margin:0!important;min-width:0!important;width:100%!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original .station-title strong{display:block!important;margin:0!important;padding:0!important;font:600 calc(11px * var(--ns-font-scale, 1))/1.15 Arial,sans-serif!important;letter-spacing:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;min-height:0!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original .details-btn{top:2px!important;right:2px!important;width:10px!important;height:10px!important;font-size:calc(8px * var(--ns-font-scale, 1))!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.weather-icon{display:block!important;flex:0 0 auto!important;width:auto!important;height:20px!important;margin:2px 0 0!important;padding:0!important;font:calc(20px * var(--ns-font-scale, 1))/20px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif!important;color:initial}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.weather-current{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:1px!important;margin:2px 0 0!important;padding:0!important;min-width:0!important;width:100%!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.weather-current b{display:block!important;margin:0!important;padding:0!important;font:700 calc(22px * var(--ns-font-scale, 1))/1 Arial,sans-serif!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.weather-current span{display:block!important;margin:0!important;padding:0!important;font:600 calc(9px * var(--ns-font-scale, 1))/1.1 Arial,sans-serif!important;letter-spacing:.2px!important;text-transform:uppercase!important;color:var(--muted,#82929d)!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:100%!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>:is(.weather-extra-line){display:block!important;margin:2px 0 0!important;padding:0!important;font:600 calc(9px * var(--ns-font-scale, 1))/1.1 Arial,sans-serif!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:100%!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.weather-extra-line.weather-wind{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>:not(.weather-rain-collector){position:relative;z-index:1}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.weather-rain-collector{position:absolute;z-index:0;left:0;right:0;bottom:0;display:flex;align-items:flex-end;justify-content:center;height:var(--weather-rain-level,0%);min-height:0;padding:0 0 3px;box-sizing:border-box;overflow:hidden;background:linear-gradient(180deg,#93d5ff70,#64bfff9c);border-top:1px solid #b0e2ff8c;box-shadow:inset 0 6px 12px #d8f1ff22;transition:height .35s ease;color:#effaff}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip .weather-rain-collector>strong{font:700 9px/1 Arial,sans-serif;white-space:nowrap;text-shadow:0 1px 2px #153d5e}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>:is(.weather-extra-line):has(.precip-dot){display:block!important}
+
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.periods{display:none!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original:last-child>.periods{left:auto!important;right:0!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original:is(:hover,:focus-within){z-index:200!important;overflow:visible!important}
+
+/* The Overview weather row replaces the retired title/source/alarm strip.
+   Keep historical native proportions without layered child or whole-card zoom. */
+html body.overview-canvas main .page-header{position:static!important;display:block!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;overflow:visible!important}
+html body.overview-canvas main .page-header>:not(#weatherStrip,.weather-carousel-frame){display:none!important}
+html body.overview-canvas main .page-header>#weatherStrip{position:static!important;display:block!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;overflow:visible!important}
+/* Weather cards keep their saved Overview-canvas coordinates.  The carousel
+   wrappers are only a non-canvas presentation surface and must not clip them. */
+:is(html body.overview-canvas main,html body #nsStatusBar) .weather-carousel-frame{display:block!important;box-sizing:border-box!important;padding:0!important;overflow:visible!important;min-width:0!important;min-height:0!important;border:1px solid var(--line,#293b44)!important;border-radius:8px!important;background:var(--panel2,#17232b)!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) .weather-carousel-viewport{display:block!important;position:relative!important;width:100%!important;height:100%!important;overflow:hidden!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip[data-carousel-grouped]{display:block!important;position:static!important;width:100%!important;height:100%!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) .weather-carousel-frame > :is(.canvas-move-handle,.canvas-resize-handle){z-index:10001!important}
+/* Minimal paired controls; canvas coordinates are measured without moving cards. */
+html body :is(main,#nsStatusBar) .weather-carousel-arrow{display:grid!important;place-items:center;width:18px!important;height:18px!important;min-height:18px!important;left:auto!important;right:2px!important;transform:translateY(-50%)!important;border:0!important;border-radius:3px!important;background:transparent!important;font:400 16px/1 Arial,sans-serif!important}
+html body :is(main,#nsStatusBar) .weather-carousel-prev{top:calc(50% - 10px)!important}
+html body :is(main,#nsStatusBar) .weather-carousel-next{top:calc(50% + 10px)!important}
+html body :is(main,#nsStatusBar) .weather-carousel-arrow:hover{background:#69b7e822!important}
+html body :is(main,#nsStatusBar) .weather-carousel-arrow:active{background:#69b7e844!important}
+html body :is(main,#nsStatusBar) .weather-carousel-arrow:focus-visible{outline:2px solid var(--blue,#69b7e8);outline-offset:1px}
+:is(html body.overview-canvas main,html body #nsStatusBar) .weather-carousel-arrow{left:var(--weather-controls-x,calc(100% - 22px))!important;right:auto!important;z-index:210!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) .weather-carousel-prev{top:calc(50% - 10px)!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) .weather-carousel-next{top:calc(50% + 10px)!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original{zoom:1!important;transform-origin:top left;--ns-font-scale:1}
+html body #alarmBar.alarm-indicator-bar{display:none!important}
+
+/* Carousel presentation leaves saved canvas geometry untouched. */
+html body :is(main,#nsStatusBar) #weatherStrip>.weather-card[data-weather-page="hidden"]{display:none!important}
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip[data-carousel-grouped]>.weather-card[data-weather-page="visible"]{translate:none!important}
+
+/* Give every compact Weather reading the available row width and its full text minimum. */
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.weather-current>:is(b,span),
+:is(html body.overview-canvas main,html body #nsStatusBar) #weatherStrip>.ns-weather-original>.weather-extra-line{width:100%!important;min-width:max-content!important;max-width:none!important;text-align:center!important}
+
+/* Weather keeps the existing live strip and paging inside the fixed dashboard. */
+html body #nsStatusBar [data-status=weather]{padding:0!important;overflow:hidden!important}
+html body #nsStatusBar [data-status=weather] .ns-status-content{display:block!important;width:100%!important;height:100%!important;padding:0!important}
+html body #nsStatusBar #weatherCarousel{position:relative!important;inset:auto!important;width:100%!important;height:100%!important;margin:0!important;transform:none!important;translate:none!important}
+html body #nsStatusBar .weather-carousel-arrow{position:absolute!important}
+
+/* Fixed weather tiles: leave enough vertical room for every reading. */
+html body #nsStatusBar #weatherStrip>.ns-weather-original{padding:3px 2px!important;gap:0!important;background:var(--weather-tile-background,linear-gradient(160deg,#244c70,#102d49))!important;border-color:#54758f!important}
+html body #nsStatusBar #weatherStrip>.ns-weather-original>:is(header,.weather-icon,.weather-current,.weather-extra-line){flex-shrink:0!important;margin-top:0!important;min-width:0!important;max-width:100%!important}
+html body #nsStatusBar #weatherStrip>.ns-weather-original>.weather-current>:is(b,span),
+html body #nsStatusBar #weatherStrip>.ns-weather-original>.weather-extra-line{min-width:0!important;max-width:100%!important}
+html body #nsStatusBar #weatherStrip>.ns-weather-original>.weather-current b{font-size:20px!important}
+html body #nsStatusBar .weather-carousel-arrow{left:auto!important;right:4px!important;width:28px!important;height:30px!important;min-height:30px!important;font-size:24px!important;box-sizing:border-box!important;border:1px solid #526773!important;border-radius:3px!important;color:var(--text,#e5edf3)!important}
+html body #nsStatusBar .weather-carousel-prev{top:calc(50% - 17px)!important}
+html body #nsStatusBar .weather-carousel-next{top:calc(50% + 17px)!important}
+
+/* Fixed weather frame follows the dashboard; tile hues follow reported conditions. */
+html body #nsStatusBar #weatherCarousel{background:var(--panel,#0f1c25)!important}
+#nsStatusBar #weatherStrip>[data-weather-theme="clear"]{--weather-tile-background:linear-gradient(160deg,#245b87,#123653)}
+#nsStatusBar #weatherStrip>[data-weather-theme="cloud"]{--weather-tile-background:linear-gradient(160deg,#36536b,#1a354e)}
+#nsStatusBar #weatherStrip>[data-weather-theme="rain"]{--weather-tile-background:linear-gradient(160deg,#244e70,#142d4c)}
+#nsStatusBar #weatherStrip>[data-weather-theme="snow"]{--weather-tile-background:linear-gradient(160deg,#45677e,#25465f)}
+#nsStatusBar #weatherStrip>[data-weather-theme="fog"]{--weather-tile-background:linear-gradient(160deg,#465e6d,#293e50)}
+#nsStatusBar #weatherStrip>[data-weather-theme="storm"]{--weather-tile-background:linear-gradient(160deg,#414463,#222d48)}
+html body #nsStatusBar #weatherStrip>.ns-weather-original :is(.weather-current span,.weather-extra-line){color:#edf6ff!important}
+
+/* Screenshot-directed fixed-strip weather density. */
+html body #nsStatusBar .weather-carousel-arrow{right:2px!important;width:15px!important;height:20px!important;min-height:20px!important;font-size:17px!important;padding:0!important;place-items:center!important}
+html body #nsStatusBar .weather-carousel-prev{top:calc(50% - 11px)!important}
+html body #nsStatusBar .weather-carousel-next{top:calc(50% + 11px)!important}
+html body #nsStatusBar #weatherStrip>.ns-weather-original>header{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.1!important;text-align:center!important}
+html body #nsStatusBar #weatherStrip>.ns-weather-original>header,
+html body #nsStatusBar #weatherStrip>.ns-weather-original>header *{font:600 11px/1.15 Arial,sans-serif!important;letter-spacing:0!important}
+html body #nsStatusBar #weatherStrip>.ns-weather-original :is(.weather-current span,.weather-extra-line){font-size:10px!important}
+html body #nsStatusBar #weatherStrip>.ns-weather-original>.weather-current b{font-size:21px!important}
+html body #nsStatusBar .weather-carousel-arrow svg{display:block!important;margin:0!important;transform:none!important}
+.weather-locations-jump{position:absolute!important;top:3px!important;right:2px!important;left:auto!important;width:15px!important;min-width:15px!important;height:20px!important;min-height:20px!important;padding:0!important;display:grid;place-items:center;z-index:210!important}
+.weather-locations-jump svg{display:block;pointer-events:none}
+
+html body.ns-station-popout #nsStatusBar .weather-locations-jump{display:grid!important}

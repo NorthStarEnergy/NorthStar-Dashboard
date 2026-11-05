@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>NorthStar Demo · Site Directory</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:#071015;color:#e7edf2;font:16px Arial,sans-serif}.shell{width:min(760px,calc(100vw - 40px));margin:0 auto;padding:42px 0 64px}.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #2c4254;padding-bottom:22px}.eyebrow{margin:0 0 7px;color:#1598e5;font:700 11px monospace;letter-spacing:.16em}.bar h1{margin:0;font-size:27px}.logout{border:1px solid #426275;border-radius:5px;background:transparent;color:#c8d9e3;padding:9px 12px;font:700 11px monospace;cursor:pointer}.notice{margin:26px 0;padding:16px 18px;border:1px solid #5c4724;border-radius:7px;background:#211b10;color:#e6c57e;font-size:13px;line-height:1.5}.panel{border:1px solid #2c4254;border-radius:8px;background:#111a24;padding:24px}.panel h2{margin:0;color:#e7edf2;font-size:17px}.panel p{margin:8px 0 18px;color:#9db0bd;font-size:13px;line-height:1.5}.sites{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:0;padding:0;list-style:none}.sites li{padding:13px 14px;border:1px solid #274152;border-radius:5px;background:#0a0f15;color:#eff6fa}.status{min-height:22px;color:#9db0bd;font-size:13px}.error{color:#ff8d78}@media(max-width:520px){.shell{width:min(100% - 28px,760px);padding-top:26px}.bar{align-items:flex-start}.bar h1{font-size:23px}.sites{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="bar">
+      <div><p class="eyebrow">NORTHSTAR · DEMO ACCESS</p><h1>Site directory</h1></div>
+      <a href="research.html" style="color:inherit">Research reports</a><button class="logout" id="logout" type="button">LOG OUT</button>
+    </header>
+    <p class="notice">This account can browse site names and all shared research reports. Operational records and other company documents remain restricted.</p>
+    <section class="panel" aria-labelledby="sitesHeading">
+      <h2 id="sitesHeading">Sites</h2>
+      <p>NorthStar generating-station directory.</p>
+      <p class="status" id="status" role="status">Loading site names…</p>
+      <ul class="sites" id="sites" hidden></ul>
+    </section>
+  </main>
+  <script>
+  (function(){
+    var status=document.querySelector('#status'),list=document.querySelector('#sites');
+    function escapeHtml(value){var node=document.createElement('span');node.textContent=String(value||'');return node.innerHTML}
+    async function start(){
+      var sessionResponse=await fetch('/api/auth/session',{cache:'no-store'});
+      var session=await sessionResponse.json().catch(function(){return{}});
+      if(!sessionResponse.ok||!session.authenticated){location.replace('/operator-login.html');return}
+      if(session.role!=='site_viewer'){location.replace(session.landingUrl||'/northstar-clean.html');return}
+      var response=await fetch('/api/sites',{cache:'no-store'});
+      var payload=await response.json().catch(function(){return{}});
+      if(!response.ok||!Array.isArray(payload.sites)){throw new Error('The site directory is unavailable.')}
+      list.innerHTML=payload.sites.map(function(site){return '<li>'+escapeHtml(site&&site.name)+'</li>'}).join('');
+      list.hidden=false;status.textContent=payload.sites.length+' site names available.';
+    }
+    document.querySelector('#logout').addEventListener('click',function(){
+      fetch('/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
+        .finally(function(){location.replace('/operator-login.html')});
+    });
+    start().catch(function(error){status.className='status error';status.textContent=error.message||'The site directory is unavailable.'});
+  })();
+  </script>
+</body>
+</html>

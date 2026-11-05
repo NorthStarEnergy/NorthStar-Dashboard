@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Location Weather &amp; Water · NorthStar</title>
+  <link rel="stylesheet" href="weather-location.css?v=20261022-date-navigation-1">
+  <script src="operator-session.js"></script>
+  <script src="weather-icons.js?v=20261022-fog-1" defer></script>
+  <script src="weather-location.js?v=20261022-date-navigation-1" defer></script>
+  <script src="weather-location-water.js?v=20260930-1" defer></script>
+</head>
+<body>
+  <header class="weather-page-header">
+    <nav class="weather-header-nav" aria-label="Location weather navigation">
+      <a class="weather-back" href="northstar-clean.html#weather" target="_top">← ALL LOCATIONS</a>
+      <span id="locationSelect"></span>
+      <span id="feedBadge" class="feed-badge">CONNECTING</span>
+      <div class="weather-source-links" aria-label="Other weather services">
+        <a href="https://www.theweathernetwork.com/" target="_blank" rel="noopener noreferrer">The Weather Network</a>
+        <a href="https://weather.gc.ca/" target="_blank" rel="noopener noreferrer">Environment Canada</a>
+        <a href="https://www.accuweather.com/" target="_blank" rel="noopener noreferrer">AccuWeather</a>
+      </div>
+    </nav>
+    <div class="weather-header-summary">
+      <div class="weather-location-name"><div class="weather-title-row"><h1 id="locationTitle">Location weather</h1><div class="weather-range-controls" role="group" aria-label="Forecast range"><button type="button" data-weather-range="24h" aria-pressed="true">24h</button><button type="button" data-weather-range="7d" aria-pressed="false">7d</button><button type="button" data-weather-range="14d" aria-pressed="false">14d</button></div></div><p id="locationSubtitle">Loading current conditions…</p></div>
+      <div id="weatherSummary" class="weather-summary-grid"></div>
+    </div>
+  </header>
+  <main id="weatherDetail" aria-live="polite"><div class="loading-card">Loading weather details…</div></main>
+  <section id="locationWater" class="location-water" aria-live="polite"><div class="loading-card">Loading river-system connectors…</div></section>
+</body>
+</html>

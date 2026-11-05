@@ -1,0 +1,38 @@
+/* All overrides are scoped to the detached monitor, leaving overview layouts intact. */
+html body.ns-station-popout #nsStationWindow>#nsWebToolbar{position:relative!important;top:auto!important;right:auto!important;left:auto!important;align-self:flex-start;margin:8px;height:28px;flex:none;z-index:1000}
+#nsSimpleRail[hidden]{display:none!important}
+html body.ns-simple-monitor #nsStationWindow{display:flex!important;overflow:auto!important}
+html body.ns-simple-monitor #nsStationDivider,html body.ns-simple-monitor #nsFieldActivity{display:none!important}
+html body.ns-simple-monitor #nsStatusWorkers{display:grid!important;grid-template-columns:minmax(0,7fr) minmax(0,3fr)!important;gap:12px!important;padding:0 12px 24px!important;align-items:start!important;flex:1 0 auto!important}
+html body.ns-simple-monitor #overviewStaff{height:auto!important;max-height:none!important;overflow:visible!important}
+html body.ns-simple-monitor #overviewWorkerList,html body.ns-simple-monitor #overviewWorkerList .fr-scroll{height:auto!important;max-height:none!important;overflow:visible!important}
+html body.ns-simple-monitor #overviewWorkerGraphic{display:none!important}
+html body.ns-simple-monitor #nsSimpleRail{min-width:0;display:flex;flex-direction:column;gap:12px}
+html body.ns-simple-monitor #nsStatusBar{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;padding:0!important;gap:0!important;border:1px solid var(--line);border-radius:6px;overflow:hidden!important}
+html body.ns-simple-monitor #nsStatusBar>[data-status]{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;grid-area:auto!important;margin:0!important;padding:10px!important;box-sizing:border-box}
+html body.ns-simple-monitor #nsStatusBar>:not([data-status=dispatch]):not([data-status=markets]){display:none!important}
+html body.ns-simple-monitor #nsStatusBar .ns-status-content{height:auto!important;min-height:0!important}
+html body.ns-simple-monitor #nsStatusBar .ns-market-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+html body.ns-simple-monitor #nsStatusBar :is(.ns-status-demand-box,.ns-or-grid,.ns-status-price-demand,.ns-status-price-forecast){display:none!important}
+#nsSimpleEvents .v3-data-header{flex-wrap:wrap;gap:6px}
+#nsSimpleEvents .v3-data-header input{order:5;width:100%}
+#nsSimpleEvents .v3-event-filters{display:flex;flex-wrap:wrap;padding:8px;gap:4px}
+#nsSimpleEvents [data-v3-event-filter]:is([data-v3-event-filter=scada],[data-v3-event-filter=communications],[data-v3-event-filter=water],[data-v3-event-filter=outages]){display:none}
+#nsSimpleEvents .v3-data-scroll{max-height:65vh;overflow:auto}
+#nsSimpleEvents :is(th,td,col):is(:nth-child(3),:nth-child(4),:nth-child(6)){display:none}
+#nsSimpleEvents col:nth-child(1){width:105px}#nsSimpleEvents col:nth-child(2){width:65px}#nsSimpleEvents col:nth-child(5){width:auto}
+#nsSimpleEvents td{white-space:normal;overflow-wrap:anywhere;height:auto;padding:8px 6px;line-height:1.45}
+#nsSimpleEvents td a{white-space:normal;color:inherit}
+#nsSimpleEvents .v3-data-footer{display:flex;justify-content:space-between;padding:8px}
+#nsSimpleComposer{padding:10px;border-bottom:1px solid var(--line)}
+#nsSimpleComposer label{display:flex;flex-direction:column;gap:5px;font-size:12px;margin-bottom:8px}
+#nsSimpleComposer>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#nsSimpleComposer :is(textarea,input,select){width:100%;min-width:0;background:var(--panel,#101a24);color:var(--text,#e0e8ed);border:1px solid var(--line,#344656);padding:8px;font:inherit;box-sizing:border-box}
+#nsSimpleComposer textarea{resize:vertical;min-height:90px}
+#nsSimpleComposer [role=status]{font-size:12px;line-height:1.4}
+@media(max-width:850px){html body.ns-simple-monitor #nsStatusWorkers{grid-template-columns:minmax(0,1fr)!important}#nsSimpleEvents .v3-data-scroll{max-height:none}}
+html body.ns-simple-monitor #nsStatusWorkers>#nsFieldActivity{display:none!important}
+html body.ns-simple-monitor #nsStatusWorkers>#nsSimpleRail{grid-column:2!important;grid-row:1!important}
+html body.ns-simple-monitor :is(.ns-station-options,.layout-edit-toggle,.layout-edit-controls,.layout-toolbar){display:none!important}
+@media(max-width:850px){html body.ns-simple-monitor #nsStatusWorkers>#nsSimpleRail{grid-column:1!important;grid-row:2!important}}
+html body.ns-simple-monitor #nsWebToolbar :is([data-action=edit],[data-action=station-display],#nsStationDisplayOptions){display:none!important}

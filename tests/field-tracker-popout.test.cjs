@@ -1,0 +1,11 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..');
+const js=fs.readFileSync(path.join(root,'module-workspace.js'),'utf8');
+const css=fs.readFileSync(path.join(root,'module-workspace.css'),'utf8');
+const html=fs.readFileSync(path.join(root,'northstar-clean.html'),'utf8');
+assert.match(js,/bindOverviewFieldTrackerPopout/);
+assert.match(js,/data-field-tracker-replacement/);
+assert.match(js,/popup\.closed/);
+assert.match(css,/ns-field-tracker-popped[\s\S]*eventsCard/);
+assert.match(html,/!events\.hasAttribute\('data-field-tracker-replacement'\)/);
+console.log('Field Tracker pop-out swap/restore wiring checks passed.');

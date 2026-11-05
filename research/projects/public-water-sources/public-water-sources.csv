@@ -1,0 +1,30 @@
+﻿provider,station_id,station_name,active_for_collection,datum,mapping_note,endpoint
+wsc,05PA006,Lac La Croix outlet,True,United States and Canada Boundary Survey datum,Candidate for workbook Lac LaCroix; confirm site alias.,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,05PA013,Namakan at Squirrel Island,True,United States Coast and Geodetic Survey datum,Candidate for workbook Squirrel Falls; confirm site alias.,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,05PB024,Rainy Lake near Bear Pass,True,Assumed datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,05PB007,Rainy Lake near Fort Frances,True,United States Coast and Geodetic Survey datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,05PC024,Rainy River at Point Park No. 1,True,United States Coast and Geodetic Survey datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,05PE006,Kenora forebay,True,Lake of the Woods datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,05PE001,Kenora tailrace,True,Geodetic Survey of Canada datum (local 1923 adjustment),,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,05PE029,Norman forebay,True,Lake of the Woods datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,05PE012,Norman tailrace,True,Geodetic Survey of Canada datum (local 1923 adjustment),,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,05PE014,Keewatin,True,Lake of the Woods datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+usgs,05127500,Basswood River near Winton,True,NAVD88,,https://api.waterdata.usgs.gov/ogcapi/v1/collections/continuous/items
+usgs,05129115,Vermilion River near Crane Lake,True,NAVD88,,https://api.waterdata.usgs.gov/ogcapi/v1/collections/continuous/items
+usgs,05129290,Gold Portage outlet,True,NAVD88,,https://api.waterdata.usgs.gov/ogcapi/v1/collections/continuous/items
+wsc,04LF001,Kapuskasing River at Kapuskasing,True,Assumed datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,02DD006,Lake Nipissing at North Bay,True,Assumed datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,02DD032,Lake Nipissing at West Bay,True,Assumed datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,02DD021,Lake Nipissing at French River outlet,True,Assumed datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,02DD020,Little French River at Okikendawt Island,True,Assumed datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,04ME003,Abitibi River at Onakawana,True,Assumed datum,Downstream basin context; not the Iroquois Falls plant elevation.,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,04MC001,Abitibi River at Iroquois Falls,False,Assumed datum,Discontinued gauge; published historical records only.,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,04MC002,Abitibi River at Twin Falls,False,Assumed datum,Discontinued gauge; published historical records only.,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,05PB018,Atikokan River at Atikokan,True,Geodetic Survey of Canada datum (local 1929 adjustment),,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,05PB009,Seine River at Sturgeon Falls generating station,False,Assumed datum,Published records; WSC does not advertise a real-time feed.,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,02HD008,Oshawa Creek at Oshawa,True,Assumed datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,02HC024,Don River at Todmorden,True,Assumed datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,02LC020,Riviere du Nord at Lachute,True,Assumed datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+wsc,04MA004,Lake Abitibi at Mancebourg,True,Assumed datum,,https://api.weather.gc.ca/collections/hydrometric-realtime/items
+cehq,050801,Québec hydrometric station 050801,True,Not applicable to discharge,,https://www.cehq.gouv.qc.ca/suivihydro/fichier_donnees.asp
+cehq,040110,Québec hydrometric station 040110,True,Not applicable to discharge,,https://www.cehq.gouv.qc.ca/suivihydro/fichier_donnees.asp
