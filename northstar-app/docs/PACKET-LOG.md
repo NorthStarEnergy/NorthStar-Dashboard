@@ -1,3 +1,7 @@
+## 20261105-worker-session
+
+Cross-link active visit recovery and explicit session/reminder guidance. Site and checkout lifecycle verified using isolated HTTP tests. See packets/2026-11-05-worker-session.md.
+
 ## 20261105-worker-mobile
 
 Compact mobile check-in, prominent site selection and QR prefill. Live phone viewport verified. See packets/2026-11-05-worker-mobile.md.
