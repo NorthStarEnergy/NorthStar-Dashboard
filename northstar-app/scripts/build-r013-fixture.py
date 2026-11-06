@@ -201,6 +201,7 @@ def write_artifacts():
             element.set('data-breaker-state','unknown')
             element.set('stroke','#9db0c0')
     enhance_drawing(svg,model)
+    tidy_device_layout(svg,model)
     (assets/'runtime.svg').write_text(ET.tostring(svg,encoding='unicode'),encoding='utf-8')
     print(f"r013: {len(model['equipment'])} equipment, {len(model['drawingBindings'])} drawing bindings")
 
@@ -266,6 +267,75 @@ def enhance_drawing(svg, model):
             elif float(label.get('x','0'))>x and float(label.get('x','0'))<x+28:label.set('x',str(x+28))
         if key in ['TW-52L1','TW-52L2','IS-L1-HV','IS-L2-HV','IS-L2-LV']:
             text(g,x+28,y+5,d['label'])
+
+
+
+
+
+def tidy_device_layout(svg,model):
+    """Uniform labels in device-local coordinates, with straight transformer leads."""
+    ns='{http://www.w3.org/2000/svg}'
+    def el(parent,tag,**attrs):return ET.SubElement(parent,ns+tag,{k.replace('_','-'):str(v) for k,v in attrs.items()})
+    def label(g,x,y,value,anchor='start',secondary=False):
+        t=el(g,'text',x=x,y=y,text_anchor=anchor,font_family='Helvetica,Arial,sans-serif',font_size=11 if secondary else 13,fill='#a9bdcc' if secondary else '#e4edf5',data_device_label='secondary' if secondary else 'primary')
+        t.text=value
+        return t
+    devices={d['equipmentId']:d for d in model['equipment']}
+    # These detached source labels are replaced by labels attached to their devices.
+    for t in list(svg):
+        if t.tag==ns+'text' and (t.text or '') in ['52-BT','L1','L2'] and float(t.get('y',0)) in [767,831]:svg.remove(t)
+    for g in svg.findall('.//'+ns+'g'):
+        key=g.get('data-device')
+        if not key:continue
+        d=devices[model['drawingBindings'][key]]
+        texts=g.findall(ns+'text');old=[t.text or '' for t in texts]
+        sym=next((e for e in g if e.get('data-northstar-symbol')),None)
+        # Replace the old sideways winding/dogleg assembly, preserving both endpoints.
+        winding=next((e for e in g.findall(ns+'path') if ' C' in e.get('d','')),None)
+        if winding is not None and sym is None:
+            lead=g.find(ns+'path');match=re.match(r'M([-.0-9]+) ([-.0-9]+)',lead.get('d',''))
+            if match:
+                x,top=map(float,match.groups());y=top+28
+                for e in g.findall(ns+'path'):g.remove(e)
+                sym=el(g,'g',data_northstar_symbol='transformer',transform=f'translate({x} {y})',fill='none',stroke='#75c5d4',stroke_width=2)
+                el(sym,'path',d='M0 -28 V-19 M0 19 V28',data_straight_leads='true')
+                el(sym,'circle',cx=0,cy=-8,r=11);el(sym,'circle',cx=0,cy=8,r=11)
+        if sym is None:
+            for i,t in enumerate(texts):
+                t.set('font-family','Helvetica,Arial,sans-serif');t.set('font-size','13' if i==0 else '11');t.set('data-device-label','primary' if i==0 else 'secondary')
+            if texts:g.set('data-marker-x',str(float(texts[0].get('x'))-14));g.set('data-marker-y',str(float(texts[0].get('y'))-3))
+            continue
+        trans=sym.get('transform','');match=re.search(r'translate\(([-.0-9]+) ([-.0-9]+)\)',trans)
+        if not match:continue
+        x,y=map(float,match.groups());kind=sym.get('data-northstar-symbol')
+        g.set('data-marker-x',str(x-21));g.set('data-marker-y',str(y-17))
+        if kind in {'breaker','disconnect','circuit-switcher','earth-switch','generator'}:
+            scale=.68 if kind=='generator' else .62 if kind=='breaker' else .56
+            sym.set('transform',re.sub(r'scale\([^)]+\)',f'scale({scale})',trans))
+            for rect in g.findall(ns+'rect'):
+                size=38 if kind=='generator' else 32
+                rect.set('x',str(x-size/2));rect.set('y',str(y-size/2));rect.set('width',str(size));rect.set('height',str(size))
+        for t in texts:g.remove(t)
+        if kind=='generator':
+            label(g,x,y+35,key.split('-')[-1],anchor='middle')
+        elif re.search(r'-G\d+-52$',key):
+            label(g,x+20,y+4,'52-'+key.split('-')[1])
+        elif key in ['TW-TIE','IR-TIE','CTS-TIE','TW-SS-TIE']:
+            label(g,x,y-24,{'TW-TIE':'TW 52-BT','IR-TIE':'IR 52-BT','CTS-TIE':'52-T8.9LV','TW-SS-TIE':'TW 52BT-SS'}[key],anchor='middle')
+        elif kind=='transformer':
+            if key=='IR-T-600V':
+                # Align both new transformer terminals to the vertical L3 feeder.
+                sym.set('transform',f'translate({x} {y})');sym.set('stroke-width','2')
+                for child in list(sym):sym.remove(child)
+                el(sym,'path',d='M0 -28 V-19 M0 19 V28',data_straight_leads='true')
+                el(sym,'circle',cx=0,cy=-8,r=11);el(sym,'circle',cx=0,cy=8,r=11)
+                label(g,x-28,y-5,'12.5 / 0.6 kV',anchor='end')
+                note=label(g,x-28,y+14,'Tag / rating unverified',anchor='end',secondary=True);note.set('fill','#f2bc61')
+            else:
+                label(g,x+28,y-5,old[0] if old else d['label'])
+                if len(old)>1:label(g,x+28,y+14,old[1],secondary=True)
+        elif key=='IR-52L3':label(g,x-28,y+4,'IR 52-L3',anchor='end')
+        else:label(g,x+26,y+4,d['label'])
 
 
 if __name__=='__main__':write_artifacts()

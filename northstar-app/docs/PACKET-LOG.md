@@ -1,3 +1,10 @@
+## 20261105-r013-device-layout
+
+Smaller breakers, larger generators, straight transformer leads and uniform
+per-device label placement. Existing topology and unverified markings retained.
+Chrome review checked; Python 632 passed, 21 skipped, 347 subtests passed;
+JavaScript 72 passed. See packets/2026-11-05-r013-device-layout.md.
+
 ## 20261105-r013-600v-symbols
 
 Revision 2 adds the user-confirmed common 600 V bus, transformer and IR 52-L3

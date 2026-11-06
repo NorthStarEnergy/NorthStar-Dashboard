@@ -83,7 +83,7 @@
       let label=g.querySelector('.r013-status');
       if(!label){
         const box=g.getBBox();label=document.createElementNS('http://www.w3.org/2000/svg','text');label.setAttribute('class','r013-status');
-        label.setAttribute('x',box.x);label.setAttribute('y',box.y-7);g.append(label);
+        label.setAttribute('x',g.dataset.markerX??box.x);label.setAttribute('y',g.dataset.markerY??(box.y-7));g.append(label);
       }
       label.textContent=unresolved?'?':'';label.setAttribute('fill',unresolved?'#f2bc61':'#e4edf5');
     });

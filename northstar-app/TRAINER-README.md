@@ -20,7 +20,9 @@ All dynamics, impedances, protection and initial positions are assumed; source
 voltage/rating discrepancies are retained in each device's historical source notes.
 
 The drawing uses green/red for simulated closed/open switching positions, with
-no C/O or OFF/ON badges. Enlarged breaker bars are inset from the box sides.
+no C/O or OFF/ON badges. Breaker bars are inset from the box sides; generator symbols are larger than
+their unit breakers. Transformer leads are straight, with uniform device tags
+placed clear of the bus lines.
 Amber question marks still identify unresolved devices; unit state is in details. Wires retain source geometry and **do not indicate energization**; use
 the live simulated bus-voltage strip and device terminal readings. Start, select,
 execute, synchronize and stop operate only on the isolated session. Normal,

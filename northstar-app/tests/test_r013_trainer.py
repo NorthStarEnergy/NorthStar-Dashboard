@@ -150,7 +150,7 @@ class R013Tests(unittest.TestCase):
         groups={e.get('data-device'):e for e in svg.findall('.//s:g[@data-device]',ns)}
         for key in ['TW-52L1','TW-52L2','IR-52L3']:
             g=groups[key];symbol=g.find('s:g[@data-northstar-symbol="breaker"]',ns)
-            self.assertIn('scale(0.75)',symbol.get('transform'))
+            self.assertIn('scale(0.62)',symbol.get('transform'))
             self.assertIn('52-L',g.find('s:title',ns).text)
         for bar in svg.findall('.//s:path[@data-position-bar]',ns):
             self.assertEqual(bar.get('d'),'M-13 0 H13')
@@ -160,6 +160,26 @@ class R013Tests(unittest.TestCase):
         self.assertIsNotNone(route)
         self.assertGreater(list(svg).index(route),max(i for i,e in enumerate(svg) if e.tag.endswith('rect')))
         self.assertNotIn('step-up routing unresolved',' '.join(svg.itertext()))
+
+    def test_uniform_labels_generator_size_and_straight_transformer_leads(self):
+        svg=ET.fromstring((ROOT/'trainer-assets/r013/runtime.svg').read_text(encoding='utf-8'))
+        ns={'s':'http://www.w3.org/2000/svg'}
+        groups={e.get('data-device'):e for e in svg.findall('.//s:g[@data-device]',ns)}
+        for key,g in groups.items():
+            for text in g.findall('s:text',ns):
+                self.assertIn(text.get('font-size'),['11','13'],key)
+            symbol=g.find('s:g[@data-northstar-symbol="generator"]',ns)
+            if symbol is not None:
+                self.assertIn('scale(0.68)',symbol.get('transform'))
+                unit=groups[key+'-52'].find('s:g[@data-northstar-symbol="breaker"]',ns)
+                self.assertIn('scale(0.62)',unit.get('transform'))
+                self.assertGreaterEqual(50*.68,44*.62)
+                self.assertEqual(len(groups[key+'-52'].findall('s:text[@data-device-label="primary"]',ns)),1)
+            transformer=g.find('s:g[@data-northstar-symbol="transformer"]',ns)
+            if transformer is not None:
+                leads=transformer.find('s:path[@data-straight-leads]',ns)
+                self.assertEqual(leads.get('d'),'M0 -28 V-19 M0 19 V28')
+                self.assertEqual(len(transformer.findall('s:circle',ns)),2)
 
     def test_disconnector_requires_its_own_breaker_open(self):
         s=session();d=s._device('CTS-89-T8')
