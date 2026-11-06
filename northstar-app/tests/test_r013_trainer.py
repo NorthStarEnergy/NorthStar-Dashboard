@@ -167,7 +167,7 @@ class R013Tests(unittest.TestCase):
         groups={e.get('data-device'):e for e in svg.findall('.//s:g[@data-device]',ns)}
         for key,g in groups.items():
             for text in g.findall('s:text',ns):
-                self.assertIn(text.get('font-size'),['11','13'],key)
+                self.assertIn(text.get('font-size'),['18','22'],key)
             symbol=g.find('s:g[@data-northstar-symbol="generator"]',ns)
             if symbol is not None:
                 self.assertIn('scale(0.68)',symbol.get('transform'))

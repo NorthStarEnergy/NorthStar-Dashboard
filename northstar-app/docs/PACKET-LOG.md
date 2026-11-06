@@ -1,3 +1,11 @@
+## 20261105-r013-readable-labels
+
+Larger, higher-contrast device labels with measured clearances. Browser audits
+found zero conflicts across 113 labels, 92 symbols, 23 unverified markers,
+58 wire paths and 31 captions, in normal and full-screen layouts. Unverified
+markings retained. Python 632 passed / 21 skipped / 347 subtests; JS 72 passed.
+See packets/2026-11-05-r013-readable-labels.md.
+
 ## 20261105-r013-device-layout
 
 Smaller breakers, larger generators, straight transformer leads and uniform

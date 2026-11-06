@@ -277,13 +277,22 @@ def tidy_device_layout(svg,model):
     ns='{http://www.w3.org/2000/svg}'
     def el(parent,tag,**attrs):return ET.SubElement(parent,ns+tag,{k.replace('_','-'):str(v) for k,v in attrs.items()})
     def label(g,x,y,value,anchor='start',secondary=False):
-        t=el(g,'text',x=x,y=y,text_anchor=anchor,font_family='Helvetica,Arial,sans-serif',font_size=11 if secondary else 13,fill='#a9bdcc' if secondary else '#e4edf5',data_device_label='secondary' if secondary else 'primary')
+        t=el(g,'text',x=x,y=y,text_anchor=anchor,font_family='Helvetica,Arial,sans-serif',font_size=18 if secondary else 22,fill='#a9bdcc' if secondary else '#e4edf5',data_device_label='secondary' if secondary else 'primary')
         t.text=value
+        t.set('font-weight','600' if not secondary else '400')
         return t
+    svg.set('width','2350');svg.set('viewBox','0 0 2350 1550')
     devices={d['equipmentId']:d for d in model['equipment']}
+    for caption in svg.findall(ns+'text'):
+        content=caption.text or ''
+        positions={'Unit positions from simulator; no plant feedback':985,'Line jumps: crossing, no connection.':1007,'Light outlines: physical station areas.':1029}
+        if content in positions:caption.set('y',str(positions[content]))
+        if content.startswith('IR L1/L2:'):caption.set('y','963')
     # These detached source labels are replaced by labels attached to their devices.
     for t in list(svg):
         if t.tag==ns+'text' and (t.text or '') in ['52-BT','L1','L2'] and float(t.get('y',0)) in [767,831]:svg.remove(t)
+    for t in list(svg):
+        if t.tag==ns+'text' and (t.text or '') in ['10 MW','11 MW']:svg.remove(t)
     for g in svg.findall('.//'+ns+'g'):
         key=g.get('data-device')
         if not key:continue
@@ -302,7 +311,10 @@ def tidy_device_layout(svg,model):
                 el(sym,'circle',cx=0,cy=-8,r=11);el(sym,'circle',cx=0,cy=8,r=11)
         if sym is None:
             for i,t in enumerate(texts):
-                t.set('font-family','Helvetica,Arial,sans-serif');t.set('font-size','13' if i==0 else '11');t.set('data-device-label','primary' if i==0 else 'secondary')
+                if (t.text or '')=='Details':g.remove(t);continue
+                if key=='IS-B2':t.set('x','365');t.set('y','913')
+                if key=='IS-B1':t.set('y','902')
+                t.set('font-family','Helvetica,Arial,sans-serif');t.set('font-size','22' if i==0 else '18');t.set('data-device-label','primary' if i==0 else 'secondary')
             if texts:g.set('data-marker-x',str(float(texts[0].get('x'))-14));g.set('data-marker-y',str(float(texts[0].get('y'))-3))
             continue
         trans=sym.get('transform','');match=re.search(r'translate\(([-.0-9]+) ([-.0-9]+)\)',trans)
@@ -317,11 +329,11 @@ def tidy_device_layout(svg,model):
                 rect.set('x',str(x-size/2));rect.set('y',str(y-size/2));rect.set('width',str(size));rect.set('height',str(size))
         for t in texts:g.remove(t)
         if kind=='generator':
-            label(g,x,y+35,key.split('-')[-1],anchor='middle')
+            label(g,x,y+42,key.split('-')[-1],anchor='middle')
         elif re.search(r'-G\d+-52$',key):
-            label(g,x+20,y+4,'52-'+key.split('-')[1])
+            label(g,x,y+116,'52-'+key.split('-')[1],anchor='middle')
         elif key in ['TW-TIE','IR-TIE','CTS-TIE','TW-SS-TIE']:
-            label(g,x,y-24,{'TW-TIE':'TW 52-BT','IR-TIE':'IR 52-BT','CTS-TIE':'52-T8.9LV','TW-SS-TIE':'TW 52BT-SS'}[key],anchor='middle')
+            label(g,x,y-(36 if key=='TW-SS-TIE' else 24),{'TW-TIE':'TW 52-BT','IR-TIE':'IR 52-BT','CTS-TIE':'52-T8.9LV','TW-SS-TIE':'TW 52BT-SS'}[key],anchor='middle')
         elif kind=='transformer':
             if key=='IR-T-600V':
                 # Align both new transformer terminals to the vertical L3 feeder.
@@ -329,12 +341,13 @@ def tidy_device_layout(svg,model):
                 for child in list(sym):sym.remove(child)
                 el(sym,'path',d='M0 -28 V-19 M0 19 V28',data_straight_leads='true')
                 el(sym,'circle',cx=0,cy=-8,r=11);el(sym,'circle',cx=0,cy=8,r=11)
-                label(g,x-28,y-5,'12.5 / 0.6 kV',anchor='end')
-                note=label(g,x-28,y+14,'Tag / rating unverified',anchor='end',secondary=True);note.set('fill','#f2bc61')
+                label(g,x+28,y-5,'12.5 / 0.6 kV')
+                note=label(g,x+28,y+20,'Tag / rating unverified',secondary=True);note.set('fill','#f2bc61')
             else:
                 label(g,x+28,y-5,old[0] if old else d['label'])
-                if len(old)>1:label(g,x+28,y+14,old[1],secondary=True)
-        elif key=='IR-52L3':label(g,x-28,y+4,'IR 52-L3',anchor='end')
+                if len(old)>1:label(g,x+28,y+20,old[1],secondary=True)
+        elif key=='IR-52L3':label(g,x+28,y+4,'IR 52-L3')
+        elif key in ['TW-52L1','TW-52L2']:label(g,x+26,y+18,d['label'])
         else:label(g,x+26,y+4,d['label'])
 
 
