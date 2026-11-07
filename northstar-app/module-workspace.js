@@ -174,6 +174,7 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
     });
     // UWPC is owned by Tools in demo mode but its source remains under Switching.
     // Register it after source-root discovery so Tools does not discard the cross-section entry.
+    register('switching:arc-flash-studio', 'Arc Flash Scenario Studio', 'switching', $('#arcFlashStudio'));
     register('outages:uwpc', 'UWPC', window.NORTHSTAR_PLATFORM_DEMO ? 'tools' : 'outages', $('#switching .switching-workspace'));
     if ($('#eventLogs')) {
       const eventsSection=sectionState('logbook');
@@ -496,6 +497,8 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
     document.body.classList.toggle('ns-floating',!!s.floating);
     selected.forEach((m,i) => {
       const el=m.el; el.hidden=false;
+      const studio = el.querySelector('iframe[data-studio-src]');
+      if (studio && !studio.hasAttribute('src')) studio.src = studio.dataset.studioSrc;
       const locationFrame = el.querySelector('iframe[data-location-src]');
       if (locationFrame && !locationFrame.hasAttribute('src')) locationFrame.src = locationFrame.dataset.locationSrc;
       if (!originals.has(el)) originals.set(el,el.getAttribute('style') || '');

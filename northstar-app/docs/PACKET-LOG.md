@@ -642,3 +642,5 @@ Recovered H2O control families now drive a separate 17-unit trainer with connect
 start, generating islands and synchronization/reconnection. Isolated local entry
 path; native source bases retained separately. See
 [packet](packets/2026-11-05-twin-iroquois-complex.md).
+
+Engineering now includes [Arc Flash Scenario Studio](packets/2026-11-07-arc-flash-studio.md).

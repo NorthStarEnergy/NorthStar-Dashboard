@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Arc Flash Lab</title><link rel="stylesheet" href="lab.css"></head>
+<body><main><header><small>NORTHSTAR ENGINEERING</small><h1>Arc Flash Lab</h1><p>IEEE 1584-2018 · Three-phase AC · 50/60 Hz</p></header><nav class="scenario-picker" aria-label="Scenario selector"><h2>Choose a scenario</h2><div>
+<a href="equipment.html">Three-phase equipment</a>
+<a href="transmission.html">Live-line tool</a>
+<a href="transmission.html?scenario=glove">Rubber insulating glove</a>
+<a href="study.html?scenario=yard">Open-air multiphase bus</a>
+<a href="study.html?scenario=enclosed">Enclosed transmission bus</a>
+<a href="study.html?scenario=sources">Multiple-source fault</a>
+</div></nav><script src="scenario-menu.js"></script>
+<section class="layout"><form id="inputs"><h2>Equipment</h2><div class="fields">
+<label>Voltage (V)<input type="number" required name="voltage" value="600" step="any" min="208" max="15000"></label>
+<label>Bolted fault current (kA)<input type="number" required name="fault" value="20" step="any" min="0.5" max="106"></label>
+<label>Conductor gap (mm)<input type="number" required name="gap" value="32" step="any" min="6.35" max="76.2"></label>
+<label>Working distance (mm)<input type="number" required name="distance" value="610" step="any" min="304.8" ></label>
+<label>Arc duration (ms)<input type="number" required name="duration" value="100" step="any" min="0.01" ></label>
+<label>Electrode configuration<select name="ec"><option value="VCB">VCB · Vertical, enclosed</option><option value="VCBB">VCBB · Vertical, barrier</option><option value="HCB">HCB · Horizontal, enclosed</option><option value="VOA">VOA · Vertical, open air</option><option value="HOA">HOA · Horizontal, open air</option></select></label></div>
+<fieldset><legend>Enclosure dimensions</legend><div class="fields"><label>Width (mm)<input type="number" required step="any" name="width" value="508" min="0.01" max="1244.6"></label><label>Height (mm)<input type="number" required step="any" name="height" value="508" min="0.01" max="1244.6"></label><label>Depth (mm)<input type="number" required step="any" name="depth" value="508" min="0.01" ></label></div></fieldset></form>
+<section class="results"><h2>Nominal case</h2><p id="scope">Unverified equipment inputs. Duration is entered manually. Reduced arcing current and protection timing are outside this calculation.</p><div id="result" aria-live="polite"></div><button id="pin" type="button">Pin for comparison</button><div id="baseline" aria-live="polite"></div></section></section></main><script src="vendor/ArcFlashCalculatorClass.js"></script><script src="lab.js"></script></body></html>
+

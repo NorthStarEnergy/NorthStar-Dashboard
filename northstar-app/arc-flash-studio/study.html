@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bus study · Arc Flash Lab</title><link rel="stylesheet" href="lab.css"></head><body><main><header><small>NORTHSTAR ENGINEERING</small><h1>Bus study</h1></header><nav class="scenario-picker" aria-label="Scenario selector"><h2>Choose a scenario</h2><div>
+<a href="equipment.html">Three-phase equipment</a>
+<a href="transmission.html">Live-line tool</a>
+<a href="transmission.html?scenario=glove">Rubber insulating glove</a>
+<a href="study.html?scenario=yard">Open-air multiphase bus</a>
+<a href="study.html?scenario=enclosed">Enclosed transmission bus</a>
+<a href="study.html?scenario=sources">Multiple-source fault</a>
+</div></nav><script src="scenario-menu.js"></script><form id="study"><h2 id="name"></h2><p>Unverified inputs for external analysis. This case does not calculate incident energy or a boundary.</p><div class="fields"><label>Bus name<input name="bus" required></label><label>Line-to-line voltage (kV)<input name="voltage_kV" type="number" step="any" min="0.208" max="230" value="230" required></label><label>Working distance (mm)<input name="distance_mm" type="number" min="1" step="any" required></label><label>Expected arc length (mm)<input name="arc_length_mm" type="number" min="1" step="any" required></label></div><label>Sources, operating lineup and clearing devices<textarea name="sources" rows="4" required></textarea></label><label>Protection settings, clearing times and data sources<textarea name="protection" rows="4" required></textarea></label><button>Export case inputs</button></form></main><script src="study.js"></script></body></html>

@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Transmission bus · Arc Flash Lab</title><link rel="stylesheet" href="lab.css"></head>
+<body><main><header><small>NORTHSTAR ENGINEERING</small><h1>Transmission bus</h1><p><a href="equipment.html">Equipment calculator (through 15 kV)</a></p></header><nav class="scenario-picker" aria-label="Scenario selector"><h2>Choose a scenario</h2><div>
+<a href="equipment.html">Three-phase equipment</a>
+<a href="transmission.html">Live-line tool</a>
+<a href="transmission.html?scenario=glove">Rubber insulating glove</a>
+<a href="study.html?scenario=yard">Open-air multiphase bus</a>
+<a href="study.html?scenario=enclosed">Enclosed transmission bus</a>
+<a href="study.html?scenario=sources">Multiple-source fault</a>
+</div></nav><script src="scenario-menu.js"></script>
+<section class="layout"><form><h2>Live-line tool exposure</h2><p>Open-air, single-phase arc to ground. Equipment and protection inputs are unverified.</p><div class="fields">
+<label>Bus voltage, line-to-line (kV)<input id="kv" type="number" min="4" max="230" step="0.1" value="230" required></label>
+<label>Fault current (kA)<select id="current"></select></label></div>
+<label>Case clearing time (cycles)<input id="cycles" type="number" min="0.01" step="any" value="6" required></label><p id="geometry">Assumed arc length is the sparkover distance specified for the band. Worker distance equals minimum approach distance minus twice that arc length.</p><p id="mad"></p></form>
+<section class="results"><h2>Reference clearing times</h2><p>Maximum clearing time in cycles for each listed incident-energy threshold. Applies only under the table’s exposure and distance assumptions.</p><div id="rows" aria-live="polite"></div></section></section>
+<p><a href="https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926SubpartVAppE">OSHA Appendix E, Table 7 and applicability notes</a></p></main><script src="transmission.js"></script></body></html>

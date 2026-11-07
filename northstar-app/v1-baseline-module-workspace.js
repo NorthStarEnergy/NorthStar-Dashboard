@@ -159,6 +159,7 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
       if (key === 'switching-plans' || key === 'uwpc') return;
       register('outages:'+key, {current:'Current outages',uwpc:'UWPC',reports:'Outage reports'}[key] || key, 'outages', el);
     });
+    register('switching:arc-flash-studio', 'Arc Flash Scenario Studio', 'switching', $('#arcFlashStudio'));
     register('outages:uwpc', 'UWPC', window.NORTHSTAR_PLATFORM_DEMO ? 'tools' : 'outages', $('#switching .switching-workspace'));
     $$('.section').filter(el => !['overview','weather','markets','outages','switching','modules','operations-sites'].includes(el.id)).forEach(root => {
       if(root.id==='logbook' && $('.logbook-layout',root))$('.logbook-layout',root).hidden=false;
@@ -494,6 +495,8 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
     document.body.classList.toggle('ns-floating',!!s.floating);
     selected.forEach((m,i) => {
       const el=m.el; el.hidden=false;
+      const studio = el.querySelector('iframe[data-studio-src]');
+      if (studio && !studio.hasAttribute('src')) studio.src = studio.dataset.studioSrc;
       const locationFrame = el.querySelector('iframe[data-location-src]');
       if (locationFrame && !locationFrame.hasAttribute('src')) locationFrame.src = locationFrame.dataset.locationSrc;
       if (!originals.has(el)) originals.set(el,el.getAttribute('style') || '');
