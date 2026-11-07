@@ -644,3 +644,4 @@ path; native source bases retained separately. See
 [packet](packets/2026-11-05-twin-iroquois-complex.md).
 
 Engineering now includes [Arc Flash Scenario Studio](packets/2026-11-07-arc-flash-studio.md).
+Engineering studio styling follows the [dashboard theme](packets/2026-11-07-arc-studio-theme.md).
