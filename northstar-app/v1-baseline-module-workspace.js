@@ -66,7 +66,12 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
     if (m.section === 'tools') return demoToolIds.has(m.id);
     return !['switching','outages','games'].includes(m.section);
   };
-  const restrictedForDemo = m => !demoModuleAllowed(m);
+  function restrictedInSession(m) {
+    if (window.NORTHSTAR_PLATFORM_DEMO) return !demoModuleAllowed(m);
+    if (!window.NORTHSTAR_RYAN_VIEW) return false;
+    if (belongs(m, 'switching') || m?.id === 'training:switching-simulator') return false;
+    return !demoModuleAllowed(m);
+  }
   const sectionItems = owner => [...registry.values()]
     .filter(m=>belongs(m,owner))
     .filter(m=>!window.NORTHSTAR_PLATFORM_DEMO || demoModuleAllowed(m))
@@ -207,7 +212,7 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
 
     for (const [id,m] of registry) if (!m.el.isConnected) registry.delete(id);
     for (const m of registry.values()) {
-      if((window.NORTHSTAR_PLATFORM_DEMO||window.NORTHSTAR_RYAN_VIEW)&&!demoModuleAllowed(m)) {
+      if(restrictedInSession(m)) {
         m.el.hidden=true;
         m.compact.forEach(el=>{el.hidden=true;el.style.setProperty('display','none','important');});
         $(`[data-ns-pin="${CSS.escape(m.id)}"]`)?.remove();
@@ -530,7 +535,7 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
         const nested=document.createElement('div');nested.className='ns-tree-children';nested.id='ns-tree-children-'+m.id;nested.hidden=!open;build(m.id,nested,depth+1);group.append(nested);host.append(group);
       }else{row.append(moduleButton(m));host.append(row);}
     });
-    const moduleButton = m => {const b=document.createElement('button');b.type='button';b.textContent=name(m);b.className=m.id===active?'active':'';if(window.NORTHSTAR_RYAN_VIEW&&restrictedForDemo(m))b.classList.add('ns-demo-restricted');b.dataset.openModule=m.id;b.setAttribute('aria-label',name(m));b.setAttribute('aria-current',m.id===active?'page':'false');b.onclick=()=>{if(m.sourceSection==='crew')window.NorthstarCheckins?.select('All stations');openModule(m.id);};return b;};
+    const moduleButton = m => {const b=document.createElement('button');b.type='button';b.textContent=name(m);b.className=m.id===active?'active':'';if(window.NORTHSTAR_RYAN_VIEW&&restrictedInSession(m))b.classList.add('ns-demo-restricted');b.dataset.openModule=m.id;b.setAttribute('aria-label',name(m));b.setAttribute('aria-current',m.id===active?'page':'false');b.onclick=()=>{if(m.sourceSection==='crew')window.NorthstarCheckins?.select('All stations');openModule(m.id);};return b;};
     build('',tree);
     if(section==='games'){
       const links=document.createElement('div');links.className='ns-games-menu-links';links.setAttribute('aria-label','NorthStar games');
@@ -636,7 +641,7 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
       id = 'outages:uwpc';
     }
     const m=registry.get(id);if(!m)return;
-    if((window.NORTHSTAR_PLATFORM_DEMO||window.NORTHSTAR_RYAN_VIEW)&&!demoModuleAllowed(m))return;
+    if(restrictedInSession(m))return;
     if (id.startsWith('operations:site:')) {
       window.dispatchEvent(new CustomEvent('northstar:site-page-open', {detail:{siteId:'site:' + id.slice('operations:site:'.length)}}));
     }
@@ -647,7 +652,7 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
   }
   function popOutModule(id) {
     const m=registry.get(id);if(!m)return null;
-    if((window.NORTHSTAR_PLATFORM_DEMO||window.NORTHSTAR_RYAN_VIEW)&&!demoModuleAllowed(m))return null;
+    if(restrictedInSession(m))return null;
     const url=new URL(location.href);
     url.searchParams.delete('nsStatusWindow');
     url.searchParams.set('nsModuleWindow',id);
@@ -699,7 +704,7 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
   }
   function showModulePopout(id) {
     const m=registry.get(id);if(!m)return;
-    if((window.NORTHSTAR_PLATFORM_DEMO||window.NORTHSTAR_RYAN_VIEW)&&!demoModuleAllowed(m))return;
+    if(restrictedInSession(m))return;
     if (id.startsWith('operations:site:')) {
       window.dispatchEvent(new CustomEvent('northstar:site-page-open', {detail:{siteId:'site:' + id.slice('operations:site:'.length)}}));
     }
@@ -1017,7 +1022,7 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
       }
       save();return true;
     };
-    window.NorthstarModules={open:openModule,popOut:popOutModule,edit:openEditor,refresh:schedule,registry,state,createCanvas,deleteCanvas,movementHandle,fitSize,canOpen:id=>registry.has(id)&&(!(window.NORTHSTAR_PLATFORM_DEMO||window.NORTHSTAR_RYAN_VIEW)||demoModuleAllowed(registry.get(id)))};
+    window.NorthstarModules={open:openModule,popOut:popOutModule,edit:openEditor,refresh:schedule,registry,state,createCanvas,deleteCanvas,movementHandle,fitSize,canOpen:id=>registry.has(id)&&!restrictedInSession(registry.get(id))};
     const restoreSection=()=>{
       const id=location.hash.slice(1);
       const button=$$('#sideNav [data-tab]').find(b=>b.dataset.tab===ownerSection(id));

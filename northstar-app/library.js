@@ -18,7 +18,7 @@
    {id:'data-connections',title:'Data connections',type:'Tools',summary:'Connection information and provider setup.',status:'Available',href:shell+'&nsModuleWindow='+encodeURIComponent('tools:data-connections')},
    {id:'data-workspace',title:'Data workspace',type:'Tools',summary:'Datasets, calculations, saved scripts and charts.',disabled:true},
    {id:'flows',title:'Water flows',type:'Tools',summary:'Water-source monitoring and operational data workspace.',disabled:true},
-   {id:'training',title:'Training',type:'Tools',summary:'Training materials and exercises.',disabled:true}];
+   {id:'training',title:'Switching Simulator',type:'Tools',summary:'Island / Twin / Iroquois r013 training single-line. Source-qualified draft.',status:'Available',disabled:session?.role!=='operator',href:'northstar-clean.html?buildView=v3&nsModuleWindow=training%3Aswitching-simulator'}];
   const item=items.find(i=>i.id===q.get('item'));
   if(q.has('item')){if(!item){main.innerHTML='<a href="'+url()+'">Back to Library</a><h1>Item not found</h1><p>This link does not identify a Library item.</p>';return;}detail(item);return;}
   main.classList.add('library-index');
