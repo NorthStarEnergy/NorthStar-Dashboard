@@ -1,3 +1,7 @@
+## 20261110-outage-section-library
+
+Restored the [public UWPC reader and form exports](packets/2026-11-10-outage-section-library.md) and scoped the outage folder to the Outages section.
+
 ## 20261110-public-outage
 
 Added [public passcode access and switching-plan reuse](packets/2026-11-10-public-outage.md).

@@ -41,8 +41,9 @@
   // Store only the identity. Resolve the name and access from this operator's current register.
   async function mountFolder(selected=null,section='',rows=[]) {
     const tree=$('outageTree'), request=++folderRequest;
+    const host=tree||$('rows');
     const user=await session;
-    if(!tree?.isConnected || request!==folderRequest)return;
+    if(!host?.isConnected || request!==folderRequest)return;
     const key=user?.actor ? 'northstar.outageManager.last.'+user.actor : '';
     let last='';
     try {if(key)last=localStorage.getItem(key)||'';} catch {}
@@ -51,11 +52,12 @@
       try {row=await fetchData(api+'/detail?id='+encodeURIComponent(last));}
       catch(e){if(![403,404].includes(e.status))return;}
     }
-    if(!tree.isConnected || request!==folderRequest)return;
+    if(!host.isConnected || request!==folderRequest)return;
     row ||= rows[0];
-    if(!row){tree.replaceChildren();tree.hidden=true;return;}
+    if(!row){if(tree){tree.replaceChildren();tree.hidden=true;}return;}
     try {if(key && row.id!==last)localStorage.setItem(key,row.id);} catch {}
     document.querySelectorAll('[data-outage-row]').forEach(tr=>tr.classList.toggle('selected-outage',tr.dataset.outageRow===row.id));
+    if(!tree)return;
     if(tree.firstElementChild?.dataset.folder===row.id && !selected)return;
     const doc=selected?new URLSearchParams(location.search).get('id'):'';
     tree.hidden=false;
@@ -68,15 +70,16 @@
       }).join('')}</ul></details>`;
   }
   function shell(view,selected=null,section='overview') {
+    const showFolder=view==='outages' || Boolean(selected);
     const badge='<b class="inbox-badge" aria-hidden="true" hidden>!</b>';
     const navLink = ([key,label]) => `<a href="${base}#${key}" title="${label}" ${key==='inbox'?'id="inboxLink"':''} ${view===key?'aria-current="page"':''}>${icon(key==='inbox'?'bell':key)}<span>${label}</span>${key==='inbox'?badge:''}</a>`;
     $('shell').innerHTML=`<aside class="rail"><header class="rail-head"><a class="brand" href="${base}" aria-label="Outage Manager home">Outage Manager</a>
       <a class="new-outage" href="${base}#new" title="Create an outage" ${view==='new'?'aria-current="page"':''}>${icon('new')}New</a>
       </header>
-      <button class="mobile-menu" id="menuToggle" aria-controls="packageNav" aria-expanded="false">Menu ${badge}</button><nav id="packageNav" aria-label="Main menu">${menuViews.map(item=>item[0]==='outages'?
+      <button class="mobile-menu" id="menuToggle" aria-controls="packageNav" aria-expanded="false">Menu ${badge}</button><nav id="packageNav" aria-label="Main menu">${menuViews.map(item=>showFolder && item[0]==='outages'?
         `${navLink(item)}<div id="outageTree" hidden></div>`:navLink(item)).join('')}</nav>
       ${visitor ? `<form class="back" method="post" action="/outage-manager/exit"><span>${esc(document.body.dataset.outageVisitor)}</span><button class="btn">Sign out</button></form>` : `<a class="back" href="/northstar-clean.html" aria-label="Return to NorthStar">${icon('back')}<span>NorthStar</span></a>`}</aside>`;
-    if(selected || !['home','outages','reports'].includes(view))void mountFolder(selected,section);
+    if(selected)void mountFolder(selected,section);
     if(view!=='inbox')void refreshInbox().catch(()=>{});
     const menu=$('menuToggle'), nav=menu.nextElementSibling;
     menu.onclick=()=>{const open=menu.getAttribute('aria-expanded')!=='true';
@@ -481,14 +484,16 @@
       <button class="iconbtn" id="readNext" aria-label="Next manual page">${icon('right')}</button></div>`:'';
     main.innerHTML=`<h1 class="sr-only">UWPC library</h1><div id="libraryWorkspace"><div class="library-bar"><div class="library-controls">
       <div class="library-buttons" role="group" aria-label="UWPC sections">${tabs.map(([key,label])=>`<button type="button" aria-pressed="${section===key}" data-lib="${key}">${label}</button>`).join('')}</div>
-      ${search('bookQuery',prompt)}<a class="source-link" ${d.referenceOnly?'hidden':''} href="${sourceUrl}" target="_blank" rel="noopener">${icon('arrow')}Open source PDF</a>
+      ${search('bookQuery',prompt)}<a class="source-link" ${d.referenceOnly?'hidden':''} href="${sourceUrl}" target="_blank" rel="noopener">${icon('arrow')}${d.guide?'Open guide PDF':'Open source PDF'}</a>
+      ${d.guide?'<a class="source-link" href="https://ops.northstarenergy.ca/outage-manager.html#library" target="_blank" rel="noopener">Licensed manual</a>':''}
       ${paging}</div>${manual?'<button type="button" class="iconbtn" id="readerFull"></button>':''}</div><div id="libraryContent"></div></div>`;
     const content=$('libraryContent');
     if(!manual){
-      const cards=section==='forms'?d.forms.map(f=>`<article class="card formref"><strong>${esc(f.code)}</strong><p>${esc(f.title)}</p>
+      const cards=section==='forms'?d.forms.map(f=>`<article class="card formref"><strong>${f.pages?.length?`<a href="#library/manual/${Number(f.pages[0])}">${esc(f.code)}</a>`:esc(f.code)}</strong><p>${esc(f.title)}</p>
         <a class="btn" ${d.referenceOnly?'hidden':''} href="${api}/library/${encodeURIComponent(f.id)}" download>${icon('download')}PDF</a>
-        <a ${d.referenceOnly?'hidden':''} href="${sourceUrl}#page=${f.pages?.[0]}" target="_blank" rel="noopener">Source p. ${f.pages?.[0]}</a></article>`):
-        d.questions.map(([q,a,cl,p])=>`<details class="card"><summary>${esc(q)}</summary><p>${esc(a)}</p><a ${d.referenceOnly?'hidden':''} href="${sourceUrl}#page=${p}" target="_blank" rel="noopener">${esc(cl)} · PDF p. ${p}</a></details>`);
+        ${d.guide?`<a class="btn" href="${api}/library/${encodeURIComponent(f.id)}.xlsx" download>Excel</a>`:''}
+        <a ${d.referenceOnly?'hidden':''} href="#library/manual/${Number(f.pages?.[0])}">${d.guide?'Guide':'Source'} p. ${f.pages?.[0]}</a></article>`):
+        d.questions.map(([q,a,cl,p])=>`<details class="card"><summary>${esc(q)}</summary><p>${esc(a)}</p><a ${d.referenceOnly?'hidden':''} href="#library/manual/${Number(p)}">${esc(cl)} · PDF p. ${p}</a></details>`);
       content.className=section==='forms'?'formsgrid':'questions';
       content.innerHTML=cards.join('')+'<p class="note" id="libraryEmpty" hidden></p>';
       const filter=()=>{
@@ -602,14 +607,17 @@
       const seq=++sequence;host.textContent='Loading report…';
       history.replaceState(null,'','#reports/'+encodeURIComponent(choice.value));
       try{const r=await fetchData(api+'/reports?id='+encodeURIComponent(choice.value));
-        if(seq===sequence && host.isConnected){host.innerHTML=reportBody(r);void mountFolder(r,'');}
+        if(seq===sequence && host.isConnected){
+          host.innerHTML=reportBody(r);
+          if(user?.actor){try{localStorage.setItem('northstar.outageManager.last.'+user.actor,r.id);}catch{}}
+        }
       }catch(e){if(seq===sequence && host.isConnected)host.innerHTML=errorBox(e);}
     }
     choice.onchange=load;$('reportRefresh').onclick=load;await load();
   }
   async function route(){
     const stamp=++epoch;requestId++;clearTimeout(delayed);
-    const [part,sub]=location.hash.slice(1).split('/');const view=Object.hasOwn(titles,part)?part:'home';
+    const [part,sub,pagePart]=location.hash.slice(1).split('/');const view=Object.hasOwn(titles,part)?part:'home';
     shell(view);document.title=(view==='home'?'Outages':titles[view])+' · Outage Manager';
     try{
       if(view==='home'||view==='outages'){state={tab:'upcoming',offset:0,sort:'start',direction:'asc'};regHome();}
@@ -617,7 +625,7 @@
       else if(view==='inbox')await inbox(stamp);
       else if(view==='reports')await reports(stamp,sub);
       else{main.innerHTML=head('UWPC library')+'<p role="status">Loading manual…</p>';const d=libraryData||await fetchData(api+'/library');
-        if(epoch===stamp){libraryData=d;renderLibrary(d,['forms','questions'].includes(sub)?sub:'manual');}}
+        if(epoch===stamp){libraryData=d;if(sub==='manual' && /^\d+$/.test(pagePart||''))readerPage=Math.min(d.pages,Math.max(1,Number(pagePart)));renderLibrary(d,['forms','questions'].includes(sub)?sub:'manual');}}
     }catch(e){if(epoch===stamp)main.innerHTML=head(titles[view])+errorBox(e);}
   }
   function updateAlerts(){if(!document.hidden)void refreshInbox().catch(()=>{});}
@@ -640,6 +648,6 @@
   window.addEventListener('hashchange',route);void route();
   window.addEventListener('pageshow',e=>{
     if(!e.persisted)return;
-    if($('rows'))void loadRegister();else void mountFolder();
+    if($('rows'))void loadRegister();
   });
 })();

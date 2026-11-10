@@ -46,18 +46,26 @@ async function check() {
       },title);
     }
     const first='Unit 2 stator inspection', second='Feeder protection review';
-    await expectFolder(first);
+    const expectClosedMenu=async()=>assert.equal(await page.locator('#packageNav #outageTree').count(),0);
+    await expectClosedMenu();
     const rowTop=await page.locator('tbody tr').first().evaluate(el=>Math.round(el.getBoundingClientRect().top));
     assert.ok(rowTop<120,'The register should open directly on the rows');
     console.log('First register row at '+rowTop+' px on a 1366 × 768 viewport.');
     await page.locator('tbody').getByRole('link',{name:second}).click();
     await expectFolder(second);
     await page.goBack();
-    await expectFolder(second);
+    await page.locator('tbody').waitFor();
+    await expectClosedMenu();
     await page.reload();
-    await expectFolder(second);
+    await page.locator('tbody').waitFor();
+    await expectClosedMenu();
     await page.getByRole('link',{name:'Outages',exact:true}).click();
     await expectFolder(second);
+    for(const [label,key] of [['New','new'],['UWPC','library'],['Reports','reports'],['Inbox','inbox'],['Home','home']]){
+      await page.locator(`a[href$="#${key}"]`).filter({hasText:label}).first().click();
+      await page.locator(`a[aria-current=page][href$="#${key}"]`).waitFor();
+      await expectClosedMenu();
+    }
     await page.locator('tbody').getByRole('link',{name:first}).click();
     await expectFolder(first);
     await page.getByRole('link',{name:'Outages',exact:true}).click();
@@ -383,6 +391,7 @@ async function check() {
     const other=await page.locator('#reportChoice option').filter({hasText:'Completed valve inspection'}).getAttribute('value');
     await page.locator('#reportChoice').selectOption(other);
     await page.locator('#outageReport').getByRole('heading',{name:'Completed valve inspection'}).waitFor();
+    await expectClosedMenu();
     assert.equal(await page.getByText('Crew handover confirmed').count(),0);
     await asUser('fixture_relief',origin+'/outage-manager.html#outages');
     await expectFolder(first);

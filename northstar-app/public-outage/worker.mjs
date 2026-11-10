@@ -21,7 +21,33 @@ function go(value,seconds){
   return new Response(null,{status:303,headers:{...security,location:base+'/',
     'set-cookie':`${cookieName}=${value}; Path=${base}; Max-Age=${seconds}; Secure; HttpOnly; SameSite=Lax`}});
 }
-export async function publicOutage(request,assets,upstreamFetch=fetch){
+function referenceResponse(endpoint,params,library){
+  if(endpoint==='manager/library'){
+    const words=(params.get('q')||'').trim().toLowerCase().slice(0,250).split(/\s+/).filter(Boolean);
+    const hits=[];
+    if(words.length)library.texts.forEach((text,i)=>{
+      const lower=text.toLowerCase();
+      if(words.every(word=>lower.includes(word))){
+        const start=Math.max(0,lower.indexOf(words[0])-45);
+        hits.push({page:i+1,text:text.slice(start,start+180)});
+      }
+    });
+    return Response.json({...library.catalog,hits},{headers:security});
+  }
+  if(endpoint==='manager/library-page'){
+    const page=Number(params.get('page'));
+    if(!Number.isInteger(page)||page<1||page>library.texts.length)return Response.json({error:'Page not found'},{status:404,headers:security});
+    return Response.json({page,text:library.texts[page-1]},{headers:security});
+  }
+  const key=endpoint.slice('manager/library/'.length);
+  if(!Object.hasOwn(library.files,key))return new Response(null,{status:404,headers:security});
+  const bytes=Uint8Array.from(atob(library.files[key]),c=>c.charCodeAt(0));
+  const xlsx=key.endsWith('.xlsx'),book=key==='book';
+  return new Response(bytes,{headers:{...security,'content-security-policy':"default-src 'none'; frame-ancestors 'self'",
+    'content-type':xlsx?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/pdf',
+    'content-disposition':`${book?'inline':'attachment'}; filename="NorthStar-${book?'UWPC-reference':key}${xlsx?'':'.pdf'}"`}});
+}
+export async function publicOutage(request,assets,upstreamFetch=fetch,referenceLibrary=null){
   const url=new URL(request.url);
   if(url.pathname!==base && !url.pathname.startsWith(base+'/'))return null;
   const path=url.pathname.slice(base.length).replace(/^\//,'');
@@ -65,6 +91,10 @@ export async function publicOutage(request,assets,upstreamFetch=fetch){
   if(path==='api/sites' || path==='api/uwpc/requests' || path.startsWith('api/uwpc/requests/')){
     if(!valid)return Response.json({error:'Enter the Outage Manager passcode.'},{status:401,headers:security});
     const endpoint=path==='api/sites'?'sites':path.slice('api/uwpc/requests'.length).replace(/^\//,'');
+    if(referenceLibrary && request.method==='GET' &&
+       (endpoint==='manager/library'||endpoint==='manager/library-page'||endpoint.startsWith('manager/library/'))){
+      return referenceResponse(endpoint,url.searchParams,referenceLibrary);
+    }
     const headers={};
     for(const key of ['content-type','x-northstar-checkout','x-northstar-filename']){
       if(request.headers.has(key))headers[key]=request.headers.get(key);

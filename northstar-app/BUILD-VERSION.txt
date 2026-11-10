@@ -1,4 +1,4 @@
-v0.239
+v0.240
 2026-11-10
-2026-11-10T06:55:04-05:00
-Adds public tester access and lets editors reuse earlier switching plans.
+2026-11-10T10:40:47-05:00
+Restores the UWPC reader and form links and shows the outage folder only in Outages.

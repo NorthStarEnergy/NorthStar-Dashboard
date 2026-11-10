@@ -3,12 +3,18 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.239",
+    "version": "v0.240",
     "published": "2026-11-10",
-    "publishedAt": "2026-11-10T06:55:04-05:00",
-    "summary": "Adds public tester access and lets editors reuse earlier switching plans."
+    "publishedAt": "2026-11-10T10:40:47-05:00",
+    "summary": "Restores the UWPC reader and form links and shows the outage folder only in Outages."
   },
   "history": [
+    {
+      "version": "v0.240",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T10:40:47-05:00",
+      "summary": "Restores the UWPC reader and form links and shows the outage folder only in Outages."
+    },
     {
       "version": "v0.239",
       "published": "2026-11-10",
