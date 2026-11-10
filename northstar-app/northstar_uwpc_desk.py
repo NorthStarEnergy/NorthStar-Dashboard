@@ -9,6 +9,7 @@ import hashlib
 import io
 import json
 import re
+import textwrap
 import urllib.error
 import urllib.request
 import uuid
@@ -18,6 +19,7 @@ from datetime import datetime
 from pathlib import Path
 
 import northstar_ai as ai
+import northstar_outage_review as outage_review
 import northstar_store as store
 import northstar_uwpc as uwpc
 import northstar_uwpc_evidence as evidence
@@ -155,11 +157,15 @@ def checked(c, ident, payload):
 
 
 def invalidate(row):
+    prior = row.pop("packageReview", None)
+    if prior:
+        row["lastReview"] = prior
     row.update(generation=None, review=None, status="DRAFT")
 
 
 def create(payload, actor):
-    row = {**fields(payload), "id": "uwpc_" + uuid.uuid4().hex, "version": 1,
+    row = {**fields(payload), **outage_review.classification(payload),
+           "id": "uwpc_" + uuid.uuid4().hex, "version": 1,
            "status": "DRAFT", "phase": "FUTURE", "createdAt": store.now_iso(),
            "createdBy": actor, "sources": [], "generation": None, "review": None}
     with session() as c:
@@ -196,18 +202,46 @@ def correspondence():
 
 def change(ident, action, payload, actor, operators=()):
     with session() as c:
+        c.execute("BEGIN IMMEDIATE")
         row = checked(c, ident, payload)
         detail = {}
-        if action == "save":
+        if action == "review-view":
+            review = row.get("packageReview") or {}
+            if not review or payload.get("digest") != review["digest"] or actor not in operators:
+                raise ValueError("Reopen the current review")
+            if actor not in review.setdefault("viewed", {}):
+                review["viewed"][actor] = store.now_iso()
+                write(c, row)
+                event(c, row, actor, action, {"digest": review["digest"], "revision": review["number"]})
+            return row
+        if action == "review-open":
+            if row.get("generation"):
+                evidence.require_reviewable(row["generation"], actor)
+            detail = outage_review.open_review(row, payload, actor, outage_review.directory(operators),
+                                               field_snapshot(row), digest)
+        elif action in {"review-sign", "review-return", "review-answer", "review-close"}:
+            if actor not in operators:
+                raise PermissionError("A named active account is required")
+            if action == "review-sign" and row.get("generation"):
+                evidence.require_reviewable(row["generation"], actor)
+            detail = outage_review.transition(row, action, payload, actor, outage_review.directory(operators))
+        elif action == "save":
             updated = fields(payload)
+            updated.update(outage_review.classification(payload, row))
             if row["phase"] in {"ACTIVE", "COMPLETED", "CANCELLED"}:
                 raise ValueError("Return the plan to Future before revising its content")
             row.update(updated)
+            if actor not in row.setdefault("contentEditors", []):
+                row["contentEditors"].append(actor)
             invalidate(row)
             detail = updated
         elif action == "route":
             if row.get("preparationMode") == "INTAKE":
                 raise ValueError("Complete and save the draft form before sending it for sign-off")
+            if outage_review.required(row):
+                raise ValueError("Open the significant outage package review for this revision")
+            if row["kind"] == "SWITCHING_PLAN" and not row.get("reviewTrigger"):
+                raise ValueError("Classify this switching plan before routing it")
             evidence.require_reviewable(row.get("generation"), actor)
             if not row["generation"] or row["phase"] in {"COMPLETED", "CANCELLED"}:
                 raise ValueError("Generate a current proposal before sending it for sign-off")
@@ -218,12 +252,19 @@ def change(ident, action, payload, actor, operators=()):
                 raise ValueError("Select at least one operator")
             if any(not isinstance(p, str) or p not in operators for p in recipients):
                 raise ValueError("Select active operator accounts from the directory")
+            if row["kind"] == "SWITCHING_PLAN" and not any(
+                name in outage_review.directory(operators)["checker"] and
+                name not in {row["createdBy"], actor, *row.get("contentEditors", [])} for name in recipients
+            ):
+                raise ValueError("Include an independent competent checker for this switching plan")
             row["review"] = {"digest": row["generation"]["digest"], "requestedBy": actor,
                              "requestedAt": store.now_iso(), "operators": list(dict.fromkeys(recipients)),
                              "decisions": []}
             row["status"] = "PENDING_SIGNOFF"
             detail = row["review"]
         elif action == "signoff":
+            if outage_review.required(row):
+                raise ValueError("Use your assigned outage review task")
             review = row.get("review") or {}
             if row["status"] != "PENDING_SIGNOFF" or actor not in review.get("operators", []):
                 raise PermissionError("Only an assigned operator may sign this pending revision")
@@ -254,6 +295,11 @@ def change(ident, action, payload, actor, operators=()):
                 raise ValueError("Unknown plan lifecycle state")
             if phase in {"ACTIVE", "COMPLETED"} and row["status"] != "SIGNED_OFF":
                 raise ValueError("Operator sign-off is required before tracking this plan as active/completed")
+            if phase == "ACTIVE" and outage_review.required(row):
+                roster = outage_review.directory(operators)
+                tasks = (row.get("packageReview") or {}).get("tasks", [])
+                if not tasks or any(not t["signedAt"] or t["account"] not in roster[t["role"]] for t in tasks):
+                    raise ValueError("Reissue the review with current eligible assignments")
             if row["status"] == "PENDING_SIGNOFF":
                 raise ValueError("Resolve or revise the pending review before changing lifecycle")
             detail = {"from": row["phase"], "to": phase}
@@ -277,6 +323,8 @@ def change(ident, action, payload, actor, operators=()):
                 raise ValueError("Source not found")
             c.execute("UPDATE uwpc_request_sources SET active=0 WHERE id=? AND request_id=?", (source["id"], ident))
             row["sources"].remove(source)
+            if actor not in row.setdefault("contentEditors", []):
+                row["contentEditors"].append(actor)
             invalidate(row)
             detail = source
         else:
@@ -307,6 +355,7 @@ def add_source(ident, version, name, kind, content, actor):
         except (UnicodeError, ValueError):
             raise ValueError("Text/JSON source is not valid UTF-8 or JSON") from None
     with session() as c:
+        c.execute("BEGIN IMMEDIATE")
         row = checked(c, ident, {"version": version})
         if row["phase"] != "FUTURE":
             raise ValueError("Return the plan to Future before revising sources")
@@ -317,6 +366,8 @@ def add_source(ident, version, name, kind, content, actor):
         c.execute("INSERT INTO uwpc_request_sources(id,request_id,name,kind,mime,sha256,content) VALUES (?,?,?,?,?,?,?)",
                   (source["id"], ident, name, kind, source["mime"], source["sha256"], content))
         row["sources"].append(source)
+        if actor not in row.setdefault("contentEditors", []):
+            row["contentEditors"].append(actor)
         invalidate(row)
         row["version"] += 1
         write(c, row)
@@ -427,7 +478,8 @@ def generate(ident, payload, actor):
     with session() as c:
         current = checked(c, ident, payload)
         evidence.recheck(bundle, actor)
-        current.update(generation=document, review=None, status="GENERATED", version=current["version"] + 1)
+        invalidate(current)
+        current.update(generation=document, status="GENERATED", version=current["version"] + 1)
         write(c, current)
         event(c, current, actor, "generated", document)
     return get(ident)
@@ -562,6 +614,35 @@ def _pdf_escape(value):
     return _plain(value).encode("latin-1", "replace").decode("latin-1").replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
+def _review_cover(row):
+    if not outage_review.required(row):
+        return []
+    review = row.get("packageReview") or {}
+    lines = [row["title"], f"Outage {row['outageId']} | {row['reviewTrigger']}",
+             f"Work window: {row['start']} to {row['end']}",
+             "Sites: " + ", ".join(row["affectedSites"]),
+             "Planning review complete" if row["status"] == "SIGNED_OFF" else "Planning review open",
+             "Operational release remains with the controlling authority."]
+    if review:
+        lines += [f"Review revision {review['number']} | Due {review['due']}",
+                  f"Preparer: {review['preparer']} | Manager: {review['owner']}",
+                  f"Package SHA-256: {review['digest']}", review["summary"]]
+        for task in review["tasks"]:
+            lines.append(f"{task['role'].title()} {task['site']} | {task['account']} | {task['signedAt'] or 'Awaiting signature'}")
+    lines += [f"Source: {s['name']} | SHA-256 {s['sha256']}" for s in row["sources"]]
+    for issue in row.get("reviewIssues", []):
+        lines.append(f"Correction {issue['id']} | {issue['actor']} | {issue['comment']}")
+        lines.append(f"Response: {issue.get('answer', 'Pending')} | Confirmed: {issue.get('closedAt', 'Pending')}")
+    wrapped = [line for item in lines for line in textwrap.wrap(item, 85)]
+    pages = []
+    for offset in range(0, len(wrapped), 40):
+        commands = ["BT /F2 17 Tf 44 744 Td (Outage package review) Tj ET"]
+        for index, line in enumerate(wrapped[offset:offset + 40]):
+            commands.append(f"BT /F1 10 Tf 44 {710 - 16 * index} Td ({_pdf_escape(line)}) Tj ET")
+        pages.append("\n".join(commands))
+    return pages
+
+
 def _export_summary_pdf(row):
     pages, commands, y = [], [], 742
     def page():
@@ -597,6 +678,7 @@ def _export_summary_pdf(row):
         wrapped(value or "Not entered", 88, 10)
         y -= 4
     page()
+    pages = [p.encode("latin-1", "replace") for p in _review_cover(row)] + pages
     objects = [b"<< /Type /Catalog /Pages 2 0 R >>", b"", b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>", b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>"]
     page_ids = []
     for stream in pages:
@@ -751,16 +833,31 @@ def _pc17a_pdf(row):
         wrapped(41, 104, row.get("notes", ""), 112, 8, 10, 5)
         text(41, 48, "DRAFT - QUALIFIED REVIEW REQUIRED - Operator-entered order; not an operational release or authorization.", 7, True, "0.65 0.10 0.10")
         pages.append("\n".join(commands))
-    return _pdf_bytes(pages)
+    return _pdf_bytes(_review_cover(row) + pages)
 
 
 def export_pdf(row):
     return _pc17a_pdf(row) if row.get("template") == "pc17a" else _export_summary_pdf(row)
 
 
-def export_record(ident, kind):
+def export_record(ident, kind, version=None):
     row = get(ident)
+    if version is not None and str(row["version"]) != str(version):
+        raise Conflict("The package changed. Reopen the current revision before downloading.")
     safe = re.sub(r"[^A-Za-z0-9_-]+", "-", row.get("title", "uwpc")).strip("-")[:80] or "uwpc"
+    if kind == "package" and row.get("packageReview"):
+        review = row["packageReview"]
+        output = io.BytesIO()
+        with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("package-and-review-cover.pdf", export_pdf(row))
+            archive.writestr("review-record.json", json.dumps(row, ensure_ascii=False, indent=2))
+            for source in row["sources"]:
+                content = source_bytes(ident, source["id"])["content"]
+                if hashlib.sha256(content).hexdigest() != source["sha256"]:
+                    raise Conflict("A stored source differs from the reviewed package")
+                filename = re.sub(r"[^\w. -]", "_", source["name"])
+                archive.writestr(f"sources/{source['id']}/{filename}", content)
+        return output.getvalue(), "application/zip", f"{safe}-review-{review['number']}.zip"
     if kind == "xlsx":
         body = export_xlsx(row)
         return body, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", f"{safe}.xlsx"

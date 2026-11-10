@@ -1778,6 +1778,7 @@ class Handler(SimpleHTTPRequestHandler):
                 if not parts:
                     self._send_json({"requests": uwpc_desk.listing(), "operators": operators,
                                      "actor": actor, "identityMode": OPERATOR_GATE,
+                                     "outageReviewRoles": uwpc_desk.outage_review.directory(operators),
                                      "correspondence": uwpc_desk.correspondence()})
                 elif len(parts) == 1:
                     self._send_json(uwpc_desk.get(parts[0]))
@@ -1785,7 +1786,8 @@ class Handler(SimpleHTTPRequestHandler):
                     source = uwpc_desk.source_bytes(parts[0], parts[2])
                     self._send_binary(source["content"], source["mime"], source["name"], source["sha256"])
                 elif len(parts) == 3 and parts[1] == "exports":
-                    body, content_type, filename = uwpc_desk.export_record(parts[0], parts[2])
+                    version = parse_qs(urlparse(self.path).query).get("v", [None])[0]
+                    body, content_type, filename = uwpc_desk.export_record(parts[0], parts[2], version)
                     self._send_binary(body, content_type, filename, hashlib.sha256(body).hexdigest(), inline=parts[2] == "pdf")
                 else:
                     self._send_json({"error": "UWPC route not found"}, 404)

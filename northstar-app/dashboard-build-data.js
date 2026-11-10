@@ -3,12 +3,24 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.224",
-    "published": "2026-10-19",
-    "publishedAt": "2026-10-19T20:02:02-04:00",
-    "summary": "Research: pull daily-report weather screenshots and flow graphs on demand"
+    "version": "v0.227",
+    "published": "2026-11-09",
+    "publishedAt": "2026-11-09T23:40:27-05:00",
+    "summary": "Significant outage packages now route to named managers, scheduled operators, an independent checker and each affected site."
   },
   "history": [
+    {
+      "version": "v0.227",
+      "published": "2026-11-09",
+      "publishedAt": "2026-11-09T23:40:27-05:00",
+      "summary": "Significant outage packages now route to named managers, scheduled operators, an independent checker and each affected site."
+    },
+    {
+      "version": "v0.226",
+      "published": "2026-10-27",
+      "publishedAt": "2026-10-27T06:00:00-04:00",
+      "summary": "Direct IESO news, RSS and full public report streams"
+    },
     {
       "version": "v0.224",
       "published": "2026-10-19",

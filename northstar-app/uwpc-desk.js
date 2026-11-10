@@ -14,6 +14,8 @@
   const when = value => value ? new Date(value).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : 'Not scheduled';
   let root, current = null, records = [], operators = [], actor = '', busy = false, dirty = false, legacy = [], legacyError = '';
   const $ = id => document.getElementById(id);
+  const outage = window.NorthStarOutageReview({esc, when, dateValue});
+  let roles = {};
 
   async function request(url, method = 'GET', body) {
     const response = await fetch(url, {method, credentials:'same-origin', cache:'no-store',
@@ -43,7 +45,7 @@
 
   function phase(record) { return phaseLabels[record.phase] || status(record.phase); }
 
-  function feed(items, empty) {
+  function feed(items, empty, inbox = false) {
     if (!items.length) return `<p class="uwpc-empty">${esc(empty)}</p>`;
     return `<div class="uwpc-feed">${items.map(record => `<button class="uwpc-feed-line" type="button" data-request="${esc(record.id)}">
       <span class="uwpc-phase uwpc-phase-${esc(String(record.phase || '').toLowerCase())}">${esc(phase(record))}</span>
@@ -52,7 +54,7 @@
       <span class="uwpc-feed-id">${esc(record.outageId || record.reference || record.id)}</span>
       <span class="uwpc-feed-title">${esc(record.title)}</span>
       <span class="uwpc-feed-description">${esc(record.description || record.scope)}</span>
-      <span class="uwpc-feed-notes">${esc(record.notes || status(record.status))}</span>
+      <span class="uwpc-feed-notes">${esc((inbox && outage.alerts(record, actor).join(' · ')) || record.notes || status(record.status))}</span>
     </button>`).join('')}</div>`;
   }
 
@@ -72,8 +74,8 @@
   function drawLists() {
     const active = records.filter(record => ['ACTIVE','FUTURE','COMPLETED'].includes(record.phase));
     $('uwpcActivePlans').innerHTML = feed(active, 'No current UWPC plans or packages.');
-    const inbox = records.filter(record => record.status === 'PENDING_SIGNOFF' && record.review?.operators.includes(actor) && !record.review.decisions.some(decision => decision.actor === actor));
-    $('uwpcOperatorInbox').innerHTML = feed(inbox, 'No packages are waiting for your review.');
+    const inbox = records.filter(record => outage.alerts(record, actor).length || (record.status === 'PENDING_SIGNOFF' && record.review?.operators.includes(actor) && !record.review.decisions.some(decision => decision.actor === actor)));
+    $('uwpcOperatorInbox').innerHTML = feed(inbox, 'No packages are waiting for your review.', true);
     $('uwpcInboxCount').textContent = String(inbox.length);
     const historical = records.filter(record => ['COMPLETED','CANCELLED'].includes(record.phase));
     $('uwpcPastPlans').innerHTML = feed(historical, 'No completed or cancelled packages.');
@@ -85,6 +87,7 @@
   async function refresh() {
     const data = await request(api);
     records = data.requests; operators = data.operators; actor = data.actor;
+    roles = data.outageReviewRoles || {};
     drawLists();
     $('uwpcAuthorityRecords').innerHTML = (data.correspondence || []).map(entry => `<article class="uwpc-history"><strong>${esc(status(entry.detail.direction))} · ${esc(entry.detail.authority)}</strong><small>${esc(when(entry.detail.occurredAt))} · ${esc(entry.detail.reference)} · ${esc(entry.actor)}</small><p>${esc(entry.detail.message)}</p><button type="button" data-request="${esc(entry.request_id)}">Open linked package</button></article>`).join('') || '<p class="uwpc-empty">No authority correspondence recorded.</p>';
   }
@@ -168,6 +171,7 @@
     dirty = false;
     const r = record || {kind:seed.kind || 'REQUEST_GUARANTEE', template:seed.template || 'pc10c-sg', phase:'FUTURE', sources:[], title:'', site:'', outageId:'', description:'', scope:'', notes:'', authority:'', reference:'', diagramRevision:'', start:'', end:''};
     const review = r.review;
+    const fullReview = r.reviewTrigger && r.reviewTrigger !== 'routine';
     const canSign = r.status === 'PENDING_SIGNOFF' && review?.operators.includes(actor) && !review.decisions.some(decision => decision.actor === actor);
     const chosen = forms.find(form => form.template === r.template) || forms[0];
     $('uwpcEditor').hidden = false;
@@ -178,6 +182,7 @@
       ${exportPanel(r)}
       <form id="uwpcRequestForm">
         ${r.template === 'pc17a' ? switchingForm(r) : standardForm(r)}
+        ${outage.classification(r)}
         <footer class="uwpc-form-footer"><small>Saving creates a fresh PDF preview and editable Excel file for this revision.</small><div class="uwpc-actions"><button type="button" data-action="cancel">Cancel</button><button class="uwpc-primary" type="submit">${r.id ? 'Save changes' : 'Submit draft form'}</button></div></footer>
       </form>
       ${r.preparationMode === 'INTAKE' ? '</details>' : ''}
@@ -187,7 +192,7 @@
         <button type="button" data-action="generate">Generate review proposal</button>
         ${r.generation && r.preparationMode !== 'INTAKE' ? `<div class="uwpc-generated"><h4>Generated proposal · ${esc(status(r.status))}</h4><pre class="uwpc-document">${esc(r.generation.text)}</pre><p class="uwpc-digest">Document SHA-256: ${esc(r.generation.digest)}</p></div>` : ''}
       </div></details>
-      ${r.generation && r.preparationMode !== 'INTAKE' ? `<details class="uwpc-advanced"><summary>Operator review and sign-off</summary><div class="uwpc-advanced-body"><p>All selected operators endorse this exact revision. Sign-off records review; operational authorization remains with the controlling authority.</p>
+      ${!fullReview && r.generation && r.preparationMode !== 'INTAKE' ? `<details class="uwpc-advanced"><summary>Operator review and sign-off</summary><div class="uwpc-advanced-body"><p>All selected operators endorse this exact revision. Sign-off records review; operational authorization remains with the controlling authority.</p>
         <div class="uwpc-operators">${operators.map(operator => `<label><input type="checkbox" name="uwpcReviewer" value="${esc(operator)}"> ${esc(operator)}</label>`).join('') || '<p>No operator directory configured.</p>'}</div>
         <button type="button" data-action="route" ${['PENDING_SIGNOFF','SIGNED_OFF'].includes(r.status) || !r.generation.evidenceCheck?.canRoute ? 'disabled':''}>Send to operator inbox</button>
         ${review ? `<p>Sent by ${esc(review.requestedBy)} · ${esc(when(review.requestedAt))} · Assigned: ${review.operators.map(esc).join(', ')}</p>${review.decisions.map(decision => `<p><strong>${esc(decision.actor)} · ${esc(status(decision.decision))}</strong><br>${esc(decision.comment)}</p>`).join('')}` : ''}
@@ -196,9 +201,10 @@
       <details class="uwpc-advanced"><summary>Lifecycle, correspondence and audit history</summary><div class="uwpc-advanced-body">
         <div class="uwpc-actions"><label>Plan status<select id="uwpcPlanPhase">${Object.entries(phaseLabels).map(([value,label]) => `<option value="${value}" ${r.phase===value?'selected':''}>${label}</option>`).join('')}</select></label><button type="button" data-action="phase">Update status</button></div>
         <form id="uwpcCorrespondenceForm"><h4>Authority correspondence</h4><div class="uwpc-fields"><label><span>Direction</span><select name="direction"><option value="TO_AUTHORITY">To authority</option><option value="FROM_AUTHORITY">From authority</option></select></label>${input('authority','Authority','text',r.authority)}${input('reference','Reference')}${input('occurredAt','Date and time','datetime-local',dateValue(new Date().toISOString()))}<label class="uwpc-wide"><span>Request / response</span><textarea name="message" rows="3" required></textarea></label></div><button type="submit">Record correspondence</button><small>Records an exchange; it does not send a message.</small></form>
-        ${(r.events || []).map(entry => `<article class="uwpc-history"><strong>${esc(status(entry.event))}</strong><small>${esc(entry.actor)} · ${esc(when(entry.at))}</small></article>`).join('') || '<p class="uwpc-empty">No audit events.</p>'}
+        ${(r.events || []).map(entry => `<article class="uwpc-history"><strong>${esc(status(entry.event))}</strong><small>${esc(entry.actor)} · ${esc(when(entry.at))}</small>${entry.event.startsWith('review-') ? `<details><summary>Review record</summary><pre class="uwpc-document">${esc(JSON.stringify(entry.detail, null, 2))}</pre></details>` : ''}</article>`).join('') || '<p class="uwpc-empty">No audit events.</p>'}
       </div></details>` : ''}
     </article>`;
+    $('uwpcEditor').querySelector('.uwpc-form-head').insertAdjacentHTML('afterend', outage.cover(r, roles, actor));
     $('uwpcRequestForm').addEventListener('submit', event => {event.preventDefault(); void run(save);});
     $('uwpcRequestForm').addEventListener('input', () => {dirty=true;});
     $('uwpcRequestForm').addEventListener('change', () => {dirty=true;});
@@ -224,6 +230,7 @@
   async function save() {
     const form = $('uwpcRequestForm'); if (!form.reportValidity()) return;
     const data = Object.fromEntries(new FormData(form));
+    data.affectedSites = String(data.affectedSites || '').split(/\r?\n/).map(site => site.trim()).filter(Boolean);
     ['start','end'].forEach(key => {data[key] = data[key] ? new Date(data[key]).toISOString() : '';});
     if (data.template === 'pc17a') {
       const plan = {};
@@ -250,7 +257,12 @@
 
   async function open(ident) {
     if (dirty) throw new Error('Save or cancel the open form before opening another package.');
-    show(await request(`${api}/${encodeURIComponent(ident)}`));
+    const record = await request(`${api}/${encodeURIComponent(ident)}`);
+    if (record.packageReview && operators.includes(actor) && !record.packageReview.viewed?.[actor]) {
+      const viewed = await request(`${api}/${encodeURIComponent(ident)}/review-view`, 'POST', {version:record.version, digest:record.packageReview.digest});
+      record.packageReview = viewed.packageReview;
+    }
+    show(record);
     $('uwpcEditor').scrollIntoView({block:'start',behavior:'smooth'});
   }
 
@@ -309,7 +321,7 @@
     });
   }
 
-  async function act(action) {
+  async function act(action, button) {
     if (action === 'add-step') {
       const body = $('uwpcSwitchingRows');
       body.insertAdjacentHTML('beforeend', switchingRow({}, body.querySelectorAll('[data-switching-step]').length));
@@ -321,6 +333,11 @@
     if (action === 'cancel') {current=null; dirty=false; $('uwpcEditor').hidden=true; $('uwpcEditor').innerHTML=''; return;}
     if (action === 'refresh') {await refresh(); notice('UWPC records refreshed.'); return;}
     if (!current) return;
+    if (action.startsWith('review-')) {
+      const data = outage.actionData(action, button, current);
+      if (data) {await change(action, data); notice(current.status === 'SIGNED_OFF' ? 'Planning review complete.' : 'Outage review updated.');}
+      return;
+    }
     if (action === 'generate') {notice('Reading the circuit diagram and generating a review proposal…'); await change('generate'); notice(current.generation.evidenceCheck?.canRoute ? 'Proposal generated for review.' : 'Evidence review required. AI conclusions are withheld.');}
     if (action === 'route') {await change('route',{operators:[...root.querySelectorAll('[name="uwpcReviewer"]:checked')].map(input => input.value)}); notice('Delivered to the selected NorthStar operator inboxes.');}
     if (action === 'approve' || action === 'return') {
@@ -371,7 +388,7 @@
       else if (button.dataset.request) void run(() => open(button.dataset.request));
       else if (button.dataset.removeSource) void run(() => change('remove-source',{sourceId:button.dataset.removeSource}));
       else if (button.dataset.legacy) {details.open=true; window.NorthStarSwitching?.loadDraft?.(button.dataset.legacy); details.scrollIntoView();}
-      else if (button.dataset.action) void run(() => act(button.dataset.action));
+      else if (button.dataset.action) void run(() => act(button.dataset.action, button));
     });
     const inboxButton = document.createElement('button'); inboxButton.id='uwpcGlobalInbox'; inboxButton.type='button'; inboxButton.hidden=true;
     inboxButton.onclick=()=>{window.NorthstarModules?.open('outages:uwpc'); setView('active'); $('uwpcOperatorInbox').scrollIntoView();}; document.body.append(inboxButton);

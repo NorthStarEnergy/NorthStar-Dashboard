@@ -19,7 +19,13 @@ with tempfile.TemporaryDirectory(prefix="northstar-uwpc-test-") as temp:
     store.init_db()
     backend.OPERATOR_HOST = "127.0.0.1"
     backend.CHECKIN_ORIGIN = "https://fixture-public.invalid"
-    backend.DEMO_AUTH = {"accounts": [auth.build_config(name, "fixture-only-password") for name in ("fixture_author", "fixture_operator")]}
+    roster = {"manager": ["fixture_author"], "operator": ["fixture_operator", "fixture_relief"],
+              "checker": ["fixture_operator"], "area": ["fixture_area"], "field": ["fixture_north", "fixture_south"]}
+    accounts = sorted({name for names in roster.values() for name in names})
+    backend.DEMO_AUTH = {"accounts": [auth.build_config(name, "fixture-only-password") for name in accounts]}
+    roster_path = Path(temp) / "outage-review-directory.json"
+    roster_path.write_text(json.dumps(roster))
+    os.environ["NORTHSTAR_OUTAGE_REVIEW_DIRECTORY"] = str(roster_path)
     if not os.environ.get("UWPC_TEST_MISSING_EVIDENCE"):
         desk.evidence.prepare = evidence_fixture.bundle
         desk.generate_text = evidence_fixture.generate
