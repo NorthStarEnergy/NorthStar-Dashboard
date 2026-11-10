@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const managerPackage = document.body.hasAttribute('data-manager-package');
+  let managerSection = 'forms';
   const practice = document.body.hasAttribute('data-outage-practice');
   const persona = new URLSearchParams(location.search).get('as') || 'Avery Brooks';
   const api = '/api/uwpc/requests' + (practice ? '/practice/' + encodeURIComponent(persona) : '');
@@ -177,6 +178,7 @@
 
   function show(record, seed = {}) {
     current = record;
+    if(managerPackage && record)window.dispatchEvent(new CustomEvent('outage-record',{detail:record}));
     dirty = false;
     const r = record || {kind:seed.kind || 'REQUEST_GUARANTEE', template:seed.template || 'pc10c-sg', phase:'FUTURE', sources:[], title:'', site:'', outageId:'', description:'', scope:'', notes:'', authority:'', reference:'', diagramRevision:'', start:'', end:''};
     const review = r.review;
@@ -184,46 +186,64 @@
     const canSign = r.status === 'PENDING_SIGNOFF' && review?.operators.includes(actor) && !review.decisions.some(decision => decision.actor === actor);
     const chosen = forms.find(form => form.template === r.template) || forms[0];
     $('uwpcEditor').hidden = false;
-    $('uwpcEditor').innerHTML = `<article class="uwpc-form-shell">
-      <header class="uwpc-form-head"><div><small>${r.id ? `${esc(managerPackage ? (r.outageId || 'Outage package') : r.id)} · REVISION ${r.version}` : `NEW ${esc(chosen.code)} FORM`}</small><h3>${r.id ? esc(r.title) : esc(chosen.title)}</h3>${managerPackage ? '' : '<p>Complete the known information. Missing operational facts remain unverified.</p>'}</div><button type="button" data-action="cancel">Close</button></header>
-      ${r.generation?.evidenceCheck ? `<section class="uwpc-inbox" aria-label="UWPC evidence checks"><h4>Code evidence · ${esc(status(r.generation.evidenceCheck.status))}</h4><p>References are checked against stored text. Interpretation and complete rule coverage require qualified review.</p>${r.generation.evidenceCheck.missing.map(item=>`<p>Missing: ${esc(item)}</p>`).join('')}${r.generation.evidenceCheck.errors.map(item=>`<p class="error">${esc(item)}</p>`).join('')}<a href="knowledge-library.html" target="_blank" rel="noopener">Review controlled sources</a><details><summary>Retrieved clauses and revisions</summary>${r.generation.controlledEvidence.passages.map(p=>`<p><a href="${esc(p.href)}" target="_blank" rel="noopener">${esc(p.title)} · revision ${esc(p.revision)} · ${p.page ? `PDF page ${esc(p.page)}` : esc(p.section)}</a><small>${esc(p.id)} · Clause mentions: ${esc(p.clauseMentions.join(', ') || 'None identified')}</small></p>`).join('') || '<p>No eligible controlled passages retrieved.</p>'}</details></section>` : ''}
-      ${r.preparationMode === 'INTAKE' ? `${r.generation ? `<section class="uwpc-generated"><h4>${r.generation.model === "not-run-missing-controlled-evidence" ? "Evidence checklist · analysis paused" : "AI draft · qualified review required"}</h4><pre class="uwpc-document">${esc(r.generation.text)}</pre></section>` : '<p>Request saved. Add your evidence below to prepare an AI draft.</p>'}<details class="uwpc-intake-form"><summary>Complete and save the draft form</summary>` : ''}
+    const editor = $('uwpcEditor');
+    const section = managerPackage ? managerSection : 'all';
+    const parts = [];
+    if (!managerPackage) parts.push(`<header class="uwpc-form-head"><div><small>${r.id ? `${esc(managerPackage ? (r.outageId || 'Outage package') : r.id)} · REVISION ${r.version}` : `NEW ${esc(chosen.code)} FORM`}</small><h3>${r.id ? esc(r.title) : esc(chosen.title)}</h3>${managerPackage ? '' : '<p>Complete the known information. Missing operational facts remain unverified.</p>'}</div><button type="button" data-action="cancel">Close</button></header>`);
+    if (section === 'all' || section === 'approvals') {
+      parts.push(outage.cover(r, roles, actor, operators, !managerPackage));
+      parts.push(r.generation?.evidenceCheck ? `<section class="uwpc-inbox" aria-label="UWPC evidence checks"><h4>Code evidence · ${esc(status(r.generation.evidenceCheck.status))}</h4><p>References are checked against stored text. Interpretation and complete rule coverage require qualified review.</p>${r.generation.evidenceCheck.missing.map(item=>`<p>Missing: ${esc(item)}</p>`).join('')}${r.generation.evidenceCheck.errors.map(item=>`<p class="error">${esc(item)}</p>`).join('')}<a href="knowledge-library.html" target="_blank" rel="noopener">Review controlled sources</a><details><summary>Retrieved clauses and revisions</summary>${r.generation.controlledEvidence.passages.map(p=>`<p><a href="${esc(p.href)}" target="_blank" rel="noopener">${esc(p.title)} · revision ${esc(p.revision)} · ${p.page ? `PDF page ${esc(p.page)}` : esc(p.section)}</a><small>${esc(p.id)} · Clause mentions: ${esc(p.clauseMentions.join(', ') || 'None identified')}</small></p>`).join('') || '<p>No eligible controlled passages retrieved.</p>'}</details></section>` : '');
+    }
+    if (section === 'all' || section === 'forms') parts.push(`${r.preparationMode === 'INTAKE' ? `${r.generation ? `<section class="uwpc-generated"><h4>${r.generation.model === "not-run-missing-controlled-evidence" ? "Evidence checklist · analysis paused" : "AI draft · qualified review required"}</h4><pre class="uwpc-document">${esc(r.generation.text)}</pre></section>` : '<p>Request saved. Add your evidence below to prepare an AI draft.</p>'}<details class="uwpc-intake-form"><summary>Complete and save the draft form</summary>` : ''}
       ${exportPanel(r)}
       <form id="uwpcRequestForm">
         ${r.template === 'pc17a' ? switchingForm(r) : standardForm(r)}
         ${outage.classification(r)}
         <footer class="uwpc-form-footer">${managerPackage ? '' : '<small>Saving creates a fresh PDF preview and editable Excel file for this revision.</small>'}<div class="uwpc-actions"><button type="button" data-action="cancel">Cancel</button><button class="uwpc-primary" type="submit">${r.id ? 'Save changes' : 'Submit draft form'}</button></div></footer>
       </form>
-      ${r.preparationMode === 'INTAKE' ? '</details>' : ''}
-      ${r.id ? `<details class="uwpc-advanced"><summary>Sources and proposal generation</summary><div class="uwpc-advanced-body"><p>Attach the evidence used for this revision. Generation creates a review proposal, never an issued permit or release.</p>
+      ${r.preparationMode === 'INTAKE' ? '</details>' : ''}`);
+    if (r.id && (section === 'all' || section === 'documents')) parts.push(`<details class="uwpc-advanced"><summary>Sources and proposal generation</summary><div class="uwpc-advanced-body"><p>Attach the evidence used for this revision. Generation creates a review proposal, never an issued permit or release.</p>
         <div class="uwpc-actions"><label>File purpose<select id="uwpcSourceKind"><option value="diagram">Circuit diagram</option><option value="source">Procedure / supporting request</option></select></label><input id="uwpcSourceUpload" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.json,.txt" aria-label="Attach source"><button type="button" data-action="upload">Attach</button></div>
         <ul>${r.sources.map(source => `<li><a href="${api}/${encodeURIComponent(r.id)}/sources/${encodeURIComponent(source.id)}" target="_blank" rel="noopener">${esc(source.name)}</a> · ${esc(source.kind)} <button type="button" data-remove-source="${esc(source.id)}">Remove</button></li>`).join('') || '<li>No sources attached.</li>'}</ul>
         <button type="button" data-action="generate">Generate review proposal</button>
         ${r.generation && r.preparationMode !== 'INTAKE' ? `<div class="uwpc-generated"><h4>Generated proposal · ${esc(status(r.status))}</h4><pre class="uwpc-document">${esc(r.generation.text)}</pre><p class="uwpc-digest">Document SHA-256: ${esc(r.generation.digest)}</p></div>` : ''}
-      </div></details>
-      ${!fullReview && r.generation && r.preparationMode !== 'INTAKE' ? `<details class="uwpc-advanced"><summary>Operator review and sign-off</summary><div class="uwpc-advanced-body"><p>All selected operators endorse this exact revision. Sign-off records review; operational authorization remains with the controlling authority.</p>
+      </div></details>`);
+    if (r.id && (section === 'all' || section === 'approvals')) parts.push(!fullReview && r.generation && r.preparationMode !== 'INTAKE' ? `<details class="uwpc-advanced"><summary>Operator review and sign-off</summary><div class="uwpc-advanced-body"><p>All selected operators endorse this exact revision. Sign-off records review; operational authorization remains with the controlling authority.</p>
         <div class="uwpc-operators">${operators.map(operator => `<label><input type="checkbox" name="uwpcReviewer" value="${esc(operator)}"> ${esc(operator)}</label>`).join('') || '<p>No operator directory configured.</p>'}</div>
         <button type="button" data-action="route" ${['PENDING_SIGNOFF','SIGNED_OFF'].includes(r.status) || !r.generation.evidenceCheck?.canRoute ? 'disabled':''}>Send to operator inbox</button>
         ${review ? `<p>Sent by ${esc(review.requestedBy)} · ${esc(when(review.requestedAt))} · Assigned: ${review.operators.map(esc).join(', ')}</p>${review.decisions.map(decision => `<p><strong>${esc(decision.actor)} · ${esc(status(decision.decision))}</strong><br>${esc(decision.comment)}</p>`).join('')}` : ''}
         ${canSign ? `<label>Review comments<textarea id="uwpcDecisionComment" rows="3"></textarea></label><label class="uwpc-check"><input id="uwpcReviewed" type="checkbox"> I reviewed this document, diagram, references and unresolved conditions.</label><div class="uwpc-actions"><button type="button" data-action="approve">Sign off as ${esc(actor)}</button><button type="button" data-action="return">Return for changes</button></div>` : ''}
-      </div></details>` : ''}
-      <details class="uwpc-advanced"><summary>Lifecycle, correspondence and audit history</summary><div class="uwpc-advanced-body">
+      </div></details>` : '');
+    if (r.id && (section === 'all' || section === 'history')) parts.push(`<details class="uwpc-advanced"><summary>Lifecycle, correspondence and audit history</summary><div class="uwpc-advanced-body">
         <div class="uwpc-actions"><label>Plan status<select id="uwpcPlanPhase">${Object.entries(phaseLabels).map(([value,label]) => `<option value="${value}" ${r.phase===value?'selected':''}>${label}</option>`).join('')}</select></label><button type="button" data-action="phase">Update status</button></div>
         <form id="uwpcCorrespondenceForm"><h4>Authority correspondence</h4><div class="uwpc-fields"><label><span>Direction</span><select name="direction"><option value="TO_AUTHORITY">To authority</option><option value="FROM_AUTHORITY">From authority</option></select></label>${input('authority','Authority','text',r.authority)}${input('reference','Reference')}${input('occurredAt','Date and time','datetime-local',dateValue(new Date().toISOString()))}<label class="uwpc-wide"><span>Request / response</span><textarea name="message" rows="3" required></textarea></label></div><button type="submit">Record correspondence</button><small>Records an exchange; it does not send a message.</small></form>
         ${(r.events || []).map(entry => `<article class="uwpc-history"><strong>${esc(status(entry.event))}</strong><small>${esc(entry.actor)} · ${esc(when(entry.at))}</small>${entry.event.startsWith('review-') ? `<details><summary>Review record</summary><pre class="uwpc-document">${esc(JSON.stringify(entry.detail, null, 2))}</pre></details>` : ''}</article>`).join('') || '<p class="uwpc-empty">No audit events.</p>'}
-      </div></details>` : ''}
-    </article>`;
-    $('uwpcEditor').querySelector('.uwpc-form-head').insertAdjacentHTML('afterend', outage.cover(r, roles, actor, operators));
-    if (r.registerOutage) $('uwpcRequestForm').elements.outageId.readOnly = true;
-    if (fullReview) $('uwpcPlanPhase').closest('.uwpc-actions').hidden = Boolean(r.switchLog || r.distribution);
-    $('uwpcRequestForm').addEventListener('submit', event => {event.preventDefault(); void run(save);});
-    $('uwpcRequestForm').addEventListener('input', () => {dirty=true;});
-    $('uwpcRequestForm').addEventListener('change', () => {dirty=true;});
-    $('uwpcRequestForm').elements.kind?.addEventListener('change', event => {
+      </div></details>`);
+    if (managerPackage && ['distribution','log','closeout'].includes(section)) {
+      parts.push(outage.execution(r,roles,actor,section));
+    }
+    const empty = {approvals:'No review has been routed for this package.',distribution:'No final copy has been distributed.',
+      log:'The switching log has not opened.',closeout:'No closeout has been recorded.'};
+    editor.innerHTML = `<article class="uwpc-form-shell">${parts.join('').trim() || `<p class="folder-empty">${empty[section] || 'No entries.'}</p>`}</article>`;
+    const assigned=r.packageReview || r.lastReview;
+    if(assigned?.copyTo?.includes(actor) && assigned.preparer!==actor && !assigned.tasks.some(t=>t.account===actor)) {
+      editor.querySelectorAll('input,select,textarea,button').forEach(el=>{
+        if(el.matches('[data-action="final-receipt"],[data-action="final-flag"],[data-action="cancel"]') ||
+           el.closest('fieldset')?.querySelector('[data-action="final-flag"]'))return;
+        el.disabled=true;
+      });
+    }
+    if (managerPackage) editor.querySelectorAll('.uwpc-form-shell > details').forEach(el => {el.open=true;});
+    if (r.registerOutage && $('uwpcRequestForm')) $('uwpcRequestForm').elements.outageId.readOnly = true;
+    if (fullReview && $('uwpcPlanPhase')) $('uwpcPlanPhase').closest('.uwpc-actions').hidden = Boolean(r.switchLog || r.distribution);
+    $('uwpcRequestForm')?.addEventListener('submit', event => {event.preventDefault(); void run(save);});
+    $('uwpcRequestForm')?.addEventListener('input', () => {dirty=true;});
+    $('uwpcRequestForm')?.addEventListener('change', () => {dirty=true;});
+    $('uwpcRequestForm')?.elements.kind?.addEventListener('change', event => {
       const select = $('uwpcRequestForm').elements.template;
       if (event.target.value === 'SWITCHING_PLAN') select.value = 'pc17a'; else if (select.value === 'pc17a') select.value = 'pc10c-sg';
     });
-    $('uwpcRequestForm').elements.template?.addEventListener('change', event => {
+    $('uwpcRequestForm')?.elements.template?.addEventListener('change', event => {
       $('uwpcRequestForm').elements.kind.value = event.target.value === 'pc17a' ? 'SWITCHING_PLAN' : forms.find(form => form.template === event.target.value)?.kind || 'REQUEST_GUARANTEE';
     });
     $('uwpcCorrespondenceForm')?.addEventListener('submit', event => {event.preventDefault(); void run(async() => {
@@ -269,12 +289,13 @@
   async function open(ident) {
     if (dirty) throw new Error('Save or cancel the open form before opening another package.');
     const record = await request(`${api}/${encodeURIComponent(ident)}`);
-    if (record.packageReview && operators.includes(actor) && !record.packageReview.viewed?.[actor]) {
+    if ((!managerPackage || ['forms','approvals'].includes(managerSection)) && record.packageReview && operators.includes(actor) && !record.packageReview.viewed?.[actor]) {
       const viewed = await request(`${api}/${encodeURIComponent(ident)}/review-view`, 'POST', {version:record.version, digest:record.packageReview.digest});
       record.packageReview = viewed.packageReview;
     }
     show(record);
-    $('uwpcEditor').scrollIntoView({block:'start',behavior:'smooth'});
+    if(!managerPackage)$('uwpcEditor').scrollIntoView({block:'start',behavior:'smooth'});
+    else if(location.hash==='#accuracy') $('accuracy')?.scrollIntoView({block:'center'});
   }
 
   async function intake(event) {
@@ -341,17 +362,17 @@
       return;
     }
     if (dirty && action !== 'cancel') throw new Error('Save or cancel the edited form before continuing.');
-    if (action === 'cancel' && managerPackage) {location.assign('/outage-manager.html'); return;}
+    if (action === 'cancel' && managerPackage) {dirty=false; location.assign((await window.outageWorkspace).overview); return;}
     if (action === 'cancel') {current=null; dirty=false; $('uwpcEditor').hidden=true; $('uwpcEditor').innerHTML=''; return;}
     if (action === 'refresh') {await refresh(); notice('UWPC records refreshed.'); return;}
     if (!current) return;
-    if (['distribute','final-receipt','log-open','log-entry','log-close','closeout-note'].includes(action)) {
+    if (['distribute','final-receipt','final-flag','final-resolve','log-open','log-entry','log-close','closeout-note'].includes(action)) {
       const fields = button.closest('fieldset');
       const occurred = fields?.querySelector('[name=occurredAt]')?.value;
-      await change(action, {copyId:current.distribution?.id, site:fields?.querySelector('[name=site]')?.value,
+      await change(action, {copyId:current.distribution?.id, flag:button.dataset.flag, site:fields?.querySelector('[name=site]')?.value,
         step:Number(fields?.querySelector('[name=step]')?.value) || null, occurredAt:occurred ? new Date(occurred).toISOString() : null,
         text:fields?.querySelector('[name=text]')?.value});
-      notice(({distribute:'Final copy distributed.', 'final-receipt':'Receipt recorded.', 'log-open':'Switching log opened.',
+      notice(({distribute:'Final copy distributed.', 'final-receipt':'Alert dismissed.', 'final-flag':'Concern sent to the outage managers.', 'final-resolve':'Resolution recorded.', 'log-open':'Switching log opened.',
         'log-entry':'Log entry saved.', 'log-close':'Outage closed.', 'closeout-note':'Closeout note saved.'})[action]);
       return;
     }
@@ -375,9 +396,15 @@
     }
   }
 
-  function bind() {
+  async function bind() {
     if (managerPackage) {
+      const workspace = await window.outageWorkspace;
+      if (!workspace?.editable) return;
+      managerSection = workspace.section;
       root = $('uwpcDesk');
+      window.addEventListener('beforeunload', e => {
+        if (dirty) {e.preventDefault();e.returnValue='';}
+      });
       root.addEventListener('click', event => {
         const button = event.target.closest('button');
         if (!button || busy) return;
@@ -386,9 +413,9 @@
       });
       void run(async () => {
         await refresh();
-        const id = new URLSearchParams(location.search).get('id');
+        const id = workspace.packageId;
         if (!id) throw new Error('Choose an outage package from Home.');
-        await open(id);
+        await open(id);notice('');
       });
       return;
     }

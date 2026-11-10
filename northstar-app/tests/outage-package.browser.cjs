@@ -115,7 +115,7 @@ async function verify() {
       await page.getByRole('button', {name,exact:true}).click();
       await page.waitForFunction(() => !document.getElementById('uwpcDesk').hasAttribute('aria-busy'));
     };
-    await act('Acknowledge receipt');
+    await act('Dismiss final-copy alert');
     await login('fixture_operator');
     await page.evaluate(() => window.NorthStarUwpcDesk.refresh());
     await page.locator('#uwpcOperatorInbox [data-request]').click();

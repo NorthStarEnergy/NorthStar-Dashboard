@@ -258,7 +258,10 @@ def correspondence():
 
 def distribute(c, row):
     review = row["packageReview"]
-    recipients = sorted({t["account"] for t in review["tasks"]} | set(review.get("copyTo", [])))
+    recipients = {t["account"] for t in review["tasks"]} | set(review.get("copyTo", []))
+    if review.get("sscLead"):
+        recipients.add(review["preparer"])
+    recipients = sorted(recipients)
     distribution = {"id": uuid.uuid4().hex, "revision": review["number"], "digest": review["digest"],
                     "at": store.now_iso(), "recipients": recipients, "receipts": {}}
     row["distribution"] = distribution
@@ -283,6 +286,22 @@ def record_execution(row, action, payload, actor, roster):
     if action == "final-receipt":
         delivery["receipts"].setdefault(actor, now)
         return {"copyId": delivery["id"], "receivedAt": delivery["receipts"][actor]}
+    if action in {"final-flag", "final-resolve"}:
+        text = payload.get("text")
+        if not isinstance(text, str) or not text.strip() or len(text) > 4000:
+            raise ValueError("Enter a concern or resolution of up to 4,000 characters")
+        flags = delivery.setdefault("flags", [])
+        if action == "final-flag":
+            flag = {"id": str(len(flags)+1), "actor": actor, "at": now, "text": text.strip()}
+            flags.append(flag)
+        else:
+            if actor not in {review.get("sscLead") or review["owner"], review.get("localLead") or review["area"]}:
+                raise PermissionError("An assigned outage manager must record the resolution")
+            flag = next((item for item in flags if item["id"] == payload.get("flag")), None)
+            if not flag or flag.get("resolvedAt"):
+                raise ValueError("Select an open concern on the current final copy")
+            flag.update(resolution=text.strip(), resolvedAt=now, resolvedBy=actor)
+        return {"copyId": delivery["id"], **flag}
     roles = {t["role"] for t in review["tasks"] if t["account"] == actor and actor in roster[t["role"]]}
     if action in {"log-open", "log-close"} and not roles.intersection({"operator", "manager"}):
         raise PermissionError("The assigned manager or a scheduled SSC must open or close the switching log")
@@ -343,6 +362,8 @@ def change(ident, action, payload, actor, operators=()):
         c.execute("BEGIN IMMEDIATE")
         row = checked(c, ident, payload)
         detail = {}
+        if action not in {"final-receipt", "final-flag", "review-view"}:
+            outage_review.require_editor(row, actor)
         if row.get("registerOutage") and action in {"save", "review-open", "log-open", "distribute"}:
             source = c.execute("SELECT status FROM outages WHERE id=?", (row["registerOutage"],)).fetchone()
             if not source or source["status"] != "Open":
@@ -364,7 +385,7 @@ def change(ident, action, payload, actor, operators=()):
             if actor != review.get("owner") or actor not in outage_review.directory(operators)["manager"]:
                 raise PermissionError("The assigned manager must distribute this approved revision")
             detail = {"revision": review["number"]}
-        elif action in {"final-receipt", "log-open", "log-entry", "log-close", "closeout-note"}:
+        elif action in {"final-receipt", "final-flag", "final-resolve", "log-open", "log-entry", "log-close", "closeout-note"}:
             if actor not in operators:
                 raise PermissionError("A signed-in named account is required")
             detail = record_execution(row, action, payload, actor, outage_review.directory(operators))
@@ -529,6 +550,7 @@ def add_source(ident, version, name, kind, content, actor):
     with session() as c:
         c.execute("BEGIN IMMEDIATE")
         row = checked(c, ident, {"version": version})
+        outage_review.require_editor(row, actor)
         if row["phase"] != "FUTURE":
             raise ValueError("Return the plan to Future before revising sources")
         if len(row["sources"]) >= 8 or sum(s["size"] for s in row["sources"]) + len(content) > MAX_TOTAL:
@@ -632,6 +654,7 @@ def generate(ident, payload, actor):
         raise ValueError("Practice packages use the supplied training reference")
     with session() as c:
         row = checked(c, ident, payload)
+        outage_review.require_editor(row, actor)
         if row["phase"] != "FUTURE" or row["status"] in {"PENDING_SIGNOFF", "SIGNED_OFF"}:
             raise ValueError("Save a revised Future request before regenerating")
         if not any(s["kind"] == "diagram" for s in row["sources"]) or not row["diagramRevision"]:
@@ -800,6 +823,8 @@ def _review_cover(row):
     if row.get("practice"):
         lines.insert(0, "PRACTICE EXERCISE - fictitious team and equipment")
     if review:
+        if review.get("sscLead"):
+            lines += [f"SSC outage manager: {review['sscLead']}", f"Local outage manager: {review['localLead']}"]
         lines += [f"Review revision {review['number']} | Due {review['due']}",
                   f"Preparer: {review['preparer']} | Manager: {review['owner']}",
                   f"Package SHA-256: {review['digest']}", review["summary"]]

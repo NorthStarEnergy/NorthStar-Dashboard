@@ -1800,7 +1800,7 @@ class Handler(SimpleHTTPRequestHandler):
                     payload = self._json_body(32 * 1024)
                     if not isinstance(payload, dict):
                         raise ValueError("An outage request is required")
-                    self._send_json(manager.create_request(payload,actor),201)
+                    self._send_json(manager.create_request(payload,actor,operators),201)
                 else:
                     self._send_json({"error":"Outage Manager route not found"},404)
                 return True

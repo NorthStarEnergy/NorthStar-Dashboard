@@ -3,7 +3,7 @@
   const api = '/api/uwpc/requests/manager';
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? '').replace(/[&<>"']/g,c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const paths = {home:'M3 10l9-7 9 7 M5 9v11h5v-6h4v6h5V9',new:'M12 4v16 M4 12h16',
+  const paths = {outages:'M3 7V5h6l3 3h9v12H3z',home:'M3 10l9-7 9 7 M5 9v11h5v-6h4v6h5V9',new:'M12 4v16 M4 12h16',
     inbox:'M4 4h16l2 13v3H2v-3z M3 14h5l2 3h4l2-3h5',library:'M3 4h5v16H3z M10 4h4v16h-4z M16 5l4-1 3 15-4 1z',
     back:'M19 12H5 M11 6l-6 6 6 6',search:'M16 16l5 5 M18 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0',
     filters:'M3 6h18 M6 12h12 M9 18h6',file:'M6 3h8l4 4v14H6z M14 3v5h4 M9 12h6 M9 16h5',
@@ -12,24 +12,221 @@
   const icon = name => `<svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="${paths[name]}"></path></svg>`;
   const base = '/outage-manager.html';
   const sourceUrl = api + '/library/book';
-  const packageUrl = id => '/outage-manager-package.html?id='+encodeURIComponent(id);
-  const views = [['home','Home'],['new','New'],['inbox','My reviews'],['library','UWPC library']];
+  const sections = {overview:'Overview', request:'Request', forms:'Forms', documents:'Drawings & documents',
+    approvals:'Approvals', distribution:'Final distribution', log:'Switching log', closeout:'Closeout', history:'History & correspondence'};
+  function outageUrl(outage,section='overview',id='') {
+    const query = new URLSearchParams({section});
+    if(outage) query.set('outage',outage);
+    if(id) query.set('id',id);
+    return '/outage-manager-package.html?'+query;
+  }
+  const views = [['home','Home'],['new','New'],['outages','Outages'],['inbox','My reviews'],['library','UWPC library']];
   const main=$('main');
   const date = value => value ? new Date(value).toLocaleString('en-CA',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}) : 'Unscheduled';
   const localDay = value => {const d=new Date(value);return Number.isNaN(+d)?'':new Date(+d-d.getTimezoneOffset()*60000).toISOString().slice(0,10);};
   const states = {DRAFT:'Draft',GENERATED:'Prepared',PENDING_SIGNOFF:'In review',CHANGES_REQUESTED:'Correction requested',SIGNED_OFF:'Checked / approved'};
   const priorities = {Monitor:'Normal',Degraded:'Elevated',Critical:'Critical'};
   const opts=(items,current,empty='') => (empty?`<option value="">${esc(empty)}</option>`:'')+items.map(([value,label])=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(label)}</option>`).join('');
-  let state={}, epoch=0, requestId=0, delayed, libraryData, detailToken=0, readerPage=1, readerMode='pdf', readId=0;
-  function shell(view) {
+  let state={}, epoch=0, requestId=0, delayed, libraryData, readerPage=1, readerMode='pdf', readId=0;
+  function shell(view,selected=null,section='overview') {
+    const navLink = ([key,label]) => `<a href="${base}#${key}" title="${label}" ${view===key?'aria-current="page"':''}>${icon(key)}<span>${label}</span>${key==='inbox'?'<small id="reviewCount" aria-live="polite"></small>':''}</a>`;
     $('shell').innerHTML=`<aside class="rail"><a class="brand" href="${base}" aria-label="Outage Manager home"><svg class="mark" viewBox="0 0 32 36" aria-hidden="true"><path d="M3 26V10l7-4v16zm10 3V9l7-4v20zm10-7V6l7-4v16z" fill="currentColor"/></svg><span>Outage Manager</span></a>
-      <nav aria-label="Main menu">${views.map(([key,label])=>`<a href="${base}#${key}" aria-label="${label}" title="${label}" ${view===key?'aria-current="page"':''}>${icon(key)}<span>${label}</span></a>`).join('')}</nav>
+      <button class="mobile-menu" id="menuToggle" aria-controls="packageNav" aria-expanded="false">Menu</button><nav id="packageNav" aria-label="Main menu">${views.map(item=>item[0]==='outages'?
+        `<div class="tree-heading">${navLink(item)}<button id="treeToggle" aria-label="Outage folders" aria-controls="outageTree"></button></div><div id="outageTree"></div>`:navLink(item)).join('')}</nav>
       <a class="back" href="/northstar-clean.html" aria-label="Return to NorthStar">${icon('back')}<span>NorthStar</span></a></aside>`;
+    mountTree(view,selected,section);
+    if(view!=='inbox')void refreshInbox().catch(()=>{});
+  }
+  function mountTree(view,selected,section) {
+    const tree=$('outageTree'), toggle=$('treeToggle');
+    const shown=new Set();
+    const openFolders=new Set(JSON.parse(sessionStorage.getItem('outageFolders') || '[]'));
+    if(selected) openFolders.add(selected.id);
+    function folder(row) {
+      if(shown.has(row.id)) return '';
+      shown.add(row.id);
+      const current=selected?.id===row.id;
+      const documentId=current ? new URLSearchParams(location.search).get('id') : '';
+      return `<details class="package-folder" data-folder="${esc(row.id)}" ${openFolders.has(row.id)?'open':''}>
+        <summary title="${esc(row.title)}">${icon('outages')}<span>${esc(row.title)}</span></summary>
+        <ul class="tree-children">${Object.entries(sections).map(([key,label])=>{
+          const name=key==='overview'?row.title:label;
+          const id=['overview','request'].includes(key)?'':documentId;
+          return `<li><a href="${outageUrl(row.id,key,id)}" ${current&&key===section?'aria-current="page"':''}
+            title="${esc(key==='overview'?row.title+' · Overview':name)}">${icon('file')}<span>${esc(name)}</span></a></li>`;
+        }).join('')}</ul></details>`;
+    }
+    tree.addEventListener('toggle',e=>{
+      const id=e.target.dataset.folder;
+      if(!id)return;
+      if(e.target.open)openFolders.add(id);else openFolders.delete(id);
+      sessionStorage.setItem('outageFolders',JSON.stringify([...openFolders]));
+    },true);
+    // Insert new pages alongside existing folders so keyboard focus and disclosure state survive pagination.
+    function bucket(tab,host) {
+      let offset=0;
+      const list=document.createElement('div'), more=document.createElement('button');
+      more.className='tree-more';host.append(list,more);
+      async function load() {
+        more.disabled=true;more.textContent='Loading…';
+        try {
+          const data=await fetchData(api+'/register?'+new URLSearchParams({tab,offset,sort:tab==='past'?'closed':'start',direction:tab==='past'?'desc':'asc'}));
+          list.insertAdjacentHTML('beforeend',data.rows.map(folder).join(''));
+          offset=data.offset+data.rows.length;
+          more.hidden=offset>=data.total;
+          more.textContent='More '+({upcoming:'upcoming outages',active:'active outages',past:'past outages'}[tab]);
+          if(tab==='past'&&!data.total)list.textContent='No past outages.';
+        } catch(e) {more.textContent='Retry '+tab+' outages';more.title=e.message;}
+        finally {more.disabled=false;}
+      }
+      more.onclick=load;void load();
+    }
+    let loaded=false;
+    function expand(open) {
+      toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'▾':'▸';
+      tree.hidden=!open;
+      if(!open||loaded)return;
+      loaded=true;
+      tree.innerHTML=(selected?folder(selected):'')+
+        '<div data-period="upcoming"></div><div data-period="active"></div><details class="past-folders"><summary>Past outages</summary><div data-period="past"></div></details>';
+      bucket('upcoming',tree.querySelector('[data-period=upcoming]'));
+      bucket('active',tree.querySelector('[data-period=active]'));
+      tree.querySelector('.past-folders').addEventListener('toggle',function() {
+        const host=this.querySelector('[data-period=past]');
+        if(this.open&&!host.hasChildNodes())bucket('past',host);
+      });
+    }
+    toggle.onclick=()=>{expand(tree.hidden);sessionStorage.setItem('outageTreeOpen',String(!tree.hidden));};
+    expand(Boolean(selected)||view==='outages'||(sessionStorage.getItem('outageTreeOpen')??String(innerWidth>820))==='true');
+    const menu=$('menuToggle'), nav=menu.nextElementSibling;
+    menu.onclick=()=>{const open=menu.getAttribute('aria-expanded')!=='true';
+      menu.setAttribute('aria-expanded',String(open));nav.classList.toggle('menu-open',open);};
+  }
+  function processStrip(row,plan) {
+    const review=plan?.packageReview, delivery=plan?.distribution;
+    const significant=plan?.reviewTrigger && plan.reviewTrigger!=='routine';
+    const phases=[['request','Request'],['forms','Preparation'],['approvals','Team review']];
+    if(significant)phases.push(['check','Accuracy check'],['distribution','Final copy']);
+    phases.push(['log','Switching'],['closeout','Closeout']);
+    const pending=(review?.tasks||[]).filter(t=>!t.signedAt);
+    const issues=(plan?.reviewIssues||[]).filter(i=>!i.closedAt);
+    const phase=row.phase==='COMPLETED'||row.phase==='CANCELLED'?row.phase:plan?.phase||row.phase;
+    const status=plan?.status||row.status;
+    let stage='request',message='Prepare the outage package.',target='forms';
+    if(phase==='CANCELLED'||phase==='COMPLETED') {
+      stage=target='closeout';message=phase==='CANCELLED'?'Outage cancelled.':'Outage closed.';
+    } else if(phase==='ACTIVE') {
+      stage=target='log';message=plan?.switchLog?'Switching log open.':'Outage in progress.';
+    } else if(delivery) {
+      stage='distribution';target='log';message='Final copy delivered. Awaiting the start of switching.';
+    } else if(review || status==='PENDING_SIGNOFF' || status==='CHANGES_REQUESTED') {
+      stage=target='approvals';
+      const team=pending.filter(t=>t.role!=='checker');
+      if(issues.length)message='Outstanding corrections: '+issues.map(i=>i.actor+' · '+i.comment).join(' / ');
+      else if(review && !team.length && pending.length) {
+        stage='check';message='Final accuracy check assigned to '+pending[0].account+'.';
+      } else if(review)message='Awaiting '+(review.sscLead?team:pending).map(t=>t.account+' ('+(t.site||t.role)+')').join(', ')+'.';
+      else if(status==='CHANGES_REQUESTED')message='Changes requested on the current revision.';
+      else message='Awaiting '+(plan.review?.operators||[]).filter(name=>!plan.review.decisions.some(d=>d.actor===name)).join(', ')+'.';
+    } else if(status==='SIGNED_OFF') {
+      stage=significant?'check':'approvals';target=significant?'distribution':'history';message='Checks complete.';
+    } else if(plan) {
+      stage=target='forms';message='Complete the draft form.';
+      if(plan.preparationMode!=='REQUEST' && plan.preparationMode!=='INTAKE') {
+        if(!plan.reviewTrigger)message='Select the outage review trigger.';
+        else if(significant && !plan.diagramRevision)message='Enter the drawing revision.';
+        else if(significant && !plan.sources.some(s=>s.kind==='diagram')){target='documents';message='Attach the drawing for review.';}
+        else if(!significant && !plan.generation){target='documents';message='Prepare the proposal for operator review.';}
+        else {target='approvals';message=plan.lastReview?'Reissue the edited package for review.':'Assign and route the review.';}
+      }
+    }
+    const pageFor=k=>k==='check'?'approvals':(!significant && plan && ['log','closeout'].includes(k))?'history':k;
+    const current=phases.findIndex(([k])=>k===stage);
+    const flags=(delivery?.flags||[]).filter(f=>!f.resolvedAt).length;
+    const href=k=>outageUrl(row.id,pageFor(k),['request','overview'].includes(k)?'':plan?.id)+(k==='check'?'#accuracy':'');
+    return `<nav class="process" aria-label="Outage process"><ol>${phases.map(([key,label],i)=>{
+      const recorded={request:true,forms:plan && plan.preparationMode!=='REQUEST',approvals:status==='SIGNED_OFF'||Boolean(review),
+        check:review?.tasks.some(t=>t.role==='checker'&&t.signedAt),distribution:Boolean(delivery),log:Boolean(plan?.switchLog)};
+      const done=i<current && phase!=='CANCELLED' && recorded[key];
+      return `<li class="${i===current?'current':done?'passed':''}"><a href="${href(key)}" ${i===current?'aria-current="step"':''}><i aria-hidden="true">${done?'✓':'●'}</i>${label}</a></li>`;
+    }).join('')}</ol><div class="process-note"><a href="${href(target)}">${esc(message)}</a>
+    ${flags?`<a class="flag-note" href="${href('distribution')}">${flags} open final-copy concern${flags===1?'':'s'}</a>`:''}</div></nav>
+    ${significant||plan?.proposedLeads?`<div class="coordination"><span>SSC outage manager <strong>${esc(review?.sscLead||plan?.proposedLeads?.sscLead||'Unassigned')}</strong></span><span>Local outage manager <strong>${esc(review?.localLead||plan?.proposedLeads?.localLead||'Unassigned')}</strong></span></div>`:''}`;
+  }
+  async function loadWorkspace() {
+    const query=new URLSearchParams(location.search);
+    const section=Object.hasOwn(sections,query.get('section'))?query.get('section'):'overview';
+    const docId=query.get('id');
+    let id=query.get('outage'),legacy=null;
+    if(!id&&docId) {
+      legacy=await fetchData('/api/uwpc/requests/'+encodeURIComponent(docId));
+      id=legacy.registerOutage||legacy.outageId||legacy.id;
+    }
+    if(!id)throw Error('Choose an outage from the register.');
+    let row;
+    try {row=await fetchData(api+'/detail?id='+encodeURIComponent(id));}
+    catch(e) {
+      if(!legacy||e.status!==404)throw e;
+      row={...legacy,sites:legacy.affectedSites||[],packageId:legacy.id,owner:legacy.createdBy,documents:[legacy]};
+    }
+    if(docId&&!row.documents.some(doc=>doc.id===docId))throw Error('This document does not belong to the selected outage.');
+    const packageId=docId||row.packageId;
+    shell('',row,section);
+    const overview=outageUrl(id);
+    const title=section==='overview'?row.title:sections[section];
+    document.title=title+(section==='overview'?'':' · '+row.title)+' · Outage Manager';
+    const page=$('packagePage');
+    page.innerHTML=(section==='overview'?'':`<a class="outage-parent" href="${overview}">${esc(row.title)}</a>`)+head(esc(title),section==='overview'?chip(row):'');
+    const plan=row.workflow || legacy;
+    page.insertAdjacentHTML('beforeend','<div id="processStrip"></div>');
+    const draw=record=>{$('processStrip').innerHTML=processStrip(row,record);};
+    draw(plan);
+    let version=plan?.version||0;
+    window.addEventListener('outage-record',e=>{if(e.detail.id===row.packageId){version=e.detail.version;draw(e.detail);}});
+    async function refreshProcess() {
+      if(document.hidden || !row.workflow)return;
+      try {
+        const latest=await fetchData(api+'/detail?id='+encodeURIComponent(id));
+        if(latest.workflow?.version>=version) {
+          version=latest.workflow.version;row.phase=latest.phase;draw(latest.workflow);
+        }
+      } catch { /* Keep the last loaded revision during a connection interruption. */ }
+    }
+    window.addEventListener('focus',refreshProcess);setInterval(refreshProcess,45000);
+    const facts=entries=>`<dl class="facts">${entries.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v||'—')}</dd>`).join('')}</dl>`;
+    const sites=[...new Set([row.site,...row.sites].filter(Boolean))].join(', ');
+    const timing=[['Start',date(row.start)],['End',row.end&&date(row.end)]];
+    if(section==='overview'||section==='request') {
+      const fields=section==='overview'?[['Sites',sites],['Equipment',row.asset],...timing,
+        ['Required signatures',row.requiredSignatures?`${row.signed} of ${row.requiredSignatures} received`:'No assignments recorded']]:
+        [['Outage ID',id],['Requested by',row.owner],['Opened',row.created&&date(row.created)],['Type',row.type],
+          ['Priority',priorities[row.severity]||row.severity],['Sites',sites],['Equipment',row.asset],...timing];
+      page.insertAdjacentHTML('beforeend',`<section class="panel overview-panel"><h2>Work scope</h2><p>${esc(row.scope||'No scope recorded.')}</p>${facts(fields)}</section>`);
+      if(section==='overview')page.insertAdjacentHTML('beforeend',`<section class="panel overview-panel"><h2>Package forms</h2>
+        ${row.documents.map(doc=>`<a class="file-line" href="${outageUrl(id,'forms',doc.id)}">${icon('file')}<span>${esc(doc.title)}</span><small>${esc(states[doc.status]||doc.status)}</small></a>`).join('')||'<p>No forms have been attached.</p>'}</section>`);
+      return {editable:false};
+    }
+    if(!packageId) {
+      page.insertAdjacentHTML('beforeend','<div class="panel overview-panel"><p>No package has been prepared for this outage.</p></div>');
+      if(section==='forms'&&row.type==='Planned'&&row.phase==='FUTURE') {
+        page.lastElementChild.insertAdjacentHTML('beforeend','<button class="primary">Prepare outage package</button><p role="status"></p>');
+        const button=page.querySelector('button');
+        button.onclick=async()=>{button.disabled=true;try{const doc=await fetchData('/api/uwpc/requests',{fromOutage:id});location.assign(outageUrl(id,'forms',doc.id));}
+          catch(e){button.nextElementSibling.textContent=e.message;button.disabled=false;}};
+      }
+      return {editable:false};
+    }
+    if(row.documents.length>1) {
+      page.insertAdjacentHTML('beforeend',`<label class="document-select">Package document <select>${opts(row.documents.map(d=>[d.id,d.title]),packageId)}</select></label>`);
+      page.querySelector('select').onchange=e=>location.assign(outageUrl(id,section,e.target.value));
+    }
+    $('uwpcDesk').hidden=false;$('uwpcDeskStatus').textContent='Loading package…';
+    return {editable:true,section,packageId,overview};
   }
   async function fetchData(url,body) {
     const r=await fetch(url,{credentials:'same-origin',cache:'no-store',...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
     const data=await r.json().catch(()=>({}));
-    if(!r.ok)throw Error(data.error || `Request failed (${r.status})`);
+    if(!r.ok)throw Object.assign(Error(data.error || `Request failed (${r.status})`),{status:r.status});
     return data;
   }
   function errorBox(e){return `<p class="error" role="alert">${esc(e.message)}</p>`;}
@@ -38,7 +235,6 @@
   function chip(r){const [text,tone]=r.phase==='COMPLETED'?['Closed','done']:r.phase==='CANCELLED'?['Cancelled','hold']:r.phase==='ACTIVE'?['In progress','active']:
     [states[r.status] || r.status,({SIGNED_OFF:'done',PENDING_SIGNOFF:'review',CHANGES_REQUESTED:'hold'})[r.status]||''];
     return `<span class="chip ${tone}">${esc(text)}</span>`;}
-  function rowAction(key,id,label,graphic){return `<button class="iconbtn" data-${key}="${esc(id)}" title="${esc(label)}" aria-label="${esc(label)}">${icon(graphic)}</button>`;}
   function regHome(){
     const tabs=[['upcoming','Upcoming'],['active','In progress'],['past','Past']];
     main.innerHTML=head('Outages',`<a href="#new" class="primary">${icon('new')}New outage</a>`)+
@@ -74,30 +270,16 @@
       state.offset=d.offset;
       $('site').innerHTML=opts(d.sites.filter(Boolean).map(s=>[s,s]),p.get('site'),'All sites');
       main.querySelectorAll('[data-count]').forEach(el=>el.textContent=d.counts[el.dataset.count]);
-      const cols=[['title','Outage'],['site','Site'],[state.tab==='past'?'closed':'start',state.tab==='past'?'Closed':'Start'],['','End'],['severity','Priority'],['status','Status'],['','Actions']];
+      const cols=[['title','Outage'],['site','Site'],[state.tab==='past'?'closed':'start',state.tab==='past'?'Closed':'Start'],['','End'],['severity','Priority'],['status','Status']];
       $('rows').innerHTML=`<table aria-label="Outage register"><thead><tr>${cols.map(([k,l])=>`<th ${k===state.sort?'aria-sort="'+(state.direction==='asc'?'ascending':'descending')+'"':''}>${k?`<button data-sort="${k}">${l} ${k===state.sort?(state.direction==='asc'?'↑':'↓'):'↕'}</button>`:l}</th>`).join('')}</tr></thead><tbody>
-        ${d.rows.map(r=>`<tr><td><button class="titlebtn" data-detail="${esc(r.id)}" title="${esc(r.title)}">${esc(r.title)}</button></td>
+        ${d.rows.map(r=>`<tr data-outage-row><td><a class="titlebtn" href="${outageUrl(r.id)}" title="${esc(r.title)}">${esc(r.title)}</a></td>
         <td title="${esc(r.sites.join(', '))}">${esc(r.site)}${r.sites.length>1?' +'+(r.sites.length-1):''}</td>
         <td>${state.tab==='past'?(r.closed?esc(date(r.closed)):'—'):esc(date(r.start))}</td><td>${r.end?esc(date(r.end)):'—'}</td>
-        <td>${esc(priorities[r.severity]||r.severity)}</td><td>${chip(r)}${r.requiredSignatures?` <small class="mono" title="Required sign-offs received">${r.signed}/${r.requiredSignatures}</small>`:''}</td><td><div class="actions">${rowAction('detail',r.id,'View outage details','info')}
-        ${r.packageId?`<a class="iconbtn" href="${packageUrl(r.packageId)}" title="Open outage package" aria-label="Open outage package">${icon('file')}</a>`:
-        (r.type==='Planned'&&r.phase==='FUTURE'?rowAction('prepare',r.id,'Prepare outage package','file'):'')}</div></td></tr>`).join('')}</tbody></table>
+        <td>${esc(priorities[r.severity]||r.severity)}</td><td>${chip(r)}${r.requiredSignatures?` <small class="mono" title="Required sign-offs received">${r.signed}/${r.requiredSignatures}</small>`:''}</td></tr>`).join('')}</tbody></table>
         ${d.rows.length?'':'<div class="empty">No outages match this view.</div>'}`;
       $('range').textContent=d.total?`${d.offset+1}–${d.offset+d.rows.length} of ${d.total} outages`:'0 outages';
       $('prev').disabled=!d.offset;$('next').disabled=d.offset+d.rows.length>=d.total;
     }catch(e){if(fetchId===requestId&&$('rows'))$('rows').innerHTML=errorBox(e);}
-  }
-  async function showDetail(id){
-    const stamp=++detailToken;
-    $('detailBody').textContent='Loading…';if(!$('detail').open)$('detail').showModal();
-    try{const r=await fetchData(api+'/detail?id='+encodeURIComponent(id));if(stamp!==detailToken)return;
-      $('detailBody').innerHTML=`<h3>${esc(r.title)}</h3>${chip(r)}<dl class="facts">${Object.entries({
-        'Outage ID':r.id,'Sites':r.sites.join(', ')||r.site,'Equipment':r.asset||'—','Type':r.type,'Priority':priorities[r.severity]||r.severity,
-        'Starts':date(r.start),'Ends':r.end?date(r.end):'—','Opened by':r.owner,'Work scope':r.scope||'—'
-      }).map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="toolsList">
-      ${r.documents.map(pkg=>`<a class="librow" href="${packageUrl(pkg.id)}">${icon('file')}${esc(pkg.title)}${icon('right')}</a>`).join('')}
-      ${!r.documents.length&&r.type==='Planned'&&r.phase==='FUTURE'?`<button class="primary" data-prepare="${esc(id)}">Prepare outage package</button>`:''}</div>`;
-    }catch(e){$('detailBody').innerHTML=errorBox(e);}
   }
   async function newOutage(stamp){
     main.innerHTML=head('New outage')+`<form id="create" class="formcard panel"><div class="fields">
@@ -108,10 +290,17 @@
       <label class="wide">Work scope<textarea name="scope" rows="3" required maxlength="4000"></textarea></label>
       <label>Priority<select name="severity">${opts(Object.entries(priorities),'Monitor')}</select></label>
       <label>Review trigger<select name="reviewTrigger" required>${opts(['routine','multi-site','crew dependency','non-routine switching or lockout','manager designation'].map(x=>[x,x[0].toUpperCase()+x.slice(1)]),'','Select trigger')}</select></label>
-      <label class="wide">Additional affected sites <textarea name="additional" rows="2" placeholder="One site per line"></textarea></label></div>
+      <label class="wide">Additional affected sites <textarea name="additional" rows="2" placeholder="One site per line"></textarea></label>
+      <label>SSC outage manager<select name="sscLead" aria-label="SSC outage manager"><option value="">Unassigned</option></select></label>
+      <label>Local outage manager<select name="localLead" aria-label="Local outage manager"><option value="">Unassigned</option></select></label></div>
       <div class="formfoot"><span role="status" id="saveStatus"></span><a class="btn" href="#home">Cancel</a><button class="primary" type="submit">Create outage</button></div></form>`;
     let token=crypto.randomUUID();
     const form=$('create');
+    void fetchData(api+'/session').then(d=>{
+      const roles=d.outageReviewRoles;
+      for(const [key,people] of Object.entries({sscLead:roles.operator,localLead:[...new Set([...roles.area,...roles.field])]}))
+        form.elements[key].innerHTML=opts(people.map(s=>[s,s]),'','Unassigned');
+    }).catch(e=>{if(epoch===stamp)$('saveStatus').textContent='Reviewer directory unavailable: '+e.message;});
     form.addEventListener('input',()=>{token=crypto.randomUUID();});
     form.onsubmit=async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(form));
       for(const k of ['start','end'])data[k]=new Date(data[k]).toISOString();
@@ -119,22 +308,29 @@
       data.affectedSites=data.additional.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);delete data.additional;
       data.requestKey=token;const button=form.querySelector('[type=submit]');button.disabled=true;
       $('saveStatus').textContent='Saving…';
-      try{const r=await fetchData(api+'/create',data);if(epoch===stamp){location.hash='home';await showDetail(r.id);}}
+      try{const r=await fetchData(api+'/create',data);if(epoch===stamp)location.assign(outageUrl(r.id));}
       catch(err){if(epoch===stamp)$('saveStatus').textContent=err.message;}finally{button.disabled=false;}
     };
     try{const d=await fetchData('/api/sites');if(epoch===stamp)$('stations').innerHTML=d.options.map(s=>`<option value="${esc(s.name||s.label||s.site||s)}"></option>`).join('');}catch{/* Site entry remains available. */}
   }
-  async function inbox(stamp){
-    main.innerHTML=head('My reviews')+'<div id="reviews" class="toolsList" aria-live="polite">Loading…</div>';
-    const d=await fetchData(api+'/inbox');if(epoch!==stamp)return;
+  let inboxSeq=0;
+  async function refreshInbox(){
+    const seq=++inboxSeq;
+    const d=await fetchData(api+'/inbox');if(seq!==inboxSeq)return;
     const review=window.NorthStarOutageReview({esc,when:date,dateValue:localDay});
     const rows=d.rows.flatMap(r=>{
       const ordinary=JSON.parse(r.ordinary||'null');
       const messages=review.alerts({...r,lastReview:{owner:r.lastOwner},reviewIssues:JSON.parse(r.issues||'[]'),
         packageReview:JSON.parse(r.packageReview||'null'),distribution:JSON.parse(r.distribution||'null')},d.actor);
       if(r.status==='PENDING_SIGNOFF'&&ordinary?.operators.includes(d.actor)&&!ordinary.decisions.some(v=>v.actor===d.actor))messages.push('Operator review requested');
-      return messages.length?[`<a class="librow" href="${packageUrl(r.id)}"><strong>${esc(r.title)}</strong><span>${esc(messages.join(' · '))}</span>${icon('right')}</a>`]:[];
-    });$('reviews').innerHTML=rows.join('')||'<div class="panel empty">You have no outstanding reviews.</div>';
+      return messages.length?[`<a class="librow" href="${outageUrl('',messages[0].startsWith('Final copy')?'distribution':'approvals',r.id)}"><strong>${esc(r.title)}</strong><span>${esc(messages.join(' · '))}</span>${icon('right')}</a>`]:[];
+    });
+    if($('reviewCount'))$('reviewCount').textContent=rows.length||'';
+    if($('reviews'))$('reviews').innerHTML=rows.join('')||'<div class="panel empty">You have no outstanding reviews.</div>';
+  }
+  async function inbox(){
+    main.innerHTML=head('My reviews')+'<div id="reviews" class="toolsList" aria-live="polite">Loading…</div>';
+    await refreshInbox();
   }
   async function readPage(number,mode){
     const id=++readId;
@@ -184,21 +380,27 @@
     const [part,sub]=location.hash.slice(1).split('/');const view=views.some(([k])=>k===part)?part:'home';
     shell(view);document.title=(view==='home'?'Outages':views.find(([k])=>k===view)[1])+' · Outage Manager';
     try{
-      if(view==='home'){state={tab:'upcoming',offset:0,sort:'start',direction:'asc'};regHome();}
+      if(view==='home'||view==='outages'){state={tab:'upcoming',offset:0,sort:'start',direction:'asc'};regHome();}
       else if(view==='new')await newOutage(stamp);
       else if(view==='inbox')await inbox(stamp);
       else{main.innerHTML=head('UWPC library')+'<p role="status">Loading manual…</p>';const d=libraryData||await fetchData(api+'/library');
         if(epoch===stamp){libraryData=d;renderLibrary(d,['forms','questions'].includes(sub)?sub:'manual');}}
     }catch(e){if(epoch===stamp)main.innerHTML=head(views.find(([k])=>k===view)[1])+errorBox(e);}
   }
-  if(document.body.hasAttribute('data-manager-package')){shell('');return;}
-  $('closeDetail').onclick=()=>$('detail').close();
+  function updateAlerts(){if(!document.hidden)void refreshInbox().catch(()=>{});}
+  window.addEventListener('focus',updateAlerts);setInterval(updateAlerts,45000);
+  window.addEventListener('outage-record',updateAlerts);
+  if(document.body.hasAttribute('data-manager-package')){
+    window.outageWorkspace=loadWorkspace().catch(e=>{if(!$('packageNav'))shell('');main.innerHTML=head('Outage package')+errorBox(e);return null;});
+    return;
+  }
   document.addEventListener('click',async e=>{
-    const el=e.target.closest('[data-detail],[data-prepare],[data-sort],[data-page],[data-lib]');if(!el)return;
-    if(el.dataset.detail)await showDetail(el.dataset.detail);
-    else if(el.dataset.prepare){el.disabled=true;try{const r=await fetchData('/api/uwpc/requests',{fromOutage:el.dataset.prepare});location.assign(packageUrl(r.id));}
-      catch(err){if(!$('detail').open)$('detail').showModal();$('detailBody').innerHTML=errorBox(err);}finally{el.disabled=false;}}
-    else if(el.dataset.sort){state.direction=state.sort===el.dataset.sort&&state.direction==='asc'?'desc':'asc';state.sort=el.dataset.sort;state.offset=0;await loadRegister();}
+    const row=e.target.closest('[data-outage-row]');
+    if(row && !e.target.closest('a,button') && !getSelection()?.toString()) {
+      location.assign(row.querySelector('a').href);return;
+    }
+    const el=e.target.closest('[data-sort],[data-page],[data-lib]');if(!el)return;
+    if(el.dataset.sort){state.direction=state.sort===el.dataset.sort&&state.direction==='asc'?'desc':'asc';state.sort=el.dataset.sort;state.offset=0;await loadRegister();}
     else if(el.dataset.lib){location.hash='library/'+el.dataset.lib;}
     else if(el.dataset.page){e.preventDefault();await readPage(Number(el.dataset.page),readerMode);}
   });

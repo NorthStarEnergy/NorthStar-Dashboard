@@ -1,3 +1,7 @@
+## 20261110-outage-folders
+
+Added [outage folders and coordination](packets/2026-11-10-outage-folders.md) with a clickable process graphic, two named outage managers and final-copy viewer alerts.
+
 ## 20261110-outage-manager
 
 Added [Outage Manager](packets/2026-11-10-outage-manager.md), a standalone operator-hosted register, creation page, review inbox and UWPC library.

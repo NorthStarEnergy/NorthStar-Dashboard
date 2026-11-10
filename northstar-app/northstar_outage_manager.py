@@ -141,7 +141,7 @@ def query_register(params):
     return {"rows": items, "total": total, "offset": offset, "counts": {k:counts.get(k,0) for k in ("upcoming","active","past")}, "sites":site_names}
 
 
-def create_request(payload, actor):
+def create_request(payload, actor, accounts=()):
     token = payload.get("requestKey", "")
     if not isinstance(token, str) or not re.fullmatch(r"[a-zA-Z0-9-]{16,80}", token):
         raise ValueError("A submission ID is required")
@@ -163,7 +163,15 @@ def create_request(payload, actor):
     classification = review.classification({**payload,"site":data["site"]})
     if not classification["reviewTrigger"] or (classification["reviewTrigger"] == "multi-site" and len(classification["affectedSites"]) < 2):
         raise ValueError("Select a review trigger and include every affected site")
-    signature = desk.digest({**data, **classification,"severity":payload["severity"]})
+    leads = {key: payload[key] for key in ("sscLead", "localLead") if payload.get(key)}
+    if leads:
+        roster = review.directory(accounts)
+        if ("sscLead" in leads and leads["sscLead"] not in roster["operator"]) or (
+                "localLead" in leads and leads["localLead"] not in roster["area"] + roster["field"]):
+            raise ValueError("Choose eligible outage managers from the directory")
+        if leads.get("sscLead") == leads.get("localLead"):
+            raise ValueError("Assign separate control room and local outage managers")
+    signature = desk.digest({**data, **classification,"severity":payload["severity"], **leads})
     with desk.session() as c:
         c.execute("BEGIN IMMEDIATE")
         c.execute("CREATE TABLE IF NOT EXISTS outage_manager_submissions(actor TEXT,token TEXT,signature TEXT,oid TEXT,pid TEXT,PRIMARY KEY(actor,token))")
@@ -174,7 +182,7 @@ def create_request(payload, actor):
             return {"id":prior["oid"],"packageId":prior["pid"]}
         outage = store.insert_outage(c,{**data,"details":data["scope"],"type":"Planned","severity":payload["severity"]},actor)
         plan = desk.create({"fromOutage":outage["id"]},actor,connection=c)
-        plan.update(start=data["start"],end=data["end"],**classification)
+        plan.update(start=data["start"],end=data["end"],coordinated=True,proposedLeads=leads,**classification)
         desk.write(c,plan)
         desk.event(c,plan,actor,"scheduled",{"start":data["start"],"end":data["end"],**classification})
         c.execute("INSERT INTO outage_manager_submissions VALUES (?,?,?,?,?)",(actor,token,signature,outage["id"],plan["id"]))
@@ -190,6 +198,16 @@ def details(oid):
         documents = [dict(r) for r in c.execute(REGISTER+"SELECT id,json_extract(body,'$.title') title,json_extract(body,'$.status') status FROM docs WHERE oid=? ORDER BY title,id",(oid,))]
         result = dict(row)
         result["sites"] = json.loads(result["sites"])
+        if row["packageId"]:
+            plan = desk.read(c, row["packageId"])
+            result["workflow"] = {k: plan.get(k) for k in (
+                "id", "version", "phase", "status", "preparationMode", "reviewTrigger", "diagramRevision",
+                "packageReview", "reviewIssues", "review", "proposedLeads")}
+            result["workflow"].update(
+                sources=[{"kind": s["kind"]} for s in plan["sources"]],
+                lastReview=bool(plan.get("lastReview")), switchLog=bool(plan.get("switchLog")),
+                generation=bool(plan.get("generation")),
+                distribution={"flags": plan["distribution"].get("flags", [])} if plan.get("distribution") else None)
         return {**result,"documents":documents}
 
 
