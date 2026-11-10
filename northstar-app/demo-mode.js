@@ -10,7 +10,7 @@
     document.querySelectorAll('#sideNav [data-tab]').forEach(button => {
       const unavailable = unavailableTabs.has(button.dataset.tab);
       button.hidden = demo && unavailable;
-      button.classList.toggle('ns-demo-restricted', ryan && unavailable && button.dataset.tab !== 'switching');
+      button.classList.toggle('ns-demo-restricted', ryan && button.dataset.tab === 'games');
       button.classList.toggle('ns-demo-partial', ryan && partialTabs.has(button.dataset.tab));
     });
     const development = document.getElementById('nsDevelopmentFolder');

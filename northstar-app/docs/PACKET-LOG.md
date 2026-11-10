@@ -1,3 +1,15 @@
+## 20261110-outages-menu
+
+Fixed the Outages sidebar route and added the UWPC Builder to the v3 Outages menu. See [Outages menu](packets/2026-11-10-outages-menu.md).
+
+## 20261110-outage-closeout
+
+Linked outage requests now lead through review, final-copy distribution, an electronic switching log, closure and saved notes. The UWPC Builder includes a two-site practice outage with an assigned team. See [distribution and closeout](packets/2026-11-10-outage-closeout.md).
+
+## 20261109-outage-package-review
+
+The UWPC Builder routes significant outages to the manager, scheduled operators, independent checker, area manager and each affected site. See [routing, role setup and verification](packets/2026-11-09-outage-package-review.md).
+
 ## 20261107-ryan-dashboard-access
 
 Ryan Engineering navigation restored. Library opens the r013 Switching Simulator in the supported dashboard build. Installed runtime and restarted the protected backend. Installed-file fixture verified UWPC and r013 launch. Production Ryan sign-in remains pending. Python 632 passed, 21 skipped, 347 subtests. JavaScript 74 passed. See packets/2026-11-07-ryan-dashboard-access.md.

@@ -1773,11 +1773,25 @@ class Handler(SimpleHTTPRequestHandler):
         if OPERATOR_GATE == "access":
             operators = [name.strip() for name in os.environ.get("NORTHSTAR_UWPC_OPERATORS", "").split(",") if name.strip()]
         parts = route[len(prefix):].strip("/").split("/") if route != prefix else []
+        practice_token = None
         try:
+            if parts[:1] == ["practice"]:
+                if actor not in operators or len(parts) < 2:
+                    raise PermissionError("Sign in with an active NorthStar account to open the practice outage")
+                team = uwpc_desk.outage_review.PRACTICE_TEAM
+                operators = sorted({name for names in team.values() for name in names})
+                persona = unquote(parts[1])
+                if persona not in operators:
+                    raise ValueError("Select a member of the practice team")
+                workspace = hashlib.sha256(actor.encode()).hexdigest()
+                practice_token = uwpc_desk.outage_review.PRACTICE_DB.set(
+                    store.DB_PATH.parent / "outage-practice" / (workspace + ".sqlite"))
+                actor, parts = persona, parts[2:]
             if self.command == "GET":
                 if not parts:
                     self._send_json({"requests": uwpc_desk.listing(), "operators": operators,
                                      "actor": actor, "identityMode": OPERATOR_GATE,
+                                     "outageReviewRoles": uwpc_desk.outage_review.directory(operators),
                                      "correspondence": uwpc_desk.correspondence()})
                 elif len(parts) == 1:
                     self._send_json(uwpc_desk.get(parts[0]))
@@ -1785,7 +1799,10 @@ class Handler(SimpleHTTPRequestHandler):
                     source = uwpc_desk.source_bytes(parts[0], parts[2])
                     self._send_binary(source["content"], source["mime"], source["name"], source["sha256"])
                 elif len(parts) == 3 and parts[1] == "exports":
-                    body, content_type, filename = uwpc_desk.export_record(parts[0], parts[2])
+                    version = parse_qs(urlparse(self.path).query).get("v", [None])[0]
+                    copy_id = parse_qs(urlparse(self.path).query).get("copy", [None])[0]
+                    body, content_type, filename = uwpc_desk.export_record(parts[0], parts[2], version,
+                                                                          copy_id=copy_id, actor=actor if actor in operators else None)
                     self._send_binary(body, content_type, filename, hashlib.sha256(body).hexdigest(), inline=parts[2] == "pdf")
                 else:
                     self._send_json({"error": "UWPC route not found"}, 404)
@@ -1824,6 +1841,9 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json({"error": str(exc)}, 400)
         except uwpc_desk.ai.AssistantUnavailable as exc:
             self._send_json({"error": str(exc)}, 503)
+        finally:
+            if practice_token is not None:
+                uwpc_desk.outage_review.PRACTICE_DB.reset(practice_token)
         return True
 
     def do_OPTIONS(self) -> None:
@@ -1976,7 +1996,7 @@ class Handler(SimpleHTTPRequestHandler):
         # with failed API calls. Serve the login screen instead of the console.
         if (
             OPERATOR_GATE == "demo"
-            and route in {"/", "/northstar-clean.html", "/index.html", "/operator-mobile.html", "/knowledge-library.html", "/data-workspace.html", "/water-collection.html", "/daily-report-automation.html", "/service-controls.html"}
+            and route in {"/", "/northstar-clean.html", "/index.html", "/operator-mobile.html", "/knowledge-library.html", "/data-workspace.html", "/water-collection.html", "/daily-report-automation.html", "/service-controls.html", "/outage-practice.html"}
             and self._is_operator_host()
             and not self._demo_actor()
         ):
@@ -3652,7 +3672,11 @@ class Handler(SimpleHTTPRequestHandler):
             payload = self._json_body()
             actor = self._audit_actor(payload.get("actor"))
             previous = store.get_outage(outage_id)
-            record = store.close_outage(outage_id, actor, str(payload.get("details", "")))
+            try:
+                record = store.close_outage(outage_id, actor, str(payload.get("details", "")))
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, 409)
+                return
             if record and previous and previous["status"] == "Open":
                 log_event("Outage closed", record["title"], f"{record['site']} marked closed", actor)
             self._send_json(record or {"error": "outage not found"}, 200 if record else 404)

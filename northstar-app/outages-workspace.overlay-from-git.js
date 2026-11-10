@@ -70,8 +70,10 @@
     const close = outage.status === 'Open' && outage.id
       ? `<button class="node-expand outage-close" data-close-outage="${escapeHtml(outage.id)}">CLOSE</button>`
       : '';
+    const packageButton = type === 'Planned' && outage.status === 'Open' && outage.id
+      ? `<button class="node-expand" data-outage-package="${escapeHtml(outage.id)}">OUTAGE PLAN</button>` : '';
     const switching = outage.status === 'Open' && outage.id
-      ? `<button class="node-expand" data-create-switching="${escapeHtml(outage.id)}">CREATE PLAN</button>`
+      ? packageButton + `<button class="node-expand" data-create-switching="${escapeHtml(outage.id)}">${packageButton ? 'DRAWING DRAFT' : 'CREATE PLAN'}</button>`
       : '';
     const connectivity = outage.id
       ? `<button class="node-expand" data-open-connectivity-outage="${escapeHtml(outage.id)}">CONNECTIVITY</button>`

@@ -9,15 +9,18 @@ import hashlib
 import io
 import json
 import re
+import sqlite3
+import textwrap
 import urllib.error
 import urllib.request
 import uuid
 import zipfile
-from contextlib import contextmanager
-from datetime import datetime
+from contextlib import closing, contextmanager
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import northstar_ai as ai
+import northstar_outage_review as outage_review
 import northstar_store as store
 import northstar_uwpc as uwpc
 import northstar_uwpc_evidence as evidence
@@ -54,10 +57,21 @@ def init_schema(c):
     c.execute("""CREATE TABLE IF NOT EXISTS uwpc_request_events (
         seq INTEGER PRIMARY KEY AUTOINCREMENT, request_id TEXT NOT NULL REFERENCES uwpc_requests(id),
         at TEXT NOT NULL, actor TEXT NOT NULL, event TEXT NOT NULL, detail TEXT NOT NULL)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS uwpc_final_copies (
+        id TEXT PRIMARY KEY, request_id TEXT NOT NULL REFERENCES uwpc_requests(id),
+        digest TEXT NOT NULL, content BLOB NOT NULL)""")
 
 
 @contextmanager
 def session():
+    practice = outage_review.PRACTICE_DB.get()
+    if practice is not None:
+        practice.parent.mkdir(parents=True, exist_ok=True)
+        with store._LOCK, closing(sqlite3.connect(practice, timeout=10)) as c, c:
+            c.row_factory = sqlite3.Row
+            init_schema(c)
+            yield c
+        return
     with store._LOCK, store._session() as c:
         init_schema(c)
         yield c
@@ -107,7 +121,7 @@ def fields(payload):
     result["switchingPlan"] = switching_plan(payload) if result["template"] == "pc17a" else {}
     if result["template"] == "pc17a":
         plan = result["switchingPlan"]
-        if not plan["purpose"] or (not plan["steps"] and result["preparationMode"] != "INTAKE"):
+        if not plan["purpose"] or (not plan["steps"] and result["preparationMode"] not in {"INTAKE", "REQUEST"}):
             raise ValueError("Purpose of Order and at least one switching sequence line are required")
         if any(not step["device"] or not step["operation"] for step in plan["steps"]):
             raise ValueError("Every switching sequence line requires a device and operation")
@@ -155,15 +169,62 @@ def checked(c, ident, payload):
 
 
 def invalidate(row):
+    row.pop("distribution", None)
+    prior = row.pop("packageReview", None)
+    if prior:
+        row["lastReview"] = prior
     row.update(generation=None, review=None, status="DRAFT")
 
 
 def create(payload, actor):
-    row = {**fields(payload), "id": "uwpc_" + uuid.uuid4().hex, "version": 1,
-           "status": "DRAFT", "phase": "FUTURE", "createdAt": store.now_iso(),
-           "createdBy": actor, "sources": [], "generation": None, "review": None}
     with session() as c:
+        c.execute("BEGIN IMMEDIATE")
+        practice = outage_review.PRACTICE_DB.get() is not None
+        if practice:
+            if payload.get("practiceSample") is not True:
+                raise ValueError("Open the practice outage to use this workspace")
+            prior = c.execute("SELECT body FROM uwpc_requests LIMIT 1").fetchone()
+            if prior:
+                return json.loads(prior["body"])
+            start = datetime.fromisoformat(store.now_iso()) + timedelta(days=7)
+            payload = {"title": "Practice outage · North and South", "site": "North", "affectedSites": ["South"],
+                       "outageId": "PRACTICE-001", "kind": "SWITCHING_PLAN", "template": "pc17a", "diagramRevision": "Exercise 1",
+                       "start": start.isoformat(), "end": (start + timedelta(hours=2)).isoformat(),
+                       "switchingPlan": {"purpose": "Practice shift and site handoffs", "steps": [
+                           {"device": "Training reference A", "operation": "Record the North and South team handoff"}]}}
+            actor = outage_review.PRACTICE_TEAM["manager"][0]
+        source = payload.get("fromOutage")
+        if source:
+            outage = c.execute("SELECT * FROM outages WHERE id=?", (source,)).fetchone()
+            if not outage or outage["outage_type"] != "Planned" or outage["status"] != "Open":
+                raise ValueError("Choose an open planned outage")
+            prior = c.execute("SELECT body FROM uwpc_requests WHERE json_extract(body,'$.registerOutage')=?", (source,)).fetchone()
+            if prior:
+                return json.loads(prior["body"])
+            purpose = outage["details"] or outage["title"]
+            payload = {"title": outage["title"], "site": outage["site"], "outageId": source,
+                       "scope": purpose, "kind": "SWITCHING_PLAN", "template": "pc17a",
+                       "preparationMode": "REQUEST", "switchingPlan": {"purpose": purpose}}
+        row = {**fields(payload), **outage_review.classification(payload),
+               "id": "uwpc_" + uuid.uuid4().hex, "version": 1,
+               "status": "DRAFT", "phase": "FUTURE", "createdAt": store.now_iso(),
+               "createdBy": actor, "sources": [], "generation": None, "review": None}
+        if source:
+            row["registerOutage"] = source
         c.execute("INSERT INTO uwpc_requests VALUES (?,?)", (row["id"], json.dumps(row)))
+        if practice:
+            content = b"Practice drawing reference only. North and South are fictional sites."
+            source = {"id": "src_practice", "name": "practice-drawing-reference.txt", "kind": "diagram",
+                      "mime": "text/plain", "size": len(content), "sha256": hashlib.sha256(content).hexdigest()}
+            c.execute("INSERT INTO uwpc_request_sources(id,request_id,name,kind,mime,sha256,content) VALUES (?,?,?,?,?,?,?)",
+                      (source["id"], row["id"], source["name"], source["kind"], source["mime"], source["sha256"], content))
+            team = outage_review.PRACTICE_TEAM
+            row.update(practice=True, sources=[source], practiceAssignments={
+                "preparer": actor, "due": (start - timedelta(days=1)).isoformat(),
+                "tasks": [{"role":role, "account":name, "site":site} for role, name, site in [
+                    ("operator", team["operator"][0], ""), ("operator", team["operator"][1], ""),
+                    ("checker", team["checker"][0], ""), ("area", team["area"][0], ""),
+                    ("field", team["field"][0], "North"), ("field", team["field"][1], "South")]]})
         event(c, row, actor, "created", {"fields": fields(payload)})
         write(c, row)
     return row
@@ -194,20 +255,148 @@ def correspondence():
     return rows
 
 
+def distribute(c, row):
+    review = row["packageReview"]
+    recipients = sorted({t["account"] for t in review["tasks"]} | set(review.get("copyTo", [])))
+    distribution = {"id": uuid.uuid4().hex, "revision": review["number"], "digest": review["digest"],
+                    "at": store.now_iso(), "recipients": recipients, "receipts": {}}
+    row["distribution"] = distribution
+    snapshot = {**row, "events": [{**dict(e), "detail": json.loads(e["detail"])} for e in c.execute(
+        "SELECT at,actor,event,detail FROM uwpc_request_events WHERE request_id=? ORDER BY seq", (row["id"],))]}
+    content = package_zip(snapshot, lambda source: c.execute(
+        "SELECT content FROM uwpc_request_sources WHERE id=? AND request_id=?", (source["id"], row["id"])).fetchone()["content"])
+    c.execute("INSERT INTO uwpc_final_copies VALUES (?,?,?,?)",
+              (distribution["id"], row["id"], review["digest"], content))
+    distribution["sha256"] = hashlib.sha256(content).hexdigest()
+    event(c, row, "NorthStar", "final-copy-distributed", distribution)
+
+
+def record_execution(row, action, payload, actor, roster):
+    review = row.get("packageReview") or {}
+    delivery = row.get("distribution")
+    if not delivery or delivery["id"] != payload.get("copyId") or row["status"] != "SIGNED_OFF":
+        raise Conflict("Open the current distributed final copy")
+    if actor not in delivery["recipients"]:
+        raise PermissionError("This action belongs to the assigned outage team")
+    now = store.now_iso()
+    if action == "final-receipt":
+        delivery["receipts"].setdefault(actor, now)
+        return {"copyId": delivery["id"], "receivedAt": delivery["receipts"][actor]}
+    roles = {t["role"] for t in review["tasks"] if t["account"] == actor and actor in roster[t["role"]]}
+    if action in {"log-open", "log-close"} and not roles.intersection({"operator", "manager"}):
+        raise PermissionError("The assigned manager or a scheduled SSC must open or close the switching log")
+    if action in {"log-entry", "closeout-note"} and not roles:
+        raise PermissionError("Only assigned reviewers may write entries")
+    if action == "log-open":
+        if row["phase"] != "FUTURE" or row.get("switchLog"):
+            raise ValueError("Only a planned outage can start a switching log")
+        if any(t["account"] not in roster[t["role"]] for t in review["tasks"]):
+            raise ValueError("Reissue the review with current eligible assignments")
+        row["switchLog"] = {"openedAt": now, "openedBy": actor, "copyId": delivery["id"], "entries": [], "notes": []}
+        row["phase"] = "ACTIVE"
+        return {"copyId": delivery["id"], "openedAt": now}
+    log = row.get("switchLog")
+    if not log or log["copyId"] != delivery["id"]:
+        raise ValueError("Open the electronic switching log first")
+    note = payload.get("text")
+    if not isinstance(note, str) or not note.strip() or len(note) > 4000:
+        raise ValueError("Enter a record of up to 4,000 characters")
+    entry = {"actor": actor, "at": now, "text": note.strip(), "copyId": delivery["id"]}
+    if action == "closeout-note":
+        if row["phase"] != "COMPLETED":
+            raise ValueError("Close the outage before adding follow-up notes")
+        log["notes"].append(entry)
+    elif row["phase"] != "ACTIVE":
+        raise ValueError("Switching log entries require an open log")
+    elif action == "log-entry":
+        site = payload.get("site", "")
+        if site and site not in row["affectedSites"]:
+            raise ValueError("Select an affected site")
+        entry["site"] = site
+        recorded_time = payload.get("occurredAt") or now
+        try:
+            actual = datetime.fromisoformat(recorded_time.replace("Z", "+00:00"))
+            if actual.tzinfo is None or actual > datetime.fromisoformat(now):
+                raise ValueError()
+        except (TypeError, AttributeError, ValueError):
+            raise ValueError("Enter an activity time with a time zone at or before the current time") from None
+        entry["occurredAt"] = actual.isoformat()
+        step = payload.get("step")
+        if step is not None:
+            steps = row.get("switchingPlan", {}).get("steps", [])
+            if type(step) is not int or not 1 <= step <= len(steps):
+                raise ValueError("Select a step from the distributed order")
+            entry.update(step=step, device=steps[step - 1]["device"])
+        entry["sequence"] = len(log["entries"]) + 1
+        log["entries"].append(entry)
+    else:
+        if not log["entries"]:
+            raise ValueError("Record the switching activity before closing the outage")
+        log["closure"] = entry
+        row["phase"] = "COMPLETED"
+    return entry
+
+
 def change(ident, action, payload, actor, operators=()):
     with session() as c:
+        c.execute("BEGIN IMMEDIATE")
         row = checked(c, ident, payload)
         detail = {}
-        if action == "save":
+        if row.get("registerOutage") and action in {"save", "review-open", "log-open", "distribute"}:
+            source = c.execute("SELECT status FROM outages WHERE id=?", (row["registerOutage"],)).fetchone()
+            if not source or source["status"] != "Open":
+                raise ValueError("The linked outage request is closed")
+        if action == "review-view":
+            review = row.get("packageReview") or {}
+            if not review or payload.get("digest") != review["digest"] or actor not in operators:
+                raise ValueError("Reopen the current review")
+            if actor not in review.setdefault("viewed", {}):
+                review["viewed"][actor] = store.now_iso()
+                write(c, row)
+                event(c, row, actor, action, {"digest": review["digest"], "revision": review["number"]})
+            return row
+        old_delivery = row.get("distribution")
+        if action == "distribute":
+            review = row.get("packageReview") or {}
+            if row["status"] != "SIGNED_OFF" or old_delivery or row["phase"] not in {"FUTURE", "ACTIVE"}:
+                raise ValueError("Select an approved package awaiting distribution")
+            if actor != review.get("owner") or actor not in outage_review.directory(operators)["manager"]:
+                raise PermissionError("The assigned manager must distribute this approved revision")
+            detail = {"revision": review["number"]}
+        elif action in {"final-receipt", "log-open", "log-entry", "log-close", "closeout-note"}:
+            if actor not in operators:
+                raise PermissionError("A signed-in named account is required")
+            detail = record_execution(row, action, payload, actor, outage_review.directory(operators))
+        elif action == "review-open":
+            if row.get("generation"):
+                evidence.require_reviewable(row["generation"], actor)
+            detail = outage_review.open_review(row, payload, actor, outage_review.directory(operators),
+                                               field_snapshot(row), digest, operators)
+        elif action in {"review-sign", "review-return", "review-answer", "review-close"}:
+            if actor not in operators:
+                raise PermissionError("A named active account is required")
+            if action == "review-sign" and row.get("generation"):
+                evidence.require_reviewable(row["generation"], actor)
+            detail = outage_review.transition(row, action, payload, actor, outage_review.directory(operators))
+        elif action == "save":
             updated = fields(payload)
+            if row.get("registerOutage") and updated["outageId"] != row["registerOutage"]:
+                raise ValueError("The plan is linked to its original outage request")
+            updated.update(outage_review.classification(payload, row))
             if row["phase"] in {"ACTIVE", "COMPLETED", "CANCELLED"}:
                 raise ValueError("Return the plan to Future before revising its content")
             row.update(updated)
+            if actor not in row.setdefault("contentEditors", []):
+                row["contentEditors"].append(actor)
             invalidate(row)
             detail = updated
         elif action == "route":
-            if row.get("preparationMode") == "INTAKE":
+            if row.get("preparationMode") in {"INTAKE", "REQUEST"}:
                 raise ValueError("Complete and save the draft form before sending it for sign-off")
+            if outage_review.required(row):
+                raise ValueError("Open the significant outage package review for this revision")
+            if row["kind"] == "SWITCHING_PLAN" and not row.get("reviewTrigger"):
+                raise ValueError("Classify this switching plan before routing it")
             evidence.require_reviewable(row.get("generation"), actor)
             if not row["generation"] or row["phase"] in {"COMPLETED", "CANCELLED"}:
                 raise ValueError("Generate a current proposal before sending it for sign-off")
@@ -218,12 +407,19 @@ def change(ident, action, payload, actor, operators=()):
                 raise ValueError("Select at least one operator")
             if any(not isinstance(p, str) or p not in operators for p in recipients):
                 raise ValueError("Select active operator accounts from the directory")
+            if row["kind"] == "SWITCHING_PLAN" and not any(
+                name in outage_review.directory(operators)["checker"] and
+                name not in {row["createdBy"], actor, *row.get("contentEditors", [])} for name in recipients
+            ):
+                raise ValueError("Include an independent competent checker for this switching plan")
             row["review"] = {"digest": row["generation"]["digest"], "requestedBy": actor,
                              "requestedAt": store.now_iso(), "operators": list(dict.fromkeys(recipients)),
                              "decisions": []}
             row["status"] = "PENDING_SIGNOFF"
             detail = row["review"]
         elif action == "signoff":
+            if outage_review.required(row):
+                raise ValueError("Use your assigned outage review task")
             review = row.get("review") or {}
             if row["status"] != "PENDING_SIGNOFF" or actor not in review.get("operators", []):
                 raise PermissionError("Only an assigned operator may sign this pending revision")
@@ -250,13 +446,23 @@ def change(ident, action, payload, actor, operators=()):
             detail = {"signature": signed, "document": row["generation"], "fields": field_snapshot(row)}
         elif action == "phase":
             phase = payload.get("phase")
+            previous_phase = row["phase"]
             if phase not in {"FUTURE", "ACTIVE", "COMPLETED", "CANCELLED"}:
                 raise ValueError("Unknown plan lifecycle state")
             if phase in {"ACTIVE", "COMPLETED"} and row["status"] != "SIGNED_OFF":
                 raise ValueError("Operator sign-off is required before tracking this plan as active/completed")
+            if outage_review.required(row):
+                if phase in {"FUTURE", "CANCELLED"} and row.get("packageReview") and (
+                        actor != row["packageReview"]["owner"] or actor not in outage_review.directory(operators)["manager"]):
+                    raise PermissionError("The assigned control room manager manages this review")
+                if phase == "ACTIVE" and row["phase"] == "FUTURE":
+                    record_execution(row, "log-open", {"copyId": (old_delivery or {}).get("id")}, actor,
+                                     outage_review.directory(operators))
+                elif row.get("switchLog") or phase in {"ACTIVE", "COMPLETED"}:
+                    raise ValueError("Use the electronic switching log to finish this outage")
             if row["status"] == "PENDING_SIGNOFF":
                 raise ValueError("Resolve or revise the pending review before changing lifecycle")
-            detail = {"from": row["phase"], "to": phase}
+            detail = {"from": previous_phase, "to": phase}
             row["phase"] = phase
         elif action == "correspondence":
             detail = {k: clip(payload.get(k)) for k in ("direction", "authority", "reference", "message")}
@@ -277,13 +483,26 @@ def change(ident, action, payload, actor, operators=()):
                 raise ValueError("Source not found")
             c.execute("UPDATE uwpc_request_sources SET active=0 WHERE id=? AND request_id=?", (source["id"], ident))
             row["sources"].remove(source)
+            if actor not in row.setdefault("contentEditors", []):
+                row["contentEditors"].append(actor)
             invalidate(row)
             detail = source
         else:
             raise ValueError("Unknown UWPC action")
         row["version"] += 1
-        write(c, row)
         event(c, row, actor, action, detail)
+        if old_delivery and (action == "review-open" or row["status"] != "SIGNED_OFF" or row["phase"] == "CANCELLED"):
+            row.pop("distribution", None)
+            event(c, row, actor, "final-copy-withdrawn", {"copyId": old_delivery["id"]})
+        if row["status"] == "SIGNED_OFF" and not row.get("distribution") and (
+                action == "distribute" or action in {"review-sign", "review-close"}):
+            distribute(c, row)
+            if row["phase"] == "ACTIVE":
+                row["switchLog"] = {"openedAt": store.now_iso(), "openedBy": actor,
+                                    "copyId": row["distribution"]["id"], "entries": [], "notes": []}
+        write(c, row)
+        if action == "log-close" and row.get("registerOutage"):
+            store._close_outage_record(c, row["registerOutage"], actor, detail["text"])
     return get(ident)
 
 
@@ -307,6 +526,7 @@ def add_source(ident, version, name, kind, content, actor):
         except (UnicodeError, ValueError):
             raise ValueError("Text/JSON source is not valid UTF-8 or JSON") from None
     with session() as c:
+        c.execute("BEGIN IMMEDIATE")
         row = checked(c, ident, {"version": version})
         if row["phase"] != "FUTURE":
             raise ValueError("Return the plan to Future before revising sources")
@@ -317,6 +537,8 @@ def add_source(ident, version, name, kind, content, actor):
         c.execute("INSERT INTO uwpc_request_sources(id,request_id,name,kind,mime,sha256,content) VALUES (?,?,?,?,?,?,?)",
                   (source["id"], ident, name, kind, source["mime"], source["sha256"], content))
         row["sources"].append(source)
+        if actor not in row.setdefault("contentEditors", []):
+            row["contentEditors"].append(actor)
         invalidate(row)
         row["version"] += 1
         write(c, row)
@@ -405,6 +627,8 @@ def generate_text(row, sources):
 
 
 def generate(ident, payload, actor):
+    if outage_review.PRACTICE_DB.get() is not None:
+        raise ValueError("Practice packages use the supplied training reference")
     with session() as c:
         row = checked(c, ident, payload)
         if row["phase"] != "FUTURE" or row["status"] in {"PENDING_SIGNOFF", "SIGNED_OFF"}:
@@ -427,7 +651,8 @@ def generate(ident, payload, actor):
     with session() as c:
         current = checked(c, ident, payload)
         evidence.recheck(bundle, actor)
-        current.update(generation=document, review=None, status="GENERATED", version=current["version"] + 1)
+        invalidate(current)
+        current.update(generation=document, status="GENERATED", version=current["version"] + 1)
         write(c, current)
         event(c, current, actor, "generated", document)
     return get(ident)
@@ -562,6 +787,37 @@ def _pdf_escape(value):
     return _plain(value).encode("latin-1", "replace").decode("latin-1").replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
+def _review_cover(row):
+    if not outage_review.required(row):
+        return []
+    review = row.get("packageReview") or {}
+    lines = [row["title"], f"Outage {row['outageId']} | {row['reviewTrigger']}",
+             f"Work window: {row['start']} to {row['end']}",
+             "Sites: " + ", ".join(row["affectedSites"]),
+             "Planning review complete" if row["status"] == "SIGNED_OFF" else "Planning review open",
+             "Operational release remains with the controlling authority."]
+    if row.get("practice"):
+        lines.insert(0, "PRACTICE EXERCISE - fictitious team and equipment")
+    if review:
+        lines += [f"Review revision {review['number']} | Due {review['due']}",
+                  f"Preparer: {review['preparer']} | Manager: {review['owner']}",
+                  f"Package SHA-256: {review['digest']}", review["summary"]]
+        for task in review["tasks"]:
+            lines.append(f"{task['role'].title()} {task['site']} | {task['account']} | {task['signedAt'] or 'Awaiting signature'}")
+    lines += [f"Source: {s['name']} | SHA-256 {s['sha256']}" for s in row["sources"]]
+    for issue in row.get("reviewIssues", []):
+        lines.append(f"Correction {issue['id']} | {issue['actor']} | {issue['comment']}")
+        lines.append(f"Response: {issue.get('answer', 'Pending')} | Confirmed: {issue.get('closedAt', 'Pending')}")
+    wrapped = [line for item in lines for line in textwrap.wrap(item, 85)]
+    pages = []
+    for offset in range(0, len(wrapped), 40):
+        commands = ["BT /F2 17 Tf 44 744 Td (Outage package review) Tj ET"]
+        for index, line in enumerate(wrapped[offset:offset + 40]):
+            commands.append(f"BT /F1 10 Tf 44 {710 - 16 * index} Td ({_pdf_escape(line)}) Tj ET")
+        pages.append("\n".join(commands))
+    return pages
+
+
 def _export_summary_pdf(row):
     pages, commands, y = [], [], 742
     def page():
@@ -597,6 +853,7 @@ def _export_summary_pdf(row):
         wrapped(value or "Not entered", 88, 10)
         y -= 4
     page()
+    pages = [p.encode("latin-1", "replace") for p in _review_cover(row)] + pages
     objects = [b"<< /Type /Catalog /Pages 2 0 R >>", b"", b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>", b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>"]
     page_ids = []
     for stream in pages:
@@ -751,16 +1008,74 @@ def _pc17a_pdf(row):
         wrapped(41, 104, row.get("notes", ""), 112, 8, 10, 5)
         text(41, 48, "DRAFT - QUALIFIED REVIEW REQUIRED - Operator-entered order; not an operational release or authorization.", 7, True, "0.65 0.10 0.10")
         pages.append("\n".join(commands))
-    return _pdf_bytes(pages)
+    return _pdf_bytes(_review_cover(row) + pages)
 
 
 def export_pdf(row):
     return _pc17a_pdf(row) if row.get("template") == "pc17a" else _export_summary_pdf(row)
 
 
-def export_record(ident, kind):
+def _switch_log_pdf(row):
+    log = row["switchLog"]
+    lines = [row["title"], f"Outage {row['outageId']} | Review revision {row['distribution']['revision']}",
+             f"Opened {log['openedAt']} by {log['openedBy']}"]
+    for entry in log["entries"]:
+        lines += [f"{entry['sequence']}. {entry['occurredAt']} | {entry['site'] or 'Control room'} | "
+                  f"{entry['actor']} | Step {entry.get('step', '-')} {entry.get('device', '')}",
+                  entry["text"], f"Recorded {entry['at']}"]
+    if log.get("closure"):
+        end = log["closure"]
+        lines += [f"Finished / closed {end['at']} by {end['actor']}", end["text"]]
+    for note in log["notes"]:
+        lines += [f"Closeout note | {note['at']} | {note['actor']}", note["text"]]
+    wrapped = [line for item in lines for line in textwrap.wrap(item, 85)]
+    pages = []
+    for offset in range(0, len(wrapped), 40):
+        commands = ["BT /F2 17 Tf 44 744 Td (Electronic switching log) Tj ET"]
+        commands.extend(f"BT /F1 10 Tf 44 {710 - 16 * i} Td ({_pdf_escape(text)}) Tj ET"
+                        for i, text in enumerate(wrapped[offset:offset + 40]))
+        pages.append("\n".join(commands))
+    return _pdf_bytes(pages)
+
+
+def package_zip(row, source_content):
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("package-and-review-cover.pdf", export_pdf(row))
+        archive.writestr("review-record.json", json.dumps(row, ensure_ascii=False, indent=2))
+        if row.get("switchLog"):
+            archive.writestr("electronic-switching-log.pdf", _switch_log_pdf(row))
+        for source in row["sources"]:
+            content = source_content(source)
+            if hashlib.sha256(content).hexdigest() != source["sha256"]:
+                raise Conflict("A stored source differs from the reviewed package")
+            filename = re.sub(r"[^\w. -]", "_", source["name"])
+            archive.writestr(f"sources/{source['id']}/{filename}", content)
+    return output.getvalue()
+
+
+def export_record(ident, kind, version=None, *, copy_id=None, actor=None):
+    if kind == "final":
+        with session() as c:
+            row = read(c, ident)
+            delivery = row.get("distribution") or {}
+            if not delivery or delivery["id"] != copy_id or row["status"] != "SIGNED_OFF":
+                raise Conflict("This final copy has been superseded or withdrawn")
+            if actor not in delivery["recipients"]:
+                raise PermissionError("This final copy is assigned to the outage team")
+            record = c.execute("SELECT content FROM uwpc_final_copies WHERE id=? AND request_id=? AND digest=?",
+                               (copy_id, ident, delivery["digest"])).fetchone()
+            if not record or hashlib.sha256(record["content"]).hexdigest() != delivery["sha256"]:
+                raise Conflict("The final copy failed its integrity check")
+            return record["content"], "application/zip", f"{ident}-final-r{delivery['revision']}.zip"
     row = get(ident)
+    if version is not None and str(row["version"]) != str(version):
+        raise Conflict("The package changed. Reopen the current revision before downloading.")
     safe = re.sub(r"[^A-Za-z0-9_-]+", "-", row.get("title", "uwpc")).strip("-")[:80] or "uwpc"
+    if kind == "package" and row.get("packageReview"):
+        review = row["packageReview"]
+        output = package_zip(row, lambda source: source_bytes(ident, source["id"])["content"])
+        return output, "application/zip", f"{safe}-review-{review['number']}.zip"
     if kind == "xlsx":
         body = export_xlsx(row)
         return body, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", f"{safe}.xlsx"

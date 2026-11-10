@@ -3274,28 +3274,40 @@ def close_outage(
     """Close an outage. The record is retained; closing twice is a no-op."""
     actor = actor.strip()[:80] or "operator"
     with _LOCK, _session() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='uwpc_requests'").fetchone():
+            linked = connection.execute("SELECT body FROM uwpc_requests WHERE json_extract(body,'$.registerOutage')=?",
+                                        (outage_id,)).fetchone()
+            if linked:
+                plan = json.loads(linked["body"])
+                if plan.get("reviewTrigger") not in {"", None, "routine"} and plan["phase"] not in {"CANCELLED", "COMPLETED"}:
+                    raise ValueError("Finish the linked outage plan in its electronic switching log")
+        return _close_outage_record(connection, outage_id, actor, details)
+
+
+def _close_outage_record(connection, outage_id, actor, details):
+    row = connection.execute("SELECT * FROM outages WHERE id=?", (outage_id,)).fetchone()
+    if row is None:
+        return None
+    if row["status"] != "Closed":
+        timestamp = now_iso()
+        connection.execute(
+            "UPDATE outages SET status='Closed', closed_at=?, closed_by=? WHERE id=?",
+            (timestamp, actor, outage_id),
+        )
+        _append_outage_event(
+            connection,
+            outage_id=outage_id,
+            actor=actor,
+            event="closed",
+            site=row["site"],
+            prior_status=row["status"],
+            new_status="Closed",
+            details=details or "outage marked closed",
+            at=timestamp,
+        )
         row = connection.execute("SELECT * FROM outages WHERE id=?", (outage_id,)).fetchone()
-        if row is None:
-            return None
-        if row["status"] != "Closed":
-            timestamp = now_iso()
-            connection.execute(
-                "UPDATE outages SET status='Closed', closed_at=?, closed_by=? WHERE id=?",
-                (timestamp, actor, outage_id),
-            )
-            _append_outage_event(
-                connection,
-                outage_id=outage_id,
-                actor=actor,
-                event="closed",
-                site=row["site"],
-                prior_status=row["status"],
-                new_status="Closed",
-                details=details or "outage marked closed",
-                at=timestamp,
-            )
-            row = connection.execute("SELECT * FROM outages WHERE id=?", (outage_id,)).fetchone()
-        return _outage_record(row, connection)
+    return _outage_record(row, connection)
 
 
 def outage_history(outage_id: str | None = None, limit: int = 250) -> list[dict[str, Any]]:

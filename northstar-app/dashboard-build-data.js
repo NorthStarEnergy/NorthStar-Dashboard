@@ -3,12 +3,36 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.224",
-    "published": "2026-10-19",
-    "publishedAt": "2026-10-19T20:02:02-04:00",
-    "summary": "Research: pull daily-report weather screenshots and flow graphs on demand"
+    "version": "v0.229",
+    "published": "2026-11-10",
+    "publishedAt": "2026-11-10T01:38:04-05:00",
+    "summary": "Open the Outages menu, current register and UWPC Builder for signed-in operators across dashboard views."
   },
   "history": [
+    {
+      "version": "v0.229",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T01:38:04-05:00",
+      "summary": "Open the Outages menu, current register and UWPC Builder for signed-in operators across dashboard views."
+    },
+    {
+      "version": "v0.228",
+      "published": "2026-11-09",
+      "publishedAt": "2026-11-09T23:55:23-05:00",
+      "summary": "Distribute approved outage packages to the assigned team, record switching activity, and close the outage with follow-up notes."
+    },
+    {
+      "version": "v0.227",
+      "published": "2026-11-09",
+      "publishedAt": "2026-11-09T23:40:27-05:00",
+      "summary": "Significant outage packages now route to named managers, scheduled operators, an independent checker and each affected site."
+    },
+    {
+      "version": "v0.226",
+      "published": "2026-10-27",
+      "publishedAt": "2026-10-27T06:00:00-04:00",
+      "summary": "Direct IESO news, RSS and full public report streams"
+    },
     {
       "version": "v0.224",
       "published": "2026-10-19",

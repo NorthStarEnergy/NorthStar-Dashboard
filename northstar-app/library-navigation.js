@@ -2,7 +2,7 @@
 (() => {
  'use strict';
  const params=new URLSearchParams(location.search);
- let ryanOperator=false;
+ const availableTabs=new Set();
  if(params.has('libraryBuild')){
   const b=['v1','v2','v3'].includes(params.get('libraryBuild'))?params.get('libraryBuild'):'v1';
   const back=document.createElement('a');back.textContent='← Library';back.href='library.html?build='+b;
@@ -14,8 +14,8 @@
  const library=id=>'library.html?build='+encodeURIComponent(build())+(id?'&item='+encodeURIComponent(id):'');
  document.addEventListener('click',e=>{
    const b=e.target.closest('button,a');if(!b)return;
-   const ryanEngineering=ryanOperator && b.dataset.tab==='switching';
-   if(b.closest('#sideNav')&&!ryanEngineering&&(b.classList.contains('ns-demo-restricted')||['switching','outages','games'].includes(b.dataset.tab))){e.preventDefault();e.stopImmediatePropagation();return;}
+   const tab=b.dataset.tab;
+   if(b.closest('#sideNav')&&!availableTabs.has(tab)&&(b.classList.contains('ns-demo-restricted')||['switching','outages','games'].includes(tab))){e.preventDefault();e.stopImmediatePropagation();return;}
    const id=b.dataset.openModule||b.dataset.v3Destination;
    if(b.dataset.tab==='tools'||id==='operations:research'||id==='tools:schematic-builder'){
     e.preventDefault();e.stopImmediatePropagation();
@@ -34,6 +34,7 @@
   if(location.hash==='#tools'&&!params.has('nsLibrary'))location.replace(library());
  }
  Promise.resolve(window.northstarOperatorSession).then(session=>{
-  ryanOperator=session?.role==='operator' && String(session.username||'').toLowerCase()==='ryan';
+  if(session?.role==='operator' || (session?.required===false && !session.role))availableTabs.add('outages');
+  if(session?.role==='operator' && String(session.username||'').toLowerCase()==='ryan')availableTabs.add('switching');
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();});
 })();
