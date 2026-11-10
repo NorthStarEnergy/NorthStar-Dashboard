@@ -1,4 +1,4 @@
-v0.236
+v0.237
 2026-11-10
-2026-11-10T05:36:36-05:00
-Adds outage reports, an outage-wide event log and exclusive checkout for editing package forms and documents.
+2026-11-10T06:09:17-05:00
+Adds a personal Inbox, advanced settings, field help, site device suggestions and a compact form toolbar to Outage Manager.

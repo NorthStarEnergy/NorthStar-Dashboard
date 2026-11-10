@@ -62,7 +62,11 @@ async function check() {
     await expectFolder(first);
     await page.getByRole('link',{name:'Outages',exact:true}).click();
     await expectFolder(first);
-    assert.deepEqual(await page.locator('#packageNav > a').allTextContents(),['Home','Outages','UWPC','Reports']);
+    assert.deepEqual(await page.locator('#packageNav > a > span').allTextContents(),['Home','Outages','UWPC','Reports','Inbox']);
+    assert.ok(await page.getByLabel('Filter by site').isHidden());
+    await page.getByRole('button',{name:'Advanced settings'}).click();
+    assert.ok(await page.getByLabel('Filter by site').isVisible());
+    await page.getByRole('button',{name:'Advanced settings'}).click();
     const brand=page.getByRole('link',{name:'Outage Manager home'});
     const newAction=page.getByRole('link',{name:'New',exact:true});
     async function checkHeader(){
@@ -81,13 +85,28 @@ async function check() {
     await page.getByRole('link',{name:'New',exact:true}).click();
     assert.ok(await page.getByRole('button',{name:'Create outage'}).evaluate(el=>el.getBoundingClientRect().bottom<innerHeight));
     await page.screenshot({path:path.join(out,'new.png')});
+    assert.ok(await page.getByLabel('Priority').isHidden());
+    await page.getByLabel('Work scope').hover();
+    await page.getByRole('tooltip').getByText('Describe the work and the equipment or sites it covers.').waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('#outageFieldHelp').waitFor({state:'hidden'});
+    await page.getByLabel('Work scope').focus();
+    await page.keyboard.press('Tab');
+    await page.getByRole('tooltip').getByText('Choose why review is needed. This sets the review requirements.').waitFor();
+    await page.keyboard.press('Escape');
     await page.getByLabel('Outage name').fill('West bay inspection');
     await page.getByLabel('Primary site').fill('Norman');
+    await page.getByLabel('Equipment',{exact:true}).click();
+    await page.getByRole('option',{name:/FIX-N/}).waitFor();
+    assert.equal(await page.getByRole('option',{name:/FIX-K/}).count(),0);
+    await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
+    assert.equal(await page.getByLabel('Equipment',{exact:true}).inputValue(),'Norman · FIX-N');
     await page.getByLabel('Equipment',{exact:true}).fill('West bay');
     await page.getByLabel('Start',{exact:true}).fill('2030-09-18T07:00');
     await page.getByLabel('End',{exact:true}).fill('2030-09-18T17:00');
     await page.getByLabel('Work scope').fill('Review the west bay references.');
     await page.getByLabel('Review trigger').selectOption('manager designation');
+    await page.getByText('Advanced settings',{exact:true}).click();
     await page.getByLabel('SSC outage manager',{exact:true}).selectOption('fixture_operator');
     await page.getByLabel('Local outage manager',{exact:true}).selectOption('fixture_area');
     await page.getByRole('button',{name:'Create outage'}).click();
@@ -117,6 +136,11 @@ async function check() {
     await tip.waitFor({state:'hidden'});
     assert.match(await page.locator('.coordination').innerText(),/fixture_operator/);
     await page.screenshot({path:path.join(out,'package-overview.png')});
+    await page.getByText('Advanced settings',{exact:true}).click();
+    await page.getByLabel('Tag a person').selectOption('fixture_relief');
+    await page.getByLabel('Note',{exact:true}).fill('Check the outage window.');
+    await page.getByRole('button',{name:'Send tag'}).click();
+    await page.getByText('Tag sent to fixture_relief.').waitFor();
     await tree.getByRole('link',{name:'Request',exact:true}).click();
     await page.getByRole('heading',{name:'Request',exact:true}).waitFor();
     assert.ok(await page.getByText('West bay',{exact:true}).isVisible());
@@ -127,6 +151,7 @@ async function check() {
     assert.equal(await page.locator('#uwpcRequestForm').count(),0);
     await tree.getByRole('link',{name:'Drawings & documents'}).click();
     await page.locator('#uwpcSourceUpload').waitFor();
+    assert.ok(await page.locator('[data-action=generate]').isHidden());
     assert.equal(await page.locator('#outageRouting').count(),0);
     await tree.getByRole('link',{name:'Switching log'}).click();
     await page.getByText('The switching log has not opened.').waitFor();
@@ -137,8 +162,9 @@ async function check() {
     assert.equal(await page.locator('#uwpcRequestForm [name=title]').inputValue(),'West bay inspection');
     assert.equal(await page.getByRole('link',{name:'Open practice outage'}).count(),0);
     await page.goto(origin+'/outage-manager.html#inbox');
-    await page.getByText('You have no outstanding outage alerts.').waitFor();
-    assert.ok(await page.locator('#outageAlerts').isHidden());
+    await page.getByText('Your Inbox is empty.').waitFor();
+    assert.ok(await page.locator('#inboxLink').isVisible());
+    assert.ok(await page.locator('#inboxLink .inbox-badge').isHidden());
     if(process.env.OUTAGE_MANAGER_FIXTURE_BOOK){
       await page.getByRole('link',{name:'UWPC',exact:true}).click();
       const bar=page.locator('.library-bar');
@@ -213,6 +239,11 @@ async function check() {
     await page.setViewportSize({width:1440,height:900});
     await tree.getByRole('link',{name:'Forms',exact:true}).click();
     const form=page.locator('#uwpcRequestForm');
+    const toolbar=page.locator('#checkoutBar');
+    await toolbar.getByRole('button',{name:'Check out to edit'}).waitFor();
+    const [actionX,statusX,pdfX,excelX]=await toolbar.locator('button,[role=status],a').evaluateAll(els=>els.map(el=>el.getBoundingClientRect().x));
+    assert.ok(actionX<statusX && statusX<pdfX && pdfX<excelX);
+    assert.ok(await toolbar.getByRole('link',{name:'Download Excel'}).locator('svg').isVisible());
     await page.getByRole('button',{name:'Check out to edit'}).click();
     const peer=await browser.newContext();
     assert.equal((await peer.request.post(origin+'/api/auth/login',{data:{username:'fixture_relief',password:'fixture-only-password'}})).status(),200);
@@ -220,7 +251,21 @@ async function check() {
     await peerPage.getByText('Checked out by fixture_author',{exact:true}).waitFor();
     assert.ok(await peerPage.getByRole('button',{name:'Check out to edit'}).isDisabled());
     assert.ok(await peerPage.locator('#uwpcRequestForm [name=title]').isDisabled());
+    for(const [name,prefix] of [['Open PDF','%PDF'],['Download Excel','PK']]){
+      const href=await peerPage.locator('#checkoutBar').getByRole('link',{name}).getAttribute('href');
+      const file=await peerPage.evaluate(async ({href,n})=>{const r=await fetch(href);
+        return [r.status,new TextDecoder().decode((await r.arrayBuffer()).slice(0,n))];},{href,n:prefix.length});
+      assert.deepEqual(file,[200,prefix]);
+    }
     await form.locator('[name=diagramRevision]').fill('R1');
+    await form.locator('[name=affectedSites]').fill('Kenora');
+    await form.getByRole('button',{name:'Add sequence line'}).click();
+    const added=form.locator('[data-step-field=device]').last();
+    await added.click();await page.getByRole('option',{name:/FIX-K/}).click();
+    assert.equal(await added.inputValue(),'Kenora · FIX-K');
+    await form.locator('[name=affectedSites]').fill('');
+    assert.equal(await added.inputValue(),'Kenora · FIX-K');
+    await added.fill('');
     await form.locator('[data-step-field=device]').first().fill('Fixture device');
     await form.locator('[data-step-field=operation]').first().fill('Fixture step');
     await form.getByRole('button',{name:'Save changes'}).click();
@@ -236,6 +281,12 @@ async function check() {
     await peerPage.getByText('Checked out by fixture_relief',{exact:true}).waitFor();
     await peerPage.getByRole('button',{name:'Check in',exact:true}).click();
     await peerPage.getByRole('button',{name:'Check out to edit'}).waitFor();
+    await peerPage.getByRole('link',{name:'Inbox · 1 unread'}).click();
+    await peerPage.getByRole('link',{name:/fixture_author tagged you: Check the outage window/}).click();
+    await peerPage.getByRole('cell',{name:'Tagged fixture_relief: Check the outage window.'}).waitFor();
+    await peerPage.getByRole('link',{name:'Inbox',exact:true}).click();
+    await peerPage.locator('#reviews a').waitFor();
+    await peerPage.locator('#inboxLink .inbox-badge').waitFor({state:'hidden'});
     await peer.close();
     await tree.getByRole('link',{name:'Event log',exact:true}).click();
     await page.getByRole('cell',{name:'Checked in',exact:true}).first().waitFor();
@@ -274,7 +325,7 @@ async function check() {
     await progress.getByRole('link',{name:'Final copy',exact:true}).hover();
     await tip.getByText('Distributed',{exact:true}).waitFor();
     await asUser('Ryan',origin+'/outage-manager.html#home');
-    await page.getByRole('link',{name:'Outage alerts for 1 outage',exact:true}).click();
+    await page.getByRole('link',{name:'Inbox · 1 unread',exact:true}).click();
     await page.locator('#reviews a').filter({hasText:'Final copy distributed'}).click();
     await page.getByRole('link',{name:'Download final copy'}).waitFor();
     await page.getByRole('textbox',{name:'Concern',exact:true}).fill('Confirm crew arrival');

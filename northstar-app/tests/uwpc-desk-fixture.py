@@ -22,6 +22,10 @@ with tempfile.TemporaryDirectory(prefix="northstar-uwpc-test-") as temp:
         import uuid
         import northstar_outage_manager as manager
         import northstar_operator_knowledge as knowledge
+        snapshot=Path(temp)/"devices.json"
+        snapshot.write_text(json.dumps({"assets":[{"site":"FFO","location":loc,"assetNum":tag,"description":"Fixture breaker"}
+            for loc,tag in [("FFO-NOG-200","FIX-N"),("FFO-KEG-200","FIX-K")]]}))
+        os.environ["NORTHSTAR_MAXIMO_SNAPSHOT"]=str(snapshot)
         for title, site, asset, day in [
             ("Unit 2 stator inspection", "Twin Falls", "Unit 2", 8),
             ("Feeder protection review", "Iroquois Falls", "115 kV feeder", 11),

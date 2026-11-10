@@ -38,8 +38,9 @@
     fields.disabled=!lock.mine || !lock.canEdit;
     bar.title=lock.expires?'Checkout expires '+when(new Date(lock.expires*1000)):'';
     bar.querySelector('span').textContent=lock.owner?`Checked out by ${lock.owner}`:
-      lock.canEdit===false?'Read-only package':lock.canEdit?'Available to edit':'Checking edit access…';
+      lock.canEdit===false?'Read-only package':lock.canEdit?'Not checked out':'Checking edit access…';
     const button=bar.querySelector('button');
+    if(!button)return;
     button.textContent=lock.mine?'Check in':'Check out to edit';
     button.hidden=!lock.canEdit && !lock.mine;
     button.disabled=Boolean(lock.owner&&!lock.mine);
@@ -156,7 +157,7 @@
   function switchingRow(step, index) {
     return `<tr data-switching-step>
       <td class="uwpc-sequence-number">${index + 1}</td>
-      ${['device','removeTag','operation','placeTag','lockNo','orderedBy','completedBy'].map(field => `<td><textarea rows="2" data-step-field="${field}" aria-label="Sequence ${index + 1} ${field}">${esc(step[field] || '')}</textarea></td>`).join('')}
+      ${['device','removeTag','operation','placeTag','lockNo','orderedBy','completedBy'].map(field => `<td><textarea rows="2" data-step-field="${field}" ${managerPackage && field==='device'?'placeholder="Choose or type"':''} aria-label="Sequence ${index + 1} ${field}">${esc(step[field] || '')}</textarea></td>`).join('')}
     </tr>`;
   }
 
@@ -195,6 +196,7 @@
     return `<fieldset><legend>Package details</legend><div class="uwpc-fields">
       ${input('title','Package title','text',r.title,'required placeholder="Short, recognizable package name"')}
       ${input('site','Station / site','text',r.site,'required placeholder="Station or facility"')}
+      ${managerPackage ? input('equipment','Equipment','text',r.equipment,'maxlength="160"') : ''}
       ${input('outageId','Outage ID','text',r.outageId,'placeholder="Linked outage or event ID"')}
       <label><span>Request type</span><select name="kind">${Object.entries(labels).map(([value,label]) => `<option value="${value}" ${value===r.kind?'selected':''}>${label}</option>`).join('')}</select></label>
       <label><span>UWPC form</span><select name="template">${forms.map(form => `<option value="${form.template}" ${form.template===r.template?'selected':''}>${form.code} · ${form.title}</option>`).join('')}</select></label>
@@ -214,7 +216,7 @@
   function exportPanel(record) {
     if (!record.id) return '';
     const base = `${api}/${encodeURIComponent(record.id)}/exports`;
-    if (managerPackage) return `<div class="uwpc-actions"><a class="uwpc-button" href="${base}/pdf?v=${record.version}" target="_blank" rel="noopener">Open PDF</a><a class="uwpc-button" href="${base}/xlsx?v=${record.version}" download>Download Excel</a></div>`;
+    if (managerPackage) return `<div class="file-actions"><a class="uwpc-button pdf" href="${base}/pdf?v=${record.version}" aria-label="Open PDF" title="Open PDF" target="_blank" rel="noopener">PDF</a><a class="uwpc-button excel" href="${base}/xlsx?v=${record.version}" download><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="8" y="2" width="14" height="20" rx="2" fill="#c5efcf"/><path d="M12 7h8m-8 5h8m-8 5h8m-4-14v18" stroke="#23804e"/><rect x="1" y="5" width="14" height="14" rx="2" fill="#12653a"/><path d="m5 9 5 6m0-6-5 6" stroke="white" stroke-width="1.8"/></svg>Download Excel</a></div>`;
     return `<section class="uwpc-export-panel" aria-label="Generated form files"><div class="uwpc-export-copy"><small>REVISION ${record.version}</small><h4>Review files ready</h4><p>Check the PDF, make corrections in this form, or continue editing in the Excel copy.</p><div class="uwpc-actions"><a class="uwpc-button uwpc-primary" href="${base}/pdf?v=${record.version}" target="_blank" rel="noopener">Open PDF</a><a class="uwpc-button" href="${base}/xlsx?v=${record.version}" download>Download editable Excel</a></div></div><iframe title="UWPC PDF preview" src="${base}/pdf?v=${record.version}"></iframe></section>`;
   }
 
@@ -231,6 +233,8 @@
     const editor = $('uwpcEditor');
     const section = managerPackage ? managerSection : 'all';
     const parts = [];
+    const advanced = content => managerPackage
+      ? `<details class="advanced"><summary>Advanced settings</summary>${content}</details>` : content;
     if (!managerPackage) parts.push(`<header class="uwpc-form-head"><div><small>${r.id ? `${esc(managerPackage ? (r.outageId || 'Outage package') : r.id)} · REVISION ${r.version}` : `NEW ${esc(chosen.code)} FORM`}</small><h3>${r.id ? esc(r.title) : esc(chosen.title)}</h3>${managerPackage ? '' : '<p>Complete the known information. Missing operational facts remain unverified.</p>'}</div><button type="button" data-action="cancel">Close</button></header>`);
     if (section === 'all' || section === 'approvals') {
       parts.push(outage.cover(r, roles, actor, operators, !managerPackage));
@@ -239,7 +243,7 @@
     const inRegister=r.id && !practice && (r.registerOutage || r.outageId || r.kind==='SWITCHING_PLAN');
     if(!managerPackage && inRegister)parts.push(`<a class="uwpc-button" href="/outage-manager-package.html?section=forms&id=${encodeURIComponent(r.id)}">Edit in Outage Manager</a>`);
     if (section === 'all' || section === 'forms') parts.push(`${r.preparationMode === 'INTAKE' ? `${r.generation ? `<section class="uwpc-generated"><h4>${r.generation.model === "not-run-missing-controlled-evidence" ? "Evidence checklist · analysis paused" : "AI draft · qualified review required"}</h4><pre class="uwpc-document">${esc(r.generation.text)}</pre></section>` : '<p>Request saved. Add your evidence below to prepare an AI draft.</p>'}<details class="uwpc-intake-form"><summary>Complete and save the draft form</summary>` : ''}
-      ${exportPanel(r)}
+      ${managerPackage ? '' : exportPanel(r)}
       <form id="uwpcRequestForm">
         ${r.template === 'pc17a' ? switchingForm(r) : standardForm(r)}
         ${outage.classification(r)}
@@ -249,7 +253,7 @@
     if (r.id && (section === 'all' || section === 'documents')) parts.push(`<details class="uwpc-advanced"><summary>Sources and proposal generation</summary><div class="uwpc-advanced-body"><p>Attach the evidence used for this revision. Generation creates a review proposal, never an issued permit or release.</p>
         <div class="uwpc-actions"><label>File purpose<select id="uwpcSourceKind"><option value="diagram">Circuit diagram</option><option value="source">Procedure / supporting request</option></select></label><input id="uwpcSourceUpload" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.json,.txt" aria-label="Attach source"><button type="button" data-action="upload">Attach</button></div>
         <ul>${r.sources.map(source => `<li><a href="${api}/${encodeURIComponent(r.id)}/sources/${encodeURIComponent(source.id)}" target="_blank" rel="noopener">${esc(source.name)}</a> · ${esc(source.kind)} <button type="button" data-remove-source="${esc(source.id)}">Remove</button></li>`).join('') || '<li>No sources attached.</li>'}</ul>
-        <button type="button" data-action="generate">Generate review proposal</button>
+        ${advanced('<button type="button" data-action="generate">Generate review proposal</button>')}
         ${r.generation && r.preparationMode !== 'INTAKE' ? `<div class="uwpc-generated"><h4>Generated proposal · ${esc(status(r.status))}</h4><pre class="uwpc-document">${esc(r.generation.text)}</pre><p class="uwpc-digest">Document SHA-256: ${esc(r.generation.digest)}</p></div>` : ''}
       </div></details>`);
     if (r.id && (section === 'all' || section === 'approvals')) parts.push(!fullReview && r.generation && r.preparationMode !== 'INTAKE' ? `<details class="uwpc-advanced"><summary>Operator review and sign-off</summary><div class="uwpc-advanced-body"><p>All selected operators endorse this exact revision. Sign-off records review; operational authorization remains with the controlling authority.</p>
@@ -259,7 +263,7 @@
         ${canSign ? `<label>Review comments<textarea id="uwpcDecisionComment" rows="3"></textarea></label><label class="uwpc-check"><input id="uwpcReviewed" type="checkbox"> I reviewed this document, diagram, references and unresolved conditions.</label><div class="uwpc-actions"><button type="button" data-action="approve">Sign off as ${esc(actor)}</button><button type="button" data-action="return">Return for changes</button></div>` : ''}
       </div></details>` : '');
     if (r.id && (section === 'all' || section === 'history')) parts.push(`<details class="uwpc-advanced"><summary>Lifecycle, correspondence and audit history</summary><div class="uwpc-advanced-body">
-        <div class="uwpc-actions"><label>Plan status<select id="uwpcPlanPhase">${Object.entries(phaseLabels).map(([value,label]) => `<option value="${value}" ${r.phase===value?'selected':''}>${label}</option>`).join('')}</select></label><button type="button" data-action="phase">Update status</button></div>
+        ${advanced(`<div class="uwpc-actions"><label>Plan status<select id="uwpcPlanPhase">${Object.entries(phaseLabels).map(([value,label]) => `<option value="${value}" ${r.phase===value?'selected':''}>${label}</option>`).join('')}</select></label><button type="button" data-action="phase">Update status</button></div>`)}
         <form id="uwpcCorrespondenceForm"><h4>Authority correspondence</h4><div class="uwpc-fields"><label><span>Direction</span><select name="direction"><option value="TO_AUTHORITY">To authority</option><option value="FROM_AUTHORITY">From authority</option></select></label>${input('authority','Authority','text',r.authority)}${input('reference','Reference')}${input('occurredAt','Date and time','datetime-local',dateValue(new Date().toISOString()))}<label class="uwpc-wide"><span>Request / response</span><textarea name="message" rows="3" required></textarea></label></div><button type="submit">Record correspondence</button><small>Records an exchange; it does not send a message.</small></form>
         ${(r.events || []).map(entry => `<article class="uwpc-history"><strong>${esc(status(entry.event))}</strong><small>${esc(entry.actor)} · ${esc(when(entry.at))}</small>${entry.event.startsWith('review-') ? `<details><summary>Review record</summary><pre class="uwpc-document">${esc(JSON.stringify(entry.detail, null, 2))}</pre></details>` : ''}</article>`).join('') || '<p class="uwpc-empty">No audit events.</p>'}
       </div></details>`);
@@ -275,10 +279,8 @@
       const fields=document.createElement('fieldset');fields.id='checkoutFields';fields.disabled=true;
       const article=editor.firstElementChild;
       fields.append(...article.childNodes);article.append(fields);
-      if(!viewer){
-        article.insertAdjacentHTML('afterbegin','<div id="checkoutBar"><span></span><button type="button" data-action="checkout"></button></div>');
-        paintCheckout();
-      }
+      article.insertAdjacentHTML('afterbegin',`<div id="checkoutBar">${viewer?'':'<button type="button" data-action="checkout" hidden></button>'}<span role="status">${viewer?'Read-only package':''}</span>${section==='forms'?exportPanel(r):''}</div>`);
+      paintCheckout();
     }else if(!managerPackage && inRegister){
       editor.querySelectorAll('#uwpcRequestForm input,#uwpcRequestForm select,#uwpcRequestForm textarea,#uwpcRequestForm button:not([data-action=cancel]),#uwpcSourceUpload,#uwpcSourceKind,[data-action=upload],[data-action=generate],[data-remove-source]').forEach(el=>el.disabled=true);
     }
@@ -291,7 +293,7 @@
     }
     if (managerPackage) editor.querySelectorAll('.uwpc-form-shell > details,#checkoutFields > details').forEach(el => {el.open=true;});
     if (r.outageId && $('uwpcRequestForm')) $('uwpcRequestForm').elements.outageId.readOnly = true;
-    if (fullReview && $('uwpcPlanPhase')) $('uwpcPlanPhase').closest('.uwpc-actions').hidden = Boolean(r.switchLog || r.distribution);
+    if (fullReview && $('uwpcPlanPhase')) ($('uwpcPlanPhase').closest('.advanced') || $('uwpcPlanPhase').closest('.uwpc-actions')).hidden = Boolean(r.switchLog || r.distribution);
     $('uwpcRequestForm')?.addEventListener('submit', event => {event.preventDefault(); void run(save);});
     $('uwpcRequestForm')?.addEventListener('input', () => {dirty=true;});
     $('uwpcRequestForm')?.addEventListener('change', () => {dirty=true;});

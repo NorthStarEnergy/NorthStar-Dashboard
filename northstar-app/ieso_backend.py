@@ -1797,8 +1797,20 @@ class Handler(SimpleHTTPRequestHandler):
                     self._send_json(uwpc_desk.checkout(payload.get("doc",""), payload["action"], actor, checkout_token))
                 elif self.command == "GET" and endpoint == ["session"]:
                     self._send_json({"actor":actor,"operators":operators,"outageReviewRoles":uwpc_desk.outage_review.directory(operators)})
+                elif self.command == "GET" and endpoint == ["devices"]:
+                    self._send_json(manager.site_devices(parse_qs(urlparse(self.path).query).get("site",[])))
                 elif self.command == "GET" and endpoint == ["inbox"]:
-                    self._send_json({"actor":actor,"rows":manager.inbox(actor)})
+                    self._send_json(manager.inbox(actor))
+                elif self.command == "POST" and endpoint in (["inbox","open"], ["tag"]):
+                    payload = self._json_body(4096)
+                    if not isinstance(payload, dict):
+                        raise ValueError("Expected an Inbox action")
+                    if endpoint == ["tag"]:
+                        self._send_json(manager.tag_person(payload, actor, operators), 201)
+                    elif isinstance(payload.get("key"), str):
+                        self._send_json(manager.inbox(actor, payload["key"]))
+                    else:
+                        raise ValueError("Select an Inbox item")
                 elif self.command == "GET" and endpoint == ["library"]:
                     self._send_json(manager.library(actor,params.get("q","")[:250]))
                 elif self.command == "GET" and endpoint == ["library-page"]:

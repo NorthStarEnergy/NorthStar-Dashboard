@@ -29,7 +29,7 @@ import northstar_uwpc_evidence as evidence
 MAX_SOURCE = 10 * 1024 * 1024
 MAX_TOTAL = 20 * 1024 * 1024
 FIELDS = {"title": 160, "site": 120, "outageId": 160,
-          "description": 2000, "scope": 8000, "notes": 4000,
+          "description": 2000, "scope": 8000, "notes": 4000, "equipment": 160,
           "authority": 160, "reference": 160, "diagramRevision": 160,
           "start": 40, "end": 40, "kind": 40, "template": 40, "preparationMode": 20}
 KINDS = {"REQUEST_GUARANTEE", "PROVIDE_GUARANTEE", "SWITCHING_PLAN"}
@@ -478,7 +478,7 @@ def change(ident, action, payload, actor, operators=(), *, checkout_token=None):
                 evidence.require_reviewable(row["generation"], actor)
             detail = outage_review.transition(row, action, payload, actor, outage_review.directory(operators))
         elif action == "save":
-            updated = fields(payload)
+            updated = fields({"equipment":row.get("equipment",""),**payload})
             if row.get("registerOutage") and updated["outageId"] != row["registerOutage"]:
                 raise ValueError("The plan is linked to its original outage request")
             updated.update(outage_review.classification(payload, row))
@@ -799,6 +799,7 @@ def _form_rows(row):
         ("Package", row.get("title", "")), ("Lifecycle", phase), ("Review status", row.get("status", "DRAFT")),
         ("UWPC form", str(row.get("template", "")).upper()), ("Request type", kind),
         ("Station / site", row.get("site", "")),
+        *([("Equipment",row["equipment"])] if row.get("equipment") else []),
         ("Outage ID", row.get("outageId", "")), ("Planned start", row.get("start", "")),
         ("Planned end", row.get("end", "")), ("Controlling authority", row.get("authority", "")),
         ("Authority / permit reference", row.get("reference", "")),

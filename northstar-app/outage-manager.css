@@ -26,11 +26,14 @@ body[data-manager-package] .uwpc-form-head small{overflow-wrap:anywhere}.hidden,
 :root{--nav:250px}
 .rail{padding:4px 8px 8px}
 .rail-head{display:flex;align-items:center;gap:5px;margin-bottom:4px;min-height:28px}
-.new-outage,#outageAlerts{display:inline-flex;align-items:center;justify-content:center;gap:4px;border-radius:4px;white-space:nowrap;text-decoration:none;font-size:12px;font-weight:600;min-height:26px}
+.new-outage{display:inline-flex;align-items:center;justify-content:center;gap:4px;border-radius:4px;white-space:nowrap;text-decoration:none;font-size:12px;font-weight:600;min-height:26px}
 .new-outage{margin-left:auto;padding:3px 8px;color:#fff;border:1px solid #609591;background:#205054}
 .new-outage:hover,.new-outage[aria-current=page]{background:#27676a;border-color:#8ac4c0}
-.new-outage .ico,#outageAlerts .ico{width:14px;height:14px}
-#outageAlerts{padding:2px 5px;background:#dbefed;color:#163d43}#outageAlerts:hover{background:#fff}
+.new-outage .ico{width:14px;height:14px}
+.inbox-badge{display:inline-grid;place-items:center;border-radius:50%;background:#b52236;color:white;font:700 12px/1 system-ui;width:17px;height:17px;flex:none}
+#inboxLink .inbox-badge{margin-left:auto}
+.advanced{padding:8px 12px;margin:8px 0}.advanced summary{cursor:pointer;font-weight:600;font-size:13px}.advanced .fields{margin-top:8px}
+#outageFieldHelp{position:fixed;z-index:10005;max-width:min(280px,calc(100vw - 12px));padding:7px 10px;border-radius:5px;background:#30383d;color:#f5f7f8;font:400 13px/1.4 system-ui;box-shadow:0 4px 14px #0003}
 .rail nav{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#53717d transparent;gap:2px}
 .rail nav>a{padding:6px 10px}
 .mobile-menu{display:none}
@@ -118,7 +121,14 @@ a.titlebtn{display:inline-block;text-decoration:none}a.titlebtn:hover{text-decor
 .outage-report header h1{font-size:19px;margin:0}.outage-report header p,.report-section>p,.report-empty{font-size:12px;color:var(--muted);margin:4px 0 7px}
 .report-section{background:#fff;border:1px solid var(--line);border-radius:5px;margin:7px 0;padding:9px 12px}.report-section h2,.report-section summary{font-size:15px;font-weight:650;margin:0 0 5px}
 .report-section .sheet table,#eventTable>.sheet table{white-space:normal;overflow-wrap:anywhere}.report-section .sheet td,#eventTable>.sheet td{vertical-align:top;white-space:pre-wrap}.report-section .sheet th,.report-section .sheet td,#eventTable>.sheet td{padding:5px 7px}
-#checkoutBar{justify-content:space-between;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:6px}
+#checkoutBar{justify-content:flex-start;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:6px}
+#checkoutBar .file-actions{display:inline-flex;align-items:center;gap:5px}
+body[data-manager-package] #checkoutBar :is(button,.uwpc-button){display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:4px 9px;border-radius:4px;background:#1c7048;border:1px solid #185e3d;color:white;font-weight:600;text-decoration:none}
+body[data-manager-package] #checkoutBar .pdf{background:#a92d39;border-color:#902430}
+#checkoutBar svg{width:18px;height:18px}#checkoutBar :is(button,a):hover{filter:brightness(1.12)}#checkoutBar button:disabled{opacity:.65}
+#outageDevices{position:fixed;z-index:10010;overflow:auto;max-height:min(240px,35dvh);border:1px solid #afbec6;border-radius:5px;box-shadow:0 4px 14px #1233;background:white;color:#213742;font:13px/1.3 system-ui;overscroll-behavior:contain}
+#outageDevices [role=option],#outageDevices .device-note{padding:6px 9px}#outageDevices [role=option]{cursor:pointer}#outageDevices [aria-selected=true],#outageDevices [role=option]:hover{background:#e0f1ef}
+#outageDevices small{display:block;color:#52646e}
 body[data-manager-package] #checkoutFields{min-width:0;border:0;padding:0;margin:0;background:transparent}
 @media(max-width:600px){.report-section .sheet table,#eventTable>.sheet table{min-width:540px}}
 @media print{body:has(.outage-report) :is(#shell,.skip,.report-picker){display:none}body:has(.outage-report) #main{margin:0;padding:0}.outage-report .sheet{overflow:visible}.outage-report tr{break-inside:avoid}}

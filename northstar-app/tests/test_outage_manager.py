@@ -39,6 +39,40 @@ def test_create_once_and_query_shared_register(db):
     assert manager.query_register({"offset":"999"})["offset"] == 0
 
 
+def test_tags_and_read_state_belong_to_the_recipient(db):
+    oid=manager.create_request(request(),"manager")["id"]
+    payload={"outage":oid,"recipient":"field","note":"Check the site schedule"}
+    accounts=["manager","field","area"]
+    with pytest.raises(ValueError):
+        manager.tag_person({**payload,"recipient":"unknown"},"manager",accounts)
+    manager.tag_person(payload,"manager",accounts)
+    [item]=manager.inbox("field")["items"]
+    assert item["unread"] and item["outage"]==oid
+    assert not manager.inbox("area")["items"]
+    with pytest.raises(LookupError):
+        manager.inbox("area",item["key"])
+    manager.inbox("field",item["key"])
+    manager.tag_person(payload,"manager",accounts)
+    items=manager.inbox("field")["items"]
+    assert [i["unread"] for i in items]==[True,False]
+    assert len([e for e in manager.outage_report(oid)["events"] if e["event"]=="person-tagged"])==2
+
+
+def test_site_device_union_uses_location_boundaries_and_real_references(db,monkeypatch):
+    import northstar_maximo as maximo
+    assets=[{"site":"FFO","location":"FFO-NOG-1","assetNum":f"N{i}","description":"Fixture asset"} for i in range(122)]
+    assets.extend([{**assets[0],"location":"FFO-KEG","assetNum":"K1"},
+                   {**assets[0],"location":"FFO-NOG2","assetNum":"WRONG"}])
+    monkeypatch.setattr(maximo,"_load_equipment_snapshot",lambda:{"assets":assets})
+    monkeypatch.setattr(maximo,"config",lambda:{"sites":{}})
+    store.create_one_line_document({"name":"Fixture","record":{"symbols":[
+        {"id":"s","type":"breaker","assetTag":"Drawing tag","siteCode":"Kenora GS","label":"Fixture breaker"}]}}, "operator")
+    devices=manager.site_devices(["Norman GS","Kenora"])["devices"]
+    assert len(devices)==124 and {d["site"] for d in devices}=={"Norman","Kenora"}
+    assert {d["ref"] for d in devices if d["site"]=="Kenora"}=={"Drawing tag","K1"}
+    assert not manager.site_devices(["Other site"])["devices"]
+
+
 def test_register_preserves_closed_and_unlinked_records(db):
     old=store.create_outage({"title":"Past outage","site":"East"})
     assert manager.query_register({"tab":"active"})["rows"][0]["id"]==old["id"]

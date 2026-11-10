@@ -1,3 +1,7 @@
+## 20261110-outage-inbox
+
+Added the [personal Inbox, advanced settings and field help](packets/2026-11-10-outage-inbox.md) to Outage Manager.
+
 ## 20261110-outage-reports-checkout
 
 Added [outage reports, an event log and package checkout](packets/2026-11-10-outage-reports-checkout.md).

@@ -25,8 +25,8 @@
     if(id) query.set('id',id);
     return '/outage-manager-package.html?'+query;
   }
-  const menuViews = [['home','Home'],['outages','Outages'],['library','UWPC'],['reports','Reports']];
-  const titles = {...Object.fromEntries(menuViews),new:'New outage',inbox:'Outage alerts'};
+  const menuViews = [['home','Home'],['outages','Outages'],['library','UWPC'],['reports','Reports'],['inbox','Inbox']];
+  const titles = {...Object.fromEntries(menuViews),new:'New outage'};
   const main=$('main');
   const date = value => value ? new Date(value).toLocaleString('en-CA',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}) : 'Unscheduled';
   const localDay = value => {const d=new Date(value);return Number.isNaN(+d)?'':new Date(+d-d.getTimezoneOffset()*60000).toISOString().slice(0,10);};
@@ -66,11 +66,12 @@
       }).join('')}</ul></details>`;
   }
   function shell(view,selected=null,section='overview') {
-    const navLink = ([key,label]) => `<a href="${base}#${key}" title="${label}" ${view===key?'aria-current="page"':''}>${icon(key)}<span>${label}</span></a>`;
+    const badge='<b class="inbox-badge" aria-hidden="true" hidden>!</b>';
+    const navLink = ([key,label]) => `<a href="${base}#${key}" title="${label}" ${key==='inbox'?'id="inboxLink"':''} ${view===key?'aria-current="page"':''}>${icon(key==='inbox'?'bell':key)}<span>${label}</span>${key==='inbox'?badge:''}</a>`;
     $('shell').innerHTML=`<aside class="rail"><header class="rail-head"><a class="brand" href="${base}" aria-label="Outage Manager home">Outage Manager</a>
       <a class="new-outage" href="${base}#new" title="Create an outage" ${view==='new'?'aria-current="page"':''}>${icon('new')}New</a>
-      <a id="outageAlerts" href="${base}#inbox" hidden>${icon('bell')}<span id="alertCount"></span></a></header>
-      <button class="mobile-menu" id="menuToggle" aria-controls="packageNav" aria-expanded="false">Menu</button><nav id="packageNav" aria-label="Main menu">${menuViews.map(item=>item[0]==='outages'?
+      </header>
+      <button class="mobile-menu" id="menuToggle" aria-controls="packageNav" aria-expanded="false">Menu ${badge}</button><nav id="packageNav" aria-label="Main menu">${menuViews.map(item=>item[0]==='outages'?
         `${navLink(item)}<div id="outageTree" hidden></div>`:navLink(item)).join('')}</nav>
       <a class="back" href="/northstar-clean.html" aria-label="Return to NorthStar">${icon('back')}<span>NorthStar</span></a></aside>`;
     if(selected || !['home','outages','reports'].includes(view))void mountFolder(selected,section);
@@ -214,6 +215,8 @@
     if(docId&&!row.documents.some(doc=>doc.id===docId))throw Error('This document does not belong to the selected outage.');
     const packageId=docId||row.packageId;
     shell('',row,section);
+    const item=query.get('inboxItem');
+    if(item)void fetchData(api+'/inbox/open',{key:item}).then(updateAlerts).catch(()=>{});
     window.addEventListener('pageshow',e=>{if(e.persisted)void mountFolder(row,section);});
     const overview=outageUrl(id);
     const title=section==='overview'?row.title:sections[section];
@@ -264,6 +267,17 @@
       page.insertAdjacentHTML('beforeend',`<section class="panel overview-panel"><h2>Work scope</h2><p>${esc(row.scope||'No scope recorded.')}</p>${facts(fields)}</section>`);
       if(section==='overview')page.insertAdjacentHTML('beforeend',`<section class="panel overview-panel"><h2>Package forms</h2>
         ${row.documents.map(doc=>`<a class="file-line" href="${outageUrl(id,'forms',doc.id)}">${icon('file')}<span>${esc(doc.title)}</span><small>${esc(states[doc.status]||doc.status)}</small></a>`).join('')||'<p>No forms have been attached.</p>'}</section>`);
+      if(section==='overview') {
+        page.insertAdjacentHTML('beforeend','<details class="advanced panel"><summary>Advanced settings</summary><form id="tagPerson" class="fields"><label>Tag a person<select name="recipient" required><option value="">Choose an operator</option></select></label><label>Note<input name="tagNote" required maxlength="500"></label><div><button class="btn">Send tag</button> <span role="status"></span></div></form></details>');
+        const form=$('tagPerson'),status=form.querySelector('[role=status]');
+        const directory=await session;
+        form.elements.recipient.innerHTML=opts((directory?.operators||[]).map(n=>[n,n]),'','Choose an operator');
+        if(!directory)status.textContent='Operator directory unavailable.';
+        form.onsubmit=async e=>{e.preventDefault();const btn=form.querySelector('button');btn.disabled=true;
+          try{await fetchData(api+'/tag',{outage:id,recipient:form.elements.recipient.value,note:form.elements.tagNote.value});
+            status.textContent='Tag sent to '+form.elements.recipient.value+'.';form.reset();updateAlerts();}
+          catch(err){status.textContent=err.message;}finally{btn.disabled=false;}};
+      }
       return {editable:false};
     }
     if(!packageId) {
@@ -281,7 +295,7 @@
       page.querySelector('select').onchange=e=>location.assign(outageUrl(id,section,e.target.value));
     }
     $('uwpcDesk').hidden=false;$('uwpcDeskStatus').textContent='Loading package…';
-    return {editable:true,section,packageId,overview,outageId:id};
+    return {editable:true,section,packageId,overview,outageId:id,inheritedSites:packageId!==row.packageId?[row.site,...row.sites]:[]};
   }
   async function fetchData(url,body) {
     const r=await fetch(url,{credentials:'same-origin',cache:'no-store',...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
@@ -298,8 +312,8 @@
   function regHome(){
     const tabs=[['upcoming','Upcoming'],['active','In progress'],['past','Past']];
     main.innerHTML=`<h1 class="sr-only">Outages</h1><div class="register-toolbar"><div class="register-head"><div class="tabs" aria-label="Outage period">${tabs.map(([id,label])=>`<button data-tab="${id}" aria-pressed="${id===state.tab}">${label}<span class="count" data-count="${id}">–</span></button>`).join('')}</div></div>
-      <div class="bar">${search('query','Search outages')}<select id="site" aria-label="Filter by site"><option value="">All sites</option></select><button class="btn" id="toggleFilters" aria-expanded="false">${icon('filters')}Filters</button></div></div>
-      <div id="filters" class="filters panel" hidden><div class="fields"><label>Type<select id="type">${opts([['Planned','Planned'],['Unplanned','Unplanned']],'','All types')}</select></label>
+      <div class="bar">${search('query','Search outages')}<button class="btn" id="toggleFilters" aria-controls="filters" aria-expanded="false">${icon('filters')}Advanced settings</button></div></div>
+      <div id="filters" class="filters panel" hidden><div class="fields"><label>Site<select id="site" aria-label="Filter by site"><option value="">All sites</option></select></label><label>Type<select id="type">${opts([['Planned','Planned'],['Unplanned','Unplanned']],'','All types')}</select></label>
       <label>Priority<select id="severity">${opts(Object.entries(priorities),'','All priorities')}</select></label>
       <label>Plan status<select id="status">${opts(Object.entries(states),'','All statuses')}</select></label>
       <label>Start from<input id="from" type="date"></label><label>Through<input id="until" type="date"></label><button class="btn" id="resetFilters">Clear filters</button></div></div>
@@ -328,6 +342,8 @@
       if(fetchId!==requestId||!$('rows'))return;
       state.offset=d.offset;
       $('site').innerHTML=opts(d.sites.filter(Boolean).map(s=>[s,s]),p.get('site'),'All sites');
+      const filters=['site','type','severity','status','from','until'].filter(key=>p.get(key)).length;
+      $('toggleFilters').innerHTML=icon('filters')+'Advanced settings'+(filters?` · ${filters} active`:'');
       main.querySelectorAll('[data-count]').forEach(el=>el.textContent=d.counts[el.dataset.count]);
       const cols=[['title','Outage'],['site','Site'],[state.tab==='past'?'closed':'start',state.tab==='past'?'Closed':'Start'],['','End'],['severity','Priority'],['status','Status']];
       $('rows').innerHTML=`<table aria-label="Outage register"><thead><tr>${cols.map(([k,l])=>`<th ${k===state.sort?'aria-sort="'+(state.direction==='asc'?'ascending':'descending')+'"':''}>${k?`<button data-sort="${k}">${l} ${k===state.sort?(state.direction==='asc'?'↑':'↓'):'↕'}</button>`:l}</th>`).join('')}</tr></thead><tbody>
@@ -348,14 +364,17 @@
       <label>Equipment<input name="asset" maxlength="160"></label>
       <label>Start<input type="datetime-local" name="start" required></label><label>End<input type="datetime-local" name="end" required></label>
       <label class="wide">Work scope<textarea name="scope" rows="3" required maxlength="4000"></textarea></label>
-      <label>Priority<select name="severity">${opts(Object.entries(priorities),'Monitor')}</select></label>
       <label>Review trigger<select name="reviewTrigger" required>${opts(['routine','multi-site','crew dependency','non-routine switching or lockout','manager designation'].map(x=>[x,x[0].toUpperCase()+x.slice(1)]),'','Select trigger')}</select></label>
+      </div><details class="advanced"><summary>Advanced settings</summary><div class="fields">
+      <label>Priority<select name="severity">${opts(Object.entries(priorities),'Monitor')}</select></label>
       <label class="wide">Additional affected sites <textarea name="additional" rows="2" placeholder="One site per line"></textarea></label>
       <label>SSC outage manager<select name="sscLead" aria-label="SSC outage manager"><option value="">Unassigned</option></select></label>
-      <label>Local outage manager<select name="localLead" aria-label="Local outage manager"><option value="">Unassigned</option></select></label></div>
+      <label>Local outage manager<select name="localLead" aria-label="Local outage manager"><option value="">Unassigned</option></select></label></div></details>
       <div class="formfoot"><span role="status" id="saveStatus"></span><a class="btn" href="#home">Cancel</a><button class="primary" type="submit">Create outage</button></div></form>`;
     let token=crypto.randomUUID();
     const form=$('create');
+    form.elements.reviewTrigger.onchange=()=>{if(form.elements.reviewTrigger.value==='multi-site'){
+      form.querySelector('details').open=true;form.elements.additional.focus();}};
     void session.then(d=>{
       if(!d)throw Error('Cannot load the directory.');
       const roles=d.outageReviewRoles;
@@ -378,22 +397,18 @@
   async function refreshInbox(){
     const seq=++inboxSeq;
     const d=await fetchData(api+'/inbox');if(seq!==inboxSeq)return;
-    const review=window.NorthStarOutageReview({esc,when:date,dateValue:localDay});
-    const rows=d.rows.flatMap(r=>{
-      const ordinary=JSON.parse(r.ordinary||'null');
-      const messages=review.alerts({...r,lastReview:{owner:r.lastOwner},reviewIssues:JSON.parse(r.issues||'[]'),
-        packageReview:JSON.parse(r.packageReview||'null'),distribution:JSON.parse(r.distribution||'null')},d.actor);
-      if(r.status==='PENDING_SIGNOFF'&&ordinary?.operators.includes(d.actor)&&!ordinary.decisions.some(v=>v.actor===d.actor))messages.push('Operator review requested');
-      return messages.length?[`<a class="librow" href="${outageUrl('',messages[0].startsWith('Final copy')?'distribution':'approvals',r.id)}"><strong>${esc(r.title)}</strong><span>${esc(messages.join(' · '))}</span>${icon('right')}</a>`]:[];
-    });
-    const alerts=$('outageAlerts');
-    if(alerts){
-      alerts.hidden=!rows.length;
-      const label=`Outage alerts for ${rows.length} ${rows.length===1?'outage':'outages'}`;
-      alerts.setAttribute('aria-label',label);alerts.title=label;
-      $('alertCount').textContent=rows.length>99?'99+':String(rows.length);
+    const count=d.items.filter(item=>item.unread).length;
+    document.querySelectorAll('.inbox-badge').forEach(el=>{el.hidden=!count;});
+    const label=count ? `Inbox · ${count} unread` : 'Inbox';
+    if($('inboxLink')){$('inboxLink').ariaLabel=label;$('inboxLink').title=label;}
+    if($('menuToggle'))$('menuToggle').ariaLabel=count?'Menu · unread Inbox items':'Menu';
+    if($('reviews')){
+      const html=d.items.map(item=>{
+        const href=outageUrl(item.outage,item.section,item.document)+'&inboxItem='+encodeURIComponent(item.key);
+        return `<a class="librow" href="${esc(href)}"><strong>${esc(item.title)}</strong><span>${esc(item.message)}</span>${item.unread?'<b class="inbox-badge" aria-label="Unread">!</b>':icon('right')}</a>`;
+      }).join('')||'<div class="panel empty">Your Inbox is empty.</div>';
+      if($('reviews')._rendered!==html){$('reviews').innerHTML=html;$('reviews')._rendered=html;}
     }
-    if($('reviews'))$('reviews').innerHTML=rows.join('')||'<div class="panel empty">You have no outstanding outage alerts.</div>';
   }
   async function inbox(){
     main.innerHTML=head(titles.inbox)+'<div id="reviews" class="toolsList" aria-live="polite">Loading…</div>';

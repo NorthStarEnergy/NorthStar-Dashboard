@@ -2,13 +2,16 @@
 import io
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
+import uuid
 from functools import lru_cache
 
 import northstar_operator_knowledge as knowledge
 import northstar_outage_review as review
 import northstar_store as store
 import northstar_uwpc_desk as desk
+import northstar_sites as station_directory
+import northstar_maximo as maximo
 
 
 BASE = "/api/uwpc/requests/manager"
@@ -220,8 +223,57 @@ def report_options():
             julianday(start),title,id""")]
 
 
+# Match a full location segment, never a whole operating region. Station overrides
+# in the local Maximo configuration take precedence over the standard import.
+STATION_LOCATIONS = {
+    "Calm Lake":("FFO","FFO-CLG"), "Fort Frances":("FFO","FFO-FFG"),
+    "Kenora":("FFO","FFO-KEG"), "Norman":("FFO","FFO-NOG"), "Sturgeon Falls":("FFO","FFO-SFG"),
+    "Island Falls":("ISG","ISG"), "Iroquois Falls":("IRG","IRG"), "Twin Falls":("TWG","TWG"),
+    "Iroquois Falls 230 kV":("EHV","EHV-230KV"), "Big Beaver Falls":("HSI","HSI-BBF"),
+    "Camp Three Rapids":("HSI","HSI-CTR"), "Okikendawt GS":("HSI","HSI-OKI"),
+    "Old Woman Falls":("HSI","HSI-OWF"), "McDougal":("HSI","HSI-MCD"), "Cogent":("HSI","HSI-COG"),
+    "Aiyers 1":("HSI","HSI-AY1"), "Aiyers 2":("HSI","HSI-AY2"), "Bird GS":("HSI","HSI-BIRD"),
+}
+
+
+def site_devices(selected):
+    if not isinstance(selected,list) or len(selected)>41 or any(not isinstance(s,str) or len(s)>120 for s in selected):
+        raise ValueError("Choose valid outage sites")
+    def canonical(name):
+        return (station_directory.resolve(name) or {}).get("name",name.strip())
+    names={canonical(name).casefold():canonical(name) for name in selected if name.strip()}
+    if not names:
+        return {"devices":[]}
+    overrides=maximo.config()["sites"]
+    roots={}
+    for name in names.values():
+        site_id=(station_directory.resolve(name) or {}).get("id")
+        override=overrides.get(site_id) or {}
+        pair=(override.get("siteid"),override.get("location")) if isinstance(override,dict) and override.get("siteid") and override.get("location") else STATION_LOCATIONS.get(name)
+        if pair:
+            roots.setdefault(str(pair[0]).casefold(),[]).append((str(pair[1]).casefold(),name))
+    devices={}
+    def add(site,ref,description):
+        if ref:devices[(site.casefold(),ref.casefold())]={"site":site,"ref":ref,"label":description}
+    for asset in (maximo._load_equipment_snapshot() or {}).get("assets",[]):
+        code=asset["site"].casefold()
+        site=names.get(code)
+        if not site:
+            loc=asset["location"].casefold()
+            site=next((n for root,n in roots.get(code,[]) if loc==root or loc.startswith(root+"-")),None)
+        if site:add(site,asset["assetNum"],asset["description"])
+    with desk.session() as c:
+        for row in c.execute("""SELECT DISTINCT s.value->>'$.siteCode', s.value->>'$.assetTag', s.value->>'$.label'
+                FROM one_line_documents d,json_each(d.current_payload,'$.symbols') s
+                WHERE coalesce(s.value->>'$.assetTag','')<>'' AND coalesce(s.value->>'$.siteCode','')<>''"""):
+            site=names.get(canonical(row[0]).casefold())
+            if site:add(site,row[1],row[2] or "")
+    return {"devices":sorted(devices.values(),key=lambda d:(d["site"].casefold(),d["ref"].casefold()))}
+
+
 def outage_report(oid):
     with desk.session() as c:
+        inbox_schema(c)
         c.execute("BEGIN")
         row = c.execute(REGISTER + "SELECT id,title,site,phase,start,end,closed FROM rows WHERE id=?", (oid,)).fetchone()
         if not row:
@@ -237,6 +289,9 @@ def outage_report(oid):
             SELECT * FROM (SELECT at,actor,event,details AS summary,'' AS document,seq,0 AS source
               FROM outage_events WHERE outage_id=?
             UNION ALL
+            SELECT at,sender,'person-tagged','Tagged '||recipient||': '||note,'',rowid,2
+              FROM outage_person_tags WHERE oid=?
+            UNION ALL
             SELECT e.at,e.actor,e.event,coalesce(json_extract(e.detail,'$.changes'),json_extract(e.detail,'$.text'),json_extract(e.detail,'$.comment'),
                    json_extract(e.detail,'$.summary'),json_extract(e.detail,'$.name'),json_extract(e.detail,'$.message'),
                    json_extract(e.detail,'$.signature.comment'),
@@ -244,24 +299,110 @@ def outage_report(oid):
                         WHEN e.event='phase' THEN json_extract(e.detail,'$.from')||' → '||json_extract(e.detail,'$.to') END,''),
                    json_extract(d.body,'$.title'),e.seq,1
               FROM uwpc_request_events e JOIN docs d ON d.id=e.request_id WHERE d.oid=?)
-            ORDER BY julianday(at) DESC,source DESC,seq DESC""", (oid, oid))]
+            ORDER BY julianday(at) DESC,source DESC,seq DESC""", (oid, oid, oid))]
         return {**dict(row), "documents": docs, "events": events, "asOf": store.now_iso(),
                 "editOwner": desk.checkout_info(c, oid, "", "")["owner"]}
 
 
-def inbox(actor):
+def inbox_schema(c):
+    c.execute("""CREATE TABLE IF NOT EXISTS outage_person_tags (
+        id TEXT PRIMARY KEY, oid TEXT NOT NULL, sender TEXT NOT NULL, recipient TEXT NOT NULL,
+        at TEXT NOT NULL, note TEXT NOT NULL)""")
+    c.execute("CREATE INDEX IF NOT EXISTS outage_tags_by_recipient ON outage_person_tags(recipient,at)")
+    c.execute("""CREATE TABLE IF NOT EXISTS outage_inbox_reads (
+        actor TEXT NOT NULL, item TEXT NOT NULL, PRIMARY KEY(actor,item))""")
+
+
+def tag_person(payload, actor, accounts):
+    recipient, note, oid = (payload.get(k) for k in ("recipient", "note", "outage"))
+    if actor not in accounts:
+        raise PermissionError("Sign in with a named operator account to tag someone")
+    if recipient not in accounts or not isinstance(note, str) or not 0 < len(note.strip()) <= 500:
+        raise ValueError("Choose an operator and enter a note of up to 500 characters")
     with desk.session() as c:
-        return [dict(r) for r in c.execute("""
-          SELECT id,json_extract(body,'$.title') title,json_extract(body,'$.phase') phase,
-            json_extract(body,'$.status') status,json_extract(body,'$.packageReview') packageReview,
-            json_extract(body,'$.lastReview.owner') lastOwner,json_extract(body,'$.distribution') distribution,
-            json_extract(body,'$.reviewIssues') issues,json_extract(body,'$.review') ordinary
+        inbox_schema(c)
+        c.execute("BEGIN IMMEDIATE")
+        if not isinstance(oid, str) or not c.execute(REGISTER+"SELECT 1 FROM rows WHERE id=?", (oid,)).fetchone():
+            raise LookupError("Outage not found")
+        c.execute("INSERT INTO outage_person_tags VALUES (?,?,?,?,?,?)",
+                  (uuid.uuid4().hex, oid, actor, recipient, store.now_iso(), note.strip()))
+    return {"tagged": True}
+
+
+def inbox_items(c, actor):
+    seen = {r[0] for r in c.execute("SELECT item FROM outage_inbox_reads WHERE actor=?", (actor,))}
+    items = []
+    def add(key, title, message, at, section, oid="", doc=""):
+        item = desk.digest([actor, doc, *key])
+        items.append(dict(key=item, title=title, message=message, at=at, section=section,
+                          outage=oid, document=doc, unread=item not in seen))
+    for r in c.execute(REGISTER + """SELECT t.*,r.title FROM outage_person_tags t
+            JOIN rows r ON r.id=t.oid WHERE recipient=?""", (actor,)):
+        add(["tag",r["id"]],r["title"],f'{r["sender"]} tagged you: {r["note"]}',r["at"],"events",r["oid"])
+    for r in c.execute("""
+          SELECT json_object('id',id,'title',body->'$.title','phase',body->'$.phase',
+            'status',body->'$.status','createdAt',body->'$.createdAt','updatedAt',body->'$.updatedAt',
+            'packageReview',body->'$.packageReview','lastReview',body->'$.lastReview',
+            'distribution',body->'$.distribution','reviewIssues',coalesce(body->'$.reviewIssues',json('[]')),
+            'review',body->'$.review') AS body
           FROM uwpc_requests WHERE coalesce(json_extract(body,'$.practice'),0)=0 AND (
             EXISTS (SELECT 1 FROM json_each(body,'$.packageReview.tasks') WHERE json_extract(value,'$.account')=?)
             OR EXISTS (SELECT 1 FROM json_each(body,'$.distribution.recipients') WHERE value=?)
             OR EXISTS (SELECT 1 FROM json_each(body,'$.review.operators') WHERE value=?)
             OR EXISTS (SELECT 1 FROM json_each(body,'$.reviewIssues') WHERE json_extract(value,'$.actor')=?)
-            OR json_extract(body,'$.lastReview.owner')=?) ORDER BY json_extract(body,'$.updatedAt') DESC""",[actor]*5)]
+            OR json_extract(body,'$.lastReview.owner')=?)""", [actor]*5):
+        row = json.loads(r["body"])
+        review = row.get("packageReview") or {}
+        def alert(key, text, at, section="approvals"):
+            add(key, row["title"], text, at or row.get("createdAt",""), section, doc=row["id"])
+        dist = row.get("distribution") or {}
+        if actor in (dist.get("recipients") or []) and actor not in (dist.get("receipts") or {}):
+            alert(["copy",dist["id"]], f'Final copy distributed · revision {dist["revision"]}', dist["at"], "distribution")
+        if actor in (review.get("sscLead") or review.get("owner"), review.get("localLead") or review.get("area")):
+            for f in dist.get("flags",[]):
+                if not f.get("resolvedAt"):
+                    alert(["flag",dist["id"],f["id"]], "Final copy flagged · "+f["text"], f["at"], "distribution")
+        if row.get("phase")!="FUTURE":
+            continue
+        ordinary = row.get("review") or {}
+        if row.get("status")=="PENDING_SIGNOFF" and actor in ordinary.get("operators",[]) and not any(
+                d["actor"]==actor for d in ordinary.get("decisions",[])):
+            alert(["ordinary",ordinary["requestedAt"]], "Operator review requested", ordinary["requestedAt"])
+        last = row.get("lastReview") or {}
+        if not review and actor==last.get("owner"):
+            alert(["reissue",last["number"]], "Reissue the revised package", row.get("updatedAt"))
+        if not review or row.get("status")=="SIGNED_OFF":
+            continue
+        rev = review["number"]
+        issues = [i for i in row.get("reviewIssues",[]) if not i.get("closedAt")]
+        for i in issues:
+            answer = bool(i.get("answer"))
+            if actor==(i["actor"] if answer else review["owner"]):
+                alert(["issue",rev,i["id"],i.get("answer")], ("Confirm" if answer else "Respond to")+" correction "+i["id"],i["at"])
+        pending = [t for t in review["tasks"] if not t.get("signedAt")]
+        hours = (datetime.fromisoformat(review["due"].replace("Z","+00:00")) - datetime.now(timezone.utc)).total_seconds()/3600
+        for t in pending:
+            escalated = hours<=0 and (actor==review["owner"] or (actor==review["area"] and t["role"]=="field"))
+            if not (actor==t["account"] or escalated):
+                continue
+            held = bool(issues) or (t["role"]=="checker" and review.get("sscLead") and any(p["role"]!="checker" for p in pending))
+            timing = "On hold" if held else "Overdue" if hours<=0 else "Due within 24 hours" if hours<=24 else "Assigned"
+            role = {"operator":"Scheduled SSC","checker":"Independent competent checker","area":"Area manager","field":"Field reviewer"}.get(t["role"],t["role"])
+            alert(["assignment",rev,t["id"],bool(held)], " · ".join(filter(None,[timing,role,t.get("site"),t["account"]])),review["openedAt"])
+    return sorted(items,key=lambda i:(i["unread"],i["at"],i["key"]),reverse=True)
+
+
+def inbox(actor, open_item=None):
+    with desk.session() as c:
+        inbox_schema(c)
+        c.execute("BEGIN IMMEDIATE" if open_item is not None else "BEGIN")
+        items = inbox_items(c, actor)
+        if open_item is not None:
+            if not any(i["key"]==open_item for i in items):
+                raise LookupError("Inbox item no longer available")
+            c.execute("INSERT OR IGNORE INTO outage_inbox_reads VALUES (?,?)",(actor,open_item))
+            return {"opened":True}
+        return {"items":items}
 
 
 def source(actor):
