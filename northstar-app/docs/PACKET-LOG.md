@@ -1,3 +1,7 @@
+## 20261110-compact-outage-manager
+
+Updated the [Outage Manager register and working folder](packets/2026-11-10-compact-outage-manager.md) and compacted the register, package pages and manual reader.
+
 ## 20261110-outage-folders
 
 Added [outage folders and coordination](packets/2026-11-10-outage-folders.md) with a clickable process graphic, two named outage managers and final-copy viewer alerts.

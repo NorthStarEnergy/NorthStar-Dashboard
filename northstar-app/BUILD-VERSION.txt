@@ -1,4 +1,4 @@
-v0.231
+v0.232
 2026-11-10
-2026-11-10T02:58:19-05:00
-Outage folders, a clickable process tracker, control room and field coordination, final accuracy checks and viewer alerts.
+2026-11-10T03:58:08-05:00
+Outage Manager remembers one working package, opens directly on the register and groups UWPC source links with the documents.

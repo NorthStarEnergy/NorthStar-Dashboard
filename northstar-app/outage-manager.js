@@ -20,7 +20,7 @@
     if(id) query.set('id',id);
     return '/outage-manager-package.html?'+query;
   }
-  const views = [['home','Home'],['new','New'],['outages','Outages'],['inbox','My reviews'],['library','UWPC library']];
+  const views = [['home','Home'],['new','New'],['outages','Outages'],['library','UWPC library'],['inbox','My reviews']];
   const main=$('main');
   const date = value => value ? new Date(value).toLocaleString('en-CA',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}) : 'Unscheduled';
   const localDay = value => {const d=new Date(value);return Number.isNaN(+d)?'':new Date(+d-d.getTimezoneOffset()*60000).toISOString().slice(0,10);};
@@ -28,76 +28,45 @@
   const priorities = {Monitor:'Normal',Degraded:'Elevated',Critical:'Critical'};
   const opts=(items,current,empty='') => (empty?`<option value="">${esc(empty)}</option>`:'')+items.map(([value,label])=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(label)}</option>`).join('');
   let state={}, epoch=0, requestId=0, delayed, libraryData, readerPage=1, readerMode='pdf', readId=0;
+  const session=fetchData(api+'/session').catch(()=>null);
+  let folderRequest=0;
+  // Store only the identity. Resolve the name and access from this operator's current register.
+  async function mountFolder(selected=null,section='',rows=[]) {
+    const tree=$('outageTree'), request=++folderRequest;
+    const user=await session;
+    if(!tree?.isConnected || request!==folderRequest)return;
+    const key=user?.actor ? 'northstar.outageManager.last.'+user.actor : '';
+    let last='';
+    try {if(key)last=localStorage.getItem(key)||'';} catch {}
+    let row=selected||rows.find(r=>r.id===last);
+    if(!row && last) {
+      try {row=await fetchData(api+'/detail?id='+encodeURIComponent(last));}
+      catch(e){if(![403,404].includes(e.status))return;}
+    }
+    if(!tree.isConnected || request!==folderRequest)return;
+    row ||= rows[0];
+    if(!row){tree.replaceChildren();tree.hidden=true;return;}
+    try {if(key && row.id!==last)localStorage.setItem(key,row.id);} catch {}
+    document.querySelectorAll('[data-outage-row]').forEach(tr=>tr.classList.toggle('selected-outage',tr.dataset.outageRow===row.id));
+    if(tree.firstElementChild?.dataset.folder===row.id && !selected)return;
+    const doc=selected?new URLSearchParams(location.search).get('id'):'';
+    tree.hidden=false;
+    tree.innerHTML=`<details class="package-folder" data-folder="${esc(row.id)}" open>
+      <summary title="${esc(row.title)}">${icon('outages')}<span>${esc(row.title)}</span></summary>
+      <ul class="tree-children">${Object.entries(sections).map(([key,label])=>{
+        const id=['overview','request'].includes(key)?'':doc;
+        return `<li><a href="${outageUrl(row.id,key,id)}" ${selected && key===section?'aria-current="page"':''}
+          title="${esc(key==='overview'?row.title+' · Overview':label)}">${icon('file')}<span>${esc(key==='overview'?row.title:label)}</span></a></li>`;
+      }).join('')}</ul></details>`;
+  }
   function shell(view,selected=null,section='overview') {
     const navLink = ([key,label]) => `<a href="${base}#${key}" title="${label}" ${view===key?'aria-current="page"':''}>${icon(key)}<span>${label}</span>${key==='inbox'?'<small id="reviewCount" aria-live="polite"></small>':''}</a>`;
     $('shell').innerHTML=`<aside class="rail"><a class="brand" href="${base}" aria-label="Outage Manager home"><svg class="mark" viewBox="0 0 32 36" aria-hidden="true"><path d="M3 26V10l7-4v16zm10 3V9l7-4v20zm10-7V6l7-4v16z" fill="currentColor"/></svg><span>Outage Manager</span></a>
       <button class="mobile-menu" id="menuToggle" aria-controls="packageNav" aria-expanded="false">Menu</button><nav id="packageNav" aria-label="Main menu">${views.map(item=>item[0]==='outages'?
-        `<div class="tree-heading">${navLink(item)}<button id="treeToggle" aria-label="Outage folders" aria-controls="outageTree"></button></div><div id="outageTree"></div>`:navLink(item)).join('')}</nav>
+        `${navLink(item)}<div id="outageTree" hidden></div>`:navLink(item)).join('')}</nav>
       <a class="back" href="/northstar-clean.html" aria-label="Return to NorthStar">${icon('back')}<span>NorthStar</span></a></aside>`;
-    mountTree(view,selected,section);
+    if(selected || !['home','outages'].includes(view))void mountFolder(selected,section);
     if(view!=='inbox')void refreshInbox().catch(()=>{});
-  }
-  function mountTree(view,selected,section) {
-    const tree=$('outageTree'), toggle=$('treeToggle');
-    const shown=new Set();
-    const openFolders=new Set(JSON.parse(sessionStorage.getItem('outageFolders') || '[]'));
-    if(selected) openFolders.add(selected.id);
-    function folder(row) {
-      if(shown.has(row.id)) return '';
-      shown.add(row.id);
-      const current=selected?.id===row.id;
-      const documentId=current ? new URLSearchParams(location.search).get('id') : '';
-      return `<details class="package-folder" data-folder="${esc(row.id)}" ${openFolders.has(row.id)?'open':''}>
-        <summary title="${esc(row.title)}">${icon('outages')}<span>${esc(row.title)}</span></summary>
-        <ul class="tree-children">${Object.entries(sections).map(([key,label])=>{
-          const name=key==='overview'?row.title:label;
-          const id=['overview','request'].includes(key)?'':documentId;
-          return `<li><a href="${outageUrl(row.id,key,id)}" ${current&&key===section?'aria-current="page"':''}
-            title="${esc(key==='overview'?row.title+' · Overview':name)}">${icon('file')}<span>${esc(name)}</span></a></li>`;
-        }).join('')}</ul></details>`;
-    }
-    tree.addEventListener('toggle',e=>{
-      const id=e.target.dataset.folder;
-      if(!id)return;
-      if(e.target.open)openFolders.add(id);else openFolders.delete(id);
-      sessionStorage.setItem('outageFolders',JSON.stringify([...openFolders]));
-    },true);
-    // Insert new pages alongside existing folders so keyboard focus and disclosure state survive pagination.
-    function bucket(tab,host) {
-      let offset=0;
-      const list=document.createElement('div'), more=document.createElement('button');
-      more.className='tree-more';host.append(list,more);
-      async function load() {
-        more.disabled=true;more.textContent='Loading…';
-        try {
-          const data=await fetchData(api+'/register?'+new URLSearchParams({tab,offset,sort:tab==='past'?'closed':'start',direction:tab==='past'?'desc':'asc'}));
-          list.insertAdjacentHTML('beforeend',data.rows.map(folder).join(''));
-          offset=data.offset+data.rows.length;
-          more.hidden=offset>=data.total;
-          more.textContent='More '+({upcoming:'upcoming outages',active:'active outages',past:'past outages'}[tab]);
-          if(tab==='past'&&!data.total)list.textContent='No past outages.';
-        } catch(e) {more.textContent='Retry '+tab+' outages';more.title=e.message;}
-        finally {more.disabled=false;}
-      }
-      more.onclick=load;void load();
-    }
-    let loaded=false;
-    function expand(open) {
-      toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'▾':'▸';
-      tree.hidden=!open;
-      if(!open||loaded)return;
-      loaded=true;
-      tree.innerHTML=(selected?folder(selected):'')+
-        '<div data-period="upcoming"></div><div data-period="active"></div><details class="past-folders"><summary>Past outages</summary><div data-period="past"></div></details>';
-      bucket('upcoming',tree.querySelector('[data-period=upcoming]'));
-      bucket('active',tree.querySelector('[data-period=active]'));
-      tree.querySelector('.past-folders').addEventListener('toggle',function() {
-        const host=this.querySelector('[data-period=past]');
-        if(this.open&&!host.hasChildNodes())bucket('past',host);
-      });
-    }
-    toggle.onclick=()=>{expand(tree.hidden);sessionStorage.setItem('outageTreeOpen',String(!tree.hidden));};
-    expand(Boolean(selected)||view==='outages'||(sessionStorage.getItem('outageTreeOpen')??String(innerWidth>820))==='true');
     const menu=$('menuToggle'), nav=menu.nextElementSibling;
     menu.onclick=()=>{const open=menu.getAttribute('aria-expanded')!=='true';
       menu.setAttribute('aria-expanded',String(open));nav.classList.toggle('menu-open',open);};
@@ -172,11 +141,13 @@
     if(docId&&!row.documents.some(doc=>doc.id===docId))throw Error('This document does not belong to the selected outage.');
     const packageId=docId||row.packageId;
     shell('',row,section);
+    window.addEventListener('pageshow',e=>{if(e.persisted)void mountFolder(row,section);});
     const overview=outageUrl(id);
     const title=section==='overview'?row.title:sections[section];
     document.title=title+(section==='overview'?'':' · '+row.title)+' · Outage Manager';
     const page=$('packagePage');
-    page.innerHTML=(section==='overview'?'':`<a class="outage-parent" href="${overview}">${esc(row.title)}</a>`)+head(esc(title),section==='overview'?chip(row):'');
+    page.innerHTML=section==='overview'?head(esc(title),chip(row)):
+      `<header class="pagehead breadcrumb"><a class="outage-parent" href="${overview}">${esc(row.title)}</a>${icon('right')}<h1>${esc(title)}</h1></header>`;
     const plan=row.workflow || legacy;
     page.insertAdjacentHTML('beforeend','<div id="processStrip"></div>');
     const draw=record=>{$('processStrip').innerHTML=processStrip(row,record);};
@@ -237,9 +208,8 @@
     return `<span class="chip ${tone}">${esc(text)}</span>`;}
   function regHome(){
     const tabs=[['upcoming','Upcoming'],['active','In progress'],['past','Past']];
-    main.innerHTML=head('Outages',`<a href="#new" class="primary">${icon('new')}New outage</a>`)+
-      `<div class="tabs" aria-label="Outage period">${tabs.map(([id,label])=>`<button data-tab="${id}" aria-pressed="${id===state.tab}">${label}<span class="count" data-count="${id}">–</span></button>`).join('')}</div>
-      <div class="bar">${search('query','Search outages')}<select id="site" aria-label="Filter by site"><option value="">All sites</option></select><button class="btn" id="toggleFilters" aria-expanded="false">${icon('filters')}Filters</button></div>
+    main.innerHTML=`<h1 class="sr-only">Outages</h1><div class="register-toolbar"><div class="register-head"><div class="tabs" aria-label="Outage period">${tabs.map(([id,label])=>`<button data-tab="${id}" aria-pressed="${id===state.tab}">${label}<span class="count" data-count="${id}">–</span></button>`).join('')}</div><a href="#new" class="btn new-link">${icon('new')}New outage</a></div>
+      <div class="bar">${search('query','Search outages')}<select id="site" aria-label="Filter by site"><option value="">All sites</option></select><button class="btn" id="toggleFilters" aria-expanded="false">${icon('filters')}Filters</button></div></div>
       <div id="filters" class="filters panel" hidden><div class="fields"><label>Type<select id="type">${opts([['Planned','Planned'],['Unplanned','Unplanned']],'','All types')}</select></label>
       <label>Priority<select id="severity">${opts(Object.entries(priorities),'','All priorities')}</select></label>
       <label>Plan status<select id="status">${opts(Object.entries(states),'','All statuses')}</select></label>
@@ -272,11 +242,12 @@
       main.querySelectorAll('[data-count]').forEach(el=>el.textContent=d.counts[el.dataset.count]);
       const cols=[['title','Outage'],['site','Site'],[state.tab==='past'?'closed':'start',state.tab==='past'?'Closed':'Start'],['','End'],['severity','Priority'],['status','Status']];
       $('rows').innerHTML=`<table aria-label="Outage register"><thead><tr>${cols.map(([k,l])=>`<th ${k===state.sort?'aria-sort="'+(state.direction==='asc'?'ascending':'descending')+'"':''}>${k?`<button data-sort="${k}">${l} ${k===state.sort?(state.direction==='asc'?'↑':'↓'):'↕'}</button>`:l}</th>`).join('')}</tr></thead><tbody>
-        ${d.rows.map(r=>`<tr data-outage-row><td><a class="titlebtn" href="${outageUrl(r.id)}" title="${esc(r.title)}">${esc(r.title)}</a></td>
+        ${d.rows.map(r=>`<tr data-outage-row="${esc(r.id)}"><td><a class="titlebtn" href="${outageUrl(r.id)}" title="${esc(r.title)}">${esc(r.title)}</a></td>
         <td title="${esc(r.sites.join(', '))}">${esc(r.site)}${r.sites.length>1?' +'+(r.sites.length-1):''}</td>
         <td>${state.tab==='past'?(r.closed?esc(date(r.closed)):'—'):esc(date(r.start))}</td><td>${r.end?esc(date(r.end)):'—'}</td>
         <td>${esc(priorities[r.severity]||r.severity)}</td><td>${chip(r)}${r.requiredSignatures?` <small class="mono" title="Required sign-offs received">${r.signed}/${r.requiredSignatures}</small>`:''}</td></tr>`).join('')}</tbody></table>
         ${d.rows.length?'':'<div class="empty">No outages match this view.</div>'}`;
+      void mountFolder(null,'',d.rows);
       $('range').textContent=d.total?`${d.offset+1}–${d.offset+d.rows.length} of ${d.total} outages`:'0 outages';
       $('prev').disabled=!d.offset;$('next').disabled=d.offset+d.rows.length>=d.total;
     }catch(e){if(fetchId===requestId&&$('rows'))$('rows').innerHTML=errorBox(e);}
@@ -296,7 +267,8 @@
       <div class="formfoot"><span role="status" id="saveStatus"></span><a class="btn" href="#home">Cancel</a><button class="primary" type="submit">Create outage</button></div></form>`;
     let token=crypto.randomUUID();
     const form=$('create');
-    void fetchData(api+'/session').then(d=>{
+    void session.then(d=>{
+      if(!d)throw Error('Cannot load the directory.');
       const roles=d.outageReviewRoles;
       for(const [key,people] of Object.entries({sscLead:roles.operator,localLead:[...new Set([...roles.area,...roles.field])]}))
         form.elements[key].innerHTML=opts(people.map(s=>[s,s]),'','Unassigned');
@@ -346,19 +318,21 @@
   }
   function renderLibrary(d,section){
     const tabs=[['manual','Manual'],['forms','Forms & tags'],['questions','Practice questions']];
-    main.innerHTML=head('UWPC library',`<a class="btn" href="${sourceUrl}" target="_blank" rel="noopener">${icon('arrow')}Open source PDF</a>`)+
-      `<p class="bookmeta">${esc(d.title)} · ${d.pages} pages · ${esc(d.status.replaceAll('_',' ').toLowerCase())}</p><div class="tabs">
+    const book=`<div class="document-source"><span><strong>${esc(d.title)}</strong> · ${d.pages} pages · ${esc(d.status.replaceAll('_',' ').toLowerCase())}</span>
+      <a href="${sourceUrl}" target="_blank" rel="noopener">${icon('arrow')}Open source PDF</a></div>`;
+    main.innerHTML=`<h1 class="sr-only">UWPC library</h1><div class="tabs" aria-label="UWPC library">
       ${tabs.map(([key,label])=>`<button aria-pressed="${section===key}" data-lib="${key}">${label}</button>`).join('')}</div>`;
-    if(section==='forms'){main.insertAdjacentHTML('beforeend',`<p class="note">Form and tag illustrations from the source manual.</p><div class="formsgrid">${d.forms.map(f=>
+    if(section==='forms'){main.insertAdjacentHTML('beforeend',`${book}<div class="formsgrid">${d.forms.map(f=>
       `<article class="card formref"><strong>${esc(f.code)}</strong><p>${esc(f.title)}</p><a class="btn" href="${api}/library/${encodeURIComponent(f.id)}" download>${icon('download')}PDF</a>
       <a href="${sourceUrl}#page=${f.pages[0]}" target="_blank" rel="noopener">Source p. ${f.pages[0]}</a></article>`).join('')||'<p>No form index for this edition.</p>'}</div>`);return;}
-    if(section==='questions'){main.insertAdjacentHTML('beforeend',`<div class="questions">${d.questions.map(([q,a,cl,p])=>
+    if(section==='questions'){main.insertAdjacentHTML('beforeend',`${book}<div class="questions">${d.questions.map(([q,a,cl,p])=>
       `<details class="card"><summary>${esc(q)}</summary><p>${esc(a)}</p><a href="${sourceUrl}#page=${p}" target="_blank" rel="noopener">${esc(cl)} · PDF p. ${p}</a></details>`).join('')||'<p>No questions for this edition.</p>'}</div>`);return;}
-    main.insertAdjacentHTML('beforeend',`<div class="bar">${search('bookQuery','Search the manual')}</div><div class="libraryTools"><aside class="toc panel" aria-label="Manual contents" id="contents"></aside>
-      <div class="reader"><div class="readerBar"><select id="readMode" aria-label="Reading format"><option value="pdf">Source PDF</option><option value="text">Page text</option></select>
+    main.insertAdjacentHTML('beforeend',`<div class="libraryTools"><aside class="library-index">${search('bookQuery','Search the manual')}<details class="toc panel" id="manualContents"><summary>Contents</summary><div id="contents"></div></details></aside>
+      <div class="reader">${book}<div class="readerBar"><select id="readMode" aria-label="Reading format"><option value="pdf">Source PDF</option><option value="text">Page text</option></select>
       <button class="iconbtn" id="readPrevious" aria-label="Previous manual page">${icon('left')}</button>
       <label>Page <input type="number" id="pageNumber" min="1" max="${d.pages}"> / ${d.pages}</label>
       <button class="iconbtn" id="readNext" aria-label="Next manual page">${icon('right')}</button></div><div id="readerHost"></div></div></div>`);
+    $('manualContents').open=innerWidth>820;
     $('readMode').onchange=e=>readPage(readerPage,e.target.value);
     $('readPrevious').onclick=()=>readPage(readerPage-1,readerMode);
     $('readNext').onclick=()=>readPage(readerPage+1,readerMode);
@@ -370,7 +344,7 @@
         `<a href="${sourceUrl}#page=${t.page}" data-page="${t.page}">${esc(t.title)} · ${t.page}</a>`).join('')}</details>`;
     }).join('');
     $('contents').innerHTML=contents();
-    $('bookQuery').oninput=()=>{const q=$('bookQuery').value.trim();clearTimeout(delayed);const seq=++requestId;
+    $('bookQuery').oninput=()=>{const q=$('bookQuery').value.trim();if(q)$('manualContents').open=true;clearTimeout(delayed);const seq=++requestId;
       if(!q){$('contents').innerHTML=contents();return;}delayed=setTimeout(async()=>{try{const data=await fetchData(api+'/library?q='+encodeURIComponent(q));
         if(seq!==requestId||!$('contents'))return;$('contents').innerHTML=data.hits.map(h=>`<a href="${sourceUrl}#page=${Number(h.page)}" data-page="${Number(h.page)}"><strong>PDF p. ${Number(h.page)}</strong> · ${esc(h.text)}</a>`).join('')||'<p>No matching passages.</p>';
       }catch(e){if(seq===requestId&&$('contents'))$('contents').innerHTML=errorBox(e);}},220);};
@@ -402,7 +376,11 @@
     const el=e.target.closest('[data-sort],[data-page],[data-lib]');if(!el)return;
     if(el.dataset.sort){state.direction=state.sort===el.dataset.sort&&state.direction==='asc'?'desc':'asc';state.sort=el.dataset.sort;state.offset=0;await loadRegister();}
     else if(el.dataset.lib){location.hash='library/'+el.dataset.lib;}
-    else if(el.dataset.page){e.preventDefault();await readPage(Number(el.dataset.page),readerMode);}
+    else if(el.dataset.page){e.preventDefault();if(innerWidth<=820)$('manualContents').open=false;await readPage(Number(el.dataset.page),readerMode);}
   });
   window.addEventListener('hashchange',route);void route();
+  window.addEventListener('pageshow',e=>{
+    if(!e.persisted)return;
+    if($('rows'))void loadRegister();else void mountFolder();
+  });
 })();

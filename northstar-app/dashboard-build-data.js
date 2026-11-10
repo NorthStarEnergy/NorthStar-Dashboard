@@ -3,12 +3,18 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.231",
+    "version": "v0.232",
     "published": "2026-11-10",
-    "publishedAt": "2026-11-10T02:58:19-05:00",
-    "summary": "Outage folders, a clickable process tracker, control room and field coordination, final accuracy checks and viewer alerts."
+    "publishedAt": "2026-11-10T03:58:08-05:00",
+    "summary": "Outage Manager remembers one working package, opens directly on the register and groups UWPC source links with the documents."
   },
   "history": [
+    {
+      "version": "v0.232",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T03:58:08-05:00",
+      "summary": "Outage Manager remembers one working package, opens directly on the register and groups UWPC source links with the documents."
+    },
     {
       "version": "v0.231",
       "published": "2026-11-10",

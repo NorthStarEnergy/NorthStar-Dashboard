@@ -15,7 +15,7 @@ async function check() {
     const port=await Promise.race([once(lines,'line').then(([l])=>JSON.parse(l).port),once(server,'exit').then(()=>{throw Error('Fixture exited');})]);
     const origin='http://127.0.0.1:'+port;
     browser=await chromium.launch({channel:'msedge',headless:true});
-    const context=await browser.newContext({viewport:{width:1440,height:900}});
+    const context=await browser.newContext({viewport:{width:1366,height:768}});
     const page=await context.newPage();
     await page.route('**/api/**',route=>{
       const pathname=new URL(route.request().url()).pathname;
@@ -39,13 +39,38 @@ async function check() {
     }
     assert.equal(await page.locator('tbody tr').count(),3);
     const out=path.join(root,'outputs','outage-manager-qa');fs.mkdirSync(out,{recursive:true});
+    const folder=page.locator('#outageTree .package-folder');
+    async function expectFolder(title){
+      await folder.locator('summary').filter({hasText:title}).waitFor({state:'attached'});
+      assert.equal(await folder.count(),1);
+    }
+    const first='Unit 2 stator inspection', second='Feeder protection review';
+    await expectFolder(first);
+    const rowTop=await page.locator('tbody tr').first().evaluate(el=>Math.round(el.getBoundingClientRect().top));
+    assert.ok(rowTop<120,'The register should open directly on the rows');
+    console.log('First register row at '+rowTop+' px on a 1366 × 768 viewport.');
+    await page.locator('tbody').getByRole('link',{name:second}).click();
+    await expectFolder(second);
+    await page.goBack();
+    await expectFolder(second);
+    await page.reload();
+    await expectFolder(second);
+    await page.getByRole('link',{name:'Outages',exact:true}).click();
+    await expectFolder(second);
+    await page.locator('tbody').getByRole('link',{name:first}).click();
+    await expectFolder(first);
+    await page.getByRole('link',{name:'Outages',exact:true}).click();
+    await expectFolder(first);
+    assert.deepEqual(await page.locator('#packageNav > a').allTextContents(),['Home','New','Outages','UWPC library','My reviews']);
     await page.screenshot({path:path.join(out,'home.png')});
     await page.getByRole('button',{name:/^Past/}).click();
     await page.locator('tbody').getByRole('link',{name:'Completed valve inspection'}).waitFor();
+    await expectFolder(first);
     await page.getByRole('button',{name:/^Upcoming/}).click();
     await page.getByRole('searchbox',{name:'Search outages'}).fill('feeder');
     await page.waitForFunction(()=>document.querySelectorAll('tbody tr').length===1 && document.querySelector('tbody')?.textContent.includes('Feeder protection'));
     await page.getByRole('link',{name:'New',exact:true}).click();
+    assert.ok(await page.getByRole('button',{name:'Create outage'}).evaluate(el=>el.getBoundingClientRect().bottom<innerHeight));
     await page.screenshot({path:path.join(out,'new.png')});
     await page.getByLabel('Outage name').fill('West bay inspection');
     await page.getByLabel('Primary site').fill('Norman');
@@ -86,6 +111,17 @@ async function check() {
     await page.getByText('You have no outstanding reviews.').waitFor();
     if(process.env.OUTAGE_MANAGER_FIXTURE_BOOK){
       await page.getByRole('link',{name:'UWPC library',exact:true}).click();
+      const source=page.locator('.reader').getByRole('link',{name:'Open source PDF'});
+      await source.waitFor();
+      assert.equal(await source.getAttribute('href'),'/api/uwpc/requests/manager/library/book');
+      assert.ok(await page.locator('#readerHost').evaluate(el=>el.getBoundingClientRect().top<170));
+      await page.setViewportSize({width:390,height:844});
+      await page.reload();
+      await source.waitFor();
+      const mobileReaderTop=await page.locator('#readerHost').evaluate(el=>Math.round(el.getBoundingClientRect().top));
+      await page.screenshot({path:path.join(out,'mobile-manual.png')});
+      assert.ok(mobileReaderTop<260,'Mobile reader starts at '+mobileReaderTop+' px');
+      await page.setViewportSize({width:1366,height:768});
       await page.getByRole('searchbox',{name:'Search the manual'}).fill('supporting guarantee');
       await page.locator('#contents a strong').first().waitFor();
       await page.getByLabel('Reading format').selectOption('text');
@@ -138,7 +174,8 @@ async function check() {
     const approvals=page.url();
     async function asUser(name,url){
       const response=await context.request.post(origin+'/api/auth/login',{data:{username:name,password:'fixture-only-password'}});
-      assert.equal(response.status(),200);await page.goto(url);
+      assert.equal(response.status(),200);
+      if(page.url()===url)await page.reload();else await page.goto(url);
     }
     for(const name of ['fixture_operator','fixture_area','fixture_north','fixture_operator']){
       await asUser(name,approvals);
@@ -159,6 +196,13 @@ async function check() {
     await page.getByLabel('Resolution',{exact:true}).fill('Crew time confirmed');
     await page.getByRole('button',{name:'Resolve concern'}).click();
     await page.getByText('Resolution recorded.').waitFor();
+    await asUser('fixture_relief',origin+'/outage-manager.html#outages');
+    await expectFolder(first);
+    await page.evaluate(()=>localStorage.setItem('northstar.outageManager.last.fixture_relief','missing-outage'));
+    await page.reload();
+    await expectFolder(first);
+    await asUser('fixture_author',origin+'/outage-manager.html#outages');
+    await expectFolder('West bay inspection');
     assert.deepEqual(errors,[]);
     console.log('Outage Manager register, creation, package, inbox, library and mobile checks passed.');
   }finally{if(browser)await browser.close();server.kill();}
