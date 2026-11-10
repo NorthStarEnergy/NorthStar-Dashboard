@@ -3,12 +3,18 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.227",
+    "version": "v0.228",
     "published": "2026-11-09",
-    "publishedAt": "2026-11-09T23:40:27-05:00",
-    "summary": "Significant outage packages now route to named managers, scheduled operators, an independent checker and each affected site."
+    "publishedAt": "2026-11-09T23:55:23-05:00",
+    "summary": "Distribute approved outage packages to the assigned team, record switching activity, and close the outage with follow-up notes."
   },
   "history": [
+    {
+      "version": "v0.228",
+      "published": "2026-11-09",
+      "publishedAt": "2026-11-09T23:55:23-05:00",
+      "summary": "Distribute approved outage packages to the assigned team, record switching activity, and close the outage with follow-up notes."
+    },
     {
       "version": "v0.227",
       "published": "2026-11-09",

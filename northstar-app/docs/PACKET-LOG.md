@@ -1,3 +1,7 @@
+## 20261110-outage-closeout
+
+Linked outage requests now lead through review, final-copy distribution, an electronic switching log, closure and saved notes. The UWPC Builder includes a two-site practice outage with an assigned team. See [distribution and closeout](packets/2026-11-10-outage-closeout.md).
+
 ## 20261109-outage-package-review
 
 The UWPC Builder routes significant outages to the manager, scheduled operators, independent checker, area manager and each affected site. See [routing, role setup and verification](packets/2026-11-09-outage-package-review.md).

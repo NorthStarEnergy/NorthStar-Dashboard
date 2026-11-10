@@ -1,4 +1,4 @@
-v0.227
+v0.228
 2026-11-09
-2026-11-09T23:40:27-05:00
-Significant outage packages now route to named managers, scheduled operators, an independent checker and each affected site.
+2026-11-09T23:55:23-05:00
+Distribute approved outage packages to the assigned team, record switching activity, and close the outage with follow-up notes.

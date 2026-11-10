@@ -98,3 +98,59 @@ def test_corrections_revisions_and_crew_changes(draft):
     row = change(row, "review-close", "south", issue="1")
     assert row["status"] == "PENDING_SIGNOFF"
     assert any(e["event"] == "review-open" and e["detail"]["cover"]["digest"] == old for e in row["events"])
+
+
+def approved(row):
+    row = change(row, "review-open", **COVER, copyTo=["replacement"])
+    for task in row["packageReview"]["tasks"][1:]:
+        row = sign(row, task)
+    return row
+
+
+def test_registered_outage_distribution_log_and_closeout(draft):
+    out = store.create_outage({"title": "Registered outage", "site": "North", "type": "Planned"})
+    row = desk.create({"fromOutage": out["id"]}, "author")
+    assert desk.create({"fromOutage": out["id"]}, "author")["id"] == row["id"]
+    row = change(row, "save", "author", **{**FORM, "outageId": out["id"]})
+    row = desk.add_source(row["id"], row["version"], "drawing.txt", "diagram", b"test drawing", "author")
+    with pytest.raises(ValueError, match="switching log"):
+        store.close_outage(out["id"])
+    row = approved(row)
+    delivery = row["distribution"]
+    download = lambda: desk.export_record(row["id"], "final", copy_id=delivery["id"], actor="replacement")[0]
+    final = download()
+    assert set(delivery["recipients"]) == {"manager","operator","relief","area","north","south","replacement"}
+    with pytest.raises(PermissionError):
+        desk.export_record(row["id"], "final", copy_id=delivery["id"], actor="intruder")
+    row = change(row, "final-receipt", "replacement", copyId=delivery["id"])
+    with pytest.raises(PermissionError):
+        change(row, "log-open", "replacement", copyId=delivery["id"])
+    with pytest.raises(ValueError):
+        change(row, "phase", phase="COMPLETED")
+    row = change(row, "log-open", "operator", copyId=delivery["id"])
+    with pytest.raises(ValueError):
+        change(row, "log-close", "manager", copyId=delivery["id"], text="No entries")
+    row = change(row, "log-entry", "north", site="North", step=1, text="Fixture activity", copyId=delivery["id"])
+    assert row["switchLog"]["entries"][0]["device"] == "Fixture"
+    row = change(row, "log-close", "operator", text="Fixture work finished", copyId=delivery["id"])
+    assert store.get_outage(out["id"])["status"] == "Closed"
+    with pytest.raises(ValueError):
+        change(row, "log-entry", "north", copyId=delivery["id"], text="late")
+    row = change(row, "closeout-note", "south", text="Follow-up recorded", copyId=delivery["id"])
+    assert download() == final
+    assert row["phase"] == "COMPLETED" and row["switchLog"]["notes"][0]["actor"] == "south"
+    with zipfile.ZipFile(io.BytesIO(desk.export_record(row["id"], "package")[0])) as archive:
+        assert b"Follow-up recorded" in archive.read("electronic-switching-log.pdf")
+
+
+def test_return_withdraws_distributed_copy_and_reapproval_issues_another(draft):
+    row = approved(draft)
+    delivery = row["distribution"]
+    row = change(row, "review-return", "south", task=row["packageReview"]["tasks"][-1]["id"], comment="Please clarify.")
+    assert not row.get("distribution")
+    with pytest.raises(desk.Conflict):
+        desk.export_record(row["id"], "final", copy_id=delivery["id"], actor="manager")
+    row = change(row, "review-answer", issue="1", comment="Clarified")
+    row = change(row, "review-close", "south", issue="1")
+    row = sign(row, row["packageReview"]["tasks"][-1])
+    assert row["distribution"]["id"] != delivery["id"] and row["distribution"]["receipts"] == {}

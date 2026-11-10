@@ -1,6 +1,8 @@
 (() => {
   'use strict';
-  const api = '/api/uwpc/requests';
+  const practice = document.body.hasAttribute('data-outage-practice');
+  const persona = new URLSearchParams(location.search).get('as') || 'Avery Brooks';
+  const api = '/api/uwpc/requests' + (practice ? '/practice/' + encodeURIComponent(persona) : '');
   const labels = {REQUEST_GUARANTEE:'Request supporting guarantee', PROVIDE_GUARANTEE:'Provide supporting guarantee', SWITCHING_PLAN:'Switching plan'};
   const forms = [
     {template:'pc10c-sg', kind:'REQUEST_GUARANTEE', code:'PC10C', title:'Supporting Guarantee Request', detail:'Request work protection from a controlling authority.'},
@@ -14,7 +16,7 @@
   const when = value => value ? new Date(value).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : 'Not scheduled';
   let root, current = null, records = [], operators = [], actor = '', busy = false, dirty = false, legacy = [], legacyError = '';
   const $ = id => document.getElementById(id);
-  const outage = window.NorthStarOutageReview({esc, when, dateValue});
+  const outage = window.NorthStarOutageReview({esc, when, dateValue, api});
   let roles = {};
 
   async function request(url, method = 'GET', body) {
@@ -204,7 +206,9 @@
         ${(r.events || []).map(entry => `<article class="uwpc-history"><strong>${esc(status(entry.event))}</strong><small>${esc(entry.actor)} · ${esc(when(entry.at))}</small>${entry.event.startsWith('review-') ? `<details><summary>Review record</summary><pre class="uwpc-document">${esc(JSON.stringify(entry.detail, null, 2))}</pre></details>` : ''}</article>`).join('') || '<p class="uwpc-empty">No audit events.</p>'}
       </div></details>` : ''}
     </article>`;
-    $('uwpcEditor').querySelector('.uwpc-form-head').insertAdjacentHTML('afterend', outage.cover(r, roles, actor));
+    $('uwpcEditor').querySelector('.uwpc-form-head').insertAdjacentHTML('afterend', outage.cover(r, roles, actor, operators));
+    if (r.registerOutage) $('uwpcRequestForm').elements.outageId.readOnly = true;
+    if (fullReview) $('uwpcPlanPhase').closest('.uwpc-actions').hidden = Boolean(r.switchLog || r.distribution);
     $('uwpcRequestForm').addEventListener('submit', event => {event.preventDefault(); void run(save);});
     $('uwpcRequestForm').addEventListener('input', () => {dirty=true;});
     $('uwpcRequestForm').addEventListener('change', () => {dirty=true;});
@@ -333,6 +337,16 @@
     if (action === 'cancel') {current=null; dirty=false; $('uwpcEditor').hidden=true; $('uwpcEditor').innerHTML=''; return;}
     if (action === 'refresh') {await refresh(); notice('UWPC records refreshed.'); return;}
     if (!current) return;
+    if (['distribute','final-receipt','log-open','log-entry','log-close','closeout-note'].includes(action)) {
+      const fields = button.closest('fieldset');
+      const occurred = fields?.querySelector('[name=occurredAt]')?.value;
+      await change(action, {copyId:current.distribution?.id, site:fields?.querySelector('[name=site]')?.value,
+        step:Number(fields?.querySelector('[name=step]')?.value) || null, occurredAt:occurred ? new Date(occurred).toISOString() : null,
+        text:fields?.querySelector('[name=text]')?.value});
+      notice(({distribute:'Final copy distributed.', 'final-receipt':'Receipt recorded.', 'log-open':'Switching log opened.',
+        'log-entry':'Log entry saved.', 'log-close':'Outage closed.', 'closeout-note':'Closeout note saved.'})[action]);
+      return;
+    }
     if (action.startsWith('review-')) {
       const data = outage.actionData(action, button, current);
       if (data) {await change(action, data); notice(current.status === 'SIGNED_OFF' ? 'Planning review complete.' : 'Outage review updated.');}
@@ -378,6 +392,17 @@
       <section data-view-panel="historical" class="uwpc-view" hidden><div class="uwpc-section-head"><div><small>RECORD HISTORY</small><h3>Historical packages</h3></div><p>Completed, cancelled and authority correspondence records.</p></div><div id="uwpcPastPlans"></div><details><summary>Authority correspondence</summary><div id="uwpcAuthorityRecords"></div></details><details><summary>Unclassified legacy drafts</summary><div id="uwpcLegacyPlans"></div></details></section>
       <section data-view-panel="example" class="uwpc-view" hidden><div class="uwpc-section-head"><div><small>TRAINING REFERENCE</small><h3>Example forms</h3></div><p>Examples show presentation only and never create an operational record.</p></div><div class="uwpc-example-grid">${forms.map((form,index) => `<button type="button" data-example="${index}"><span>${form.code}</span><strong>${esc(form.title)}</strong><small>${esc(form.detail)}</small></button>`).join('')}</div><div id="uwpcExampleDetail"></div></section>`;
     workspace.prepend(root);
+    if (practice) {
+      details.hidden = true;
+      root.querySelector('.uwpc-intake').hidden = true;
+      root.querySelector('.uwpc-nav').hidden = true;
+      root.querySelector('.uwpc-title').innerHTML = '<div><h2>Practice outage</h2><p>Switch between the assigned team members to review the same two-site exercise.</p></div><label>Practice as <select id="outagePracticeActor"></select></label>';
+      $('outagePracticeActor').addEventListener('change', e => {
+        location.search = new URLSearchParams({as:e.target.value});
+      });
+    } else {
+      root.querySelector('.uwpc-title').insertAdjacentHTML('beforeend','<a class="uwpc-button" href="/outage-practice.html" target="_blank" rel="noopener">Open practice outage</a>');
+    }
     $('uwpcIntakeForm').addEventListener('submit', intake);
     root.addEventListener('click', event => {
       if (busy) {event.preventDefault(); return;}
@@ -392,10 +417,27 @@
     });
     const inboxButton = document.createElement('button'); inboxButton.id='uwpcGlobalInbox'; inboxButton.type='button'; inboxButton.hidden=true;
     inboxButton.onclick=()=>{window.NorthstarModules?.open('outages:uwpc'); setView('active'); $('uwpcOperatorInbox').scrollIntoView();}; document.body.append(inboxButton);
-    void run(async()=>{await refresh(); notice('Ready. Choose New or open a package from the feed.');});
-    void request('/api/switching/drafts?limit=500').then(data=>{legacy=Array.isArray(data)?data:[];drawLists();}).catch(error=>{legacyError=error.message;drawLists();});
+    void run(async()=>{
+      await refresh();
+      if (practice) {
+        const titles = {manager:'Control room manager',operator:'Scheduled SSC',checker:'Independent checker',area:'Area manager',field:'Field reviewer'};
+        $('outagePracticeActor').innerHTML = operators.map(name => {
+          const role = Object.keys(titles).filter(key => roles[key]?.includes(name)).map(key => titles[key]).join(' / ');
+          return `<option value="${esc(name)}" ${actor === name ? 'selected' : ''}>${esc(name)} · ${esc(role)}</option>`;
+        }).join('');
+        const exercise = records[0] || await request(api, 'POST', {practiceSample:true});
+        await open(exercise.id);
+        notice('Practice team · ' + actor);
+      } else notice('Ready. Choose New or open a package from the feed.');
+    });
+    if (!practice) void request('/api/switching/drafts?limit=500').then(data=>{legacy=Array.isArray(data)?data:[];drawLists();}).catch(error=>{legacyError=error.message;drawLists();});
     setInterval(()=>{if(!document.hidden&&!busy)void refresh().catch(error=>notice(`Inbox refresh failed: ${error.message}`,true));},30000);
-    window.NorthStarUwpcDesk={open:id=>run(()=>open(id)),refresh};
+    window.NorthStarUwpcDesk={open:id=>run(()=>open(id)),refresh, fromOutage:id=>run(async () => {
+      if (dirty) throw new Error('Save or cancel the open form before opening another outage.');
+      const row = await request(api, 'POST', {fromOutage:id});
+      await refresh(); await open(row.id);
+      notice('Opened the plan linked to the outage request.');
+    })};
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',bind); else bind();
 })();

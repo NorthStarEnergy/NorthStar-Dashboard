@@ -1,6 +1,7 @@
 """Planning review for significant outages. Account eligibility is workstation configuration."""
 import json
 import os
+from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 
@@ -9,9 +10,16 @@ import northstar_store as store
 
 TRIGGERS = {"routine", "multi-site", "crew dependency", "non-routine switching or lockout", "manager designation"}
 ROLES = ("manager", "checker", "operator", "area", "field")
+PRACTICE_DB = ContextVar("outage_practice_db", default=None)
+PRACTICE_TEAM = {
+    "manager": ["Avery Brooks"], "operator": ["Morgan Ellis", "Jordan Vale"],
+    "checker": ["Morgan Ellis"], "area": ["Casey Rowan"], "field": ["Riley West", "Taylor Reed"],
+}
 
 
 def directory(accounts):
+    if PRACTICE_DB.get() is not None:
+        return PRACTICE_TEAM
     path = Path(os.environ.get("NORTHSTAR_OUTAGE_REVIEW_DIRECTORY") or
                 store.DB_PATH.parent / "outage-review-directory.json")
     try:
@@ -49,10 +57,10 @@ def required(row):
     return row.get("reviewTrigger") in TRIGGERS - {"routine"}
 
 
-def open_review(row, payload, actor, roster, snapshot, digest):
+def open_review(row, payload, actor, roster, snapshot, digest, accounts):
     if actor not in roster["manager"]:
         raise PermissionError("A named control room manager must open this review")
-    if not required(row) or row["phase"] != "FUTURE" or row.get("preparationMode") == "INTAKE":
+    if not required(row) or row["phase"] != "FUTURE" or row.get("preparationMode") in {"INTAKE", "REQUEST"}:
         raise ValueError("Save a complete significant-outage form before opening review")
     if not all(row.get(key) for key in ("outageId", "start", "end", "diagramRevision")):
         raise ValueError("Enter an outage ID, work window and diagram revision")
@@ -92,6 +100,9 @@ def open_review(row, payload, actor, roster, snapshot, digest):
     if number > 1 and not summary:
         raise ValueError("Summarize the changes before reissuing review")
     now = store.now_iso()
+    copy_to = payload.get("copyTo", [])
+    if not isinstance(copy_to, list) or len(copy_to) > 100 or any(name not in accounts for name in copy_to):
+        raise ValueError("Choose active accounts for additional final copies")
     tasks = []
 
     def task(role, account, site=""):
@@ -108,7 +119,7 @@ def open_review(row, payload, actor, roster, snapshot, digest):
     snapshot = {**snapshot, "sources": row["sources"], "proposalDigest": (row.get("generation") or {}).get("digest"),
                 "trigger": row["reviewTrigger"], "sites": row["affectedSites"]}
     review = {"number": number, "due": due.isoformat(), "preparer": preparer, "summary": summary,
-              "owner": actor, "area": area, "openedAt": now, "tasks": tasks}
+              "owner": actor, "area": area, "openedAt": now, "tasks": tasks, "copyTo": sorted(set(copy_to))}
     review["digest"] = digest({"package": snapshot, "cover": review})
     status = "CHANGES_REQUESTED" if any(not i.get("closedAt") for i in row.get("reviewIssues", [])) else "PENDING_SIGNOFF"
     row.update(packageReview=review, reviewNumber=number, review=None, status=status)

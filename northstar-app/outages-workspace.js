@@ -68,8 +68,10 @@
     const close = outage.status === 'Open' && outage.id
       ? `<button class="node-expand outage-close" data-close-outage="${escapeHtml(outage.id)}">CLOSE</button>`
       : '';
+    const packageButton = type === 'Planned' && outage.status === 'Open' && outage.id
+      ? `<button class="node-expand" data-outage-package="${escapeHtml(outage.id)}">OUTAGE PLAN</button>` : '';
     const switching = outage.status === 'Open' && outage.id
-      ? `<button class="node-expand" data-create-switching="${escapeHtml(outage.id)}">CREATE PLAN</button>`
+      ? packageButton + `<button class="node-expand" data-create-switching="${escapeHtml(outage.id)}">${packageButton ? 'DRAWING DRAFT' : 'CREATE PLAN'}</button>`
       : '';
     const href = String(outage.href || '').startsWith('event-detail.html?id=')
       ? outage.href
@@ -146,6 +148,12 @@
     };
   }
   document.addEventListener('click', event => {
+    const plan = event.target.closest('[data-outage-package]');
+    if (plan) {
+      window.NorthstarModules?.open('outages:uwpc');
+      window.NorthStarUwpcDesk?.fromOutage(plan.dataset.outagePackage);
+      return;
+    }
     if (event.target.closest('[data-close-outage]')) setTimeout(loadOutageRegister, 350);
     const create = event.target.closest('[data-create-switching]');
     if (create) {
