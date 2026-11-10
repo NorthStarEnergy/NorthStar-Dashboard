@@ -20,6 +20,7 @@ from contextlib import closing, contextmanager, nullcontext
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import northstar_form_layout as layout_editor
 import northstar_ai as ai
 import northstar_outage_review as outage_review
 import northstar_store as store
@@ -99,7 +100,7 @@ def digest(value):
 
 def field_snapshot(row):
     return {**{key: row.get(key, "") for key in FIELDS},
-            "switchingPlan": row.get("switchingPlan", {})}
+            "switchingPlan": row.get("switchingPlan", {}), **({"layout": row["layout"]} if "layout" in row else {})}
 
 
 def switching_plan(payload):
@@ -124,6 +125,8 @@ def switching_plan(payload):
 
 def fields(payload):
     result = {k: clip(payload.get(k), n) for k, n in FIELDS.items()}
+    if "layout" in payload:
+        result["layout"] = layout_editor.validate(payload["layout"])
     if result["kind"] not in KINDS or result["template"] not in TEMPLATES:
         raise ValueError("Select a request type and supported UWPC form")
     if (result["kind"] == "SWITCHING_PLAN") != (result["template"] == "pc17a"):
@@ -908,7 +911,9 @@ def _pc17a_xlsx(row):
 
 
 def export_xlsx(row):
-    return _pc17a_xlsx(row) if row.get("template") == "pc17a" else _export_summary_xlsx(row)
+    original = _pc17a_xlsx(row) if row.get("template") == "pc17a" else _export_summary_xlsx(row)
+    layout = row.get('layout', {})
+    return layout_editor.xlsx(original, layout) if layout.get('rows') or layout.get('photo') else original
 
 
 def _pdf_escape(value):
@@ -1142,7 +1147,9 @@ def _pc17a_pdf(row):
 
 
 def export_pdf(row):
-    return _pc17a_pdf(row) if row.get("template") == "pc17a" else _export_summary_pdf(row)
+    original = _pc17a_pdf(row) if row.get("template") == "pc17a" else _export_summary_pdf(row)
+    layout = row.get('layout', {})
+    return layout_editor.pdf(original, layout) if layout.get('rows') or layout.get('photo') else original
 
 
 def _switch_log_pdf(row):

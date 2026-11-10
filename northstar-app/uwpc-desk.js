@@ -215,6 +215,80 @@
     </div></fieldset>`;
   }
 
+  function bindLayout(form, saved) {
+    if (!form) return;
+    const panel = form.querySelector('[data-layout]');
+    const list = panel.querySelector('[data-layout-rows]');
+    const canvas = panel.querySelector('canvas');
+    const context = canvas.getContext('2d');
+    const file = panel.querySelector('[type=file]');
+    const zoom = panel.querySelector('[data-zoom]');
+    const light = panel.querySelector('[data-light]');
+    let source = null, rotation = 0, photo = saved?.photo || '', loading = false;
+    function add(row = {}) {
+      if (list.children.length >= 120) { notice('The form has reached 120 rows.', true); return; }
+      const line = document.createElement('fieldset');
+      line.innerHTML = '<label>Label<input maxlength="180"></label><label>Text<textarea rows="2" maxlength="4000"></textarea></label><label>Font<select><option>Arial</option><option>Georgia</option><option>Courier New</option></select></label><label>Size<input type="number" min="8" max="32" required></label><button type="button" data-move="-1">Move up</button><button type="button" data-move="1">Move down</button><button type="button" data-delete>Remove row</button>';
+      const [label, text, font, size] = line.querySelectorAll('input, textarea, select');
+      label.value = row.label || ''; text.value = row.text || '';
+      font.value = row.font || 'Arial'; size.value = row.size || 12;
+      const paint = () => { for (const field of [label, text]) {
+        field.style.fontFamily = font.value; field.style.fontSize = size.value + 'pt';
+      }};
+      line.oninput = paint; paint(); list.append(line);
+    }
+    function draw(edit) {
+      canvas.hidden = !source;
+      if (!source) return;
+      const scale = Math.min(1, 900 / Math.max(source.width, source.height));
+      const w = Math.max(1, Math.round(source.width * scale)), h = Math.max(1, Math.round(source.height * scale));
+      canvas.width = rotation % 2 ? h : w; canvas.height = rotation % 2 ? w : h;
+      context.translate(canvas.width / 2, canvas.height / 2); context.rotate(rotation * Math.PI / 2);
+      context.scale(Number(zoom.value), Number(zoom.value)); context.filter = 'brightness(' + light.value + '%)';
+      context.drawImage(source, -w / 2, -h / 2, w, h);
+      if (edit) { photo = canvas.toDataURL('image/jpeg', 0.68).split(',')[1]; dirty = true; }
+    }
+    async function load(blob, edit) {
+      loading = true;
+      try {
+        const next = await createImageBitmap(blob);
+        source?.close(); source = next; rotation = 0; zoom.value = 1; light.value = 100; draw(edit);
+      } catch { notice('The browser could not read that photo.', true); }
+      finally { loading = false; }
+    }
+    for (const row of saved?.rows || []) add(row);
+    if (photo) {
+      const bytes = Uint8Array.from(atob(photo), c => c.charCodeAt(0));
+      void load(new Blob([bytes], {type:'image/jpeg'}), false);
+    }
+    file.onchange = () => { if (file.files[0]) void load(file.files[0], true); };
+    zoom.oninput = light.oninput = () => draw(true);
+    panel.onclick = event => {
+      const b = event.target.closest('button'); if (!b || loading) return;
+      const line = b.closest('[data-layout-rows] > fieldset');
+      if (b.hasAttribute('data-add')) add();
+      if (b.hasAttribute('data-copy')) {
+        for (const el of form.querySelectorAll('input, textarea, select')) {
+          if (panel.contains(el) || el.type === 'hidden' || !el.value || el.type === 'checkbox' && !el.checked) continue;
+          add({label:el.getAttribute('aria-label') || el.labels?.[0]?.querySelector('span')?.textContent || el.name || el.dataset.planField, text:el.value});
+        }
+      }
+      if (line && b.hasAttribute('data-delete')) line.remove();
+      if (line && b.dataset.move === '-1' && line.previousElementSibling) list.insertBefore(line, line.previousElementSibling);
+      if (line && b.dataset.move === '1' && line.nextElementSibling) list.insertBefore(line.nextElementSibling, line);
+      if (b.hasAttribute('data-rotate')) { rotation++; draw(true); }
+      if (b.hasAttribute('data-clear-photo')) { source?.close(); source = null; photo = ''; file.value = ''; draw(false); }
+      dirty = true;
+    };
+    form.readLayout = () => {
+      if (loading) throw new Error('Wait for the photo to finish loading.');
+      return {photo, rows:[...list.children].map(line => {
+        const [label, text, font, size] = line.querySelectorAll('input, textarea, select');
+        return {label:label.value, text:text.value, font:font.value, size:Number(size.value)};
+      })};
+    };
+  }
+
   function exportPanel(record) {
     if (!record.id) return '';
     const base = `${api}/${encodeURIComponent(record.id)}/exports`;
@@ -249,6 +323,7 @@
       <form id="uwpcRequestForm">
         ${r.template === 'pc17a' ? switchingForm(r) : standardForm(r)}
         ${outage.classification(r)}
+        <details data-layout><summary>Edit printable form and photo</summary><p>Copy filled fields to start a printable sheet. Edit its rows, labels and type. The sheet is included in PDF and Excel exports.</p><div data-layout-rows></div><button type="button" data-copy>Copy filled fields</button><button type="button" data-add>Add row</button><fieldset><legend>Photo editor</legend><label>Photo<input type="file" accept="image/*"></label><label>Crop zoom<input data-zoom type="range" min="1" max="3" step=".1" value="1"></label><label>Brightness<input data-light type="range" min="50" max="150" value="100"></label><button type="button" data-rotate>Rotate 90°</button><button type="button" data-clear-photo>Remove photo</button><canvas hidden style="display:block;max-width:100%;height:auto"></canvas></fieldset></details>
         <footer class="uwpc-form-footer">${managerPackage ? '' : '<small>Saving creates a fresh PDF preview and editable Excel file for this revision.</small>'}<div class="uwpc-actions"><button type="button" data-action="cancel">Cancel</button><button class="uwpc-primary" type="submit">${r.id ? 'Save changes' : 'Submit draft form'}</button></div></footer>
       </form>
       ${r.preparationMode === 'INTAKE' ? '</details>' : ''}`);
@@ -295,6 +370,7 @@
       });
     }
     if (managerPackage) editor.querySelectorAll('.uwpc-form-shell > details,#checkoutFields > details').forEach(el => {el.open=true;});
+    bindLayout(document.getElementById('uwpcRequestForm'), r.layout);
     if (r.outageId && $('uwpcRequestForm')) $('uwpcRequestForm').elements.outageId.readOnly = true;
     if (fullReview && $('uwpcPlanPhase')) ($('uwpcPlanPhase').closest('.advanced') || $('uwpcPlanPhase').closest('.uwpc-actions')).hidden = Boolean(r.switchLog || r.distribution);
     $('uwpcRequestForm')?.addEventListener('submit', event => {event.preventDefault(); void run(save);});
@@ -322,6 +398,7 @@
   async function save() {
     const form = $('uwpcRequestForm'); if (!form.reportValidity()) return;
     const data = Object.fromEntries(new FormData(form));
+    if (form.readLayout) data.layout = form.readLayout();
     data.affectedSites = String(data.affectedSites || '').split(/\r?\n/).map(site => site.trim()).filter(Boolean);
     ['start','end'].forEach(key => {data[key] = data[key] ? new Date(data[key]).toISOString() : '';});
     if (data.template === 'pc17a') {

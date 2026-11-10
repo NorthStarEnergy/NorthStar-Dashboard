@@ -134,6 +134,8 @@ def register_area_ids(primary, sites_json):
 
 
 def query_register(params):
+    visitor = review.VISITOR_DB.get() is not None
+    areas = ("Training area",) if visitor else OUTAGE_AREAS
     tab = params.get("tab", "upcoming")
     if tab not in {"upcoming","active","past"}:
         raise ValueError("Unknown register tab")
@@ -149,10 +151,10 @@ def query_register(params):
         where.append("(site=? OR EXISTS(SELECT 1 FROM json_each(sites) WHERE value=?))")
         values.extend([params["site"]] * 2)
     if params.get("area"):
-        if params["area"] not in OUTAGE_AREAS:
+        if params["area"] not in areas:
             raise ValueError("Unknown outage area")
         where.append("EXISTS(SELECT 1 FROM json_each(area_ids) WHERE value=?)")
-        values.append(OUTAGE_AREAS.index(params["area"]))
+        values.append(areas.index(params["area"]))
     for key, op in [("from", ">="), ("until", "<")]:
         if params.get(key):
             stamp = datetime.fromisoformat(params[key].replace("Z", "+00:00"))
@@ -168,7 +170,7 @@ def query_register(params):
     direction = "DESC" if params.get("direction", "desc" if tab == "past" else "asc") == "desc" else "ASC"
     filtered = " FROM (SELECT register.*,outage_areas(site,sites) AS area_ids FROM register) WHERE " + " AND ".join(where)
     with desk.session() as c:
-        c.create_function("outage_areas", 2, register_area_ids, deterministic=True)
+        c.create_function("outage_areas", 2, (lambda primary, extra: "[0]") if visitor else register_area_ids, deterministic=True)
         c.execute("BEGIN")
         total = c.execute(REGISTER + "SELECT count(*)" + filtered, values).fetchone()[0]
         offset = min(offset, max(0, (total - 1) // 30 * 30))
@@ -178,8 +180,8 @@ def query_register(params):
         site_names = [r[0] for r in c.execute(REGISTER + "SELECT site FROM rows UNION SELECT value FROM rows,json_each(sites) ORDER BY 1")]
     for item in items:
         item["sites"] = json.loads(item["sites"])
-        item["areas"] = [OUTAGE_AREAS[i] for i in json.loads(item.pop("area_ids"))]
-    return {"rows": items, "total": total, "offset": offset, "counts": {k:counts.get(k,0) for k in ("upcoming","active","past")}, "sites":site_names, "areas":OUTAGE_AREAS}
+        item["areas"] = [areas[i] for i in json.loads(item.pop("area_ids"))]
+    return {"rows": items, "total": total, "offset": offset, "counts": {k:counts.get(k,0) for k in ("upcoming","active","past")}, "sites":site_names, "areas":areas}
 
 
 def create_request(payload, actor, accounts=()):

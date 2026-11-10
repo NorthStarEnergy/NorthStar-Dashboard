@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlsplit
 import northstar_auth as auth
 import northstar_outage_manager as manager
 import northstar_outage_review as review
-import northstar_sites as sites
+from datetime import datetime, timedelta, timezone
 import northstar_store as store
 import northstar_uwpc_desk as desk
 
@@ -28,6 +28,48 @@ DOC_ACTIONS = {"save","sources","remove-source","review-view","review-open","rev
                "log-open","log-entry","log-close","closeout-note","phase","correspondence","route","signoff"}
 
 
+DEMO_SITES = ("Training Station A", "Training Station B")
+
+
+def seed_examples(c):
+    c.row_factory = sqlite3.Row
+    c.execute("BEGIN IMMEDIATE")
+    c.execute("CREATE TABLE IF NOT EXISTS demo_editions (edition INTEGER PRIMARY KEY)")
+    if not c.execute("INSERT OR IGNORE INTO demo_editions VALUES (1)").rowcount:
+        return
+    for index, site in enumerate(DEMO_SITES):
+        providing = index == 0
+        asset = "Training Line A" if providing else "Training Line Switch B"
+        title = "Provide SG for connected-line work" if providing else "Request SG for station line-switch work"
+        station = f"Station Coordinator {index + 1}"
+        utility = f"Hydro One Training Contact {index + 1}"
+        issuer, recipient = (station, utility) if providing else (utility, station)
+        scope = ("Hydro One training crew inspects its connected line. The requested guarantee covers the station-side boundary only."
+                 if providing else "Station training crew inspects its line switch. The station requests a guarantee covering the Hydro One side of the connection.")
+        reference = f"DEMO-SG-0{index + 1}"
+        steps = [
+            f"{recipient} records the proposed work, boundary and requested window under {reference}.",
+            f"{issuer} and {recipient} compare the fictional boundary drawing and record the limits and exclusions.",
+            f"{issuer} records the simulated guarantee terms. {recipient} reads back the terms and records receipt.",
+            "The work coordinator links the guarantee to the separate work authorization in the exercise log.",
+            f"After the simulated work authorization is closed, {recipient} returns the guarantee to {issuer}. Both log its release.",
+        ]
+        start = datetime.now(timezone.utc) + timedelta(days=7 + index)
+        schedule = dict(start=start.isoformat(), end=(start + timedelta(hours=3)).isoformat())
+        outage = store.insert_outage(c, dict(title=title, site=site, asset=asset, type="Planned", details=scope), station)
+        shared = dict(site=site, outageId=outage["id"], scope=scope, authority=issuer, reference=reference,
+                      equipment=asset, diagramRevision=f"Exercise boundary {index + 1}, revision A", **schedule)
+        plan = desk.create(dict(shared, title=title, kind="SWITCHING_PLAN", template="pc17a",
+                                switchingPlan=dict(purpose="Tabletop coordination exercise. " + scope, preparedBy=station,
+                                steps=[dict(device=asset, operation=step) for step in steps])), station, connection=c)
+        plan["registerOutage"] = outage["id"]
+        desk.write(c, plan)
+        desk.create(dict(shared, title=f"{reference} · {title}", kind="PROVIDE_GUARANTEE" if providing else "REQUEST_GUARANTEE",
+                         template="pc17b-sg" if providing else "pc10c-sg", description=scope,
+                         notes=f"Exercise copy. Issuer: {issuer}. Recipient: {recipient}.\n" + "\n".join(steps)),
+                    station, connection=c)
+
+
 @lru_cache(maxsize=4)
 def initialize(path):
     path.parent.mkdir(parents=True,exist_ok=True)
@@ -37,6 +79,9 @@ def initialize(path):
         desk.init_schema(c)
         c.execute("""CREATE TABLE IF NOT EXISTS visitor_sessions(
             id INTEGER PRIMARY KEY AUTOINCREMENT, digest TEXT UNIQUE NOT NULL, expires INTEGER NOT NULL)""")
+
+
+        seed_examples(c)
 
 
 def issue_session(path):
@@ -81,7 +126,7 @@ def handle(h):
     # cannot authorize this API, and a visitor token never enters operator auth.
     if h.command=="POST" and (h.headers.get("Origin") or h.headers.get("Transfer-Encoding")):
         return fail(403,"Use the Outage Manager entry page")
-    path=store.DB_PATH.parent/"outage-visitors"/"public-outages.sqlite3"
+    path=store.DB_PATH.parent/"outage-visitors"/"fictional-outages-v1.sqlite3"
     if route=="entry" and h.command=="POST":
         ip=h.headers.get("CF-Connecting-IP") or h.client_address[0]
         if not throttle.check(ip)[0]:
@@ -110,7 +155,7 @@ def handle(h):
                 c.execute("DELETE FROM visitor_sessions WHERE digest=?",(hashlib.sha256(token.encode()).hexdigest(),))
             return h._send_json({"signedOut":True})
         if route=="sites" and h.command=="GET":
-            return h._send_json({"options":sites.stations()})
+            return h._send_json({"options":[{"name": name, "id": name, "kind": "site"} for name in DEMO_SITES]})
         if route=="manager/library" and h.command=="GET":
             return h._send_json({"referenceOnly":True,"forms":[{"code":v[0],"title":v[1]} for v in manager.FORMS.values()],
                                  "questions":manager.QUESTIONS})

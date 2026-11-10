@@ -1877,7 +1877,7 @@ class Handler(SimpleHTTPRequestHandler):
                         unquote(self.headers.get("X-Northstar-Filename", "")),
                         query.get("kind", [""])[0], self._binary_body(uwpc_desk.MAX_SOURCE), actor, checkout_token=checkout_token)
                 else:
-                    payload = self._json_body(64 * 1024)
+                    payload = self._json_body(2 * 1024 * 1024 if not parts or parts[-1] == "save" else 64 * 1024)
                     if not isinstance(payload, dict):
                         raise ValueError("A JSON object is required")
                     if not parts:

@@ -34,6 +34,21 @@ export async function publicOutage(request,assets,upstreamFetch=fetch){
     const headers=new Headers(extra);if(valid)headers.set('authorization','Bearer '+token);
     return upstreamFetch(origin+'/public-outage-api/'+route,{method,body,headers,redirect:'manual',cache:'no-store'});
   }
+  // Older backends return the operator station catalog. Keep those sessions off the public surface.
+  if(valid && path!=='exit' && path!=='entry'){
+    const catalog=await upstream('sites');
+    if(catalog.ok){
+      const data=await catalog.json();
+      const names=data.options?.map(site=>site.name);
+      if(names?.length!==2 || !names.includes('Training Station A') || !names.includes('Training Station B')){
+        return page('The training workspace is being updated. Please try again shortly.',503);
+      }
+    }else if(catalog.status!==401){
+      return page('The training workspace is temporarily unavailable.',503);
+    }else if(path.startsWith('api/')){
+      return Response.json({error:'Enter the Outage Manager passcode.'},{status:401,headers:security});
+    }
+  }
   if(path==='entry' && request.method==='POST'){
     if(Number(request.headers.get('content-length'))>512)return entry('Enter a valid passcode.');
     const passcode=new URLSearchParams(await request.text()).get('passcode')||'';
