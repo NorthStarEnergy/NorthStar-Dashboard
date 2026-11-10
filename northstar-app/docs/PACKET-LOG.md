@@ -1,3 +1,7 @@
+## 20261110-public-outage
+
+Added [public passcode access and switching-plan reuse](packets/2026-11-10-public-outage.md).
+
 ## 20261110-outage-areas
 
 Added [area sorting and filtering](packets/2026-11-10-outage-areas.md) to the outage register.

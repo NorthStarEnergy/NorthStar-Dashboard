@@ -123,6 +123,10 @@ a.titlebtn{display:inline-block;text-decoration:none}a.titlebtn:hover{text-decor
 .report-section .sheet table,#eventTable>.sheet table{white-space:normal;overflow-wrap:anywhere}.report-section .sheet td,#eventTable>.sheet td{vertical-align:top;white-space:pre-wrap}.report-section .sheet th,.report-section .sheet td,#eventTable>.sheet td{padding:5px 7px}
 #checkoutBar{justify-content:flex-start;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:6px}
 #checkoutBar .file-actions{display:inline-flex;align-items:center;gap:5px}
+body[data-manager-package] #checkoutBar button.plan-tool{background:white;color:var(--ink);border:1px solid var(--line);min-height:26px}
+.plan-picker{width:min(540px,94vw);max-height:85dvh;overflow:auto}.plan-picker header h2{font-size:16px;margin:0}
+.plan-picker label{display:grid;gap:3px;margin:6px 0}.plan-picker select,.plan-picker input{width:100%;min-width:0;padding:5px}
+.plan-picker [data-preview]{max-height:28dvh;overflow:auto}.plan-picker ol{padding-left:24px}.plan-picker footer{display:flex;align-items:center;gap:12px}.plan-picker [role=status]{color:var(--muted);font-size:13px}
 body[data-manager-package] #checkoutBar :is(button,.uwpc-button){display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:4px 9px;border-radius:4px;background:#1c7048;border:1px solid #185e3d;color:white;font-weight:600;text-decoration:none}
 body[data-manager-package] #checkoutBar .pdf{background:#a92d39;border-color:#902430}
 #checkoutBar svg{width:18px;height:18px}#checkoutBar :is(button,a):hover{filter:brightness(1.12)}#checkoutBar button:disabled{opacity:.65}

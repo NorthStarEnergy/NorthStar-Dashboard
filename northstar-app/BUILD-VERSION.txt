@@ -1,4 +1,4 @@
-v0.238
+v0.239
 2026-11-10
-2026-11-10T06:35:49-05:00
-Adds operating-area sorting and filtering to the outage register.
+2026-11-10T06:55:04-05:00
+Adds public tester access and lets editors reuse earlier switching plans.

@@ -3,12 +3,18 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.238",
+    "version": "v0.239",
     "published": "2026-11-10",
-    "publishedAt": "2026-11-10T06:35:49-05:00",
-    "summary": "Adds operating-area sorting and filtering to the outage register."
+    "publishedAt": "2026-11-10T06:55:04-05:00",
+    "summary": "Adds public tester access and lets editors reuse earlier switching plans."
   },
   "history": [
+    {
+      "version": "v0.239",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T06:55:04-05:00",
+      "summary": "Adds public tester access and lets editors reuse earlier switching plans."
+    },
     {
       "version": "v0.238",
       "published": "2026-11-10",

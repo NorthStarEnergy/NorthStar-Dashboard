@@ -144,6 +144,13 @@ async function check() {
     await page.screenshot({path:path.join(out,'package-overview.png')});
     await page.getByText('Advanced settings',{exact:true}).click();
     await page.getByLabel('Tag a person').selectOption('fixture_relief');
+    const note=page.getByLabel('Note',{exact:true});
+    await note.hover();
+    await page.locator('#outageFieldHelp').getByText(/Tell the recipient/).waitFor();
+    assert.ok(await note.evaluate(el=>el.form.noValidate && el.required && el.validity.valueMissing));
+    await page.getByRole('button',{name:'Send tag'}).click();
+    assert.ok(await note.evaluate(el=>el===document.activeElement && el.validity.valueMissing));
+    assert.ok(await page.locator('#outageFieldHelp').isHidden());
     await page.getByLabel('Note',{exact:true}).fill('Check the outage window.');
     await page.getByRole('button',{name:'Send tag'}).click();
     await page.getByText('Tag sent to fixture_relief.').waitFor();
@@ -249,7 +256,7 @@ async function check() {
     await toolbar.getByRole('button',{name:'Check out to edit'}).waitFor();
     const [actionX,statusX,pdfX,excelX]=await toolbar.locator('button,[role=status],a').evaluateAll(els=>els.map(el=>el.getBoundingClientRect().x));
     assert.ok(actionX<statusX && statusX<pdfX && pdfX<excelX);
-    assert.ok(await toolbar.getByRole('link',{name:'Download Excel'}).locator('svg').isVisible());
+    assert.ok(await toolbar.getByRole('link',{name:'Excel'}).locator('svg').isVisible());
     await page.getByRole('button',{name:'Check out to edit'}).click();
     const peer=await browser.newContext();
     assert.equal((await peer.request.post(origin+'/api/auth/login',{data:{username:'fixture_relief',password:'fixture-only-password'}})).status(),200);
@@ -257,7 +264,7 @@ async function check() {
     await peerPage.getByText('Checked out by fixture_author',{exact:true}).waitFor();
     assert.ok(await peerPage.getByRole('button',{name:'Check out to edit'}).isDisabled());
     assert.ok(await peerPage.locator('#uwpcRequestForm [name=title]').isDisabled());
-    for(const [name,prefix] of [['Open PDF','%PDF'],['Download Excel','PK']]){
+    for(const [name,prefix] of [['Open PDF','%PDF'],['Excel','PK']]){
       const href=await peerPage.locator('#checkoutBar').getByRole('link',{name}).getAttribute('href');
       const file=await peerPage.evaluate(async ({href,n})=>{const r=await fetch(href);
         return [r.status,new TextDecoder().decode((await r.arrayBuffer()).slice(0,n))];},{href,n:prefix.length});
@@ -272,6 +279,14 @@ async function check() {
     await form.locator('[name=affectedSites]').fill('');
     assert.equal(await added.inputValue(),'Kenora · FIX-K');
     await added.fill('');
+    await toolbar.getByRole('button',{name:'Open',exact:true}).click();
+    const picker=page.getByRole('dialog',{name:'Open switching plan'});
+    await picker.locator('[data-preview] li').first().waitFor();
+    await picker.getByRole('button',{name:'Merge'}).click();
+    await picker.waitFor({state:'hidden'});
+    assert.equal(await form.locator('[data-step-field=device]').first().inputValue(),'');
+    assert.equal(await form.locator('[data-step-field=operation]').first().inputValue(),'Record [reference] at [reference]');
+    assert.equal(await form.locator('[data-step-field=completedBy]').first().inputValue(),'');
     await form.locator('[data-step-field=device]').first().fill('Fixture device');
     await form.locator('[data-step-field=operation]').first().fill('Fixture step');
     await form.getByRole('button',{name:'Save changes'}).click();

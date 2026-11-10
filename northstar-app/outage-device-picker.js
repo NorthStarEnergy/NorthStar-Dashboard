@@ -49,7 +49,7 @@
     const params=new URLSearchParams(sites.map(s=>['site',s])),key=params.toString();
     try{
       if(key!==lastKey){
-        const res=await fetch('/api/uwpc/requests/manager/devices?'+params,{credentials:'same-origin',cache:'no-store'});
+        const res=await fetch((document.body.hasAttribute('data-outage-visitor')?'/outage-manager':'')+'/api/uwpc/requests/manager/devices?'+params,{credentials:'same-origin',cache:'no-store'});
         if(!res.ok)throw Error();
         const data=await res.json();if(seq!==sequence)return;
         lastRows=data.devices.map(d=>({...d,search:[d.ref,d.label,d.site].join(' ').toLowerCase()}));lastKey=key;

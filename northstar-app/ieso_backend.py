@@ -1735,6 +1735,10 @@ class Handler(SimpleHTTPRequestHandler):
         then 404s, because it does not exist on that hostname.
         """
         self.correlation_id = events.set_correlation_id(self.headers.get("X-Correlation-Id"))
+        if self.path.split("?",1)[0].startswith("/public-outage-api/"):
+            import northstar_public_outage
+            northstar_public_outage.handle(self)
+            return True
         if shelf_mobile.handle(self, shelf, OPERATOR_GATE):
             return True
         denial = self._operator_gate_denial()
@@ -1761,17 +1765,19 @@ class Handler(SimpleHTTPRequestHandler):
             return True
         return False
 
-    def _uwpc_request_route(self, route: str) -> bool:
+    def _uwpc_request_route(self, route: str, visitor_identity=None) -> bool:
         prefix = "/api/uwpc/requests"
         if route != prefix and not route.startswith(prefix + "/"):
             return False
-        actor = self._operator_actor()
-        accounts = (DEMO_AUTH or {}).get("accounts", [DEMO_AUTH or {}]) if OPERATOR_GATE == "demo" else []
-        operators = sorted({str(a.get("username")) for a in accounts
-                            if a.get("username") and a.get("role", "operator") == "operator" and not a.get("disabled")})
-        # A separately configured Access directory is needed before assigning external identities.
-        if OPERATOR_GATE == "access":
-            operators = [name.strip() for name in os.environ.get("NORTHSTAR_UWPC_OPERATORS", "").split(",") if name.strip()]
+        if visitor_identity is not None:
+            actor, operators = visitor_identity
+        else:
+            actor = self._operator_actor()
+            accounts = (DEMO_AUTH or {}).get("accounts", [DEMO_AUTH or {}]) if OPERATOR_GATE == "demo" else []
+            operators = sorted({str(a.get("username")) for a in accounts
+                                if a.get("username") and a.get("role", "operator") == "operator" and not a.get("disabled")})
+            if OPERATOR_GATE == "access":
+                operators = [name.strip() for name in os.environ.get("NORTHSTAR_UWPC_OPERATORS", "").split(",") if name.strip()]
         parts = route[len(prefix):].strip("/").split("/") if route != prefix else []
         checkout_token = self.headers.get("X-Northstar-Checkout", "")
         practice_token = None
@@ -1788,6 +1794,10 @@ class Handler(SimpleHTTPRequestHandler):
                     self._send_json(manager.details(params.get("id","")))
                 elif self.command == "GET" and endpoint == ["reports"]:
                     self._send_json(manager.outage_report(params["id"]) if params.get("id") else manager.report_options())
+                elif self.command == "GET" and endpoint == ["plans"]:
+                    self._send_json(manager.switching_sources(params.get("target","")))
+                elif self.command == "GET" and endpoint == ["plan-versions"]:
+                    self._send_json(manager.switching_versions(params.get("id","")))
                 elif endpoint == ["checkout"] and self.command == "GET":
                     self._send_json(uwpc_desk.checkout(params.get("doc",""), None, actor, checkout_token))
                 elif endpoint == ["checkout"] and self.command == "POST":

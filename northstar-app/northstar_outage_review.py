@@ -11,6 +11,7 @@ import northstar_store as store
 TRIGGERS = {"routine", "multi-site", "crew dependency", "non-routine switching or lockout", "manager designation"}
 ROLES = ("manager", "checker", "operator", "area", "field")
 PRACTICE_DB = ContextVar("outage_practice_db", default=None)
+VISITOR_DB = ContextVar("outage_visitor_db", default=None)
 PRACTICE_TEAM = {
     "manager": ["Avery Brooks"], "operator": ["Morgan Ellis", "Jordan Vale"],
     "checker": ["Morgan Ellis"], "area": ["Casey Rowan"], "field": ["Riley West", "Taylor Reed"],
@@ -18,6 +19,8 @@ PRACTICE_TEAM = {
 
 
 def directory(accounts):
+    if VISITOR_DB.get() is not None:
+        return {role: list(accounts) for role in ROLES}
     if PRACTICE_DB.get() is not None:
         return PRACTICE_TEAM
     path = Path(os.environ.get("NORTHSTAR_OUTAGE_REVIEW_DIRECTORY") or

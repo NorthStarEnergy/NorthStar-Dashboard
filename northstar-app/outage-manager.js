@@ -1,6 +1,8 @@
 (() => {
   'use strict';
-  const api = '/api/uwpc/requests/manager';
+  const visitor = document.body.hasAttribute('data-outage-visitor');
+  const mount = visitor ? '/outage-manager' : '';
+  const api = mount + '/api/uwpc/requests/manager';
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? '').replace(/[&<>"']/g,c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const paths = {outages:'M3 7V5h6l3 3h9v12H3z',home:'M3 10l9-7 9 7 M5 9v11h5v-6h4v6h5V9',new:'M12 4v16 M4 12h16',
@@ -15,7 +17,7 @@
     fullscreen:'M9 4H4v5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5',restore:'M4 9h5V4 M15 4v5h5 M20 15h-5v5 M9 20v-5H4',
     reports:'M4 3h11l5 5v13H4z M14 3v6h6 M8 17v-3 M12 17v-6 M16 17v-4'};
   const icon = name => `<svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="${paths[name]}"></path></svg>`;
-  const base = '/outage-manager.html';
+  const base = visitor ? mount+'/' : '/outage-manager.html';
   const sourceUrl = api + '/library/book';
   const sections = {overview:'Overview', request:'Request', forms:'Forms', documents:'Drawings & documents',
     approvals:'Approvals', distribution:'Final distribution', log:'Switching log', closeout:'Closeout', history:'History & correspondence',events:'Event log'};
@@ -23,7 +25,7 @@
     const query = new URLSearchParams({section});
     if(outage) query.set('outage',outage);
     if(id) query.set('id',id);
-    return '/outage-manager-package.html?'+query;
+    return mount+'/outage-manager-package.html?'+query;
   }
   const menuViews = [['home','Home'],['outages','Outages'],['library','UWPC'],['reports','Reports'],['inbox','Inbox']];
   const titles = {...Object.fromEntries(menuViews),new:'New outage'};
@@ -73,7 +75,7 @@
       </header>
       <button class="mobile-menu" id="menuToggle" aria-controls="packageNav" aria-expanded="false">Menu ${badge}</button><nav id="packageNav" aria-label="Main menu">${menuViews.map(item=>item[0]==='outages'?
         `${navLink(item)}<div id="outageTree" hidden></div>`:navLink(item)).join('')}</nav>
-      <a class="back" href="/northstar-clean.html" aria-label="Return to NorthStar">${icon('back')}<span>NorthStar</span></a></aside>`;
+      ${visitor ? `<form class="back" method="post" action="/outage-manager/exit"><span>${esc(document.body.dataset.outageVisitor)}</span><button class="btn">Sign out</button></form>` : `<a class="back" href="/northstar-clean.html" aria-label="Return to NorthStar">${icon('back')}<span>NorthStar</span></a>`}</aside>`;
     if(selected || !['home','outages','reports'].includes(view))void mountFolder(selected,section);
     if(view!=='inbox')void refreshInbox().catch(()=>{});
     const menu=$('menuToggle'), nav=menu.nextElementSibling;
@@ -202,7 +204,7 @@
     const docId=query.get('id');
     let id=query.get('outage'),legacy=null;
     if(!id&&docId) {
-      legacy=await fetchData('/api/uwpc/requests/'+encodeURIComponent(docId));
+      legacy=await fetchData(mount+'/api/uwpc/requests/'+encodeURIComponent(docId));
       id=legacy.registerOutage||legacy.outageId||legacy.id;
     }
     if(!id)throw Error('Choose an outage from the register.');
@@ -285,7 +287,7 @@
       if(section==='forms'&&row.type==='Planned'&&row.phase==='FUTURE') {
         page.lastElementChild.insertAdjacentHTML('beforeend','<button class="primary">Prepare outage package</button><p role="status"></p>');
         const button=page.querySelector('button');
-        button.onclick=async()=>{button.disabled=true;try{const doc=await fetchData('/api/uwpc/requests',{fromOutage:id});location.assign(outageUrl(id,'forms',doc.id));}
+        button.onclick=async()=>{button.disabled=true;try{const doc=await fetchData(mount+'/api/uwpc/requests',{fromOutage:id});location.assign(outageUrl(id,'forms',doc.id));}
           catch(e){button.nextElementSibling.textContent=e.message;button.disabled=false;}};
       }
       return {editable:false};
@@ -392,7 +394,7 @@
       try{const r=await fetchData(api+'/create',data);if(epoch===stamp)location.assign(outageUrl(r.id));}
       catch(err){if(epoch===stamp)$('saveStatus').textContent=err.message;}finally{button.disabled=false;}
     };
-    try{const d=await fetchData('/api/sites');if(epoch===stamp)$('stations').innerHTML=d.options.map(s=>`<option value="${esc(s.name||s.label||s.site||s)}"></option>`).join('');}catch{/* Site entry remains available. */}
+    try{const d=await fetchData(mount+'/api/sites');if(epoch===stamp)$('stations').innerHTML=d.options.map(s=>`<option value="${esc(s.name||s.label||s.site||s)}"></option>`).join('');}catch{/* Site entry remains available. */}
   }
   let inboxSeq=0;
   async function refreshInbox(){
@@ -470,6 +472,7 @@
   }
   function renderLibrary(d,section){
     const tabs=[['manual','Manual'],['forms','Forms & Tags'],['questions','Practice Questions']];
+    if(d.referenceOnly){tabs.shift();if(section==='manual')section='forms';}
     const manual=section==='manual';
     const prompt={manual:'Search the manual',forms:'Search forms and tags',questions:'Search practice questions'}[section];
     const paging=manual?`<select id="readMode" aria-label="Reading format"><option value="pdf">PDF</option><option value="text">Page text</option></select>
@@ -478,14 +481,14 @@
       <button class="iconbtn" id="readNext" aria-label="Next manual page">${icon('right')}</button></div>`:'';
     main.innerHTML=`<h1 class="sr-only">UWPC library</h1><div id="libraryWorkspace"><div class="library-bar"><div class="library-controls">
       <div class="library-buttons" role="group" aria-label="UWPC sections">${tabs.map(([key,label])=>`<button type="button" aria-pressed="${section===key}" data-lib="${key}">${label}</button>`).join('')}</div>
-      ${search('bookQuery',prompt)}<a class="source-link" href="${sourceUrl}" target="_blank" rel="noopener">${icon('arrow')}Open source PDF</a>
+      ${search('bookQuery',prompt)}<a class="source-link" ${d.referenceOnly?'hidden':''} href="${sourceUrl}" target="_blank" rel="noopener">${icon('arrow')}Open source PDF</a>
       ${paging}</div>${manual?'<button type="button" class="iconbtn" id="readerFull"></button>':''}</div><div id="libraryContent"></div></div>`;
     const content=$('libraryContent');
     if(!manual){
       const cards=section==='forms'?d.forms.map(f=>`<article class="card formref"><strong>${esc(f.code)}</strong><p>${esc(f.title)}</p>
-        <a class="btn" href="${api}/library/${encodeURIComponent(f.id)}" download>${icon('download')}PDF</a>
-        <a href="${sourceUrl}#page=${f.pages[0]}" target="_blank" rel="noopener">Source p. ${f.pages[0]}</a></article>`):
-        d.questions.map(([q,a,cl,p])=>`<details class="card"><summary>${esc(q)}</summary><p>${esc(a)}</p><a href="${sourceUrl}#page=${p}" target="_blank" rel="noopener">${esc(cl)} · PDF p. ${p}</a></details>`);
+        <a class="btn" ${d.referenceOnly?'hidden':''} href="${api}/library/${encodeURIComponent(f.id)}" download>${icon('download')}PDF</a>
+        <a ${d.referenceOnly?'hidden':''} href="${sourceUrl}#page=${f.pages?.[0]}" target="_blank" rel="noopener">Source p. ${f.pages?.[0]}</a></article>`):
+        d.questions.map(([q,a,cl,p])=>`<details class="card"><summary>${esc(q)}</summary><p>${esc(a)}</p><a ${d.referenceOnly?'hidden':''} href="${sourceUrl}#page=${p}" target="_blank" rel="noopener">${esc(cl)} · PDF p. ${p}</a></details>`);
       content.className=section==='forms'?'formsgrid':'questions';
       content.innerHTML=cards.join('')+'<p class="note" id="libraryEmpty" hidden></p>';
       const filter=()=>{

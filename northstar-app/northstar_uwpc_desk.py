@@ -68,6 +68,14 @@ def init_schema(c):
 
 @contextmanager
 def session():
+    visitor_db = outage_review.VISITOR_DB.get()
+    if visitor_db is not None:
+        with closing(sqlite3.connect(visitor_db, timeout=5)) as c, c:
+            c.row_factory = sqlite3.Row
+            c.execute("PRAGMA foreign_keys=ON")
+            c.execute("PRAGMA max_page_count=65536")
+            yield c
+        return
     practice = outage_review.PRACTICE_DB.get()
     if practice is not None:
         practice.parent.mkdir(parents=True, exist_ok=True)
@@ -129,6 +137,8 @@ def fields(payload):
             raise ValueError("Purpose of Order and at least one switching sequence line are required")
         if any(not step["device"] or not step["operation"] for step in plan["steps"]):
             raise ValueError("Every switching sequence line requires a device and operation")
+        if any("[reference]" in step["operation"].lower() for step in plan["steps"]):
+            raise ValueError("Replace each [reference] in the imported instructions before saving")
         result["scope"] = result["scope"] or plan["purpose"]
         result["description"] = result["description"] or plan["purpose"]
     elif not result["scope"]:

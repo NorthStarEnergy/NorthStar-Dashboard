@@ -261,6 +261,47 @@ def report_options():
             julianday(start),title,id""")]
 
 
+def switching_sources(target):
+    """One entry per saved switching order, including orders with older usable revisions."""
+    def locations(site, additional):
+        return {station_directory.bind(s)["site"].casefold() for s in [site,*additional] if s}
+    with desk.session() as c:
+        current=desk.read(c,target)
+        selected=locations(current["site"],current.get("affectedSites",[]))
+        records=c.execute("""SELECT id,body->>'$.title' title,body->>'$.site' site,
+            body->>'$.affectedSites' sites,body->>'$.updatedAt' updated
+            FROM uwpc_requests WHERE body->>'$.template'='pc17a' AND coalesce(body->>'$.practice',0)=0
+            AND (json_array_length(body,'$.switchingPlan.steps')>0 OR EXISTS
+                (SELECT 1 FROM uwpc_request_events e WHERE e.request_id=uwpc_requests.id AND
+                json_array_length(e.detail,'$.switchingPlan.steps')>0)) ORDER BY updated DESC,id""")
+        return [{"id":r["id"],"title":r["title"],"site":r["site"],"updated":r["updated"],
+                 "similar":bool(selected & locations(r["site"],json.loads(r["sites"] or "[]")))} for r in records]
+
+
+def switching_versions(ident):
+    with desk.session() as c:
+        row=desk.read(c,ident)
+        if row.get("practice") or row.get("template")!="pc17a":
+            raise LookupError("Switching plan not found")
+        versions=[]
+        seen=set()
+        def collect(snapshot,at):
+            steps=snapshot.get("switchingPlan",{}).get("steps",[])
+            if not steps:return
+            content={"steps":steps,"site":snapshot.get("site",row["site"]),
+                     "sites":snapshot.get("affectedSites",[])}
+            signature=desk.digest(content)
+            if signature not in seen:
+                versions.append({**content,"at":at})
+                seen.add(signature)
+        collect(row,row["updatedAt"])
+        for event in c.execute("""SELECT at,detail FROM uwpc_request_events WHERE request_id=? AND event IN ('created','save')
+                                  ORDER BY seq DESC""",(ident,)):
+            record=json.loads(event["detail"])
+            collect(record.get("fields",record),event["at"])
+        return versions
+
+
 # Match a full location segment, never a whole operating region. Station overrides
 # in the local Maximo configuration take precedence over the standard import.
 STATION_LOCATIONS = {

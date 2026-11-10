@@ -4,7 +4,9 @@
   let managerSection = 'forms';
   const practice = document.body.hasAttribute('data-outage-practice');
   const persona = new URLSearchParams(location.search).get('as') || 'Avery Brooks';
-  const api = '/api/uwpc/requests' + (practice ? '/practice/' + encodeURIComponent(persona) : '');
+  const visitor=document.body.hasAttribute('data-outage-visitor');
+  const mount=visitor?'/outage-manager':'';
+  const api = mount+'/api/uwpc/requests' + (practice ? '/practice/' + encodeURIComponent(persona) : '');
   const labels = {REQUEST_GUARANTEE:'Request supporting guarantee', PROVIDE_GUARANTEE:'Provide supporting guarantee', SWITCHING_PLAN:'Switching plan'};
   const forms = [
     {template:'pc10c-sg', kind:'REQUEST_GUARANTEE', code:'PC10C', title:'Supporting Guarantee Request', detail:'Request work protection from a controlling authority.'},
@@ -21,7 +23,7 @@
   const outage = window.NorthStarOutageReview({esc, when, dateValue, api});
   let roles = {};
   let editToken='', checkoutKey='', lock={owner:null,mine:false}, lastActivity=0;
-  const checkoutUrl='/api/uwpc/requests/manager/checkout';
+  const checkoutUrl=mount+'/api/uwpc/requests/manager/checkout';
   function tokenHeader(){return editToken?{'X-Northstar-Checkout':editToken}:{};}
 
   async function request(url, method = 'GET', body) {
@@ -39,7 +41,7 @@
     bar.title=lock.expires?'Checkout expires '+when(new Date(lock.expires*1000)):'';
     bar.querySelector('span').textContent=lock.owner?`Checked out by ${lock.owner}`:
       lock.canEdit===false?'Read-only package':lock.canEdit?'Not checked out':'Checking edit access…';
-    const button=bar.querySelector('button');
+    const button=bar.querySelector('[data-action=checkout]');
     if(!button)return;
     button.textContent=lock.mine?'Check in':'Check out to edit';
     button.hidden=!lock.canEdit && !lock.mine;
@@ -216,7 +218,7 @@
   function exportPanel(record) {
     if (!record.id) return '';
     const base = `${api}/${encodeURIComponent(record.id)}/exports`;
-    if (managerPackage) return `<div class="file-actions"><a class="uwpc-button pdf" href="${base}/pdf?v=${record.version}" aria-label="Open PDF" title="Open PDF" target="_blank" rel="noopener">PDF</a><a class="uwpc-button excel" href="${base}/xlsx?v=${record.version}" download><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="8" y="2" width="14" height="20" rx="2" fill="#c5efcf"/><path d="M12 7h8m-8 5h8m-8 5h8m-4-14v18" stroke="#23804e"/><rect x="1" y="5" width="14" height="14" rx="2" fill="#12653a"/><path d="m5 9 5 6m0-6-5 6" stroke="white" stroke-width="1.8"/></svg>Download Excel</a></div>`;
+    if (managerPackage) return `<div class="file-actions"><a class="uwpc-button pdf" href="${base}/pdf?v=${record.version}" aria-label="Open PDF" title="Open PDF" target="_blank" rel="noopener">PDF</a><a class="uwpc-button excel" href="${base}/xlsx?v=${record.version}" download><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="8" y="2" width="14" height="20" rx="2" fill="#c5efcf"/><path d="M12 7h8m-8 5h8m-8 5h8m-4-14v18" stroke="#23804e"/><rect x="1" y="5" width="14" height="14" rx="2" fill="#12653a"/><path d="m5 9 5 6m0-6-5 6" stroke="white" stroke-width="1.8"/></svg>Excel</a></div>`;
     return `<section class="uwpc-export-panel" aria-label="Generated form files"><div class="uwpc-export-copy"><small>REVISION ${record.version}</small><h4>Review files ready</h4><p>Check the PDF, make corrections in this form, or continue editing in the Excel copy.</p><div class="uwpc-actions"><a class="uwpc-button uwpc-primary" href="${base}/pdf?v=${record.version}" target="_blank" rel="noopener">Open PDF</a><a class="uwpc-button" href="${base}/xlsx?v=${record.version}" download>Download editable Excel</a></div></div><iframe title="UWPC PDF preview" src="${base}/pdf?v=${record.version}"></iframe></section>`;
   }
 
@@ -253,7 +255,7 @@
     if (r.id && (section === 'all' || section === 'documents')) parts.push(`<details class="uwpc-advanced"><summary>Sources and proposal generation</summary><div class="uwpc-advanced-body"><p>Attach the evidence used for this revision. Generation creates a review proposal, never an issued permit or release.</p>
         <div class="uwpc-actions"><label>File purpose<select id="uwpcSourceKind"><option value="diagram">Circuit diagram</option><option value="source">Procedure / supporting request</option></select></label><input id="uwpcSourceUpload" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.json,.txt" aria-label="Attach source"><button type="button" data-action="upload">Attach</button></div>
         <ul>${r.sources.map(source => `<li><a href="${api}/${encodeURIComponent(r.id)}/sources/${encodeURIComponent(source.id)}" target="_blank" rel="noopener">${esc(source.name)}</a> · ${esc(source.kind)} <button type="button" data-remove-source="${esc(source.id)}">Remove</button></li>`).join('') || '<li>No sources attached.</li>'}</ul>
-        ${advanced('<button type="button" data-action="generate">Generate review proposal</button>')}
+        ${visitor?'':advanced('<button type="button" data-action="generate">Generate review proposal</button>')}
         ${r.generation && r.preparationMode !== 'INTAKE' ? `<div class="uwpc-generated"><h4>Generated proposal · ${esc(status(r.status))}</h4><pre class="uwpc-document">${esc(r.generation.text)}</pre><p class="uwpc-digest">Document SHA-256: ${esc(r.generation.digest)}</p></div>` : ''}
       </div></details>`);
     if (r.id && (section === 'all' || section === 'approvals')) parts.push(!fullReview && r.generation && r.preparationMode !== 'INTAKE' ? `<details class="uwpc-advanced"><summary>Operator review and sign-off</summary><div class="uwpc-advanced-body"><p>All selected operators endorse this exact revision. Sign-off records review; operational authorization remains with the controlling authority.</p>
@@ -279,7 +281,8 @@
       const fields=document.createElement('fieldset');fields.id='checkoutFields';fields.disabled=true;
       const article=editor.firstElementChild;
       fields.append(...article.childNodes);article.append(fields);
-      article.insertAdjacentHTML('afterbegin',`<div id="checkoutBar">${viewer?'':'<button type="button" data-action="checkout" hidden></button>'}<span role="status">${viewer?'Read-only package':''}</span>${section==='forms'?exportPanel(r):''}</div>`);
+      const planTools=section==='forms' && r.template==='pc17a' ? '<button class="plan-tool" data-action="similar-plans">Similar</button><button class="plan-tool" data-action="open-plan">Open</button>' : '';
+      article.insertAdjacentHTML('afterbegin',`<div id="checkoutBar">${viewer?'':'<button type="button" data-action="checkout" hidden></button>'}<span role="status">${viewer?'Read-only package':''}</span>${section==='forms'?exportPanel(r):''}${planTools}</div>`);
       paintCheckout();
     }else if(!managerPackage && inRegister){
       editor.querySelectorAll('#uwpcRequestForm input,#uwpcRequestForm select,#uwpcRequestForm textarea,#uwpcRequestForm button:not([data-action=cancel]),#uwpcSourceUpload,#uwpcSourceKind,[data-action=upload],[data-action=generate],[data-remove-source]').forEach(el=>el.disabled=true);
@@ -337,7 +340,7 @@
     const result = await request(current ? `${api}/${current.id}/save` : api, 'POST', {...data,...(current ? {version:current.version} : {})});
     if(managerPackage && result.outageId && !current?.outageId){
       sessionStorage.setItem('outageEdit.'+result.outageId,editToken);dirty=false;
-      location.assign('/outage-manager-package.html?section=forms&id='+encodeURIComponent(result.id));return;
+      location.assign(mount+'/outage-manager-package.html?section=forms&id='+encodeURIComponent(result.id));return;
     }
     show(result); await refresh(); notice('Form saved. The PDF preview and editable Excel file are ready.');
   }
@@ -425,6 +428,22 @@
   }
 
   async function act(action, button) {
+    if(action==='similar-plans'||action==='open-plan'){
+      const target=current.id;
+      await window.openOutagePlanPicker({api,request,row:current,similar:action==='similar-plans',esc,when,
+        canMerge:()=>current.id===target && lock.mine && lock.canEdit,
+        merge:async (steps,mode)=>{
+          await checkStatus();
+          if(current.id!==target || !lock.mine || !lock.canEdit)throw Error('Check out this form before merging.');
+          const body=$('uwpcSwitchingRows');
+          const prior=mode==='append'?[...body.rows].map(tr=>Object.fromEntries([...tr.querySelectorAll('[data-step-field]')].map(el=>[el.dataset.stepField,el.value]))).filter(step=>Object.values(step).some(v=>v.trim())):[];
+          const combined=[...prior,...steps];
+          if(combined.length>60)throw Error('A switching plan can hold up to 60 steps.');
+          body.innerHTML=switchingRows({steps:combined});dirty=true;lastActivity=Date.now();
+          notice('Steps merged into this form. Review and save your changes.');
+        }});
+      return;
+    }
     if(action==='checkout'){await toggleCheckout();return;}
     if (action === 'add-step') {
       const body = $('uwpcSwitchingRows');

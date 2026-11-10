@@ -61,6 +61,30 @@
   const tip=document.createElement('div');tip.id='outageFieldHelp';tip.setAttribute('role','tooltip');tip.hidden=true;
   document.body.append(tip);
   let active,timer;
+  const validationForms=new WeakSet(), invalidFields=new WeakSet();
+  function prepare(node){
+    if(node.nodeType!==1)return;
+    const forms=node.matches('form')?[node]:node.querySelectorAll('form');
+    for(const form of forms){
+      if(form.noValidate)continue;
+      validationForms.add(form);
+      form.noValidate=true;
+    }
+    // Blink also checks this attribute on the textarea itself for its hover tip.
+    for(const el of node.matches('textarea')?[node]:node.querySelectorAll('textarea'))el.setAttribute('novalidate','');
+  }
+  prepare(document.body);
+  new MutationObserver(changes=>{
+    for(const change of changes)for(const node of change.addedNodes)prepare(node);
+  }).observe(document.body,{subtree:true,childList:true});
+  document.addEventListener('submit',e=>{
+    if(validationForms.has(e.target) && !e.submitter?.formNoValidate && !e.target.reportValidity()){
+      e.preventDefault();e.stopImmediatePropagation();
+    }
+  },true);
+  document.addEventListener('invalid',e=>{hide();invalidFields.add(e.target);},true);
+  document.addEventListener('input',e=>invalidFields.delete(e.target),true);
+  document.addEventListener('focusout',e=>invalidFields.delete(e.target),true);
   function hide(){
     clearTimeout(timer);
     if(active){
@@ -70,7 +94,7 @@
     tip.hidden=true;active=null;
   }
   function show(el){
-    if(!el?.isConnected || !el.getClientRects().length || el.getAttribute('aria-expanded')==='true')return hide();
+    if(!el?.isConnected || !el.getClientRects().length || invalidFields.has(el) || el.getAttribute('aria-expanded')==='true')return hide();
     const msg=explanation(el);if(!msg)return hide();
     hide();active=el;tip.textContent=msg;
     el.setAttribute('aria-describedby',[el.getAttribute('aria-describedby'),tip.id].filter(Boolean).join(' '));

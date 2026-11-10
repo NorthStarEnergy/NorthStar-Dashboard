@@ -31,9 +31,14 @@ with tempfile.TemporaryDirectory(prefix="northstar-uwpc-test-") as temp:
             ("Feeder protection review", "Iroquois Falls", "115 kV feeder", 11),
             ("Intake gate maintenance", "Norman", "Gate 3", 14),
         ]:
-            manager.create_request({"requestKey":str(uuid.uuid4()),"title":title,"site":site,"asset":asset,
+            planned=manager.create_request({"requestKey":str(uuid.uuid4()),"title":title,"site":site,"asset":asset,
                 "scope":"Scheduled inspection","severity":"Monitor","reviewTrigger":"routine",
                 "start":f"2030-09-{day:02d}T13:00:00Z","end":f"2030-09-{day:02d}T21:00:00Z"},"fixture_author")
+            if site=="Twin Falls":
+                with desk.session() as c:
+                    saved=desk.read(c,planned["packageId"])
+                    saved["switchingPlan"]["steps"]=[{"device":"FIX-TW","operation":"Record FIX-TW at Twin Falls","lockNo":"L1","completedBy":"fixture_relief"}]
+                    desk.write(c,saved)
         past = store.create_outage({"title":"Completed valve inspection","site":"Norman","type":"Planned"},"fixture_author")
         store.close_outage(past["id"],"fixture_author")
         book = os.environ.get("OUTAGE_MANAGER_FIXTURE_BOOK")
