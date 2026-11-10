@@ -3,12 +3,18 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.232",
+    "version": "v0.233",
     "published": "2026-11-10",
-    "publishedAt": "2026-11-10T03:58:08-05:00",
-    "summary": "Outage Manager remembers one working package, opens directly on the register and groups UWPC source links with the documents."
+    "publishedAt": "2026-11-10T04:19:31-05:00",
+    "summary": "Outage process phases have distinct icons and compact hover summaries for progress, assignments, review status and timing."
   },
   "history": [
+    {
+      "version": "v0.233",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T04:19:31-05:00",
+      "summary": "Outage process phases have distinct icons and compact hover summaries for progress, assignments, review status and timing."
+    },
     {
       "version": "v0.232",
       "published": "2026-11-10",

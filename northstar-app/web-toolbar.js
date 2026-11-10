@@ -140,7 +140,7 @@
   function load() {
     const stylesheet = document.createElement('link');
     stylesheet.rel = 'stylesheet';
-    stylesheet.href = 'web-toolbar.css?v=build-v0.232';
+    stylesheet.href = 'web-toolbar.css?v=build-v0.233';
     stylesheet.onload = start;
     stylesheet.onerror = () => stylesheet.remove();
     document.head.append(stylesheet);

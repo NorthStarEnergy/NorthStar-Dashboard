@@ -1,3 +1,7 @@
+## 20261110-outage-phase-summaries
+
+Added [phase icons and hover summaries](packets/2026-11-10-outage-phase-summaries.md) to the outage process strip.
+
 ## 20261110-compact-outage-manager
 
 Updated the [Outage Manager register and working folder](packets/2026-11-10-compact-outage-manager.md) and compacted the register, package pages and manual reader.

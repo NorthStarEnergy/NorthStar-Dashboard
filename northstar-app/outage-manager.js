@@ -8,7 +8,10 @@
     back:'M19 12H5 M11 6l-6 6 6 6',search:'M16 16l5 5 M18 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0',
     filters:'M3 6h18 M6 12h12 M9 18h6',file:'M6 3h8l4 4v14H6z M14 3v5h4 M9 12h6 M9 16h5',
     info:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M12 11v6 M12 7v1',download:'M12 3v12 M7 10l5 5 5-5 M4 17v4h16v-4',
-    left:'M15 5l-7 7 7 7',right:'M9 5l7 7-7 7',arrow:'M5 18L18 5 M7 5h11v11'};
+    left:'M15 5l-7 7 7 7',right:'M9 5l7 7-7 7',arrow:'M5 18L18 5 M7 5h11v11',
+    forms:'M4 16v4h4L20 8l-4-4z M13 7l4 4',approvals:'M15 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M5 20v-2a7 7 0 0 1 14 0v2 M18 5a3 3 0 0 1 0 6 M20 14q3 1 3 5',
+    check:'M12 2l8 3v6c0 5-4 8-8 11-4-3-8-6-8-11V5z M8 11l3 3 5-6',distribution:'M3 10l18-7-6 18-4-7z M11 14L21 3',
+    log:'M3 7h5m8 0h5 M8 7l8-5 M3 18h5m8 0h5 M8 18h8',closeout:'M5 21V3 M5 4q4-2 8 0t7 0v10q-4 2-7 0t-8 0'};
   const icon = name => `<svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="${paths[name]}"></path></svg>`;
   const base = '/outage-manager.html';
   const sourceUrl = api + '/library/book';
@@ -113,14 +116,79 @@
     const current=phases.findIndex(([k])=>k===stage);
     const flags=(delivery?.flags||[]).filter(f=>!f.resolvedAt).length;
     const href=k=>outageUrl(row.id,pageFor(k),['request','overview'].includes(k)?'':plan?.id)+(k==='check'?'#accuracy':'');
+    const tasks=(review?.tasks||[]).filter(t=>t.role!=='checker');
+    const checker=review?.tasks.find(t=>t.role==='checker');
+    const ordinary=plan?.review;
+    const teamCount=tasks.length || ordinary?.operators?.length || 0;
+    const signed=tasks.length?tasks.filter(t=>t.signedAt).length:(ordinary?.decisions||[]).filter(d=>d.decision==='APPROVE').length;
+    const recorded={request:true,forms:plan && !['REQUEST','INTAKE'].includes(plan.preparationMode),
+      approvals:teamCount?signed===teamCount:status==='SIGNED_OFF',check:Boolean(checker?.signedAt),
+      distribution:Boolean(delivery),log:Boolean(plan?.switchLog),closeout:phase==='COMPLETED'};
+    const details={
+      request:[['Requested by',row.owner],['Site',row.site],['Opened',row.created&&date(row.created)]],
+      forms:[['Package',plan?(states[status]||status):'Not prepared'],['Forms',row.documents?.length],['Drawing revision',plan?.diagramRevision]],
+      approvals:[['Team reviews',teamCount?`${signed} of ${teamCount} signed`:'No assignments recorded'],['Due',review?.due&&date(review.due)],['Open corrections',issues.length||null]],
+      check:[['Checker',checker?.account||'Not assigned'],['Signed',checker?.signedAt&&date(checker.signedAt)]],
+      distribution:[['Final copy',delivery?'Distributed':'Awaiting issue'],['Revision',delivery&&review?.number],['Open concerns',delivery?flags:null]],
+      log:[['Scheduled start',date(row.start)],['SSC',review?.sscLead||plan?.proposedLeads?.sscLead],
+        ['Local manager',review?.localLead||plan?.proposedLeads?.localLead],['Switching log',plan?.switchLog?'Opened':'No opening recorded']],
+      closeout:[['Scheduled end',date(row.end)],['Closed',row.closed&&date(row.closed)]]
+    };
     return `<nav class="process" aria-label="Outage process"><ol>${phases.map(([key,label],i)=>{
-      const recorded={request:true,forms:plan && plan.preparationMode!=='REQUEST',approvals:status==='SIGNED_OFF'||Boolean(review),
-        check:review?.tasks.some(t=>t.role==='checker'&&t.signedAt),distribution:Boolean(delivery),log:Boolean(plan?.switchLog)};
-      const done=i<current && phase!=='CANCELLED' && recorded[key];
-      return `<li class="${i===current?'current':done?'passed':''}"><a href="${href(key)}" ${i===current?'aria-current="step"':''}><i aria-hidden="true">${done?'✓':'●'}</i>${label}</a></li>`;
+      const active=i===current, done=recorded[key] && (i<current || key==='check' || key==='closeout');
+      const state=active && phase==='CANCELLED'?'Cancelled':done?'Complete':active && (issues.length||status==='CHANGES_REQUESTED')?'On hold':
+        active?'Current phase':i<current || phase==='CANCELLED'?'Not recorded':'Upcoming';
+      const fields=details[key].filter(([,v])=>v!=null && v!=='');
+      return `<li data-phase="${key}" class="${active?'current ':''}${done?'passed':''}"><a href="${href(key)}" aria-describedby="phase-tip-${key}" ${active?'aria-current="step"':''}>
+        <span class="phase-marker" aria-hidden="true">${icon(key==='request'?'file':key)}${done?'<b>✓</b>':''}</span>${label}</a>
+        <div id="phase-tip-${key}" class="phase-tip" role="tooltip" hidden><div class="phase-tip-head"><strong>${label}</strong><span>${state}</span></div>
+        ${active?`<p>${esc(message)}</p>`:''}<dl>${fields.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl></div></li>`;
     }).join('')}</ol><div class="process-note"><a href="${href(target)}">${esc(message)}</a>
     ${flags?`<a class="flag-note" href="${href('distribution')}">${flags} open final-copy concern${flags===1?'':'s'}</a>`:''}</div></nav>
     ${significant||plan?.proposedLeads?`<div class="coordination"><span>SSC outage manager <strong>${esc(review?.sscLead||plan?.proposedLeads?.sscLead||'Unassigned')}</strong></span><span>Local outage manager <strong>${esc(review?.localLead||plan?.proposedLeads?.localLead||'Unassigned')}</strong></span></div>`:''}`;
+  }
+  function bindProcessStrip(host) {
+    let open=null, markup='';
+    function close(){
+      if(open)open.querySelector('.phase-tip').hidden=true;
+      open=null;
+    }
+    function position(){
+      if(!open)return;
+      const anchor=open.querySelector('a').getBoundingClientRect();
+      const track=open.parentElement.getBoundingClientRect();
+      if(anchor.right<=track.left || anchor.left>=track.right || anchor.bottom<=0 || anchor.top>=innerHeight){close();return;}
+      const tip=open.querySelector('.phase-tip');
+      const left=Math.max(6,Math.min(anchor.left+(anchor.width-tip.offsetWidth)/2,innerWidth-tip.offsetWidth-6));
+      const above=anchor.bottom+tip.offsetHeight>innerHeight-6 && anchor.top>innerHeight-anchor.bottom;
+      tip.style.left=left+'px';
+      tip.style.top=(above?Math.max(4,anchor.top-tip.offsetHeight+1):anchor.bottom-1)+'px';
+    }
+    function show(item){
+      if(!item)return;
+      if(open!==item)close();
+      open=item;open.querySelector('.phase-tip').hidden=false;position();
+    }
+    host.addEventListener('pointerover',e=>{if(e.pointerType!=='touch')show(e.target.closest('[data-phase]'));});
+    host.addEventListener('pointerout',e=>{if(open && !open.contains(e.relatedTarget))close();});
+    host.addEventListener('focusin',e=>{if(e.target.matches('[data-phase] > a:focus-visible'))show(e.target.parentElement);});
+    host.addEventListener('focusout',e=>{if(open && !open.contains(e.relatedTarget))close();});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+    document.documentElement.addEventListener('pointerleave',close);
+    window.addEventListener('blur',close);
+    window.addEventListener('pagehide',close);
+    window.addEventListener('resize',position);
+    document.addEventListener('scroll',position,true);
+    return html=>{
+      if(html===markup)return;
+      markup=html;
+      const active=open?.dataset.phase, focused=document.activeElement.closest('[data-phase]')?.dataset.phase;
+      const scroll=host.querySelector('ol')?.scrollLeft||0;
+      close();host.innerHTML=html;
+      host.querySelector('ol').scrollLeft=scroll;
+      if(focused)host.querySelector(`[data-phase="${focused}"] > a`)?.focus({preventScroll:true});
+      if(active)show(host.querySelector(`[data-phase="${active}"]`));else close();
+    };
   }
   async function loadWorkspace() {
     const query=new URLSearchParams(location.search);
@@ -150,7 +218,8 @@
       `<header class="pagehead breadcrumb"><a class="outage-parent" href="${overview}">${esc(row.title)}</a>${icon('right')}<h1>${esc(title)}</h1></header>`;
     const plan=row.workflow || legacy;
     page.insertAdjacentHTML('beforeend','<div id="processStrip"></div>');
-    const draw=record=>{$('processStrip').innerHTML=processStrip(row,record);};
+    const render=bindProcessStrip($('processStrip'));
+    const draw=record=>render(processStrip(row,record));
     draw(plan);
     let version=plan?.version||0;
     window.addEventListener('outage-record',e=>{if(e.detail.id===row.packageId){version=e.detail.version;draw(e.detail);}});
@@ -159,7 +228,7 @@
       try {
         const latest=await fetchData(api+'/detail?id='+encodeURIComponent(id));
         if(latest.workflow?.version>=version) {
-          version=latest.workflow.version;row.phase=latest.phase;draw(latest.workflow);
+          version=latest.workflow.version;row=latest;draw(latest.workflow);
         }
       } catch { /* Keep the last loaded revision during a connection interruption. */ }
     }
