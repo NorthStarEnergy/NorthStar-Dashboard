@@ -3,12 +3,18 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.234",
+    "version": "v0.235",
     "published": "2026-11-10",
-    "publishedAt": "2026-11-10T04:27:34-05:00",
-    "summary": "UWPC puts navigation, search and page controls on one line, with a collapsible contents menu and full-screen reading."
+    "publishedAt": "2026-11-10T05:10:45-05:00",
+    "summary": "Outage Manager places New beside the title, simplifies the menu and shows a notification bell for outstanding outage alerts."
   },
   "history": [
+    {
+      "version": "v0.235",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T05:10:45-05:00",
+      "summary": "Outage Manager places New beside the title, simplifies the menu and shows a notification bell for outstanding outage alerts."
+    },
     {
       "version": "v0.234",
       "published": "2026-11-10",

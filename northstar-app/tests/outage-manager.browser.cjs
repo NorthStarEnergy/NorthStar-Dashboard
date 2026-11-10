@@ -61,7 +61,15 @@ async function check() {
     await expectFolder(first);
     await page.getByRole('link',{name:'Outages',exact:true}).click();
     await expectFolder(first);
-    assert.deepEqual(await page.locator('#packageNav > a').allTextContents(),['Home','New','Outages','UWPC library','My reviews']);
+    assert.deepEqual(await page.locator('#packageNav > a').allTextContents(),['Home','Outages','UWPC']);
+    const brand=page.getByRole('link',{name:'Outage Manager home'});
+    const newAction=page.getByRole('link',{name:'New',exact:true});
+    async function checkHeader(){
+      assert.equal(await brand.locator('svg').count(),0);
+      const title=await brand.boundingBox(), action=await newAction.boundingBox();
+      assert.ok(action.x>=title.x+title.width && title.y<action.y+action.height && action.y<title.y+title.height);
+    }
+    await checkHeader();
     await page.screenshot({path:path.join(out,'home.png')});
     await page.getByRole('button',{name:/^Past/}).click();
     await page.locator('tbody').getByRole('link',{name:'Completed valve inspection'}).waitFor();
@@ -127,10 +135,11 @@ async function check() {
     await page.locator('#uwpcRequestForm [name=title]').waitFor();
     assert.equal(await page.locator('#uwpcRequestForm [name=title]').inputValue(),'West bay inspection');
     assert.equal(await page.getByRole('link',{name:'Open practice outage'}).count(),0);
-    await page.getByRole('link',{name:'My reviews'}).click();
-    await page.getByText('You have no outstanding reviews.').waitFor();
+    await page.goto(origin+'/outage-manager.html#inbox');
+    await page.getByText('You have no outstanding outage alerts.').waitFor();
+    assert.ok(await page.locator('#outageAlerts').isHidden());
     if(process.env.OUTAGE_MANAGER_FIXTURE_BOOK){
-      await page.getByRole('link',{name:'UWPC library',exact:true}).click();
+      await page.getByRole('link',{name:'UWPC',exact:true}).click();
       const bar=page.locator('.library-bar');
       const source=bar.getByRole('link',{name:'Open source PDF'});
       await source.waitFor();
@@ -182,6 +191,9 @@ async function check() {
       assert.ok(await page.locator('#main .questions details[open] a').isVisible());
     }
     await page.setViewportSize({width:390,height:844});
+    await checkHeader();
+    await newAction.click();
+    await page.getByRole('heading',{name:'New outage'}).waitFor();
     await page.getByRole('button',{name:'Menu',exact:true}).click();
     await page.getByRole('link',{name:'Outages',exact:true}).click();
     await page.locator('tbody').getByRole('link',{name:'West bay inspection'}).waitFor();
@@ -240,7 +252,8 @@ async function check() {
     assert.ok(await tip.getByText('Complete',{exact:true}).isVisible());
     await progress.getByRole('link',{name:'Final copy',exact:true}).hover();
     await tip.getByText('Distributed',{exact:true}).waitFor();
-    await asUser('Ryan',origin+'/outage-manager.html#inbox');
+    await asUser('Ryan',origin+'/outage-manager.html#home');
+    await page.getByRole('link',{name:'Outage alerts for 1 outage',exact:true}).click();
     await page.locator('#reviews a').filter({hasText:'Final copy distributed'}).click();
     await page.getByRole('link',{name:'Download final copy'}).waitFor();
     await page.getByRole('textbox',{name:'Concern',exact:true}).fill('Confirm crew arrival');

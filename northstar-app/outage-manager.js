@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? '').replace(/[&<>"']/g,c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const paths = {outages:'M3 7V5h6l3 3h9v12H3z',home:'M3 10l9-7 9 7 M5 9v11h5v-6h4v6h5V9',new:'M12 4v16 M4 12h16',
-    inbox:'M4 4h16l2 13v3H2v-3z M3 14h5l2 3h4l2-3h5',library:'M3 4h5v16H3z M10 4h4v16h-4z M16 5l4-1 3 15-4 1z',
+    bell:'M5 16c2-2 2-3 2-7a5 5 0 0 1 10 0c0 4 0 5 2 7l1 1H4z M10 20q2 2 4 0',library:'M3 4h5v16H3z M10 4h4v16h-4z M16 5l4-1 3 15-4 1z',
     back:'M19 12H5 M11 6l-6 6 6 6',search:'M16 16l5 5 M18 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0',
     filters:'M3 6h18 M6 12h12 M9 18h6',file:'M6 3h8l4 4v14H6z M14 3v5h4 M9 12h6 M9 16h5',
     info:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M12 11v6 M12 7v1',download:'M12 3v12 M7 10l5 5 5-5 M4 17v4h16v-4',
@@ -24,7 +24,8 @@
     if(id) query.set('id',id);
     return '/outage-manager-package.html?'+query;
   }
-  const views = [['home','Home'],['new','New'],['outages','Outages'],['library','UWPC library'],['inbox','My reviews']];
+  const menuViews = [['home','Home'],['outages','Outages'],['library','UWPC']];
+  const titles = {...Object.fromEntries(menuViews),new:'New outage',inbox:'Outage alerts'};
   const main=$('main');
   const date = value => value ? new Date(value).toLocaleString('en-CA',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}) : 'Unscheduled';
   const localDay = value => {const d=new Date(value);return Number.isNaN(+d)?'':new Date(+d-d.getTimezoneOffset()*60000).toISOString().slice(0,10);};
@@ -64,9 +65,11 @@
       }).join('')}</ul></details>`;
   }
   function shell(view,selected=null,section='overview') {
-    const navLink = ([key,label]) => `<a href="${base}#${key}" title="${label}" ${view===key?'aria-current="page"':''}>${icon(key)}<span>${label}</span>${key==='inbox'?'<small id="reviewCount" aria-live="polite"></small>':''}</a>`;
-    $('shell').innerHTML=`<aside class="rail"><a class="brand" href="${base}" aria-label="Outage Manager home"><svg class="mark" viewBox="0 0 32 36" aria-hidden="true"><path d="M3 26V10l7-4v16zm10 3V9l7-4v20zm10-7V6l7-4v16z" fill="currentColor"/></svg><span>Outage Manager</span></a>
-      <button class="mobile-menu" id="menuToggle" aria-controls="packageNav" aria-expanded="false">Menu</button><nav id="packageNav" aria-label="Main menu">${views.map(item=>item[0]==='outages'?
+    const navLink = ([key,label]) => `<a href="${base}#${key}" title="${label}" ${view===key?'aria-current="page"':''}>${icon(key)}<span>${label}</span></a>`;
+    $('shell').innerHTML=`<aside class="rail"><header class="rail-head"><a class="brand" href="${base}" aria-label="Outage Manager home">Outage Manager</a>
+      <a class="new-outage" href="${base}#new" title="Create an outage" ${view==='new'?'aria-current="page"':''}>${icon('new')}New</a>
+      <a id="outageAlerts" href="${base}#inbox" hidden>${icon('bell')}<span id="alertCount"></span></a></header>
+      <button class="mobile-menu" id="menuToggle" aria-controls="packageNav" aria-expanded="false">Menu</button><nav id="packageNav" aria-label="Main menu">${menuViews.map(item=>item[0]==='outages'?
         `${navLink(item)}<div id="outageTree" hidden></div>`:navLink(item)).join('')}</nav>
       <a class="back" href="/northstar-clean.html" aria-label="Return to NorthStar">${icon('back')}<span>NorthStar</span></a></aside>`;
     if(selected || !['home','outages'].includes(view))void mountFolder(selected,section);
@@ -278,7 +281,7 @@
     return `<span class="chip ${tone}">${esc(text)}</span>`;}
   function regHome(){
     const tabs=[['upcoming','Upcoming'],['active','In progress'],['past','Past']];
-    main.innerHTML=`<h1 class="sr-only">Outages</h1><div class="register-toolbar"><div class="register-head"><div class="tabs" aria-label="Outage period">${tabs.map(([id,label])=>`<button data-tab="${id}" aria-pressed="${id===state.tab}">${label}<span class="count" data-count="${id}">–</span></button>`).join('')}</div><a href="#new" class="btn new-link">${icon('new')}New outage</a></div>
+    main.innerHTML=`<h1 class="sr-only">Outages</h1><div class="register-toolbar"><div class="register-head"><div class="tabs" aria-label="Outage period">${tabs.map(([id,label])=>`<button data-tab="${id}" aria-pressed="${id===state.tab}">${label}<span class="count" data-count="${id}">–</span></button>`).join('')}</div></div>
       <div class="bar">${search('query','Search outages')}<select id="site" aria-label="Filter by site"><option value="">All sites</option></select><button class="btn" id="toggleFilters" aria-expanded="false">${icon('filters')}Filters</button></div></div>
       <div id="filters" class="filters panel" hidden><div class="fields"><label>Type<select id="type">${opts([['Planned','Planned'],['Unplanned','Unplanned']],'','All types')}</select></label>
       <label>Priority<select id="severity">${opts(Object.entries(priorities),'','All priorities')}</select></label>
@@ -367,11 +370,17 @@
       if(r.status==='PENDING_SIGNOFF'&&ordinary?.operators.includes(d.actor)&&!ordinary.decisions.some(v=>v.actor===d.actor))messages.push('Operator review requested');
       return messages.length?[`<a class="librow" href="${outageUrl('',messages[0].startsWith('Final copy')?'distribution':'approvals',r.id)}"><strong>${esc(r.title)}</strong><span>${esc(messages.join(' · '))}</span>${icon('right')}</a>`]:[];
     });
-    if($('reviewCount'))$('reviewCount').textContent=rows.length||'';
-    if($('reviews'))$('reviews').innerHTML=rows.join('')||'<div class="panel empty">You have no outstanding reviews.</div>';
+    const alerts=$('outageAlerts');
+    if(alerts){
+      alerts.hidden=!rows.length;
+      const label=`Outage alerts for ${rows.length} ${rows.length===1?'outage':'outages'}`;
+      alerts.setAttribute('aria-label',label);alerts.title=label;
+      $('alertCount').textContent=rows.length>99?'99+':String(rows.length);
+    }
+    if($('reviews'))$('reviews').innerHTML=rows.join('')||'<div class="panel empty">You have no outstanding outage alerts.</div>';
   }
   async function inbox(){
-    main.innerHTML=head('My reviews')+'<div id="reviews" class="toolsList" aria-live="polite">Loading…</div>';
+    main.innerHTML=head(titles.inbox)+'<div id="reviews" class="toolsList" aria-live="polite">Loading…</div>';
     await refreshInbox();
   }
   async function readPage(number,mode){
@@ -482,15 +491,15 @@
   }
   async function route(){
     const stamp=++epoch;requestId++;clearTimeout(delayed);
-    const [part,sub]=location.hash.slice(1).split('/');const view=views.some(([k])=>k===part)?part:'home';
-    shell(view);document.title=(view==='home'?'Outages':views.find(([k])=>k===view)[1])+' · Outage Manager';
+    const [part,sub]=location.hash.slice(1).split('/');const view=Object.hasOwn(titles,part)?part:'home';
+    shell(view);document.title=(view==='home'?'Outages':titles[view])+' · Outage Manager';
     try{
       if(view==='home'||view==='outages'){state={tab:'upcoming',offset:0,sort:'start',direction:'asc'};regHome();}
       else if(view==='new')await newOutage(stamp);
       else if(view==='inbox')await inbox(stamp);
       else{main.innerHTML=head('UWPC library')+'<p role="status">Loading manual…</p>';const d=libraryData||await fetchData(api+'/library');
         if(epoch===stamp){libraryData=d;renderLibrary(d,['forms','questions'].includes(sub)?sub:'manual');}}
-    }catch(e){if(epoch===stamp)main.innerHTML=head(views.find(([k])=>k===view)[1])+errorBox(e);}
+    }catch(e){if(epoch===stamp)main.innerHTML=head(titles[view])+errorBox(e);}
   }
   function updateAlerts(){if(!document.hidden)void refreshInbox().catch(()=>{});}
   window.addEventListener('focus',updateAlerts);setInterval(updateAlerts,45000);

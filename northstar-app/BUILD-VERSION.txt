@@ -1,4 +1,4 @@
-v0.234
+v0.235
 2026-11-10
-2026-11-10T04:27:34-05:00
-UWPC puts navigation, search and page controls on one line, with a collapsible contents menu and full-screen reading.
+2026-11-10T05:10:45-05:00
+Outage Manager places New beside the title, simplifies the menu and shows a notification bell for outstanding outage alerts.
