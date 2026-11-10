@@ -15,7 +15,7 @@ import urllib.error
 import urllib.request
 import uuid
 import zipfile
-from contextlib import closing, contextmanager
+from contextlib import closing, contextmanager, nullcontext
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -176,9 +176,10 @@ def invalidate(row):
     row.update(generation=None, review=None, status="DRAFT")
 
 
-def create(payload, actor):
-    with session() as c:
-        c.execute("BEGIN IMMEDIATE")
+def create(payload, actor, *, connection=None):
+    with (session() if connection is None else nullcontext(connection)) as c:
+        if connection is None:
+            c.execute("BEGIN IMMEDIATE")
         practice = outage_review.PRACTICE_DB.get() is not None
         if practice:
             if payload.get("practiceSample") is not True:

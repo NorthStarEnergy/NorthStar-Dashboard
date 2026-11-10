@@ -1775,6 +1775,35 @@ class Handler(SimpleHTTPRequestHandler):
         parts = route[len(prefix):].strip("/").split("/") if route != prefix else []
         practice_token = None
         try:
+            if parts[:1] == ["manager"]:
+                import northstar_outage_manager as manager
+                endpoint = parts[1:]
+                params = {k:v[0] for k,v in parse_qs(urlparse(self.path).query).items()}
+                if self.command == "POST" and self._cross_origin_write():
+                    raise PermissionError("Cross-origin outage request refused")
+                if self.command == "GET" and endpoint == ["register"]:
+                    self._send_json(manager.query_register(params))
+                elif self.command == "GET" and endpoint == ["detail"]:
+                    self._send_json(manager.details(params.get("id","")))
+                elif self.command == "GET" and endpoint == ["session"]:
+                    self._send_json({"actor":actor,"operators":operators,"outageReviewRoles":uwpc_desk.outage_review.directory(operators)})
+                elif self.command == "GET" and endpoint == ["inbox"]:
+                    self._send_json({"actor":actor,"rows":manager.inbox(actor)})
+                elif self.command == "GET" and endpoint == ["library"]:
+                    self._send_json(manager.library(actor,params.get("q","")[:250]))
+                elif self.command == "GET" and endpoint == ["library-page"]:
+                    self._send_json(manager.read_page(actor,int(params.get("page",1))))
+                elif self.command == "GET" and len(endpoint)==2 and endpoint[0]=="library":
+                    body, name = manager.library_file(actor,endpoint[1])
+                    self._send_binary(body,"application/pdf",name,hashlib.sha256(body).hexdigest(),inline=endpoint[1]=="book")
+                elif self.command == "POST" and endpoint == ["create"]:
+                    payload = self._json_body(32 * 1024)
+                    if not isinstance(payload, dict):
+                        raise ValueError("An outage request is required")
+                    self._send_json(manager.create_request(payload,actor),201)
+                else:
+                    self._send_json({"error":"Outage Manager route not found"},404)
+                return True
             if parts[:1] == ["practice"]:
                 if actor not in operators or len(parts) < 2:
                     raise PermissionError("Sign in with an active NorthStar account to open the practice outage")
@@ -1996,7 +2025,7 @@ class Handler(SimpleHTTPRequestHandler):
         # with failed API calls. Serve the login screen instead of the console.
         if (
             OPERATOR_GATE == "demo"
-            and route in {"/", "/northstar-clean.html", "/index.html", "/operator-mobile.html", "/knowledge-library.html", "/data-workspace.html", "/water-collection.html", "/daily-report-automation.html", "/service-controls.html", "/outage-practice.html"}
+            and route in {"/", "/northstar-clean.html", "/index.html", "/operator-mobile.html", "/knowledge-library.html", "/data-workspace.html", "/water-collection.html", "/daily-report-automation.html", "/service-controls.html", "/outage-practice.html", "/outage-manager.html", "/outage-manager-package.html"}
             and self._is_operator_host()
             and not self._demo_actor()
         ):

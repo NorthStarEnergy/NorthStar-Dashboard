@@ -1,5 +1,6 @@
 (() => {
   'use strict';
+  const managerPackage = document.body.hasAttribute('data-manager-package');
   const practice = document.body.hasAttribute('data-outage-practice');
   const persona = new URLSearchParams(location.search).get('as') || 'Avery Brooks';
   const api = '/api/uwpc/requests' + (practice ? '/practice/' + encodeURIComponent(persona) : '');
@@ -87,6 +88,11 @@
   }
 
   async function refresh() {
+    if (managerPackage) {
+      const data = await request(api + '/manager/session');
+      operators = data.operators; actor = data.actor; roles = data.outageReviewRoles;
+      return;
+    }
     const data = await request(api);
     records = data.requests; operators = data.operators; actor = data.actor;
     roles = data.outageReviewRoles || {};
@@ -165,6 +171,7 @@
   function exportPanel(record) {
     if (!record.id) return '';
     const base = `${api}/${encodeURIComponent(record.id)}/exports`;
+    if (managerPackage) return `<div class="uwpc-actions"><a class="uwpc-button" href="${base}/pdf?v=${record.version}" target="_blank" rel="noopener">Open PDF</a><a class="uwpc-button" href="${base}/xlsx?v=${record.version}" download>Download Excel</a></div>`;
     return `<section class="uwpc-export-panel" aria-label="Generated form files"><div class="uwpc-export-copy"><small>REVISION ${record.version}</small><h4>Review files ready</h4><p>Check the PDF, make corrections in this form, or continue editing in the Excel copy.</p><div class="uwpc-actions"><a class="uwpc-button uwpc-primary" href="${base}/pdf?v=${record.version}" target="_blank" rel="noopener">Open PDF</a><a class="uwpc-button" href="${base}/xlsx?v=${record.version}" download>Download editable Excel</a></div></div><iframe title="UWPC PDF preview" src="${base}/pdf?v=${record.version}"></iframe></section>`;
   }
 
@@ -178,14 +185,14 @@
     const chosen = forms.find(form => form.template === r.template) || forms[0];
     $('uwpcEditor').hidden = false;
     $('uwpcEditor').innerHTML = `<article class="uwpc-form-shell">
-      <header class="uwpc-form-head"><div><small>${r.id ? `${esc(r.id)} · REVISION ${r.version}` : `NEW ${esc(chosen.code)} FORM`}</small><h3>${r.id ? esc(r.title) : esc(chosen.title)}</h3><p>Complete the known information. Missing operational facts remain unverified.</p></div><button type="button" data-action="cancel">Close</button></header>
+      <header class="uwpc-form-head"><div><small>${r.id ? `${esc(managerPackage ? (r.outageId || 'Outage package') : r.id)} · REVISION ${r.version}` : `NEW ${esc(chosen.code)} FORM`}</small><h3>${r.id ? esc(r.title) : esc(chosen.title)}</h3>${managerPackage ? '' : '<p>Complete the known information. Missing operational facts remain unverified.</p>'}</div><button type="button" data-action="cancel">Close</button></header>
       ${r.generation?.evidenceCheck ? `<section class="uwpc-inbox" aria-label="UWPC evidence checks"><h4>Code evidence · ${esc(status(r.generation.evidenceCheck.status))}</h4><p>References are checked against stored text. Interpretation and complete rule coverage require qualified review.</p>${r.generation.evidenceCheck.missing.map(item=>`<p>Missing: ${esc(item)}</p>`).join('')}${r.generation.evidenceCheck.errors.map(item=>`<p class="error">${esc(item)}</p>`).join('')}<a href="knowledge-library.html" target="_blank" rel="noopener">Review controlled sources</a><details><summary>Retrieved clauses and revisions</summary>${r.generation.controlledEvidence.passages.map(p=>`<p><a href="${esc(p.href)}" target="_blank" rel="noopener">${esc(p.title)} · revision ${esc(p.revision)} · ${p.page ? `PDF page ${esc(p.page)}` : esc(p.section)}</a><small>${esc(p.id)} · Clause mentions: ${esc(p.clauseMentions.join(', ') || 'None identified')}</small></p>`).join('') || '<p>No eligible controlled passages retrieved.</p>'}</details></section>` : ''}
       ${r.preparationMode === 'INTAKE' ? `${r.generation ? `<section class="uwpc-generated"><h4>${r.generation.model === "not-run-missing-controlled-evidence" ? "Evidence checklist · analysis paused" : "AI draft · qualified review required"}</h4><pre class="uwpc-document">${esc(r.generation.text)}</pre></section>` : '<p>Request saved. Add your evidence below to prepare an AI draft.</p>'}<details class="uwpc-intake-form"><summary>Complete and save the draft form</summary>` : ''}
       ${exportPanel(r)}
       <form id="uwpcRequestForm">
         ${r.template === 'pc17a' ? switchingForm(r) : standardForm(r)}
         ${outage.classification(r)}
-        <footer class="uwpc-form-footer"><small>Saving creates a fresh PDF preview and editable Excel file for this revision.</small><div class="uwpc-actions"><button type="button" data-action="cancel">Cancel</button><button class="uwpc-primary" type="submit">${r.id ? 'Save changes' : 'Submit draft form'}</button></div></footer>
+        <footer class="uwpc-form-footer">${managerPackage ? '' : '<small>Saving creates a fresh PDF preview and editable Excel file for this revision.</small>'}<div class="uwpc-actions"><button type="button" data-action="cancel">Cancel</button><button class="uwpc-primary" type="submit">${r.id ? 'Save changes' : 'Submit draft form'}</button></div></footer>
       </form>
       ${r.preparationMode === 'INTAKE' ? '</details>' : ''}
       ${r.id ? `<details class="uwpc-advanced"><summary>Sources and proposal generation</summary><div class="uwpc-advanced-body"><p>Attach the evidence used for this revision. Generation creates a review proposal, never an issued permit or release.</p>
@@ -334,6 +341,7 @@
       return;
     }
     if (dirty && action !== 'cancel') throw new Error('Save or cancel the edited form before continuing.');
+    if (action === 'cancel' && managerPackage) {location.assign('/outage-manager.html'); return;}
     if (action === 'cancel') {current=null; dirty=false; $('uwpcEditor').hidden=true; $('uwpcEditor').innerHTML=''; return;}
     if (action === 'refresh') {await refresh(); notice('UWPC records refreshed.'); return;}
     if (!current) return;
@@ -368,6 +376,22 @@
   }
 
   function bind() {
+    if (managerPackage) {
+      root = $('uwpcDesk');
+      root.addEventListener('click', event => {
+        const button = event.target.closest('button');
+        if (!button || busy) return;
+        if (button.dataset.removeSource) void run(() => change('remove-source',{sourceId:button.dataset.removeSource}));
+        else if (button.dataset.action) void run(() => act(button.dataset.action, button));
+      });
+      void run(async () => {
+        await refresh();
+        const id = new URLSearchParams(location.search).get('id');
+        if (!id) throw new Error('Choose an outage package from Home.');
+        await open(id);
+      });
+      return;
+    }
     const workspace = document.querySelector('#switching .switching-workspace'); if (!workspace) return;
     const details = document.createElement('details'); details.id = 'uwpcLegacyTools'; details.innerHTML = '<summary>Advanced drawing board and legacy UWPC tools</summary><div class="uwpc-legacy-body"></div>';
     [...workspace.children].forEach(node => details.lastElementChild.append(node)); workspace.append(details);

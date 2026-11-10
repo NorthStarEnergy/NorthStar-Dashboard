@@ -3,12 +3,18 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.229",
+    "version": "v0.230",
     "published": "2026-11-10",
-    "publishedAt": "2026-11-10T01:38:04-05:00",
-    "summary": "Open the Outages menu, current register and UWPC Builder for signed-in operators across dashboard views."
+    "publishedAt": "2026-11-10T02:00:59-05:00",
+    "summary": "Launch Outage Manager with a searchable outage register, new requests, assigned reviews and the UWPC library."
   },
   "history": [
+    {
+      "version": "v0.230",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T02:00:59-05:00",
+      "summary": "Launch Outage Manager with a searchable outage register, new requests, assigned reviews and the UWPC library."
+    },
     {
       "version": "v0.229",
       "published": "2026-11-10",

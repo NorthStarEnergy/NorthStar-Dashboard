@@ -21,6 +21,13 @@
 </main></div>
 <script>
 (function(){
+  function returnAfterLogin(session) {
+    if (session.role === 'operator' && ['/outage-manager.html','/outage-manager-package.html'].includes(location.pathname)) {
+      location.reload();
+    } else {
+      location.replace(session.landingUrl || '/northstar-clean.html');
+    }
+  }
   var systemTime=document.querySelector('#systemTime');
   function updateSystemTime(){
     var now=new Date();
@@ -61,7 +68,7 @@
     }
     return r.json();
   }).then(async function(s){
-    if(s&&s.authenticated){await clearStaleDashboardPage();location.replace(s.landingUrl||'/northstar-clean.html')}
+    if(s&&s.authenticated){await clearStaleDashboardPage();returnAfterLogin(s)}
   }).catch(function(){});
   form.addEventListener('submit',async function(event){
     event.preventDefault();
@@ -78,7 +85,7 @@
       if(response.ok){
         var sessionResponse=await fetch('/api/auth/session',{cache:'no-store'});
         var session=await sessionResponse.json().catch(function(){return{}});
-        if(session.authenticated){await clearStaleDashboardPage();location.replace(body.landingUrl||'/northstar-clean.html');return}
+        if(session.authenticated){await clearStaleDashboardPage();returnAfterLogin(session);return}
         error.textContent='Sign-in was accepted, but this browser did not keep the operator session. Reopen sign-in on ops.northstarenergy.ca and try again.';
       }
       if(response.status===429){

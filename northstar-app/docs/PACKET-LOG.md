@@ -1,3 +1,7 @@
+## 20261110-outage-manager
+
+Added [Outage Manager](packets/2026-11-10-outage-manager.md), a standalone operator-hosted register, creation page, review inbox and UWPC library.
+
 ## 20261110-outages-menu
 
 Fixed the Outages sidebar route and added the UWPC Builder to the v3 Outages menu. See [Outages menu](packets/2026-11-10-outages-menu.md).
