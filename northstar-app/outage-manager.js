@@ -11,7 +11,8 @@
     left:'M15 5l-7 7 7 7',right:'M9 5l7 7-7 7',arrow:'M5 18L18 5 M7 5h11v11',
     forms:'M4 16v4h4L20 8l-4-4z M13 7l4 4',approvals:'M15 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M5 20v-2a7 7 0 0 1 14 0v2 M18 5a3 3 0 0 1 0 6 M20 14q3 1 3 5',
     check:'M12 2l8 3v6c0 5-4 8-8 11-4-3-8-6-8-11V5z M8 11l3 3 5-6',distribution:'M3 10l18-7-6 18-4-7z M11 14L21 3',
-    log:'M3 7h5m8 0h5 M8 7l8-5 M3 18h5m8 0h5 M8 18h8',closeout:'M5 21V3 M5 4q4-2 8 0t7 0v10q-4 2-7 0t-8 0'};
+    log:'M3 7h5m8 0h5 M8 7l8-5 M3 18h5m8 0h5 M8 18h8',closeout:'M5 21V3 M5 4q4-2 8 0t7 0v10q-4 2-7 0t-8 0',
+    fullscreen:'M9 4H4v5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5',restore:'M4 9h5V4 M15 4v5h5 M20 15h-5v5 M9 20v-5H4'};
   const icon = name => `<svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="${paths[name]}"></path></svg>`;
   const base = '/outage-manager.html';
   const sourceUrl = api + '/library/book';
@@ -379,29 +380,90 @@
     const host=$('readerHost');if(!host)return;
     $('pageNumber').value=number;$('readPrevious').disabled=number<=1;$('readNext').disabled=number>=libraryData.pages;
     $('readMode').value=mode;
-    if(mode==='pdf'){host.innerHTML=`<iframe title="Utility Work Protection Code" src="${sourceUrl}#page=${number}"></iframe>`;return;}
+    if(mode==='pdf'){host.innerHTML=`<iframe title="Utility Work Protection Code" src="${sourceUrl}#page=${number}&toolbar=0"></iframe>`;return;}
     host.textContent='Loading page…';
     try{const d=await fetchData(api+'/library-page?page='+number);
       if(id===readId&&host.isConnected)host.innerHTML=`<article class="pageText"><h3>PDF page ${number}</h3><p>${esc(d.text.trim() || 'See the original page for its illustration.')}</p></article>`;
     }catch(e){if(id===readId&&host.isConnected)host.innerHTML=errorBox(e);}
   }
+  function bindReaderLayout(){
+    const reader=$('libraryWorkspace'), toggle=$('indexToggle'), full=$('readerFull');
+    function buttonLabel(button,label,graphic){
+      button.setAttribute('aria-label',label);button.title=label;button.innerHTML=icon(graphic);
+    }
+    function setCollapsed(collapsed){
+      reader.classList.toggle('index-collapsed',collapsed);
+      $('indexPanel').hidden=collapsed;
+      toggle.setAttribute('aria-expanded',String(!collapsed));
+      buttonLabel(toggle,collapsed?'Show manual menu':'Collapse manual menu',collapsed?'right':'left');
+    }
+    let collapsed=innerWidth<=820;
+    try {const saved=sessionStorage.getItem('uwpcIndexCollapsed');if(saved!==null)collapsed=saved==='true';} catch {}
+    setCollapsed(collapsed);
+    toggle.onclick=()=>{
+      const next=!reader.classList.contains('index-collapsed');setCollapsed(next);
+      try {sessionStorage.setItem('uwpcIndexCollapsed',String(next));} catch {}
+    };
+    function syncFull(){
+      const active=document.fullscreenElement===reader || reader.classList.contains('reader-expanded');
+      full.setAttribute('aria-pressed',String(active));
+      buttonLabel(full,active?'Exit full screen':'Full screen',active?'restore':'fullscreen');
+    }
+    reader.onfullscreenchange=syncFull;
+    full.onclick=async()=>{
+      if(document.fullscreenElement===reader)await document.exitFullscreen();
+      else if(reader.classList.contains('reader-expanded'))reader.classList.remove('reader-expanded');
+      else {
+        try {await reader.requestFullscreen();}
+        catch {if(reader.isConnected)reader.classList.add('reader-expanded');}
+      }
+      syncFull();
+    };
+    reader.onkeydown=e=>{
+      if(e.key==='Escape' && reader.classList.contains('reader-expanded')){
+        reader.classList.remove('reader-expanded');syncFull();full.focus();
+      }
+    };
+    syncFull();
+    return setCollapsed;
+  }
   function renderLibrary(d,section){
-    const tabs=[['manual','Manual'],['forms','Forms & tags'],['questions','Practice questions']];
-    const book=`<div class="document-source"><span><strong>${esc(d.title)}</strong> · ${d.pages} pages · ${esc(d.status.replaceAll('_',' ').toLowerCase())}</span>
-      <a href="${sourceUrl}" target="_blank" rel="noopener">${icon('arrow')}Open source PDF</a></div>`;
-    main.innerHTML=`<h1 class="sr-only">UWPC library</h1><div class="tabs" aria-label="UWPC library">
-      ${tabs.map(([key,label])=>`<button aria-pressed="${section===key}" data-lib="${key}">${label}</button>`).join('')}</div>`;
-    if(section==='forms'){main.insertAdjacentHTML('beforeend',`${book}<div class="formsgrid">${d.forms.map(f=>
-      `<article class="card formref"><strong>${esc(f.code)}</strong><p>${esc(f.title)}</p><a class="btn" href="${api}/library/${encodeURIComponent(f.id)}" download>${icon('download')}PDF</a>
-      <a href="${sourceUrl}#page=${f.pages[0]}" target="_blank" rel="noopener">Source p. ${f.pages[0]}</a></article>`).join('')||'<p>No form index for this edition.</p>'}</div>`);return;}
-    if(section==='questions'){main.insertAdjacentHTML('beforeend',`${book}<div class="questions">${d.questions.map(([q,a,cl,p])=>
-      `<details class="card"><summary>${esc(q)}</summary><p>${esc(a)}</p><a href="${sourceUrl}#page=${p}" target="_blank" rel="noopener">${esc(cl)} · PDF p. ${p}</a></details>`).join('')||'<p>No questions for this edition.</p>'}</div>`);return;}
-    main.insertAdjacentHTML('beforeend',`<div class="libraryTools"><aside class="library-index">${search('bookQuery','Search the manual')}<details class="toc panel" id="manualContents"><summary>Contents</summary><div id="contents"></div></details></aside>
-      <div class="reader">${book}<div class="readerBar"><select id="readMode" aria-label="Reading format"><option value="pdf">Source PDF</option><option value="text">Page text</option></select>
-      <button class="iconbtn" id="readPrevious" aria-label="Previous manual page">${icon('left')}</button>
+    const tabs=[['manual','Manual'],['forms','Forms & Tags'],['questions','Practice Questions']];
+    const manual=section==='manual';
+    const prompt={manual:'Search the manual',forms:'Search forms and tags',questions:'Search practice questions'}[section];
+    const paging=manual?`<select id="readMode" aria-label="Reading format"><option value="pdf">PDF</option><option value="text">Page text</option></select>
+      <div class="reader-paging"><button class="iconbtn" id="readPrevious" aria-label="Previous manual page">${icon('left')}</button>
       <label>Page <input type="number" id="pageNumber" min="1" max="${d.pages}"> / ${d.pages}</label>
-      <button class="iconbtn" id="readNext" aria-label="Next manual page">${icon('right')}</button></div><div id="readerHost"></div></div></div>`);
-    $('manualContents').open=innerWidth>820;
+      <button class="iconbtn" id="readNext" aria-label="Next manual page">${icon('right')}</button></div>`:'';
+    main.innerHTML=`<h1 class="sr-only">UWPC library</h1><div id="libraryWorkspace"><div class="library-bar"><div class="library-controls">
+      <div class="library-buttons" role="group" aria-label="UWPC sections">${tabs.map(([key,label])=>`<button type="button" aria-pressed="${section===key}" data-lib="${key}">${label}</button>`).join('')}</div>
+      ${search('bookQuery',prompt)}<a class="source-link" href="${sourceUrl}" target="_blank" rel="noopener">${icon('arrow')}Open source PDF</a>
+      ${paging}</div>${manual?'<button type="button" class="iconbtn" id="readerFull"></button>':''}</div><div id="libraryContent"></div></div>`;
+    const content=$('libraryContent');
+    if(!manual){
+      const cards=section==='forms'?d.forms.map(f=>`<article class="card formref"><strong>${esc(f.code)}</strong><p>${esc(f.title)}</p>
+        <a class="btn" href="${api}/library/${encodeURIComponent(f.id)}" download>${icon('download')}PDF</a>
+        <a href="${sourceUrl}#page=${f.pages[0]}" target="_blank" rel="noopener">Source p. ${f.pages[0]}</a></article>`):
+        d.questions.map(([q,a,cl,p])=>`<details class="card"><summary>${esc(q)}</summary><p>${esc(a)}</p><a href="${sourceUrl}#page=${p}" target="_blank" rel="noopener">${esc(cl)} · PDF p. ${p}</a></details>`);
+      content.className=section==='forms'?'formsgrid':'questions';
+      content.innerHTML=cards.join('')+'<p class="note" id="libraryEmpty" hidden></p>';
+      const filter=()=>{
+        const words=$('bookQuery').value.trim().toLowerCase().split(/\s+/);
+        let count=0;
+        for(const card of content.querySelectorAll('.card')){
+          const text=card.textContent.toLowerCase();card.hidden=!words.every(w=>text.includes(w));
+          if(!card.hidden)count++;
+        }
+        $('libraryEmpty').hidden=count>0;
+        $('libraryEmpty').textContent=cards.length?'No matching entries.':'No entries for this edition.';
+      };
+      $('bookQuery').oninput=filter;filter();return;
+    }
+    content.innerHTML=`<div class="libraryTools" id="manualLayout"><aside class="library-index" aria-label="Manual contents">
+      <div class="toc" id="indexPanel"><div id="contents"></div></div>
+      <button type="button" class="iconbtn index-toggle" id="indexToggle" aria-controls="indexPanel"></button></aside>
+      <div class="reader" id="readerHost"></div></div>`;
+    const setCollapsed=bindReaderLayout();
     $('readMode').onchange=e=>readPage(readerPage,e.target.value);
     $('readPrevious').onclick=()=>readPage(readerPage-1,readerMode);
     $('readNext').onclick=()=>readPage(readerPage+1,readerMode);
@@ -413,7 +475,7 @@
         `<a href="${sourceUrl}#page=${t.page}" data-page="${t.page}">${esc(t.title)} · ${t.page}</a>`).join('')}</details>`;
     }).join('');
     $('contents').innerHTML=contents();
-    $('bookQuery').oninput=()=>{const q=$('bookQuery').value.trim();if(q)$('manualContents').open=true;clearTimeout(delayed);const seq=++requestId;
+    $('bookQuery').oninput=()=>{const q=$('bookQuery').value.trim();if(q)setCollapsed(false);clearTimeout(delayed);const seq=++requestId;
       if(!q){$('contents').innerHTML=contents();return;}delayed=setTimeout(async()=>{try{const data=await fetchData(api+'/library?q='+encodeURIComponent(q));
         if(seq!==requestId||!$('contents'))return;$('contents').innerHTML=data.hits.map(h=>`<a href="${sourceUrl}#page=${Number(h.page)}" data-page="${Number(h.page)}"><strong>PDF p. ${Number(h.page)}</strong> · ${esc(h.text)}</a>`).join('')||'<p>No matching passages.</p>';
       }catch(e){if(seq===requestId&&$('contents'))$('contents').innerHTML=errorBox(e);}},220);};
@@ -445,7 +507,7 @@
     const el=e.target.closest('[data-sort],[data-page],[data-lib]');if(!el)return;
     if(el.dataset.sort){state.direction=state.sort===el.dataset.sort&&state.direction==='asc'?'desc':'asc';state.sort=el.dataset.sort;state.offset=0;await loadRegister();}
     else if(el.dataset.lib){location.hash='library/'+el.dataset.lib;}
-    else if(el.dataset.page){e.preventDefault();if(innerWidth<=820)$('manualContents').open=false;await readPage(Number(el.dataset.page),readerMode);}
+    else if(el.dataset.page){e.preventDefault();if(innerWidth<=820 && !$('indexPanel').hidden)$('indexToggle').click();await readPage(Number(el.dataset.page),readerMode);}
   });
   window.addEventListener('hashchange',route);void route();
   window.addEventListener('pageshow',e=>{

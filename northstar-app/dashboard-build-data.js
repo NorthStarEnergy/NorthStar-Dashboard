@@ -3,12 +3,18 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.233",
+    "version": "v0.234",
     "published": "2026-11-10",
-    "publishedAt": "2026-11-10T04:19:31-05:00",
-    "summary": "Outage process phases have distinct icons and compact hover summaries for progress, assignments, review status and timing."
+    "publishedAt": "2026-11-10T04:27:34-05:00",
+    "summary": "UWPC puts navigation, search and page controls on one line, with a collapsible contents menu and full-screen reading."
   },
   "history": [
+    {
+      "version": "v0.234",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T04:27:34-05:00",
+      "summary": "UWPC puts navigation, search and page controls on one line, with a collapsible contents menu and full-screen reading."
+    },
     {
       "version": "v0.233",
       "published": "2026-11-10",

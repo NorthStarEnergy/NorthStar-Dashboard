@@ -1,3 +1,7 @@
+## 20261110-uwpc-reader
+
+Added the [single-row UWPC toolbar, collapsible menu and full-screen reader](packets/2026-11-10-uwpc-reader.md).
+
 ## 20261110-outage-phase-summaries
 
 Added [phase icons and hover summaries](packets/2026-11-10-outage-phase-summaries.md) to the outage process strip.

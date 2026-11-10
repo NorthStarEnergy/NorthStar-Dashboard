@@ -1,4 +1,4 @@
-v0.233
+v0.234
 2026-11-10
-2026-11-10T04:19:31-05:00
-Outage process phases have distinct icons and compact hover summaries for progress, assignments, review status and timing.
+2026-11-10T04:27:34-05:00
+UWPC puts navigation, search and page controls on one line, with a collapsible contents menu and full-screen reading.
