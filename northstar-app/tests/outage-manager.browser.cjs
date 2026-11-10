@@ -66,6 +66,12 @@ async function check() {
     assert.ok(await page.getByLabel('Filter by site').isHidden());
     await page.getByRole('button',{name:'Advanced settings'}).click();
     assert.ok(await page.getByLabel('Filter by site').isVisible());
+    await page.getByLabel('Filter by area').selectOption('IR / TW / IS');
+    await page.waitForFunction(()=>document.querySelectorAll('tbody tr').length===2);
+    await page.getByRole('button',{name:'Clear filters'}).click();
+    await page.locator('[data-sort=area]').click();
+    await page.waitForFunction(()=>document.querySelector('tbody tr td:nth-child(3)')?.textContent==='West');
+    await page.locator('[data-sort=start]').click();
     await page.getByRole('button',{name:'Advanced settings'}).click();
     const brand=page.getByRole('link',{name:'Outage Manager home'});
     const newAction=page.getByRole('link',{name:'New',exact:true});

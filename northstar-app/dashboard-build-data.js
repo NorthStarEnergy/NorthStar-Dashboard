@@ -3,12 +3,18 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.237",
+    "version": "v0.238",
     "published": "2026-11-10",
-    "publishedAt": "2026-11-10T06:09:17-05:00",
-    "summary": "Adds a personal Inbox, advanced settings, field help, site device suggestions and a compact form toolbar to Outage Manager."
+    "publishedAt": "2026-11-10T06:35:49-05:00",
+    "summary": "Adds operating-area sorting and filtering to the outage register."
   },
   "history": [
+    {
+      "version": "v0.238",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T06:35:49-05:00",
+      "summary": "Adds operating-area sorting and filtering to the outage register."
+    },
     {
       "version": "v0.237",
       "published": "2026-11-10",

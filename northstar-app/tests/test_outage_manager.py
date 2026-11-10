@@ -58,6 +58,21 @@ def test_tags_and_read_state_belong_to_the_recipient(db):
     assert len([e for e in manager.outage_report(oid)["events"] if e["event"]=="person-tagged"])==2
 
 
+def test_area_sort_and_cross_area_filter_before_pagination(db):
+    primary = ["Island Falls GS", "KAP", "CL", "Bird GS", "Unmapped"]
+    for site in primary:
+        manager.create_request(request(site=site, affectedSites=["OKI"] if site=="CL" else []),"manager")
+    for _ in range(30):
+        manager.create_request(request(site="IS",affectedSites=[]),"manager")
+    first=manager.query_register({"sort":"area"})
+    assert first["total"]==35 and first["rows"][0]["areas"]==["West","KAP / OKI"]
+    assert first["rows"][1]["areas"]==["KAP / OKI"]
+    assert manager.query_register({"sort":"area","offset":"30"})["rows"][-1]["areas"]==["Unassigned"]
+    assert manager.query_register({"sort":"area","direction":"desc"})["rows"][0]["areas"]==["Quebec"]
+    assert manager.query_register({"area":"IR / TW / IS"})["total"]==31
+    assert manager.query_register({"area":"KAP / OKI"})["total"]==2
+
+
 def test_site_device_union_uses_location_boundaries_and_real_references(db,monkeypatch):
     import northstar_maximo as maximo
     assets=[{"site":"FFO","location":"FFO-NOG-1","assetNum":f"N{i}","description":"Fixture asset"} for i in range(122)]

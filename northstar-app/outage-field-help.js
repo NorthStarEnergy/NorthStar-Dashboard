@@ -42,6 +42,7 @@
     uwpcPlanPhase:'Choose the lifecycle status to record for this plan.'
   };
   function explanation(el){
+    if(el.dataset.help)return el.dataset.help;
     if(el.id==='site')return 'Show outages affecting the selected site.';
     if(el.id==='severity')return 'Show only outages with the selected priority.';
     if(el.closest('.document-select'))return 'Choose the package document to display in this folder.';

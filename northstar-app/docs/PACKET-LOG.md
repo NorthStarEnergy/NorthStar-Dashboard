@@ -1,3 +1,7 @@
+## 20261110-outage-areas
+
+Added [area sorting and filtering](packets/2026-11-10-outage-areas.md) to the outage register.
+
 ## 20261110-outage-inbox
 
 Added the [personal Inbox, advanced settings and field help](packets/2026-11-10-outage-inbox.md) to Outage Manager.

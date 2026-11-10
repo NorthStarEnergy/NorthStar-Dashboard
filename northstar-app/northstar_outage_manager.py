@@ -103,6 +103,36 @@ rows AS (
 """
 
 
+OUTAGE_AREAS = ("West", "KAP / OKI", "IR / TW / IS", "Quebec", "Unassigned")
+
+
+@lru_cache(maxsize=1)
+def outage_area_lookup():
+    regional = {
+        "Old Woman Falls": 1, "White Otter Rapids": 1, "Camp Three Rapids": 1,
+        "Big Beaver Falls": 1, "Okikendawt GS": 1,
+        "Iroquois Falls": 2, "Iroquois Falls 230 kV": 2, "Twin Falls": 2, "Island Falls": 2,
+    }
+    lookup = {}
+    for site in station_directory.stations():
+        area = {"West": 0, "Quebec": 3}.get(site["area"], regional.get(site["name"]))
+        if area is not None:
+            for name in [site["id"], *station_directory.match_names(site["id"])]:
+                lookup[name.casefold()] = area
+    for area, aliases in enumerate((
+            ("CL", "FF", "SF"), ("KAP", "Kap GS", "Kapuskasing", "Kapuskasing GS", "OKI", "Okikendawt"),
+            ("IR", "TW", "IS"), ("QC", "Québec", "Quebec"))):
+        lookup.update((alias.casefold(), area) for alias in aliases)
+    return lookup
+
+
+def register_area_ids(primary, sites_json):
+    lookup = outage_area_lookup()
+    areas = dict.fromkeys(lookup.get(site.strip().casefold(), 4)
+                          for site in [primary, *json.loads(sites_json)] if site and site.strip())
+    return json.dumps(list(areas) or [4])
+
+
 def query_register(params):
     tab = params.get("tab", "upcoming")
     if tab not in {"upcoming","active","past"}:
@@ -118,6 +148,11 @@ def query_register(params):
     if params.get("site"):
         where.append("(site=? OR EXISTS(SELECT 1 FROM json_each(sites) WHERE value=?))")
         values.extend([params["site"]] * 2)
+    if params.get("area"):
+        if params["area"] not in OUTAGE_AREAS:
+            raise ValueError("Unknown outage area")
+        where.append("EXISTS(SELECT 1 FROM json_each(area_ids) WHERE value=?)")
+        values.append(OUTAGE_AREAS.index(params["area"]))
     for key, op in [("from", ">="), ("until", "<")]:
         if params.get(key):
             stamp = datetime.fromisoformat(params[key].replace("Z", "+00:00"))
@@ -128,10 +163,12 @@ def query_register(params):
     offset = max(0, int(params.get("offset", 0)))
     sorts = {"start": "julianday(nullif(start,''))", "title": "title COLLATE NOCASE", "site": "site COLLATE NOCASE",
              "status": "status", "closed": "julianday(closed)", "severity": "CASE severity WHEN 'Critical' THEN 3 WHEN 'Degraded' THEN 2 ELSE 1 END"}
+    sorts["area"] = "nullif(json_extract(area_ids,'$[0]'),4)"
     order = sorts.get(params.get("sort"), sorts["closed" if tab == "past" else "start"])
     direction = "DESC" if params.get("direction", "desc" if tab == "past" else "asc") == "desc" else "ASC"
-    filtered = " FROM register WHERE " + " AND ".join(where)
+    filtered = " FROM (SELECT register.*,outage_areas(site,sites) AS area_ids FROM register) WHERE " + " AND ".join(where)
     with desk.session() as c:
+        c.create_function("outage_areas", 2, register_area_ids, deterministic=True)
         c.execute("BEGIN")
         total = c.execute(REGISTER + "SELECT count(*)" + filtered, values).fetchone()[0]
         offset = min(offset, max(0, (total - 1) // 30 * 30))
@@ -141,7 +178,8 @@ def query_register(params):
         site_names = [r[0] for r in c.execute(REGISTER + "SELECT site FROM rows UNION SELECT value FROM rows,json_each(sites) ORDER BY 1")]
     for item in items:
         item["sites"] = json.loads(item["sites"])
-    return {"rows": items, "total": total, "offset": offset, "counts": {k:counts.get(k,0) for k in ("upcoming","active","past")}, "sites":site_names}
+        item["areas"] = [OUTAGE_AREAS[i] for i in json.loads(item.pop("area_ids"))]
+    return {"rows": items, "total": total, "offset": offset, "counts": {k:counts.get(k,0) for k in ("upcoming","active","past")}, "sites":site_names, "areas":OUTAGE_AREAS}
 
 
 def create_request(payload, actor, accounts=()):

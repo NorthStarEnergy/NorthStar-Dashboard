@@ -313,7 +313,7 @@
     const tabs=[['upcoming','Upcoming'],['active','In progress'],['past','Past']];
     main.innerHTML=`<h1 class="sr-only">Outages</h1><div class="register-toolbar"><div class="register-head"><div class="tabs" aria-label="Outage period">${tabs.map(([id,label])=>`<button data-tab="${id}" aria-pressed="${id===state.tab}">${label}<span class="count" data-count="${id}">–</span></button>`).join('')}</div></div>
       <div class="bar">${search('query','Search outages')}<button class="btn" id="toggleFilters" aria-controls="filters" aria-expanded="false">${icon('filters')}Advanced settings</button></div></div>
-      <div id="filters" class="filters panel" hidden><div class="fields"><label>Site<select id="site" aria-label="Filter by site"><option value="">All sites</option></select></label><label>Type<select id="type">${opts([['Planned','Planned'],['Unplanned','Unplanned']],'','All types')}</select></label>
+      <div id="filters" class="filters panel" hidden><div class="fields"><label>Area<select id="registerArea" aria-label="Filter by area" data-help="Show outages affecting any site in this operating area."><option value="">All areas</option></select></label><label>Site<select id="site" aria-label="Filter by site"><option value="">All sites</option></select></label><label>Type<select id="type">${opts([['Planned','Planned'],['Unplanned','Unplanned']],'','All types')}</select></label>
       <label>Priority<select id="severity">${opts(Object.entries(priorities),'','All priorities')}</select></label>
       <label>Plan status<select id="status">${opts(Object.entries(states),'','All statuses')}</select></label>
       <label>Start from<input id="from" type="date"></label><label>Through<input id="until" type="date"></label><button class="btn" id="resetFilters">Clear filters</button></div></div>
@@ -323,8 +323,8 @@
       main.querySelectorAll('[data-tab]').forEach(el=>el.setAttribute('aria-pressed',String(el===b)));void loadRegister();
     });
     $('toggleFilters').onclick=()=>{$('filters').hidden=!$('filters').hidden;$('toggleFilters').setAttribute('aria-expanded',String(!$('filters').hidden));};
-    $('resetFilters').onclick=()=>{for(const key of ['site','type','severity','status','from','until','query'])$(key).value='';state.offset=0;void loadRegister();};
-    for(const key of ['site','type','severity','status','from','until'])$(key).onchange=()=>{state.offset=0;void loadRegister();};
+    $('resetFilters').onclick=()=>{for(const key of ['registerArea','site','type','severity','status','from','until','query'])$(key).value='';state.offset=0;void loadRegister();};
+    for(const key of ['registerArea','site','type','severity','status','from','until'])$(key).onchange=()=>{state.offset=0;void loadRegister();};
     $('query').oninput=()=>{state.offset=0;requestId++;clearTimeout(delayed);delayed=setTimeout(loadRegister,180);};
     $('prev').onclick=()=>{state.offset=Math.max(0,state.offset-30);void loadRegister();};
     $('next').onclick=()=>{state.offset+=30;void loadRegister();};
@@ -334,7 +334,7 @@
     if(!$('rows'))return;
     const fetchId=++requestId;
     const p=new URLSearchParams(state);
-    p.set('q',$('query').value);
+    p.set('q',$('query').value);p.set('area',$('registerArea').value);
     for(const key of ['site','type','severity','status'])p.set(key,$(key).value);
     for(const key of ['from','until'])if($(key).value){const d=new Date($(key).value+'T00:00:00');if(key==='until')d.setDate(d.getDate()+1);p.set(key,d.toISOString());}
     try{
@@ -342,14 +342,15 @@
       if(fetchId!==requestId||!$('rows'))return;
       state.offset=d.offset;
       $('site').innerHTML=opts(d.sites.filter(Boolean).map(s=>[s,s]),p.get('site'),'All sites');
-      const filters=['site','type','severity','status','from','until'].filter(key=>p.get(key)).length;
+      $('registerArea').innerHTML=opts(d.areas.map(area=>[area,area]),p.get('area'),'All areas');
+      const filters=['area','site','type','severity','status','from','until'].filter(key=>p.get(key)).length;
       $('toggleFilters').innerHTML=icon('filters')+'Advanced settings'+(filters?` · ${filters} active`:'');
       main.querySelectorAll('[data-count]').forEach(el=>el.textContent=d.counts[el.dataset.count]);
-      const cols=[['title','Outage'],['site','Site'],[state.tab==='past'?'closed':'start',state.tab==='past'?'Closed':'Start'],['','End'],['severity','Priority'],['status','Status']];
+      const cols=[['title','Outage'],['site','Site'],['area','Area'],[state.tab==='past'?'closed':'start',state.tab==='past'?'Closed':'Start'],['','End'],['severity','Priority'],['status','Status']];
       $('rows').innerHTML=`<table aria-label="Outage register"><thead><tr>${cols.map(([k,l])=>`<th ${k===state.sort?'aria-sort="'+(state.direction==='asc'?'ascending':'descending')+'"':''}>${k?`<button data-sort="${k}">${l} ${k===state.sort?(state.direction==='asc'?'↑':'↓'):'↕'}</button>`:l}</th>`).join('')}</tr></thead><tbody>
         ${d.rows.map(r=>`<tr data-outage-row="${esc(r.id)}"><td><a class="titlebtn" href="${outageUrl(r.id)}" title="${esc(r.title)}">${esc(r.title)}</a></td>
         <td title="${esc(r.sites.join(', '))}">${esc(r.site)}${r.sites.length>1?' +'+(r.sites.length-1):''}</td>
-        <td>${state.tab==='past'?(r.closed?esc(date(r.closed)):'—'):esc(date(r.start))}</td><td>${r.end?esc(date(r.end)):'—'}</td>
+        <td>${esc(r.areas.join(' · '))}</td><td>${state.tab==='past'?(r.closed?esc(date(r.closed)):'—'):esc(date(r.start))}</td><td>${r.end?esc(date(r.end)):'—'}</td>
         <td>${esc(priorities[r.severity]||r.severity)}</td><td>${chip(r)}${r.requiredSignatures?` <small class="mono" title="Required sign-offs received">${r.signed}/${r.requiredSignatures}</small>`:''}</td></tr>`).join('')}</tbody></table>
         ${d.rows.length?'':'<div class="empty">No outages match this view.</div>'}`;
       void mountFolder(null,'',d.rows);
