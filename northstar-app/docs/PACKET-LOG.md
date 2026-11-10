@@ -1,3 +1,7 @@
+## 20261110-outages-menu
+
+Fixed the Outages sidebar route and added the UWPC Builder to the v3 Outages menu. See [Outages menu](packets/2026-11-10-outages-menu.md).
+
 ## 20261110-outage-closeout
 
 Linked outage requests now lead through review, final-copy distribution, an electronic switching log, closure and saved notes. The UWPC Builder includes a two-site practice outage with an assigned team. See [distribution and closeout](packets/2026-11-10-outage-closeout.md).

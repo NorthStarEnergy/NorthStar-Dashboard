@@ -21,7 +21,7 @@ with tempfile.TemporaryDirectory(prefix="northstar-uwpc-test-") as temp:
     backend.CHECKIN_ORIGIN = "https://fixture-public.invalid"
     roster = {"manager": ["fixture_author"], "operator": ["fixture_operator", "fixture_relief"],
               "checker": ["fixture_operator"], "area": ["fixture_area"], "field": ["fixture_north", "fixture_south"]}
-    accounts = sorted({name for names in roster.values() for name in names})
+    accounts = sorted({name for names in roster.values() for name in names} | {"Ryan"})
     backend.DEMO_AUTH = {"accounts": [auth.build_config(name, "fixture-only-password") for name in accounts]}
     roster_path = Path(temp) / "outage-review-directory.json"
     roster_path.write_text(json.dumps(roster))

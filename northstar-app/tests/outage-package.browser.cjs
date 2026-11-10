@@ -26,14 +26,32 @@ async function verify() {
       });
       assert.equal(response.status(), 200);
     };
-    await login('fixture_author');
     const page = await context.newPage();
     await page.route('**/api/**', route => {
       const pathname = new URL(route.request().url()).pathname;
       if (/^\/api\/(uwpc|auth|switching|outages)/.test(pathname)) return route.continue();
       return route.fulfill({status:503, contentType:'application/json', body:'{}'});
     });
-    await page.goto(origin + (process.env.OUTAGE_TEST_SHELL || '/northstar-clean.html'));
+    const shell = process.env.OUTAGE_TEST_SHELL || '/northstar-clean.html';
+    const menu = page.locator('#sideNav [data-tab="outages"]');
+    async function chooseOutageModule(id) {
+      const choice = page.locator(`#sideNav [data-open-module="${id}"]:visible, #sideNav [data-v3-destination="${id}"]:visible`);
+      if (!await choice.count()) await menu.click();
+      await choice.click();
+    }
+    await login('Ryan');
+    const library = new URL(shell,origin);
+    library.searchParams.set('nsLibrary','1');
+    library.hash = 'tools';
+    await page.goto(library.href);
+    await page.locator('body.ns-library-shell').waitFor({state:'attached'});
+    await page.waitForFunction(() => window.NorthstarModules?.registry.has('outages:uwpc'));
+    await chooseOutageModule('outages:current');
+    await page.locator('#outageList').waitFor();
+    await chooseOutageModule('outages:uwpc');
+    await page.getByRole('link',{name:'Open practice outage'}).waitFor();
+    await login('fixture_author');
+    await page.goto(origin + shell);
     const oid = await page.evaluate(async () => {
       const r = await fetch('/api/outages', {method:'POST', headers:{'Content-Type':'application/json'},
         body:JSON.stringify({type:'Planned',title:'Fixture multi-site outage',site:'North',details:'Synthetic request'})});
@@ -42,8 +60,14 @@ async function verify() {
     assert.ok(oid);
     await page.reload();
     await page.waitForFunction(() => window.NorthstarModules?.registry.has('outages:uwpc'));
-    await page.evaluate(() => window.NorthstarModules.open('outages:current'));
-    await page.locator(`[data-outage-package="${oid}"]`).click();
+    await chooseOutageModule('outages:current');
+    const planSelector = `[data-outage-package="${oid}"]`;
+    if (await page.locator('body.ns-build-v3').count()) {
+      await page.locator('#outageList .outage-item').filter({has:page.locator(planSelector)}).locator('strong').click();
+      await page.locator('dialog[open]').locator(planSelector).click();
+    } else {
+      await page.locator(planSelector).click();
+    }
     const form = page.locator('#uwpcRequestForm');
     assert.equal(await form.locator('[name=outageId]').inputValue(), oid);
     for (const [name,value] of Object.entries({title:'Fixture multi-site outage', site:'North',

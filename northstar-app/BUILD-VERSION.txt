@@ -1,4 +1,4 @@
-v0.228
-2026-11-09
-2026-11-09T23:55:23-05:00
-Distribute approved outage packages to the assigned team, record switching activity, and close the outage with follow-up notes.
+v0.229
+2026-11-10
+2026-11-10T01:38:04-05:00
+Open the Outages menu, current register and UWPC Builder for signed-in operators across dashboard views.

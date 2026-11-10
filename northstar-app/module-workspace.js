@@ -69,7 +69,7 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
   function restrictedInSession(m) {
     if (window.NORTHSTAR_PLATFORM_DEMO) return !demoModuleAllowed(m);
     if (!window.NORTHSTAR_RYAN_VIEW) return false;
-    if (belongs(m, 'switching') || m?.id === 'training:switching-simulator') return false;
+    if (m?.section === 'outages' || belongs(m, 'switching') || m?.id === 'training:switching-simulator') return false;
     return !demoModuleAllowed(m);
   }
   const sectionItems = owner => [...registry.values()]

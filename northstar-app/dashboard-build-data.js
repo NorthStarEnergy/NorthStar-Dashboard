@@ -3,12 +3,18 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.228",
-    "published": "2026-11-09",
-    "publishedAt": "2026-11-09T23:55:23-05:00",
-    "summary": "Distribute approved outage packages to the assigned team, record switching activity, and close the outage with follow-up notes."
+    "version": "v0.229",
+    "published": "2026-11-10",
+    "publishedAt": "2026-11-10T01:38:04-05:00",
+    "summary": "Open the Outages menu, current register and UWPC Builder for signed-in operators across dashboard views."
   },
   "history": [
+    {
+      "version": "v0.229",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T01:38:04-05:00",
+      "summary": "Open the Outages menu, current register and UWPC Builder for signed-in operators across dashboard views."
+    },
     {
       "version": "v0.228",
       "published": "2026-11-09",

@@ -13,7 +13,7 @@
   const groups={
     overview:[],crew:[],logbook:[],markets:[['Market chart','chart'],['Alarms','markets:alarms']],
     operations:[['Stations','operations:sites'],['Dispatch','dispatch'],['Spill','operations:spill'],['Tasks','operations:tasks'],['Research','operations:research']],
-    outages:[['Outages','outages:current'],['Archive','outages:incident-archive']],
+    outages:[['Current outages','outages:current'],['UWPC Builder','outages:uwpc'],['Archive','outages:incident-archive']],
     switching:[['UWPC','outages:uwpc'],['Training examples','uwpc-examples'],['SCADA','scada:scada-module-0']],
     tools:[['Schematic builder','tools:schematic-builder'],['Data connections','tools:data-connections'],['Data workspace','tools:data-workspace']],
   };
