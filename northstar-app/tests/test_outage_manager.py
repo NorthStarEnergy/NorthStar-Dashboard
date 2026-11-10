@@ -63,6 +63,60 @@ def test_failed_package_rolls_back_request(db, monkeypatch):
     assert not store.list_outages()
 
 
+def test_checkout_fences_all_package_documents_and_records_handoff(db, monkeypatch):
+    outage = manager.create_request(request(), "manager")
+    plan = outage["packageId"]
+    other = desk.create({"kind":"REQUEST_GUARANTEE","template":"pc10c-sg","title":"Guarantee",
+                         "outageId":outage["id"],"site":"North","scope":"Inspection"}, "field")
+    a,b = str(uuid.uuid4()),str(uuid.uuid4())
+    desk.checkout(plan,"check-out","manager",a)
+    state=desk.checkout(other["id"],None,"field",b)
+    assert state["owner"]=="manager" and not state["mine"]
+    with pytest.raises(desk.Conflict):
+        desk.checkout(other["id"],"check-out","field",b)
+    for actor,token in [("field",a),("manager",b),("manager","")]:
+        with pytest.raises(desk.Conflict):
+            desk.add_source(other["id"],other["version"],"drawing.txt","diagram",b"fixture",actor,checkout_token=token)
+        with pytest.raises(ValueError):
+            desk.checkout(plan,"check-in",actor,token)
+    saved=desk.add_source(other["id"],other["version"],"drawing.txt","diagram",b"fixture","manager",checkout_token=a)
+    with pytest.raises(desk.Conflict):
+        desk.add_source(other["id"],other["version"],"drawing.txt","diagram",b"stale","manager",checkout_token=a)
+    due=desk.checkout(plan,None,"manager",a)["expires"]
+    monkeypatch.setattr(desk.time,"time",lambda:due+1)
+    desk.checkout(other["id"],"check-out","field",b)
+    with pytest.raises(desk.Conflict):
+        desk.change(other["id"],"remove-source",{"version":saved["version"],"sourceId":saved["sources"][0]["id"]},"manager",checkout_token=a)
+    desk.checkout(other["id"],"check-in","field",b)
+    with pytest.raises(desk.Conflict):
+        desk.add_source(other["id"],saved["version"],"drawing.txt","diagram",b"fixture","field",checkout_token=b)
+    report=manager.outage_report(outage["id"])
+    assert {doc["id"] for doc in report["documents"]} == {plan,other["id"]}
+    assert {e["event"] for e in report["events"]} >= {"opened","checked-out","checkout-expired","checked-in"}
+    assert {r["id"] for r in manager.report_options()} == {outage["id"]}
+
+
+def test_concurrent_checkout_has_one_owner_and_reports_are_read_only(db):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    outage=manager.create_request(request(),"author")
+    barrier=Barrier(2)
+    def acquire(actor):
+        token=str(uuid.uuid4())
+        barrier.wait(timeout=5)
+        try:
+            desk.checkout(outage["packageId"],"check-out",actor,token)
+        except desk.Conflict:
+            return None
+        return actor
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        owners=[o for o in pool.map(acquire,["first","second"]) if o]
+    assert len(owners)==1
+    before=manager.outage_report(outage["id"])
+    assert [e["actor"] for e in before["events"] if e["event"]=="checked-out"]==owners
+    assert manager.outage_report(outage["id"])["events"]==before["events"]
+
+
 def test_library_preserves_source_pages_and_refuses_another_edition(monkeypatch):
     pdf=PdfWriter()
     for _ in range(145):

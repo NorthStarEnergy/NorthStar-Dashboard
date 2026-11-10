@@ -20,13 +20,51 @@
   const $ = id => document.getElementById(id);
   const outage = window.NorthStarOutageReview({esc, when, dateValue, api});
   let roles = {};
+  let editToken='', checkoutKey='', lock={owner:null,mine:false}, lastActivity=0;
+  const checkoutUrl='/api/uwpc/requests/manager/checkout';
+  function tokenHeader(){return editToken?{'X-Northstar-Checkout':editToken}:{};}
 
   async function request(url, method = 'GET', body) {
     const response = await fetch(url, {method, credentials:'same-origin', cache:'no-store',
-      ...(body ? {headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {})});
+      headers:{...tokenHeader(),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+    if (!response.ok) throw Object.assign(new Error(data.error || `Request failed (${response.status})`),{status:response.status});
     return data;
+  }
+
+  function paintCheckout(){
+    const fields=$('checkoutFields'),bar=$('checkoutBar');
+    if(!fields||!bar)return;
+    fields.disabled=!lock.mine || !lock.canEdit;
+    bar.title=lock.expires?'Checkout expires '+when(new Date(lock.expires*1000)):'';
+    bar.querySelector('span').textContent=lock.owner?`Checked out by ${lock.owner}`:
+      lock.canEdit===false?'Read-only package':lock.canEdit?'Available to edit':'Checking edit access…';
+    const button=bar.querySelector('button');
+    button.textContent=lock.mine?'Check in':'Check out to edit';
+    button.hidden=!lock.canEdit && !lock.mine;
+    button.disabled=Boolean(lock.owner&&!lock.mine);
+  }
+
+  async function checkStatus(){
+    lock=await request(checkoutUrl+'?doc='+encodeURIComponent(current.id));
+    paintCheckout();
+  }
+
+  async function toggleCheckout(){
+    if(lock.mine && dirty)throw Error('Save or cancel your form changes before checking in.');
+    if(lock.mine){
+      lock=await request(checkoutUrl,'POST',{doc:current.id,action:'check-in'});
+      sessionStorage.removeItem(checkoutKey);editToken='';await checkStatus();return;
+    }
+    editToken=crypto.randomUUID();
+    sessionStorage.setItem(checkoutKey,editToken);
+    try {
+      lock=await request(checkoutUrl,'POST',{doc:current.id,action:'check-out'});
+      lastActivity=Date.now();
+      const latest=await request(api+'/'+encodeURIComponent(current.id));
+      if(!dirty)show(latest);
+      else if(latest.version!==current.version)throw Error('A newer revision was saved. Copy your draft changes and reopen the form.');
+    } finally {await checkStatus();}
   }
 
   function notice(text, error = false) {
@@ -39,11 +77,15 @@
     busy = true; root.setAttribute('aria-busy','true');
     $('uwpcEditor').inert = true;
     root.querySelectorAll('button').forEach(button => {button.dataset.wasDisabled = String(button.disabled); button.disabled = true;});
-    try { await work(); } catch (error) { notice(error.message, true); }
+    try { await work(); } catch (error) {
+      if(error.status===409 && $('checkoutBar'))await checkStatus().catch(()=>{});
+      notice(error.message, true);
+    }
     finally {
       busy = false; root.removeAttribute('aria-busy');
       $('uwpcEditor').inert = false;
       root.querySelectorAll('button[data-was-disabled]').forEach(button => {button.disabled = button.dataset.wasDisabled === 'true'; delete button.dataset.wasDisabled;});
+      if(managerPackage)paintCheckout();
     }
   }
 
@@ -194,6 +236,8 @@
       parts.push(outage.cover(r, roles, actor, operators, !managerPackage));
       parts.push(r.generation?.evidenceCheck ? `<section class="uwpc-inbox" aria-label="UWPC evidence checks"><h4>Code evidence · ${esc(status(r.generation.evidenceCheck.status))}</h4><p>References are checked against stored text. Interpretation and complete rule coverage require qualified review.</p>${r.generation.evidenceCheck.missing.map(item=>`<p>Missing: ${esc(item)}</p>`).join('')}${r.generation.evidenceCheck.errors.map(item=>`<p class="error">${esc(item)}</p>`).join('')}<a href="knowledge-library.html" target="_blank" rel="noopener">Review controlled sources</a><details><summary>Retrieved clauses and revisions</summary>${r.generation.controlledEvidence.passages.map(p=>`<p><a href="${esc(p.href)}" target="_blank" rel="noopener">${esc(p.title)} · revision ${esc(p.revision)} · ${p.page ? `PDF page ${esc(p.page)}` : esc(p.section)}</a><small>${esc(p.id)} · Clause mentions: ${esc(p.clauseMentions.join(', ') || 'None identified')}</small></p>`).join('') || '<p>No eligible controlled passages retrieved.</p>'}</details></section>` : '');
     }
+    const inRegister=r.id && !practice && (r.registerOutage || r.outageId || r.kind==='SWITCHING_PLAN');
+    if(!managerPackage && inRegister)parts.push(`<a class="uwpc-button" href="/outage-manager-package.html?section=forms&id=${encodeURIComponent(r.id)}">Edit in Outage Manager</a>`);
     if (section === 'all' || section === 'forms') parts.push(`${r.preparationMode === 'INTAKE' ? `${r.generation ? `<section class="uwpc-generated"><h4>${r.generation.model === "not-run-missing-controlled-evidence" ? "Evidence checklist · analysis paused" : "AI draft · qualified review required"}</h4><pre class="uwpc-document">${esc(r.generation.text)}</pre></section>` : '<p>Request saved. Add your evidence below to prepare an AI draft.</p>'}<details class="uwpc-intake-form"><summary>Complete and save the draft form</summary>` : ''}
       ${exportPanel(r)}
       <form id="uwpcRequestForm">
@@ -226,15 +270,27 @@
       log:'The switching log has not opened.',closeout:'No closeout has been recorded.'};
     editor.innerHTML = `<article class="uwpc-form-shell">${parts.join('').trim() || `<p class="folder-empty">${empty[section] || 'No entries.'}</p>`}</article>`;
     const assigned=r.packageReview || r.lastReview;
-    if(assigned?.copyTo?.includes(actor) && assigned.preparer!==actor && !assigned.tasks.some(t=>t.account===actor)) {
+    const viewer=assigned?.copyTo?.includes(actor) && assigned.preparer!==actor && !assigned.tasks.some(t=>t.account===actor);
+    if(managerPackage && ['forms','documents'].includes(section)){
+      const fields=document.createElement('fieldset');fields.id='checkoutFields';fields.disabled=true;
+      const article=editor.firstElementChild;
+      fields.append(...article.childNodes);article.append(fields);
+      if(!viewer){
+        article.insertAdjacentHTML('afterbegin','<div id="checkoutBar"><span></span><button type="button" data-action="checkout"></button></div>');
+        paintCheckout();
+      }
+    }else if(!managerPackage && inRegister){
+      editor.querySelectorAll('#uwpcRequestForm input,#uwpcRequestForm select,#uwpcRequestForm textarea,#uwpcRequestForm button:not([data-action=cancel]),#uwpcSourceUpload,#uwpcSourceKind,[data-action=upload],[data-action=generate],[data-remove-source]').forEach(el=>el.disabled=true);
+    }
+    if(viewer) {
       editor.querySelectorAll('input,select,textarea,button').forEach(el=>{
         if(el.matches('[data-action="final-receipt"],[data-action="final-flag"],[data-action="cancel"]') ||
            el.closest('fieldset')?.querySelector('[data-action="final-flag"]'))return;
         el.disabled=true;
       });
     }
-    if (managerPackage) editor.querySelectorAll('.uwpc-form-shell > details').forEach(el => {el.open=true;});
-    if (r.registerOutage && $('uwpcRequestForm')) $('uwpcRequestForm').elements.outageId.readOnly = true;
+    if (managerPackage) editor.querySelectorAll('.uwpc-form-shell > details,#checkoutFields > details').forEach(el => {el.open=true;});
+    if (r.outageId && $('uwpcRequestForm')) $('uwpcRequestForm').elements.outageId.readOnly = true;
     if (fullReview && $('uwpcPlanPhase')) $('uwpcPlanPhase').closest('.uwpc-actions').hidden = Boolean(r.switchLog || r.distribution);
     $('uwpcRequestForm')?.addEventListener('submit', event => {event.preventDefault(); void run(save);});
     $('uwpcRequestForm')?.addEventListener('input', () => {dirty=true;});
@@ -277,6 +333,10 @@
       data.description = plan.purpose;
     }
     const result = await request(current ? `${api}/${current.id}/save` : api, 'POST', {...data,...(current ? {version:current.version} : {})});
+    if(managerPackage && result.outageId && !current?.outageId){
+      sessionStorage.setItem('outageEdit.'+result.outageId,editToken);dirty=false;
+      location.assign('/outage-manager-package.html?section=forms&id='+encodeURIComponent(result.id));return;
+    }
     show(result); await refresh(); notice('Form saved. The PDF preview and editable Excel file are ready.');
   }
 
@@ -311,7 +371,7 @@
       const files = [[$('uwpcIntakeDiagram').files[0], 'diagram'], ...[...$('uwpcIntakeSources').files].map(file => [file, 'source'])].filter(([file]) => file);
       if (files.length > 8 || files.some(([file]) => file.size > 10 * 1024 * 1024) || files.reduce((sum, [file]) => sum + file.size, 0) > 20 * 1024 * 1024) throw new Error('Use up to 8 files, 10 MB each and 20 MB total.');
       if (files.some(([file]) => !/\.(pdf|png|jpe?g|webp|json|txt)$/i.test(file.name))) throw new Error('Use PDF, image, JSON or text files.');
-      let saved = false;
+    let saved = false, intakeCheckout='';
       [...form.elements].forEach(control => {control.disabled = true;});
       try {
         notice('Saving your request…');
@@ -322,10 +382,15 @@
           ...(chosen.kind === 'SWITCHING_PLAN' ? {switchingPlan:{purpose:scope,steps:[]}} : {})
         });
         saved = true; show(row); form.reset();
+        if(row.kind==='SWITCHING_PLAN' && (files.length || row.diagramRevision)){
+          editToken=crypto.randomUUID();
+          await request(checkoutUrl,'POST',{doc:row.id,action:'check-out'});
+          intakeCheckout=row.id;
+        }
         for (const [file, kind] of files) {
           notice(`Attaching ${file.name}…`);
           const response = await fetch(`${api}/${current.id}/sources?kind=${kind}&version=${current.version}`, {
-            method:'POST', credentials:'same-origin', headers:{'Content-Type':file.type || 'application/octet-stream','X-Northstar-Filename':encodeURIComponent(file.name)}, body:file
+            method:'POST', credentials:'same-origin', headers:{...tokenHeader(),'Content-Type':file.type || 'application/octet-stream','X-Northstar-Filename':encodeURIComponent(file.name)}, body:file
           });
           const result = await response.json();
           if (!response.ok) throw new Error(result.error || 'Attachment failed');
@@ -343,6 +408,10 @@
         if (saved) throw new Error(`Request saved as ${current.id}. ${error.message}. Continue in the saved package below.`);
         throw error;
       } finally {
+        if(intakeCheckout){
+          try{await request(checkoutUrl,'POST',{doc:intakeCheckout,action:'check-in'});}
+          finally{editToken='';}
+        }
         [...form.elements].forEach(control => {control.disabled = false;});
         if (saved) {
           const sources = $('uwpcEditor').querySelector('.uwpc-advanced');
@@ -354,6 +423,7 @@
   }
 
   async function act(action, button) {
+    if(action==='checkout'){await toggleCheckout();return;}
     if (action === 'add-step') {
       const body = $('uwpcSwitchingRows');
       body.insertAdjacentHTML('beforeend', switchingRow({}, body.querySelectorAll('[data-switching-step]').length));
@@ -390,7 +460,7 @@
     if (action === 'phase') {await change('phase',{phase:$('uwpcPlanPhase').value}); notice('Plan status updated.');}
     if (action === 'upload') {
       const file = $('uwpcSourceUpload').files[0]; if (!file) throw new Error('Choose a diagram or source file first.');
-      const response = await fetch(`${api}/${current.id}/sources?kind=${$('uwpcSourceKind').value}&version=${current.version}`,{method:'POST',credentials:'same-origin',headers:{'Content-Type':file.type||'application/octet-stream','X-Northstar-Filename':encodeURIComponent(file.name)},body:file});
+      const response = await fetch(`${api}/${current.id}/sources?kind=${$('uwpcSourceKind').value}&version=${current.version}`,{method:'POST',credentials:'same-origin',headers:{...tokenHeader(),'Content-Type':file.type||'application/octet-stream','X-Northstar-Filename':encodeURIComponent(file.name)},body:file});
       const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Upload failed');
       show(data); await refresh(); notice('Source saved with this package.');
     }
@@ -402,6 +472,8 @@
       if (!workspace?.editable) return;
       managerSection = workspace.section;
       root = $('uwpcDesk');
+      checkoutKey='outageEdit.'+workspace.outageId;editToken=sessionStorage.getItem(checkoutKey)||'';
+      root.addEventListener('input',()=>lastActivity=Date.now());
       window.addEventListener('beforeunload', e => {
         if (dirty) {e.preventDefault();e.returnValue='';}
       });
@@ -415,7 +487,20 @@
         await refresh();
         const id = workspace.packageId;
         if (!id) throw new Error('Choose an outage package from Home.');
-        await open(id);notice('');
+        await open(id);
+        if(['forms','documents'].includes(managerSection)){
+          await checkStatus();
+          setInterval(async()=>{
+            if(document.hidden||busy)return;
+            try{
+              if(lock.mine && lock.canEdit && Date.now()-lastActivity<120000)
+                lock=await request(checkoutUrl,'POST',{doc:id,action:'renew'});
+              else await checkStatus();
+              paintCheckout();
+            }catch(error){lock={};paintCheckout();notice(error.message,true);}
+          },60000);
+        }
+        notice('');
       });
       return;
     }

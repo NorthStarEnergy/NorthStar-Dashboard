@@ -1,4 +1,4 @@
-v0.235
+v0.236
 2026-11-10
-2026-11-10T05:10:45-05:00
-Outage Manager places New beside the title, simplifies the menu and shows a notification bell for outstanding outage alerts.
+2026-11-10T05:36:36-05:00
+Adds outage reports, an outage-wide event log and exclusive checkout for editing package forms and documents.

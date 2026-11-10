@@ -68,6 +68,10 @@ async function verify() {
     } else {
       await page.locator(planSelector).click();
     }
+    const deskUrl=page.url();
+    await page.getByRole('link',{name:'Edit in Outage Manager'}).click();
+    const docId=new URL(page.url()).searchParams.get('id');
+    await page.getByRole('button',{name:'Check out to edit'}).click();
     const form = page.locator('#uwpcRequestForm');
     assert.equal(await form.locator('[name=outageId]').inputValue(), oid);
     for (const [name,value] of Object.entries({title:'Fixture multi-site outage', site:'North',
@@ -78,10 +82,17 @@ async function verify() {
     await form.locator('[data-step-field=device]').first().fill('Fixture device');
     await form.locator('[data-step-field=operation]').first().fill('Fixture step');
     await form.getByRole('button', {name:'Save changes'}).click();
-    await page.getByText('Sources and proposal generation', {exact:true}).click();
+    await page.getByText('Form saved.',{exact:false}).first().waitFor();
+    await page.getByRole('link',{name:'Drawings & documents'}).click();
     await page.locator('#uwpcSourceUpload').setInputFiles({name:'drawing.txt',mimeType:'text/plain',buffer:Buffer.from('Fixture')});
     await page.getByRole('button', {name:'Attach', exact:true}).click();
     await page.locator('#uwpcDeskStatus').filter({hasText:'Source saved'}).waitFor();
+    await page.getByRole('button',{name:'Check in',exact:true}).click();
+    await page.getByRole('button',{name:'Check out to edit'}).waitFor();
+    await page.goto(deskUrl);
+    await page.waitForFunction(()=>window.NorthStarUwpcDesk);
+    await chooseOutageModule('outages:uwpc');
+    await page.evaluate(id=>window.NorthStarUwpcDesk.open(id),docId);
     const routing = page.locator('#outageRouting');
     await routing.locator('[name=due]').fill('2030-09-10T10:00');
     await routing.locator('[name=checker]').selectOption('fixture_operator');

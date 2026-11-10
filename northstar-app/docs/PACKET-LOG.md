@@ -1,3 +1,7 @@
+## 20261110-outage-reports-checkout
+
+Added [outage reports, an event log and package checkout](packets/2026-11-10-outage-reports-checkout.md).
+
 ## 20261110-outage-header
 
 Updated the [Outage Manager header and alert navigation](packets/2026-11-10-outage-header.md).

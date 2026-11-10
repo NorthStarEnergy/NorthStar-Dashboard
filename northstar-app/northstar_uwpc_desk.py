@@ -10,6 +10,7 @@ import io
 import json
 import re
 import sqlite3
+import time
 import textwrap
 import urllib.error
 import urllib.request
@@ -60,6 +61,9 @@ def init_schema(c):
     c.execute("""CREATE TABLE IF NOT EXISTS uwpc_final_copies (
         id TEXT PRIMARY KEY, request_id TEXT NOT NULL REFERENCES uwpc_requests(id),
         digest TEXT NOT NULL, content BLOB NOT NULL)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS outage_edit_checkouts (
+        oid TEXT PRIMARY KEY, doc TEXT NOT NULL, actor TEXT NOT NULL,
+        token_hash TEXT NOT NULL, expires REAL NOT NULL)""")
 
 
 @contextmanager
@@ -168,6 +172,76 @@ def checked(c, ident, payload):
     return row
 
 
+def outage_key(row):
+    return row.get("registerOutage") or row.get("outageId") or row["id"]
+
+
+def checkout_info(c, oid, actor, token):
+    lock = c.execute("SELECT * FROM outage_edit_checkouts WHERE oid=?", (oid,)).fetchone()
+    if not lock or lock["expires"] <= time.time():
+        return {"owner": None, "mine": False}
+    return {"owner": lock["actor"], "mine": actor == lock["actor"] and digest(token) == lock["token_hash"],
+            "expires": lock["expires"]}
+
+
+def guard_edit(c, row, actor, token, *, require=True):
+    if row.get("practice"):
+        return
+    lock = checkout_info(c, outage_key(row), actor, token)
+    if lock["mine"]:
+        return
+    if lock["owner"]:
+        raise Conflict(f"Checked out by {lock['owner']}. Reopen in Outage Manager to edit.")
+    if require and token is not None and (row.get("kind") == "SWITCHING_PLAN" or row.get("registerOutage") or row.get("outageId")):
+        raise Conflict("Check out this outage in Outage Manager before editing.")
+
+
+def checkout(ident, action, actor, token):
+    if not isinstance(ident,str) or not ident:
+        raise ValueError("Select an outage document")
+    with session() as c:
+        c.execute("BEGIN IMMEDIATE" if action else "BEGIN")
+        row = read(c, ident)
+        if row.get("practice"):
+            raise ValueError("Select an outage package")
+        oid = outage_key(row)
+        current = checkout_info(c, oid, actor, token)
+        can_edit = row["phase"] == "FUTURE" and not c.execute(
+            "SELECT 1 FROM outages WHERE id=? AND status='Closed'", (oid,)).fetchone()
+        if not action:
+            try:
+                outage_review.require_editor(row, actor)
+            except PermissionError:
+                can_edit = False
+            return {**current, "canEdit": can_edit}
+        if not re.fullmatch(r"[a-f0-9-]{36}", token or ""):
+            raise ValueError("A valid editing session is required")
+        if action == "check-in":
+            if current["owner"] and not current["mine"]:
+                raise Conflict("This checkout belongs to another editing session")
+            if current["mine"]:
+                c.execute("DELETE FROM outage_edit_checkouts WHERE oid=?", (oid,))
+                event(c, row, actor, "checked-in", {})
+            return {"owner": None, "mine": False}
+        if action not in {"check-out", "renew"}:
+            raise ValueError("Unknown checkout action")
+        outage_review.require_editor(row, actor)
+        if not can_edit:
+            raise ValueError("Only an open planned package can be edited")
+        if current["owner"] and not current["mine"]:
+            raise Conflict(f"Checked out by {current['owner']}")
+        if not current["mine"]:
+            if action == "renew":
+                raise Conflict("Checkout expired. Check out the outage again.")
+            old = c.execute("SELECT doc,actor FROM outage_edit_checkouts WHERE oid=?", (oid,)).fetchone()
+            if old:
+                event(c, {"id": old["doc"]}, old["actor"], "checkout-expired", {})
+            event(c, row, actor, "checked-out", {})
+        c.execute("INSERT OR REPLACE INTO outage_edit_checkouts VALUES (?,?,?,?,?)",
+                  (oid, ident, actor, digest(token), time.time()+1800))
+        return {**checkout_info(c, oid, actor, token), "canEdit": can_edit}
+
+
 def invalidate(row):
     row.pop("distribution", None)
     prior = row.pop("packageReview", None)
@@ -176,7 +250,7 @@ def invalidate(row):
     row.update(generation=None, review=None, status="DRAFT")
 
 
-def create(payload, actor, *, connection=None):
+def create(payload, actor, *, connection=None, checkout_token=None):
     with (session() if connection is None else nullcontext(connection)) as c:
         if connection is None:
             c.execute("BEGIN IMMEDIATE")
@@ -212,6 +286,7 @@ def create(payload, actor, *, connection=None):
                "createdBy": actor, "sources": [], "generation": None, "review": None}
         if source:
             row["registerOutage"] = source
+        guard_edit(c, row, actor, checkout_token, require=False)
         c.execute("INSERT INTO uwpc_requests VALUES (?,?)", (row["id"], json.dumps(row)))
         if practice:
             content = b"Practice drawing reference only. North and South are fictional sites."
@@ -357,13 +432,15 @@ def record_execution(row, action, payload, actor, roster):
     return entry
 
 
-def change(ident, action, payload, actor, operators=()):
+def change(ident, action, payload, actor, operators=(), *, checkout_token=None):
     with session() as c:
         c.execute("BEGIN IMMEDIATE")
         row = checked(c, ident, payload)
         detail = {}
         if action not in {"final-receipt", "final-flag", "review-view"}:
             outage_review.require_editor(row, actor)
+        if action in {"save", "remove-source"}:
+            guard_edit(c, row, actor, checkout_token)
         if row.get("registerOutage") and action in {"save", "review-open", "log-open", "distribute"}:
             source = c.execute("SELECT status FROM outages WHERE id=?", (row["registerOutage"],)).fetchone()
             if not source or source["status"] != "Open":
@@ -405,13 +482,25 @@ def change(ident, action, payload, actor, operators=()):
             if row.get("registerOutage") and updated["outageId"] != row["registerOutage"]:
                 raise ValueError("The plan is linked to its original outage request")
             updated.update(outage_review.classification(payload, row))
+            if updated["outageId"] != row.get("outageId"):
+                if row.get("outageId") and checkout_token is not None:
+                    raise ValueError("A saved outage document keeps its original outage ID")
+                destination = outage_key({**row, **updated})
+                guard_edit(c, {**row, **updated}, actor, checkout_token, require=False)
+                if destination != outage_key(row) and checkout_info(c, outage_key(row), actor, checkout_token)["mine"]:
+                    if checkout_info(c, destination, actor, checkout_token)["mine"]:
+                        c.execute("DELETE FROM outage_edit_checkouts WHERE oid=?", (outage_key(row),))
+                    else:
+                        c.execute("DELETE FROM outage_edit_checkouts WHERE oid=? AND expires<=?", (destination, time.time()))
+                        c.execute("UPDATE outage_edit_checkouts SET oid=? WHERE oid=?", (destination, outage_key(row)))
             if row["phase"] in {"ACTIVE", "COMPLETED", "CANCELLED"}:
                 raise ValueError("Return the plan to Future before revising its content")
+            changed = [k for k,v in updated.items() if row.get(k) != v]
             row.update(updated)
             if actor not in row.setdefault("contentEditors", []):
                 row["contentEditors"].append(actor)
             invalidate(row)
-            detail = updated
+            detail = {**updated, "changes": ", ".join(changed)}
         elif action == "route":
             if row.get("preparationMode") in {"INTAKE", "REQUEST"}:
                 raise ValueError("Complete and save the draft form before sending it for sign-off")
@@ -528,7 +617,7 @@ def change(ident, action, payload, actor, operators=()):
     return get(ident)
 
 
-def add_source(ident, version, name, kind, content, actor):
+def add_source(ident, version, name, kind, content, actor, *, checkout_token=None):
     name = Path(name.replace("\\", "/")).name[:180]
     suffix = Path(name).suffix.lower()
     types = {".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg",
@@ -550,6 +639,7 @@ def add_source(ident, version, name, kind, content, actor):
     with session() as c:
         c.execute("BEGIN IMMEDIATE")
         row = checked(c, ident, {"version": version})
+        guard_edit(c, row, actor, checkout_token)
         outage_review.require_editor(row, actor)
         if row["phase"] != "FUTURE":
             raise ValueError("Return the plan to Future before revising sources")
@@ -649,11 +739,12 @@ def generate_text(row, sources):
     return text, model
 
 
-def generate(ident, payload, actor):
+def generate(ident, payload, actor, *, checkout_token=None):
     if outage_review.PRACTICE_DB.get() is not None:
         raise ValueError("Practice packages use the supplied training reference")
     with session() as c:
         row = checked(c, ident, payload)
+        guard_edit(c, row, actor, checkout_token)
         outage_review.require_editor(row, actor)
         if row["phase"] != "FUTURE" or row["status"] in {"PENDING_SIGNOFF", "SIGNED_OFF"}:
             raise ValueError("Save a revised Future request before regenerating")
@@ -673,7 +764,9 @@ def generate(ident, payload, actor):
                 "inputVersion": row["version"]}
     document["digest"] = digest(document)
     with session() as c:
+        c.execute("BEGIN IMMEDIATE")
         current = checked(c, ident, payload)
+        guard_edit(c, current, actor, checkout_token)
         evidence.recheck(bundle, actor)
         invalidate(current)
         current.update(generation=document, status="GENERATED", version=current["version"] + 1)

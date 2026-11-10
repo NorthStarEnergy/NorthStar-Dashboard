@@ -1773,6 +1773,7 @@ class Handler(SimpleHTTPRequestHandler):
         if OPERATOR_GATE == "access":
             operators = [name.strip() for name in os.environ.get("NORTHSTAR_UWPC_OPERATORS", "").split(",") if name.strip()]
         parts = route[len(prefix):].strip("/").split("/") if route != prefix else []
+        checkout_token = self.headers.get("X-Northstar-Checkout", "")
         practice_token = None
         try:
             if parts[:1] == ["manager"]:
@@ -1785,6 +1786,15 @@ class Handler(SimpleHTTPRequestHandler):
                     self._send_json(manager.query_register(params))
                 elif self.command == "GET" and endpoint == ["detail"]:
                     self._send_json(manager.details(params.get("id","")))
+                elif self.command == "GET" and endpoint == ["reports"]:
+                    self._send_json(manager.outage_report(params["id"]) if params.get("id") else manager.report_options())
+                elif endpoint == ["checkout"] and self.command == "GET":
+                    self._send_json(uwpc_desk.checkout(params.get("doc",""), None, actor, checkout_token))
+                elif endpoint == ["checkout"] and self.command == "POST":
+                    payload = self._json_body(4096)
+                    if not isinstance(payload,dict) or payload.get("action") not in ("check-out","check-in","renew"):
+                        raise ValueError("Select a checkout action")
+                    self._send_json(uwpc_desk.checkout(payload.get("doc",""), payload["action"], actor, checkout_token))
                 elif self.command == "GET" and endpoint == ["session"]:
                     self._send_json({"actor":actor,"operators":operators,"outageReviewRoles":uwpc_desk.outage_review.directory(operators)})
                 elif self.command == "GET" and endpoint == ["inbox"]:
@@ -1843,18 +1853,18 @@ class Handler(SimpleHTTPRequestHandler):
                     version = int(query.get("version", ["0"])[0])
                     result = uwpc_desk.add_source(parts[0], version,
                         unquote(self.headers.get("X-Northstar-Filename", "")),
-                        query.get("kind", [""])[0], self._binary_body(uwpc_desk.MAX_SOURCE), actor)
+                        query.get("kind", [""])[0], self._binary_body(uwpc_desk.MAX_SOURCE), actor, checkout_token=checkout_token)
                 else:
                     payload = self._json_body(64 * 1024)
                     if not isinstance(payload, dict):
                         raise ValueError("A JSON object is required")
                     if not parts:
-                        result = uwpc_desk.create(payload, actor)
+                        result = uwpc_desk.create(payload, actor, checkout_token=checkout_token)
                     elif len(parts) == 2:
                         if parts[1] == "generate":
-                            result = uwpc_desk.generate(parts[0], payload, actor)
+                            result = uwpc_desk.generate(parts[0], payload, actor, checkout_token=checkout_token)
                         else:
-                            result = uwpc_desk.change(parts[0], parts[1], payload, actor, operators)
+                            result = uwpc_desk.change(parts[0], parts[1], payload, actor, operators, checkout_token=checkout_token)
                     else:
                         raise LookupError("UWPC route not found")
                 self._send_json(result, 201 if not parts else 200)

@@ -147,5 +147,5 @@ window.NorthStarOutageReview = function ({esc, when, dateValue, api = '/api/uwpc
     return {digest:row.packageReview.digest, task:block.dataset.task, issue:block.dataset.issue,
       comment:block.querySelector('[name=comment]')?.value, confirmed:block.querySelector('[name=confirmed]')?.checked === true};
   }
-  return {classification, cover, execution, alerts, actionData};
+  return {classification, cover, execution, alerts, actionData, names};
 };

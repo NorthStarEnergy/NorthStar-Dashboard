@@ -112,3 +112,13 @@ a.titlebtn{display:inline-block;text-decoration:none}a.titlebtn:hover{text-decor
 #libraryWorkspace:is(:fullscreen,.reader-expanded) :is(#manualLayout,#readerHost,#readerHost iframe,#readerHost .pageText){height:100%;min-height:0}
 @media(max-width:820px){.library-controls{gap:4px}.library-bar{gap:3px}.library-index{max-width:48%}#readerHost iframe,#readerHost .pageText{height:calc(100dvh - 106px)}}
 @media(max-width:540px){.register-head{width:100%;justify-content:space-between;gap:4px}.register-head .tabs{gap:8px}.register-head .tabs button{font-size:12px}.register-toolbar .bar{flex-basis:100%;gap:4px}.register-toolbar .bar select{max-width:28%}.register-toolbar .search{flex-basis:80px}}
+.report-picker,#checkoutBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.report-picker label{display:flex;align-items:center;gap:7px;min-width:0;flex:1;max-width:720px;font-weight:600}
+.report-picker select{padding:5px 8px;min-width:0;flex:1;max-width:100%;background:white;color:var(--ink);border:1px solid var(--line);border-radius:4px}
+.outage-report header h1{font-size:19px;margin:0}.outage-report header p,.report-section>p,.report-empty{font-size:12px;color:var(--muted);margin:4px 0 7px}
+.report-section{background:#fff;border:1px solid var(--line);border-radius:5px;margin:7px 0;padding:9px 12px}.report-section h2,.report-section summary{font-size:15px;font-weight:650;margin:0 0 5px}
+.report-section .sheet table,#eventTable>.sheet table{white-space:normal;overflow-wrap:anywhere}.report-section .sheet td,#eventTable>.sheet td{vertical-align:top;white-space:pre-wrap}.report-section .sheet th,.report-section .sheet td,#eventTable>.sheet td{padding:5px 7px}
+#checkoutBar{justify-content:space-between;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:6px}
+body[data-manager-package] #checkoutFields{min-width:0;border:0;padding:0;margin:0;background:transparent}
+@media(max-width:600px){.report-section .sheet table,#eventTable>.sheet table{min-width:540px}}
+@media print{body:has(.outage-report) :is(#shell,.skip,.report-picker){display:none}body:has(.outage-report) #main{margin:0;padding:0}.outage-report .sheet{overflow:visible}.outage-report tr{break-inside:avoid}}

@@ -211,6 +211,44 @@ def details(oid):
         return {**result,"documents":documents}
 
 
+def report_options():
+    with desk.session() as c:
+        return [dict(r) for r in c.execute(REGISTER + """
+          SELECT id,title,site,period FROM register ORDER BY
+            CASE period WHEN 'active' THEN 0 WHEN 'upcoming' THEN 1 ELSE 2 END,
+            CASE WHEN period='past' THEN julianday(coalesce(closed,end)) END DESC,
+            julianday(start),title,id""")]
+
+
+def outage_report(oid):
+    with desk.session() as c:
+        c.execute("BEGIN")
+        row = c.execute(REGISTER + "SELECT id,title,site,phase,start,end,closed FROM rows WHERE id=?", (oid,)).fetchone()
+        if not row:
+            raise LookupError("Outage not found")
+        docs = []
+        for record in c.execute(REGISTER + "SELECT body FROM docs WHERE oid=? ORDER BY json_extract(body,'$.title'),id", (oid,)):
+            doc = json.loads(record["body"])
+            docs.append({**{k: doc.get(k) for k in ("id", "title", "status", "phase", "packageReview", "review", "switchLog")},
+                         "reissue": bool(doc.get("lastReview") and not doc.get("packageReview")),
+                         "issues": [i for i in doc.get("reviewIssues", []) if not i.get("closedAt")],
+                         "flags": [f for f in (doc.get("distribution") or {}).get("flags", []) if not f.get("resolvedAt")]})
+        events = [dict(e) for e in c.execute(REGISTER + """
+            SELECT * FROM (SELECT at,actor,event,details AS summary,'' AS document,seq,0 AS source
+              FROM outage_events WHERE outage_id=?
+            UNION ALL
+            SELECT e.at,e.actor,e.event,coalesce(json_extract(e.detail,'$.changes'),json_extract(e.detail,'$.text'),json_extract(e.detail,'$.comment'),
+                   json_extract(e.detail,'$.summary'),json_extract(e.detail,'$.name'),json_extract(e.detail,'$.message'),
+                   json_extract(e.detail,'$.signature.comment'),
+                   CASE WHEN e.event='review-sign' THEN 'Revision '||json_extract(e.detail,'$.revision')||' · '||json_extract(e.detail,'$.role')
+                        WHEN e.event='phase' THEN json_extract(e.detail,'$.from')||' → '||json_extract(e.detail,'$.to') END,''),
+                   json_extract(d.body,'$.title'),e.seq,1
+              FROM uwpc_request_events e JOIN docs d ON d.id=e.request_id WHERE d.oid=?)
+            ORDER BY julianday(at) DESC,source DESC,seq DESC""", (oid, oid))]
+        return {**dict(row), "documents": docs, "events": events, "asOf": store.now_iso(),
+                "editOwner": desk.checkout_info(c, oid, "", "")["owner"]}
+
+
 def inbox(actor):
     with desk.session() as c:
         return [dict(r) for r in c.execute("""

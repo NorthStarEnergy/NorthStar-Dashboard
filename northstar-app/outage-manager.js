@@ -12,19 +12,20 @@
     forms:'M4 16v4h4L20 8l-4-4z M13 7l4 4',approvals:'M15 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M5 20v-2a7 7 0 0 1 14 0v2 M18 5a3 3 0 0 1 0 6 M20 14q3 1 3 5',
     check:'M12 2l8 3v6c0 5-4 8-8 11-4-3-8-6-8-11V5z M8 11l3 3 5-6',distribution:'M3 10l18-7-6 18-4-7z M11 14L21 3',
     log:'M3 7h5m8 0h5 M8 7l8-5 M3 18h5m8 0h5 M8 18h8',closeout:'M5 21V3 M5 4q4-2 8 0t7 0v10q-4 2-7 0t-8 0',
-    fullscreen:'M9 4H4v5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5',restore:'M4 9h5V4 M15 4v5h5 M20 15h-5v5 M9 20v-5H4'};
+    fullscreen:'M9 4H4v5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5',restore:'M4 9h5V4 M15 4v5h5 M20 15h-5v5 M9 20v-5H4',
+    reports:'M4 3h11l5 5v13H4z M14 3v6h6 M8 17v-3 M12 17v-6 M16 17v-4'};
   const icon = name => `<svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="${paths[name]}"></path></svg>`;
   const base = '/outage-manager.html';
   const sourceUrl = api + '/library/book';
   const sections = {overview:'Overview', request:'Request', forms:'Forms', documents:'Drawings & documents',
-    approvals:'Approvals', distribution:'Final distribution', log:'Switching log', closeout:'Closeout', history:'History & correspondence'};
+    approvals:'Approvals', distribution:'Final distribution', log:'Switching log', closeout:'Closeout', history:'History & correspondence',events:'Event log'};
   function outageUrl(outage,section='overview',id='') {
     const query = new URLSearchParams({section});
     if(outage) query.set('outage',outage);
     if(id) query.set('id',id);
     return '/outage-manager-package.html?'+query;
   }
-  const menuViews = [['home','Home'],['outages','Outages'],['library','UWPC']];
+  const menuViews = [['home','Home'],['outages','Outages'],['library','UWPC'],['reports','Reports']];
   const titles = {...Object.fromEntries(menuViews),new:'New outage',inbox:'Outage alerts'};
   const main=$('main');
   const date = value => value ? new Date(value).toLocaleString('en-CA',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}) : 'Unscheduled';
@@ -72,7 +73,7 @@
       <button class="mobile-menu" id="menuToggle" aria-controls="packageNav" aria-expanded="false">Menu</button><nav id="packageNav" aria-label="Main menu">${menuViews.map(item=>item[0]==='outages'?
         `${navLink(item)}<div id="outageTree" hidden></div>`:navLink(item)).join('')}</nav>
       <a class="back" href="/northstar-clean.html" aria-label="Return to NorthStar">${icon('back')}<span>NorthStar</span></a></aside>`;
-    if(selected || !['home','outages'].includes(view))void mountFolder(selected,section);
+    if(selected || !['home','outages','reports'].includes(view))void mountFolder(selected,section);
     if(view!=='inbox')void refreshInbox().catch(()=>{});
     const menu=$('menuToggle'), nav=menu.nextElementSibling;
     menu.onclick=()=>{const open=menu.getAttribute('aria-expanded')!=='true';
@@ -240,6 +241,21 @@
     const facts=entries=>`<dl class="facts">${entries.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v||'—')}</dd>`).join('')}</dl>`;
     const sites=[...new Set([row.site,...row.sites].filter(Boolean))].join(', ');
     const timing=[['Start',date(row.start)],['End',row.end&&date(row.end)]];
+    if(section==='events'){
+      page.insertAdjacentHTML('beforeend','<div class="report-picker"><button class="btn" id="refreshEvents">Refresh events</button><span id="eventTime"></span></div><div id="eventTable" aria-live="polite"></div>');
+      const button=$('refreshEvents');
+      button.onclick=async()=>{
+        button.disabled=true;
+        try{
+          const report=await fetchData(api+'/reports?id='+encodeURIComponent(id));
+          $('eventTime').textContent='As of '+reportTime(report.asOf);
+          $('eventTable').innerHTML=eventTable(report.events);
+        }catch(e){$('eventTime').textContent='';$('eventTable').innerHTML=errorBox(e);}
+        finally{button.disabled=false;}
+      };
+      await button.onclick();
+      return {editable:false};
+    }
     if(section==='overview'||section==='request') {
       const fields=section==='overview'?[['Sites',sites],['Equipment',row.asset],...timing,
         ['Required signatures',row.requiredSignatures?`${row.signed} of ${row.requiredSignatures} received`:'No assignments recorded']]:
@@ -265,7 +281,7 @@
       page.querySelector('select').onchange=e=>location.assign(outageUrl(id,section,e.target.value));
     }
     $('uwpcDesk').hidden=false;$('uwpcDeskStatus').textContent='Loading package…';
-    return {editable:true,section,packageId,overview};
+    return {editable:true,section,packageId,overview,outageId:id};
   }
   async function fetchData(url,body) {
     const r=await fetch(url,{credentials:'same-origin',cache:'no-store',...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
@@ -489,6 +505,89 @@
         if(seq!==requestId||!$('contents'))return;$('contents').innerHTML=data.hits.map(h=>`<a href="${sourceUrl}#page=${Number(h.page)}" data-page="${Number(h.page)}"><strong>PDF p. ${Number(h.page)}</strong> · ${esc(h.text)}</a>`).join('')||'<p>No matching passages.</p>';
       }catch(e){if(seq===requestId&&$('contents'))$('contents').innerHTML=errorBox(e);}},220);};
   }
+  const reportClock=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',timeZoneName:'short'});
+  function reportTime(value){return value?reportClock.format(new Date(value)):'—';}
+  function reportTable(headers,rows,empty){
+    if(!rows.length)return `<p class="report-empty">${esc(empty)}</p>`;
+    return `<div class="sheet"><table><thead><tr>${headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(row=>`<tr>${row.map(cell=>`<td>${esc(cell??'—')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+  function eventTable(events){
+    const labels={'review-open':'Review issued','review-sign':'Review signed','review-view':'Revision viewed',
+      'save':'Package edited','log-entry':'Switching entry','log-close':'Switching log closed','final-flag':'Final copy flagged',
+      'checked-out':'Checked out','checked-in':'Checked in','checkout-expired':'Checkout expired'};
+    return reportTable(['When','Recorded by','Event','Document','Details'],events.map(e=>[
+      reportTime(e.at),e.actor,labels[e.event]||e.event.replaceAll('-',' '),e.document||'Outage register',e.summary||'—'
+    ]),'No events recorded.');
+  }
+  function reportBody(r){
+    const signatures=[],pending=[],switching=[],notes=[];
+    const {names}=window.NorthStarOutageReview({esc,when:date,dateValue:localDay});
+    const signature=(doc,name,role,site,status,at)=>signatures.push([
+      doc.packageReview?`${doc.title} · review ${doc.packageReview.number}`:doc.title,name,role,site||'—',status,reportTime(at)]);
+    for(const doc of r.documents){
+      const review=doc.packageReview, ordinary=doc.review;
+      const terminal=['COMPLETED','CANCELLED'].includes(doc.phase)||['COMPLETED','CANCELLED'].includes(r.phase);
+      const unsigned=terminal?'Unsigned':'Pending';
+      if(review){
+        for(const task of review.tasks)signature(doc,task.account,names[task.role]||task.role,task.site,task.signedAt?'Signed':unsigned,task.signedAt);
+      }else if(ordinary){
+        for(const name of ordinary.operators){
+          const d=ordinary.decisions.find(item=>item.actor===name);
+          signature(doc,name,'Assigned operator','',d?(d.decision==='APPROVE'?'Signed':'Returned for changes'):unsigned,d?.at);
+          if(d?.decision==='RETURN')pending.push([doc.title,name,d.comment]);
+        }
+      }else if(!terminal)
+        pending.push([doc.title,'—',doc.reissue?'Edited revision awaiting reissue':'No review assigned']);
+      for(const i of doc.issues)pending.push([doc.title,i.actor,`${i.comment}${i.answer?' · Awaiting confirmation: '+i.answer:''}`]);
+      for(const f of doc.flags)pending.push([doc.title,f.actor,'Final-copy concern · '+f.text]);
+      const log=doc.switchLog;
+      if(log){
+        switching.push([doc.title,'Open',reportTime(log.openedAt),log.openedBy,'—','Log opened']);
+        for(const e of log.entries||[])switching.push([doc.title,e.sequence,reportTime(e.occurredAt||e.at),e.actor,e.site||'Control room',
+          [e.step?'Step '+e.step:null,e.device,e.text].filter(Boolean).join(' · ')]);
+        if(log.closure)notes.push([doc.title,'Closed',reportTime(log.closure.at),log.closure.actor,log.closure.text]);
+        for(const n of log.notes||[])notes.push([doc.title,'Follow-up',reportTime(n.at),n.actor,n.text]);
+      }
+    }
+    for(const e of r.events.filter(e=>!e.document && e.event==='closed')){
+      if(!r.documents.some(d=>d.switchLog?.closure?.actor===e.actor && d.switchLog.closure.text===e.summary))
+        notes.push(['Outage register','Closed',reportTime(e.at),e.actor,e.summary]);
+    }
+    const section=(title,body)=>`<section class="report-section"><h2>${title}</h2>${body}</section>`;
+    const completed=signatures.filter(row=>row[4]==='Signed').length;
+    const awaiting=signatures.filter(row=>row[4]==='Pending').length;
+    return `<article class="outage-report"><header><h1>${esc(r.title)}</h1><p>${esc([r.site,r.id].filter(Boolean).join(' · '))} · As of ${esc(reportTime(r.asOf))}${r.editOwner?' · Checked out by '+esc(r.editOwner):''}</p></header>
+      ${section('Sign-offs',`<p>${completed} signed · ${awaiting} pending</p>`+reportTable(['Document','Person','Role','Site','Decision','When'],signatures,r.documents.length?'No current sign-offs recorded.':'No package is attached to this outage.'))}
+      ${section('Outstanding items',reportTable(['Document','Raised by','Item'],pending,'No open corrections, concerns or unassigned reviews.'))}
+      ${section('Switching log',reportTable(['Document','Entry','When','Recorded by','Site','Activity'],switching,'No switching log entries recorded.'))}
+      ${section('Closeout notes',reportTable(['Record','Type','When','Recorded by','Note'],notes,'No closeout notes recorded.'))}
+      <details class="report-section"><summary>Event log (${r.events.length})</summary>${eventTable(r.events)}</details></article>`;
+  }
+  async function reports(stamp,initial){
+    main.innerHTML=head('Reports')+'<p role="status">Loading outages…</p>';
+    const [rows,user]=await Promise.all([fetchData(api+'/reports'),session]);if(epoch!==stamp)return;
+    if(!rows.length){main.innerHTML=head('Reports')+'<p>No outages recorded.</p>';return;}
+    let chosen=initial?decodeURIComponent(initial):'';
+    if(!chosen && user?.actor){try{chosen=localStorage.getItem('northstar.outageManager.last.'+user.actor);}catch{}}
+    const missing=Boolean(initial && !rows.some(r=>r.id===chosen));
+    if(!rows.some(r=>r.id===chosen))chosen=missing?'':rows[0].id;
+    main.innerHTML=`<div class="report-picker"><label>Outage <select id="reportChoice">${missing?'<option value="">Select an outage</option>':''}${['active','upcoming','past'].map(tab=>{
+      const options=rows.filter(r=>r.period===tab);
+      return options.length?`<optgroup label="${{active:'In progress',upcoming:'Upcoming',past:'Past'}[tab]}">${opts(options.map(r=>[r.id,[r.title,r.site,r.id].filter(Boolean).join(' · ')]),chosen)}</optgroup>`:'';
+    }).join('')}</select></label><button class="btn" id="reportRefresh">Refresh</button></div><div id="outageReport" aria-live="polite"></div>`;
+    const choice=$('reportChoice'), host=$('outageReport');
+    let sequence=0;
+    async function load(){
+      if(!choice.value){host.textContent='Outage not found. Select an outage to view its report.';return;}
+      const seq=++sequence;host.textContent='Loading report…';
+      history.replaceState(null,'','#reports/'+encodeURIComponent(choice.value));
+      try{const r=await fetchData(api+'/reports?id='+encodeURIComponent(choice.value));
+        if(seq===sequence && host.isConnected){host.innerHTML=reportBody(r);void mountFolder(r,'');}
+      }catch(e){if(seq===sequence && host.isConnected)host.innerHTML=errorBox(e);}
+    }
+    choice.onchange=load;$('reportRefresh').onclick=load;await load();
+  }
   async function route(){
     const stamp=++epoch;requestId++;clearTimeout(delayed);
     const [part,sub]=location.hash.slice(1).split('/');const view=Object.hasOwn(titles,part)?part:'home';
@@ -497,6 +596,7 @@
       if(view==='home'||view==='outages'){state={tab:'upcoming',offset:0,sort:'start',direction:'asc'};regHome();}
       else if(view==='new')await newOutage(stamp);
       else if(view==='inbox')await inbox(stamp);
+      else if(view==='reports')await reports(stamp,sub);
       else{main.innerHTML=head('UWPC library')+'<p role="status">Loading manual…</p>';const d=libraryData||await fetchData(api+'/library');
         if(epoch===stamp){libraryData=d;renderLibrary(d,['forms','questions'].includes(sub)?sub:'manual');}}
     }catch(e){if(epoch===stamp)main.innerHTML=head(titles[view])+errorBox(e);}

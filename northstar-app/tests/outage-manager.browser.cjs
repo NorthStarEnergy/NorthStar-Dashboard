@@ -39,10 +39,11 @@ async function check() {
     }
     assert.equal(await page.locator('tbody tr').count(),3);
     const out=path.join(root,'outputs','outage-manager-qa');fs.mkdirSync(out,{recursive:true});
-    const folder=page.locator('#outageTree .package-folder');
     async function expectFolder(title){
-      await folder.locator('summary').filter({hasText:title}).waitFor({state:'attached'});
-      assert.equal(await folder.count(),1);
+      await page.waitForFunction(name=>{
+        const folders=document.querySelectorAll('#outageTree .package-folder');
+        return folders.length===1 && folders[0].querySelector('summary').textContent.includes(name);
+      },title);
     }
     const first='Unit 2 stator inspection', second='Feeder protection review';
     await expectFolder(first);
@@ -61,7 +62,7 @@ async function check() {
     await expectFolder(first);
     await page.getByRole('link',{name:'Outages',exact:true}).click();
     await expectFolder(first);
-    assert.deepEqual(await page.locator('#packageNav > a').allTextContents(),['Home','Outages','UWPC']);
+    assert.deepEqual(await page.locator('#packageNav > a').allTextContents(),['Home','Outages','UWPC','Reports']);
     const brand=page.getByRole('link',{name:'Outage Manager home'});
     const newAction=page.getByRole('link',{name:'New',exact:true});
     async function checkHeader(){
@@ -212,6 +213,13 @@ async function check() {
     await page.setViewportSize({width:1440,height:900});
     await tree.getByRole('link',{name:'Forms',exact:true}).click();
     const form=page.locator('#uwpcRequestForm');
+    await page.getByRole('button',{name:'Check out to edit'}).click();
+    const peer=await browser.newContext();
+    assert.equal((await peer.request.post(origin+'/api/auth/login',{data:{username:'fixture_relief',password:'fixture-only-password'}})).status(),200);
+    const peerPage=await peer.newPage();await peerPage.goto(page.url());
+    await peerPage.getByText('Checked out by fixture_author',{exact:true}).waitFor();
+    assert.ok(await peerPage.getByRole('button',{name:'Check out to edit'}).isDisabled());
+    assert.ok(await peerPage.locator('#uwpcRequestForm [name=title]').isDisabled());
     await form.locator('[name=diagramRevision]').fill('R1');
     await form.locator('[data-step-field=device]').first().fill('Fixture device');
     await form.locator('[data-step-field=operation]').first().fill('Fixture step');
@@ -221,6 +229,16 @@ async function check() {
     await page.locator('#uwpcSourceUpload').setInputFiles({name:'drawing.txt',mimeType:'text/plain',buffer:Buffer.from('Fixture')});
     await page.getByRole('button',{name:'Attach',exact:true}).click();
     await page.getByText('Source saved with this package.').waitFor();
+    await page.getByRole('button',{name:'Check in',exact:true}).click();
+    await page.getByRole('button',{name:'Check out to edit'}).waitFor();
+    await peerPage.reload();
+    await peerPage.getByRole('button',{name:'Check out to edit'}).click();
+    await peerPage.getByText('Checked out by fixture_relief',{exact:true}).waitFor();
+    await peerPage.getByRole('button',{name:'Check in',exact:true}).click();
+    await peerPage.getByRole('button',{name:'Check out to edit'}).waitFor();
+    await peer.close();
+    await tree.getByRole('link',{name:'Event log',exact:true}).click();
+    await page.getByRole('cell',{name:'Checked in',exact:true}).first().waitFor();
     await tree.getByRole('link',{name:'Approvals'}).click();
     const route=page.locator('#outageRouting');
     await route.locator('[name=due]').fill('2030-09-17T10:00');
@@ -234,10 +252,13 @@ async function check() {
     await route.getByRole('button').click();
     await page.getByText('Outage package review · Awaiting signatures',{exact:true}).waitFor();
     const approvals=page.url();
+    await page.getByRole('link',{name:'Reports',exact:true}).click();
+    await page.locator('#outageReport').getByRole('heading',{name:'West bay inspection'}).waitFor();
+    assert.ok(await page.getByText('1 signed · 4 pending').isVisible());
     async function asUser(name,url){
       const response=await context.request.post(origin+'/api/auth/login',{data:{username:name,password:'fixture-only-password'}});
       assert.equal(response.status(),200);
-      if(page.url()===url)await page.reload();else await page.goto(url);
+      await page.goto('about:blank');await page.goto(url);
     }
     for(const name of ['fixture_operator','fixture_area','fixture_north','fixture_operator']){
       await asUser(name,approvals);
@@ -264,6 +285,33 @@ async function check() {
     await page.getByLabel('Resolution',{exact:true}).fill('Crew time confirmed');
     await page.getByRole('button',{name:'Resolve concern'}).click();
     await page.getByText('Resolution recorded.').waitFor();
+    await asUser('fixture_operator',approvals);
+    await tree.getByRole('link',{name:'Switching log',exact:true}).click();
+    await page.getByRole('button',{name:'Open switching log'}).click();
+    const activity=page.getByRole('group',{name:'Record switching activity'});
+    await activity.locator('[name=step]').selectOption('1');
+    await activity.locator('[name=text]').fill('West bay activity recorded');
+    await activity.getByRole('button',{name:'Save log entry'}).click();
+    await page.getByText('Log entry saved.').waitFor();
+    await tree.getByRole('link',{name:'Closeout',exact:true}).click();
+    await page.getByLabel('Closing summary').fill('West bay outage closed');
+    await page.getByRole('button',{name:'Finish and close outage'}).click();
+    await page.getByText('Outage closed.',{exact:true}).filter({visible:true}).last().waitFor();
+    await page.waitForFunction(()=>!document.getElementById('uwpcDesk').hasAttribute('aria-busy'));
+    await page.getByLabel('Follow-up note').fill('Crew handover confirmed');
+    const result=page.waitForResponse(r=>r.url().endsWith('/closeout-note') && r.request().method()==='POST');
+    await page.getByRole('button',{name:'Save closeout note'}).click();
+    const response=await result;assert.ok(response.ok(),response.ok()?'':await response.text());
+    await page.getByText('Closeout note saved.').waitFor();
+    await page.getByRole('link',{name:'Reports',exact:true}).click();
+    await page.locator('#outageReport').getByText('5 signed · 0 pending').waitFor();
+    assert.ok(await page.getByRole('cell',{name:/Step 1 · Fixture device · West bay activity recorded/}).isVisible());
+    assert.ok(await page.getByRole('cell',{name:'Crew handover confirmed',exact:true}).first().isVisible());
+    await page.screenshot({path:path.join(out,'outage-report.png')});
+    const other=await page.locator('#reportChoice option').filter({hasText:'Completed valve inspection'}).getAttribute('value');
+    await page.locator('#reportChoice').selectOption(other);
+    await page.locator('#outageReport').getByRole('heading',{name:'Completed valve inspection'}).waitFor();
+    assert.equal(await page.getByText('Crew handover confirmed').count(),0);
     await asUser('fixture_relief',origin+'/outage-manager.html#outages');
     await expectFolder(first);
     await page.evaluate(()=>localStorage.setItem('northstar.outageManager.last.fixture_relief','missing-outage'));
