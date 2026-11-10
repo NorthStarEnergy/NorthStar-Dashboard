@@ -36,10 +36,13 @@ window.NorthStarOutageReview = function ({esc, when, dateValue, api = '/api/uwpc
       <label>Review deadline<input type="datetime-local" name="due" required value="${esc(dateValue(review.due))}"></label>
       <label>Independent competent checker<select name="checker" required>${options(roles.checker, existing('checker'))}</select></label>
       <label>Area manager<select name="area" required>${options(roles.area, existing('area'))}</select></label>
+      ${row.coordinated || document.body.hasAttribute('data-manager-package') ? `<label>SSC · overall outage manager<select name="sscLead" required>${options(roles.operator,review.sscLead||row.proposedLeads?.sscLead)}</select></label>
+      <label>Local outage manager<select name="localLead" required>${options([...new Set([...roles.area,...roles.field])],review.localLead||row.proposedLeads?.localLead)}</select></label>
+      <small>The SSC coordinates the outage from the chair. The local manager coordinates crews and the area manager and is the SSC’s field contact by phone.</small>` : ''}
       </div><fieldset><legend>SSCs scheduled during the outage</legend><div class="uwpc-operators">
       ${roles.operator.map(name => `<label><input type="checkbox" name="scheduled" value="${esc(name)}" ${tasks.some(t => t.role === 'operator' && t.account === name) ? 'checked' : ''}> ${esc(name)}</label>`).join('')}</div></fieldset>
       <div class="uwpc-fields">${row.affectedSites.map(site => `<label>On-site reviewer · ${esc(site)}<select data-field-site="${esc(site)}" required>${options(roles.field, existing('field', site))}</select></label>`).join('')}</div>
-      <details><summary>Additional final-copy recipients</summary><div class="uwpc-operators">${accounts.map(name =>
+      <details><summary>Final-copy viewers</summary><p>Assigned reviewers receive the final copy automatically. Additional viewers can open it and flag a concern. No signature is required from viewers.</p><div class="uwpc-operators">${accounts.map(name =>
         `<label><input type="checkbox" name="copyTo" value="${esc(name)}" ${review.copyTo?.includes(name) ? 'checked' : ''}> ${esc(name)}</label>`).join('')}</div></details>
       ${row.reviewNumber ? '<label>Revision or crew changes<textarea name="summary" required></textarea></label>' : ''}
       <label class="uwpc-check"><input type="checkbox" name="confirmed" required> I approve this package for planning review and confirm these assignments against the outage schedule.</label>
@@ -48,6 +51,9 @@ window.NorthStarOutageReview = function ({esc, when, dateValue, api = '/api/uwpc
 
   function alerts(row, actor, now = Date.now()) {
     const review = row.packageReview;
+    if (row.distribution?.flags?.some(f=>!f.resolvedAt) &&
+        [review?.sscLead || review?.owner,review?.localLead || review?.area].includes(actor))
+      return ['Final copy flagged · revision '+row.distribution.revision];
     if (row.distribution?.recipients.includes(actor) && !row.distribution.receipts[actor])
       return ['Final copy distributed · revision ' + row.distribution.revision];
     if (!review && row.lastReview?.owner === actor && row.phase === 'FUTURE') return ['Reissue the revised package'];
@@ -64,16 +70,17 @@ window.NorthStarOutageReview = function ({esc, when, dateValue, api = '/api/uwpc
     }
     for (const task of pending) {
       const escalation = now >= due && (review.owner === actor || (review.area === actor && task.role === 'field'));
-      if (escalation || (!outstanding.length && task.account === actor)) result.push(timing + ' · ' + taskName(task));
+      const ready=task.role!=='checker'||!review.sscLead||!pending.some(t=>t.role!=='checker');
+      if (ready && (escalation || (!outstanding.length && task.account === actor))) result.push(timing + ' · ' + taskName(task));
     }
     return result;
   }
 
-  function execution(row, roles, actor) {
+  function execution(row, roles, actor, part = 'all') {
     const review = row.packageReview;
     if (row.status !== 'SIGNED_OFF' || !review || row.phase === 'CANCELLED') return '';
     const delivery = row.distribution;
-    if (!delivery) return review.owner === actor && ['FUTURE','ACTIVE'].includes(row.phase)
+    if (!delivery) return ['all','distribution'].includes(part) && review.owner === actor && ['FUTURE','ACTIVE'].includes(row.phase)
       ? '<button type="button" data-action="distribute">Distribute the approved final copy</button>' : '';
     const base = api + '/' + encodeURIComponent(row.id) + '/exports/';
     const tasks = review.tasks.filter(t => t.account === actor && roles[t.role]?.includes(actor));
@@ -82,25 +89,31 @@ window.NorthStarOutageReview = function ({esc, when, dateValue, api = '/api/uwpc
     const log = row.switchLog;
     const entry = item => `<li><strong>${esc(item.actor)}</strong> · ${esc(when(item.occurredAt || item.at))} ${esc(item.site || '')}
       ${item.step ? ` · Step ${item.step} · ${esc(item.device)}` : ''}<p>${esc(item.text)}</p></li>`;
-    return `<section><h4>Final copy distributed</h4><p>Revision ${delivery.revision} · ${esc(when(delivery.at))}</p>
+    const distribution = `<section><h4>Final copy distributed</h4><p>Revision ${delivery.revision} · ${esc(when(delivery.at))}</p>
       ${recipient ? `<a class="uwpc-button" download href="${base}final?copy=${encodeURIComponent(delivery.id)}">Download final copy</a>
-      ${delivery.receipts[actor] ? '' : '<button type="button" data-action="final-receipt">Acknowledge receipt</button>'}` : ''}
-      <details><summary>Distribution record · ${Object.keys(delivery.receipts).length} of ${delivery.recipients.length} acknowledged</summary>
-      ${delivery.recipients.map(name => `<p>${esc(name)} · ${delivery.receipts[name] ? esc(when(delivery.receipts[name])) : 'Delivered to inbox'}</p>`).join('')}</details></section>
-      <section><h4>Electronic switching log</h4>
+      ${delivery.receipts[actor] ? '' : '<button type="button" data-action="final-receipt">Dismiss final-copy alert</button>'}
+      <fieldset><legend>Flag a concern</legend><label>Concern<textarea name="text" maxlength="4000"></textarea></label><button type="button" data-action="final-flag">Send to outage managers</button></fieldset>` : ''}
+      ${(delivery.flags||[]).map(f=>`<article class="uwpc-history"><strong>${esc(f.actor)} · ${esc(when(f.at))}</strong><p>${esc(f.text)}</p>
+        ${f.resolvedAt?`<p>${esc(f.resolvedBy)} · ${esc(f.resolution)}</p>`:
+        [review.sscLead||review.owner,review.localLead||review.area].includes(actor)?`<fieldset><label>Resolution<textarea name="text" maxlength="4000"></textarea></label><button type="button" data-action="final-resolve" data-flag="${esc(f.id)}">Resolve concern</button></fieldset>`:'<p>Awaiting outage manager response.</p>'}</article>`).join('')}
+      <details><summary>Distribution record · ${delivery.recipients.length} recipients</summary>
+      ${delivery.recipients.map(name => `<p>${esc(name)} · ${delivery.receipts[name] ? esc(when(delivery.receipts[name])) : 'Delivered to inbox'}</p>`).join('')}</details></section>`;
+    const switching = `<section><h4>Electronic switching log</h4>
       ${!log ? (lead && row.phase === 'FUTURE' ? '<button type="button" data-action="log-open">Open switching log</button>' : '<p>Awaiting log opening.</p>') :
       `<p>Opened by ${esc(log.openedBy)} · ${esc(when(log.openedAt))}</p><ol>${log.entries.map(entry).join('')}</ol>
       ${row.phase === 'ACTIVE' && tasks.length ? `<fieldset><legend>Record switching activity</legend><label>Site<select name="site"><option value="">Control room</option>${row.affectedSites.map(s => `<option>${esc(s)}</option>`).join('')}</select></label>
         <label>Order step<select name="step"><option value="">General entry or handoff</option>${(row.switchingPlan?.steps || []).map((s,i) => `<option value="${i + 1}">${i + 1} · ${esc(s.device)} · ${esc(s.operation)}</option>`).join('')}</select></label>
         <label>Time of activity (defaults to time saved)<input name="occurredAt" type="datetime-local"></label>
-        <label>Activity or handoff<textarea name="text" maxlength="4000"></textarea></label><button type="button" data-action="log-entry">Save log entry</button></fieldset>` : ''}
-      ${row.phase === 'ACTIVE' && lead ? '<fieldset><legend>Finish outage</legend><label>Closing summary<textarea name="text" maxlength="4000"></textarea></label><button type="button" data-action="log-close">Finish and close outage</button></fieldset>' : ''}
+        <label>Activity or handoff<textarea name="text" maxlength="4000"></textarea></label><button type="button" data-action="log-entry">Save log entry</button></fieldset>` : ''}`}</section>`;
+    const closeout = !log || (!log.closure && !(row.phase==='ACTIVE' && lead)) ? '' : `<section>${row.phase === 'ACTIVE' && lead ? '<fieldset><legend>Finish outage</legend><label>Closing summary<textarea name="text" maxlength="4000"></textarea></label><button type="button" data-action="log-close">Finish and close outage</button></fieldset>' : ''}
       ${log.closure ? `<h4>Finished / closed</h4><ul>${entry(log.closure)}</ul><h4>Closeout notes</h4><ul>${log.notes.map(entry).join('')}</ul>
         ${tasks.length ? '<fieldset><label>Follow-up note<textarea name="text" maxlength="4000"></textarea></label><button type="button" data-action="closeout-note">Save closeout note</button></fieldset>' : ''}
-        <a class="uwpc-button" download href="${base}package?v=${Number(row.version)}">Download closeout record and sources</a>` : ''}`}</section>`;
+        <a class="uwpc-button" download href="${base}package?v=${Number(row.version)}">Download closeout record and sources</a>` : ''}</section>`;
+    if (part === 'all') return distribution + switching + closeout;
+    return {distribution, log:switching, closeout}[part] || '';
   }
 
-  function cover(row, roles, actor, accounts = []) {
+  function cover(row, roles, actor, accounts = [], includeExecution = true) {
     if (!row.id || !row.reviewTrigger || row.reviewTrigger === 'routine') return '';
     const review = row.packageReview;
     const issues = row.reviewIssues || [];
@@ -110,16 +123,16 @@ window.NorthStarOutageReview = function ({esc, when, dateValue, api = '/api/uwpc
       <p>${esc(row.reviewTrigger)} · ${row.affectedSites.map(esc).join(', ')}</p>
       ${review ? `<p>Review revision ${review.number} · Due ${esc(when(review.due))} · Prepared by ${esc(review.preparer)}</p>
       <p>${esc(review.summary)}</p><a class="uwpc-button" download href="${api}/${encodeURIComponent(row.id)}/exports/package?v=${Number(row.version)}">Download package with review cover and sources</a><div class="uwpc-switching-table-wrap"><table class="uwpc-switching-table"><thead><tr><th>Required review</th><th>Assigned to</th><th>Signature</th></tr></thead>
-      <tbody>${review.tasks.map(t => `<tr><td>${esc(names[t.role])} ${esc(t.site)}</td><td>${esc(t.account)}</td><td>${t.signedAt ? esc(when(t.signedAt)) : (review.viewed?.[t.account] ? 'Viewed · signature pending' : 'Pending')}</td></tr>`).join('')}</tbody></table></div>
+      <tbody>${review.tasks.map(t => `<tr ${t.role==='checker'?'id="accuracy"':''}><td>${esc(names[t.role])} ${esc(t.site)}</td><td>${esc(t.account)}</td><td>${t.signedAt ? esc(when(t.signedAt)) : (review.viewed?.[t.account] ? 'Viewed · signature pending' : 'Pending')}</td></tr>`).join('')}</tbody></table></div>
       ${row.phase === 'FUTURE' ? review.tasks.filter(t => t.account === actor && roles[t.role]?.includes(actor)).map(t =>
       `<fieldset data-task="${esc(t.id)}"><legend>${esc(names[t.role])} ${esc(t.site)}</legend>
-      ${!t.signedAt && !openIssues ? `<label class="uwpc-check"><input type="checkbox" name="confirmed"> ${esc(attest[t.role])}</label><button type="button" data-action="review-sign">Sign revision ${review.number}</button>` : ''}
+      ${!t.signedAt && !openIssues ? (t.role==='checker' && review.sscLead && review.tasks.some(v=>v.role!=='checker'&&!v.signedAt) ? '<p>Final accuracy check follows the assigned reviews.</p>' : `<label class="uwpc-check"><input type="checkbox" name="confirmed"> ${esc(attest[t.role])}</label><button type="button" data-action="review-sign">Sign revision ${review.number}</button>`) : ''}
       <label>Correction to this revision<textarea name="comment" rows="2"></textarea></label><button type="button" data-action="review-return">Return for correction</button></fieldset>`).join('') : ''}` : ''}
       ${issues.map(i => `<article class="uwpc-history" data-issue="${esc(i.id)}"><strong>Correction ${esc(i.id)} · revision ${esc(i.revision)} · ${esc(i.actor)}</strong><p>${esc(i.comment)}</p>
         ${i.answer ? `<p>Manager response · ${esc(i.answer)}</p>` : ''}
         ${i.closedAt ? `<small>Confirmed ${esc(when(i.closedAt))}</small>` : review && review.owner === actor ? '<label>Manager response<textarea name="comment"></textarea></label><button type="button" data-action="review-answer">Send response</button>' : ''}
         ${!i.closedAt && i.answer && actor === i.actor && review ? '<button type="button" data-action="review-close">Confirm resolution</button>' : ''}</article>`).join('')}
-      ${assignments(row, roles, actor, accounts)}${execution(row, roles, actor)}</section>`;
+      ${assignments(row, roles, actor, accounts)}${includeExecution ? execution(row, roles, actor) : ''}</section>`;
   }
 
   function actionData(action, button, row) {
@@ -134,5 +147,5 @@ window.NorthStarOutageReview = function ({esc, when, dateValue, api = '/api/uwpc
     return {digest:row.packageReview.digest, task:block.dataset.task, issue:block.dataset.issue,
       comment:block.querySelector('[name=comment]')?.value, confirmed:block.querySelector('[name=confirmed]')?.checked === true};
   }
-  return {classification, cover, alerts, actionData};
+  return {classification, cover, execution, alerts, actionData, names};
 };

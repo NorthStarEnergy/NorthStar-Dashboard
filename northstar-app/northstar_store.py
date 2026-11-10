@@ -3175,6 +3175,11 @@ def _append_outage_event(
 
 def create_outage(payload: dict[str, Any], actor: str = "operator") -> dict[str, Any]:
     """Open an outage record. Raises ValueError when the title is missing."""
+    with _LOCK, _session() as connection:
+        return insert_outage(connection, payload, actor)
+
+
+def insert_outage(connection, payload, actor):
     title = str(payload.get("title", "")).strip()[:160]
     if not title:
         raise ValueError("title is required")
@@ -3187,38 +3192,37 @@ def create_outage(payload: dict[str, Any], actor: str = "operator") -> dict[str,
     raw_site = str(payload.get("site") or "System / transmission").strip()[:80]
     bound = sites.bind(raw_site, payload.get("siteId") or payload.get("site_id") or "")
     stored_site = (bound["site"] or raw_site)[:80]
-    with _LOCK, _session() as connection:
-        record_id = _unique_id(connection, "outages", "outage")
-        connection.execute(
-            "INSERT INTO outages"
-            " (id, title, asset, site, severity, outage_type, details, status, opened_at, opened_by)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (
-                record_id,
-                title,
-                asset,
-                stored_site,
-                str(payload.get("severity", "Monitor")).strip()[:30],
-                outage_type,
-                str(payload.get("details", "")).strip()[:4000],
-                "Open",
-                timestamp,
-                actor,
-            ),
-        )
-        _append_outage_event(
-            connection,
-            outage_id=record_id,
-            actor=actor,
-            event="opened",
-            site=stored_site,
-            prior_status=None,
-            new_status="Open",
-            details=str(payload.get("details", "")).strip(),
-            at=timestamp,
-        )
-        row = connection.execute("SELECT * FROM outages WHERE id=?", (record_id,)).fetchone()
-        return _outage_record(row, connection)
+    record_id = _unique_id(connection, "outages", "outage")
+    connection.execute(
+        "INSERT INTO outages"
+        " (id, title, asset, site, severity, outage_type, details, status, opened_at, opened_by)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (
+            record_id,
+            title,
+            asset,
+            stored_site,
+            str(payload.get("severity", "Monitor")).strip()[:30],
+            outage_type,
+            str(payload.get("details", "")).strip()[:4000],
+            "Open",
+            timestamp,
+            actor,
+        ),
+    )
+    _append_outage_event(
+        connection,
+        outage_id=record_id,
+        actor=actor,
+        event="opened",
+        site=stored_site,
+        prior_status=None,
+        new_status="Open",
+        details=str(payload.get("details", "")).strip(),
+        at=timestamp,
+    )
+    row = connection.execute("SELECT * FROM outages WHERE id=?", (record_id,)).fetchone()
+    return _outage_record(row, connection)
 
 
 def _event_report_fields(connection: sqlite3.Connection, aggregate_type: str, aggregate_id: str) -> dict[str, str]:

@@ -1,3 +1,47 @@
+## 20261110-outage-section-library
+
+Restored the [public UWPC reader and form exports](packets/2026-11-10-outage-section-library.md) and scoped the outage folder to the Outages section.
+
+## 20261110-public-outage
+
+Added [public passcode access and switching-plan reuse](packets/2026-11-10-public-outage.md).
+
+## 20261110-outage-areas
+
+Added [area sorting and filtering](packets/2026-11-10-outage-areas.md) to the outage register.
+
+## 20261110-outage-inbox
+
+Added the [personal Inbox, advanced settings and field help](packets/2026-11-10-outage-inbox.md) to Outage Manager.
+
+## 20261110-outage-reports-checkout
+
+Added [outage reports, an event log and package checkout](packets/2026-11-10-outage-reports-checkout.md).
+
+## 20261110-outage-header
+
+Updated the [Outage Manager header and alert navigation](packets/2026-11-10-outage-header.md).
+
+## 20261110-uwpc-reader
+
+Added the [single-row UWPC toolbar, collapsible menu and full-screen reader](packets/2026-11-10-uwpc-reader.md).
+
+## 20261110-outage-phase-summaries
+
+Added [phase icons and hover summaries](packets/2026-11-10-outage-phase-summaries.md) to the outage process strip.
+
+## 20261110-compact-outage-manager
+
+Updated the [Outage Manager register and working folder](packets/2026-11-10-compact-outage-manager.md) and compacted the register, package pages and manual reader.
+
+## 20261110-outage-folders
+
+Added [outage folders and coordination](packets/2026-11-10-outage-folders.md) with a clickable process graphic, two named outage managers and final-copy viewer alerts.
+
+## 20261110-outage-manager
+
+Added [Outage Manager](packets/2026-11-10-outage-manager.md), a standalone operator-hosted register, creation page, review inbox and UWPC library.
+
 ## 20261110-outages-menu
 
 Fixed the Outages sidebar route and added the UWPC Builder to the v3 Outages menu. See [Outages menu](packets/2026-11-10-outages-menu.md).

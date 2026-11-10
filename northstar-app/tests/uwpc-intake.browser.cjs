@@ -12,7 +12,7 @@ const root=path.resolve(__dirname,'..'),output=path.join(root,'outputs','uwpc-ai
   const context=await browser.newContext({viewport:{width:1200,height:1000}});
   assert.equal((await context.request.post(origin+'/api/auth/login',{data:{username:'fixture_author',password:'fixture-only-password'}})).status(),200);
   const page=await context.newPage();
-  await page.route('**/intake-test',r=>r.fulfill({contentType:'text/html',body:'<html><head><meta charset="utf-8"><link rel="stylesheet" href="/uwpc-desk.css"></head><body style="margin:0;background:#0d1720"><section id="switching"><div class="switching-workspace"></div></section><script src="/uwpc-desk.js"></script></body></html>'}));
+  await page.route('**/intake-test',r=>r.fulfill({contentType:'text/html',body:'<html><head><meta charset="utf-8"><link rel="stylesheet" href="/uwpc-desk.css"></head><body style="margin:0;background:#0d1720"><section id="switching"><div class="switching-workspace"></div></section><script src="/outage-package-review.js"></script><script src="/uwpc-desk.js"></script></body></html>'}));
   await page.goto(origin+'/intake-test');
   await page.locator('#uwpcDeskStatus').filter({hasText:'Ready.'}).waitFor();
   await page.locator('#uwpcIntakeForm [name=site]').fill('Synthetic station');

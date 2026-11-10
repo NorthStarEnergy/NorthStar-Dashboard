@@ -1,4 +1,4 @@
-v0.229
+v0.240
 2026-11-10
-2026-11-10T01:38:04-05:00
-Open the Outages menu, current register and UWPC Builder for signed-in operators across dashboard views.
+2026-11-10T10:40:47-05:00
+Restores the UWPC reader and form links and shows the outage folder only in Outages.
