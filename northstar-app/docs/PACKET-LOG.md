@@ -701,3 +701,5 @@ path; native source bases retained separately. See
 
 Engineering now includes [Arc Flash Scenario Studio](packets/2026-11-07-arc-flash-studio.md).
 Engineering studio styling follows the [dashboard theme](packets/2026-11-07-arc-studio-theme.md).
+
+Checked-out outage forms now open a [document editor](packets/2026-11-14-outage-document-editor.md) with printable row formatting and images.

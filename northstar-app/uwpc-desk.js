@@ -43,6 +43,8 @@
       lock.canEdit===false?'Read-only package':lock.canEdit?'Not checked out':'Checking edit access…';
     const button=bar.querySelector('[data-action=checkout]');
     if(!button)return;
+    const launcher=bar.querySelector('[data-action=word-editor]');
+    if(launcher)launcher.hidden=fields.disabled;
     button.textContent=lock.mine?'Check in':'Check out to edit';
     button.hidden=!lock.canEdit && !lock.mine;
     button.disabled=Boolean(lock.owner&&!lock.mine);
@@ -230,6 +232,7 @@
       const line = document.createElement('fieldset');
       line.innerHTML = '<label>Label<input maxlength="180"></label><label>Text<textarea rows="2" maxlength="4000"></textarea></label><label>Font<select><option>Arial</option><option>Georgia</option><option>Courier New</option></select></label><label>Size<input type="number" min="8" max="32" required></label><button type="button" data-move="-1">Move up</button><button type="button" data-move="1">Move down</button><button type="button" data-delete>Remove row</button>';
       const [label, text, font, size] = line.querySelectorAll('input, textarea, select');
+      line.formatting = row.formatting;
       label.value = row.label || ''; text.value = row.text || '';
       font.value = row.font || 'Arial'; size.value = row.size || 12;
       const paint = () => { for (const field of [label, text]) {
@@ -284,7 +287,7 @@
       if (loading) throw new Error('Wait for the photo to finish loading.');
       return {photo, rows:[...list.children].map(line => {
         const [label, text, font, size] = line.querySelectorAll('input, textarea, select');
-        return {label:label.value, text:text.value, font:font.value, size:Number(size.value)};
+        return {...(line.formatting ? {formatting:line.formatting} : {}),label:label.value, text:text.value, font:font.value, size:Number(size.value)};
       })};
     };
   }
@@ -357,7 +360,7 @@
       const article=editor.firstElementChild;
       fields.append(...article.childNodes);article.append(fields);
       const planTools=section==='forms' && r.template==='pc17a' ? '<button class="plan-tool" data-action="similar-plans">Similar</button><button class="plan-tool" data-action="open-plan">Open</button>' : '';
-      article.insertAdjacentHTML('afterbegin',`<div id="checkoutBar">${viewer?'':'<button type="button" data-action="checkout" hidden></button>'}<span role="status">${viewer?'Read-only package':''}</span>${section==='forms'?exportPanel(r):''}${planTools}</div>`);
+      article.insertAdjacentHTML('afterbegin',`<div id="checkoutBar">${viewer?'':'<button type="button" data-action="checkout" hidden></button><button type="button" data-action="word-editor" hidden>Open document editor</button>'}<span role="status">${viewer?'Read-only package':''}</span>${section==='forms'?exportPanel(r):''}${planTools}</div>`);
       paintCheckout();
     }else if(!managerPackage && inRegister){
       editor.querySelectorAll('#uwpcRequestForm input,#uwpcRequestForm select,#uwpcRequestForm textarea,#uwpcRequestForm button:not([data-action=cancel]),#uwpcSourceUpload,#uwpcSourceKind,[data-action=upload],[data-action=generate],[data-remove-source]').forEach(el=>el.disabled=true);
@@ -504,6 +507,93 @@
     });
   }
 
+  let wordWindow;
+  function openDocumentEditor() {
+    if (!lock.mine || !lock.canEdit) throw Error('Check out the document to edit it.');
+    if (wordWindow && !wordWindow.closed) {wordWindow.focus(); return;}
+    if (dirty) throw Error('Save your form changes before opening the document editor.');
+    const popup = window.open('', '_blank', 'popup,width=1050,height=820');
+    if (!popup) throw Error('Allow pop-ups to open the document editor.');
+    wordWindow = popup;
+    const doc = popup.document, record = current, version = record.version;
+    doc.title = record.title + ' · Document editor';
+    doc.head.innerHTML = '<style>*{box-sizing:border-box}body{margin:0;background:#edf1f4;font:15px system-ui;color:#172934}header{position:sticky;top:0;background:white;padding:12px;box-shadow:0 1px 4px #8896;z-index:2}nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}button,select,input{font:inherit}main{margin:22px auto;background:white;padding:32px;width:min(100%,816px);min-height:75vh}section{position:relative;padding:6px;margin-bottom:6px}section:focus-within{outline:1px dashed #5483aa}textarea{display:block;background:transparent;border:0;width:100%;font:inherit;color:inherit;resize:none}img{max-width:100%;max-height:240px}i{position:absolute;left:-5px;top:0;width:10px;height:100%;cursor:ew-resize;touch-action:none}label{display:inline-flex;gap:4px;align-items:center}</style>';
+    doc.body.innerHTML = '<header><h2></h2><nav><label>Font<select id="font" aria-label="Font"><option>Arial</option><option>Georgia</option><option>Courier New</option></select></label><label>Size<input id="size" type="number" min="8" max="32"></label><label>Text<input id="color" type="color"></label><label>Fill<input id="fill" type="color"></label><label>Border<select id="border" aria-label="Border"><option value="none">None</option><option value="box">Box</option><option value="line">Bottom line</option></select></label><label>Inset<input id="inset" type="number" min="0" max="160"></label><button id="add">Add row</button><button id="rule">Add line</button><button id="erase">Erase row</button><label>Insert image<input id="image" type="file" accept="image/*"></label><button id="save">Save changes</button></nav><output role="status"></output></header><main></main>';
+    doc.querySelector('h2').textContent = record.title;
+    const page = doc.querySelector('main'), msg = doc.querySelector('output');
+    const control = id => doc.getElementById(id);
+    const layout = record.layout || {};
+    const rows = structuredClone(layout.rows || []);
+    if (!rows.length) {
+      for (const el of $('uwpcRequestForm')?.querySelectorAll('[name], [data-plan-field], [data-step-field]') || []) {
+        if (el.closest('[data-layout]') || el.type==='hidden' || !el.value || (el.type==='checkbox' && !el.checked)) continue;
+        rows.push({label:el.labels?.[0]?.querySelector('span')?.textContent || el.name || el.dataset.planField || el.dataset.stepField,text:el.value});
+        if(rows.length===120)break;
+      }
+      if(!rows.length)rows.push({label:record.title,text:record.scope || ''});
+    }
+    let active, modified=false, loading=false;
+    const defaults={color:'#172934',fill:'#ffffff',border:'none',inset:0};
+    function changed(){modified=true;lastActivity=Date.now();}
+    popup.onbeforeunload=e=>{if(modified){e.preventDefault();e.returnValue='';}};
+    function select(block){
+      active=block;
+      const row=block.row;
+      for(const key of ['font','size'])control(key).value=row[key];
+      for(const key of Object.keys(defaults))control(key).value=row.formatting[key];
+    }
+    function paint(block){
+      const row=block.row, f=row.formatting;
+      Object.assign(block.style,{fontFamily:row.font,fontSize:row.size+'pt',color:f.color,background:f.fill,marginLeft:f.inset+'px',border:f.border==='box'?'1px solid':'none',borderBottom:f.border==='none'?'none':'1px solid'});
+      for(const field of block.querySelectorAll('textarea')){field.style.height='auto';field.style.height=field.scrollHeight+2+'px';}
+    }
+    function insert(row,after){
+      if(page.children.length>=120){msg.textContent='Use at most 120 rows.';return;}
+      row.font ||= 'Arial';row.size ||= 12;row.formatting={...defaults,...row.formatting};
+      const block=doc.createElement('section');block.row=row;
+      if(after)after.after(block);else page.append(block);
+      for(const key of ['label','text']){
+        const field=doc.createElement('textarea');field.rows=1;field.maxLength=key==='label'?180:4000;
+        field.setAttribute('aria-label',key);field.placeholder=key==='label'?'Label':'Text';field.value=row[key] ||= '';
+        field.oninput=()=>{row[key]=field.value;paint(block);changed();};block.append(field);
+      }
+      if(row.formatting.image){const img=doc.createElement('img');img.src='data:image/jpeg;base64,'+row.formatting.image;block.append(img);}
+      const handle=doc.createElement('i');handle.title='Drag to move the left border';block.append(handle);
+      handle.onpointerdown=e=>{select(block);handle.setPointerCapture(e.pointerId);const x=e.clientX,start=row.formatting.inset;
+        handle.onpointermove=move=>{row.formatting.inset=Math.max(0,Math.min(160,Math.round(start+move.clientX-x)));select(block);paint(block);changed();};};
+      handle.onlostpointercapture=()=>{handle.onpointermove=null;};
+      block.addEventListener('focusin',()=>select(block));block.onclick=()=>select(block);paint(block);select(block);
+    }
+    rows.forEach(row=>insert(row));select(page.firstChild);
+    for(const key of ['font','size',...Object.keys(defaults)])control(key).oninput=()=>{
+      if(!active || !control(key).checkValidity() || !control(key).value)return;
+      const target=['font','size'].includes(key)?active.row:active.row.formatting;
+      target[key]=['size','inset'].includes(key)?Number(control(key).value):control(key).value;paint(active);changed();
+    };
+    control('add').onclick=()=>{insert({},active);changed();};
+    control('rule').onclick=()=>{insert({formatting:{border:'line'}},active);changed();};
+    control('erase').onclick=()=>{if(active){const next=active.nextElementSibling || active.previousElementSibling;active.remove();active=null;if(next)select(next);changed();}};
+    control('image').onchange=async e=>{
+      const file=e.target.files[0],block=active;if(!file||!block)return;
+      loading=true;
+      try{
+        const bitmap=await createImageBitmap(file),canvas=doc.createElement('canvas'),scale=Math.min(1,800/Math.max(bitmap.width,bitmap.height));
+        canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+        const ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
+        const src=canvas.toDataURL('image/jpeg',0.7);block.row.formatting.image=src.split(',')[1];let img=block.querySelector('img');
+        if(!img){img=doc.createElement('img');block.append(img);}img.src=src;changed();
+      }catch{msg.textContent='Could not read this image.';}finally{loading=false;e.target.value='';}
+    };
+    control('save').onclick=async()=>{
+      if(loading || doc.body.inert)return;
+      doc.body.inert=true;
+      try{
+        if(dirty || current.id!==record.id || current.version!==version || !lock.mine || !lock.canEdit)throw Error('The form or checkout changed. Reopen the editor on the current revision.');
+        const result=await request(api+'/'+encodeURIComponent(record.id)+'/save','POST',{...record,version,layout:{photo:layout.photo || '',rows:[...page.children].map(block=>block.row)}});
+        modified=false;show(result);popup.close();notice('Document changes saved.');
+      }catch(error){msg.textContent=error.message;}finally{doc.body.inert=false;}
+    };
+  }
   async function act(action, button) {
     if(action==='similar-plans'||action==='open-plan'){
       const target=current.id;
@@ -521,6 +611,7 @@
         }});
       return;
     }
+    if(action==='word-editor'){openDocumentEditor();return;}
     if(action==='checkout'){await toggleCheckout();return;}
     if (action === 'add-step') {
       const body = $('uwpcSwitchingRows');
@@ -589,7 +680,7 @@
         if(['forms','documents'].includes(managerSection)){
           await checkStatus();
           setInterval(async()=>{
-            if(document.hidden||busy)return;
+            if((document.hidden && (!wordWindow || wordWindow.closed))||busy)return;
             try{
               if(lock.mine && lock.canEdit && Date.now()-lastActivity<120000)
                 lock=await request(checkoutUrl,'POST',{doc:id,action:'renew'});

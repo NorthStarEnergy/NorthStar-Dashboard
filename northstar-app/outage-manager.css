@@ -136,3 +136,4 @@ body[data-manager-package] #checkoutBar .pdf{background:#a92d39;border-color:#90
 body[data-manager-package] #checkoutFields{min-width:0;border:0;padding:0;margin:0;background:transparent}
 @media(max-width:600px){.report-section .sheet table,#eventTable>.sheet table{min-width:540px}}
 @media print{body:has(.outage-report) :is(#shell,.skip,.report-picker){display:none}body:has(.outage-report) #main{margin:0;padding:0}.outage-report .sheet{overflow:visible}.outage-report tr{break-inside:avoid}}
+body[data-manager-package] #checkoutBar button[hidden]{display:none}
