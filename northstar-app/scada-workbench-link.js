@@ -23,17 +23,34 @@
       link.type = 'button';
       link.id = id;
       link.className = 'ns-main-app-link';
+      link.title = label;
+      link.setAttribute('aria-label', label);
       link.dataset.destination = href;
       link.addEventListener('click', () => location.assign(href));
       if (icon) {
         const image = document.createElement('img');
         image.src = icon;
         image.alt = '';
-        image.width = 14;
-        image.height = 14;
+        image.className = 'nav-icon';
+        image.width = 17;
+        image.height = 17;
+        link.append(image);
+      } else {
+        const image = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        image.setAttribute('viewBox', '0 0 24 24');
+        image.setAttribute('width', '17');
+        image.setAttribute('height', '17');
+        image.setAttribute('fill', 'none');
+        image.setAttribute('stroke', 'currentColor');
+        image.setAttribute('aria-hidden', 'true');
+        image.classList.add('nav-icon');
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        line.setAttribute('d', 'M13 2 4 14h7l-1 8 10-12h-7Z');
+        image.append(line);
         link.append(image);
       }
       const text = document.createElement('span');
+      text.className = 'nav-label';
       text.textContent = label;
       link.append(text);
       nav.append(link);

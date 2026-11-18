@@ -5,6 +5,7 @@
   gap: 6px;
   box-sizing: border-box;
   width: 100%;
+  min-width: 0;
   cursor: pointer;
 }
 #sideNav > .ns-main-app-link:hover {
@@ -16,3 +17,4 @@
   outline-offset: -2px;
 }
 #sideNav > .ns-main-app-link img { flex: none; border-radius: 3px; }
+#sideNav > .ns-main-app-link .nav-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
