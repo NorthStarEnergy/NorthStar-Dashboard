@@ -32,7 +32,14 @@ const root=path.resolve(__dirname,'..');
         if(expected){
           const outage=page.locator('#ns-outage-manager-link');
           assert.ok(await outage.isVisible());
-          assert.equal(await outage.getAttribute('href'),'/outage-manager.html');
+          assert.equal(await outage.evaluate(el=>el.tagName),'BUTTON');
+          const styles=await outage.evaluate(el=>{
+            const reference=document.querySelector('#sideNav button[data-tab="overview"]');
+            const own=getComputedStyle(el), base=getComputedStyle(reference);
+            return ['fontFamily','fontSize','fontWeight','padding','borderRadius','textTransform'].map(key=>[key,own[key],base[key]]);
+          });
+          for(const [key,actual,wanted] of styles) assert.equal(actual,wanted,'native menu '+key);
+          assert.equal(await outage.getAttribute('data-destination'),'/outage-manager.html');
           await outage.focus();await page.keyboard.press('Enter');
           await page.waitForURL(origin+'/outage-manager.html');
           await page.goBack();await outage.waitFor();

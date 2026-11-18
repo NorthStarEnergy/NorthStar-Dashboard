@@ -1,3 +1,7 @@
+## 20261118-menu-theme
+
+Matched standalone tool entries to the native NorthStar menu buttons. See [packet](packets/2026-11-18-menu-theme.md).
+
 ## 20261118-v1-wide-monitor
 
 Added the [V1 wide Overview, sortable roster and detached monitor controls](packets/2026-11-18-v1-wide-monitor.md). Verified 652 Python and 77 JavaScript tests plus the wide-monitor browser fixture.

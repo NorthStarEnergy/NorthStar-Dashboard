@@ -19,16 +19,18 @@
 
     function add(id, label, href, icon) {
       if (document.getElementById(id)) return;
-      const link = document.createElement('a');
+      const link = document.createElement('button');
+      link.type = 'button';
       link.id = id;
       link.className = 'ns-main-app-link';
-      link.href = href;
+      link.dataset.destination = href;
+      link.addEventListener('click', () => location.assign(href));
       if (icon) {
         const image = document.createElement('img');
         image.src = icon;
         image.alt = '';
-        image.width = 20;
-        image.height = 20;
+        image.width = 14;
+        image.height = 14;
         link.append(image);
       }
       const text = document.createElement('span');
