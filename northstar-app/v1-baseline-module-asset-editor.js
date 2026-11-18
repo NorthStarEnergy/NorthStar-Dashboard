@@ -372,13 +372,47 @@
     const key=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();finish(true);}else if(e.key==='Escape'){e.preventDefault();finish(false);}};
     const blur=()=>finish(true);node.addEventListener('keydown',key,true);node.addEventListener('blur',blur,{once:true});
   }
+  const gridSize=()=>window.NorthstarWindowLayout.gridSize();
+  let copiedAssets=[], copiedStyle=null;
+  function copyAssets(){
+    const nodes=selectedMany.length?selectedMany.map(item=>item.node):[selected?.node];
+    if(nodes.length===1 && selected && !selected.custom){
+      const style=getComputedStyle(selected.node);
+      copiedStyle={};
+      for(const [field,property] of Object.entries(FIELDS)){
+        const value=style.getPropertyValue(property);
+        if(['fontSize','radius','borderWidth','paddingTop','paddingRight','paddingBottom','paddingLeft'].includes(field)){
+          copiedStyle[field]=parseFloat(value)||0;
+        }else if(field==='lineHeight'){
+          if(parseFloat(value)>0)copiedStyle[field]=parseFloat(value)/parseFloat(style.fontSize);
+        }else if(field!=='z')copiedStyle[field]=value;
+      }
+      copiedAssets=[];status('Appearance copied. Select a destination asset to paste.');return;
+    }
+    if(!nodes.every(node=>node?.dataset.nsAsset)){status('Select one built-in asset or a group of custom assets to copy.');return;}
+    copiedStyle=null;
+    copiedAssets=nodes.map(node=>copy(record(node.closest(ROOTS)).custom.find(a=>a.id===node.dataset.nsAsset)));
+    status('Copied '+copiedAssets.length+' asset(s).');
+  }
+  function pasteAssets(){
+    if(copiedStyle){
+      if(selected)mutate({...copiedStyle});else status('Select an asset to receive the copied appearance.');
+      return;
+    }
+    const root=selectedModule || chosenRoot();
+    if(!root || !copiedAssets.length)return;
+    remember();
+    const pasted=copiedAssets.map(asset=>({...copy(asset),id:crypto.randomUUID(),x:(asset.x||0)+gridSize(),y:(asset.y||0)+gridSize()}));
+    record(root,true).custom.push(...pasted);apply();
+    select(root,root.querySelector('[data-ns-asset="'+pasted[0].id+'"]'));persist();
+  }
   function moveMany(dx,dy){
     if(!selectedMany.length)return;
-    const before=copy(state),step=$('[name="snap"]',panel).checked?5:1,root=selectedMany[0].node.closest(ROOTS);
+    const before=copy(state),root=selectedMany[0].node.closest(ROOTS);
     selectedMany.forEach(item=>{
       const node=item.node,custom=!!node.dataset.nsAsset,key=node.dataset.nsAsset||selector(root,node),rec=record(root,true),asset=custom?rec.custom.find(a=>a.id===key):(rec.assets[key] ||= {});
       if(!asset)return;
-      const box=window.NorthstarAssetLayout.box(node,asset),next=window.NorthstarAssetLayout.change(box,'move',dx*step,dy*step);
+      const box=window.NorthstarAssetLayout.box(node,asset),next=window.NorthstarAssetLayout.change(box,'move',dx,dy);
       Object.assign(asset,{x:next.x,y:next.y});styleAsset(node,asset,custom);
     });
     undo.push(before);if(undo.length>60)undo.shift();redo=[];persist();apply();draw();
@@ -406,7 +440,7 @@
     const before=copy(state),startX=event.clientX,startY=event.clientY;let changed=false;
     const originalsByItem=items.map(item=>{const root=item.node.closest(ROOTS),custom=!!item.node.dataset.nsAsset,key=item.node.dataset.nsAsset||selector(root,item.node),asset=custom?record(root,true).custom.find(a=>a.id===key):(record(root,true).assets[key] ||= {});return {item,custom,asset,box:window.NorthstarAssetLayout.box(item.node,asset)};});
     dragging=true;
-    const move=e=>{const dx=e.clientX-startX,dy=e.clientY-startY;if(!changed&&Math.hypot(dx,dy)<3)return;changed=true;originalsByItem.forEach(({item,custom,asset,box})=>{const next=window.NorthstarAssetLayout.change(box,'move',dx,dy,$('[name="snap"]',panel).checked?5:1);Object.assign(asset,{x:next.x,y:next.y});styleAsset(item.node,asset,custom);});draw();};
+    const move=e=>{const dx=e.clientX-startX,dy=e.clientY-startY;if(!changed&&Math.hypot(dx,dy)<3)return;changed=true;originalsByItem.forEach(({item,custom,asset,box})=>{const next=window.NorthstarAssetLayout.change(box,'move',dx,dy,e.altKey?1:gridSize());Object.assign(asset,{x:next.x,y:next.y});styleAsset(item.node,asset,custom);});draw();};
     const finish=e=>{window.removeEventListener('pointermove',move,true);window.removeEventListener('pointerup',finish,true);window.removeEventListener('pointercancel',finish,true);dragging=false;if(e.type!=='pointerup'){state=before;restoreStyles();apply();}else if(changed){undo.push(before);if(undo.length>60)undo.shift();redo=[];persist();apply();}draw();};
     window.addEventListener('pointermove',move,true);window.addEventListener('pointerup',finish,true);window.addEventListener('pointercancel',finish,true);
   }
@@ -611,7 +645,7 @@
       if(!changed && Math.hypot(e.clientX-px,e.clientY-py)<3)return;
       if(!changed && startNode.dataset.assetId && startNode.dataset.assetChildren!=='independent')joinGroupChildren(selected.root,startNode);
       changed=true;
-      const next=window.NorthstarAssetLayout.change(original,corner,(e.clientX-px)/scaleX,(e.clientY-py)/scaleY,$('[name="snap"]',panel).checked?5:1);
+      const next=window.NorthstarAssetLayout.change(original,corner,(e.clientX-px)/scaleX,(e.clientY-py)/scaleY,e.altKey?1:gridSize());
       const target=record(selected.root,true), asset=selected.custom?current():(target.assets[selected.key] ||= {});
       Object.assign(asset,corner==='move'?{x:next.x,y:next.y}:next);styleAsset(startNode,asset,selected.custom);draw();
     };
@@ -637,8 +671,8 @@
   function createUI(){
     panel=document.createElement('div');panel.id='nsAssetEditor';panel.hidden=true;panel.setAttribute('role','region');panel.setAttribute('aria-label','Module designer');
     panel.innerHTML=`<header><div><strong>MODULE DESIGNER</strong><small>Saved on this browser</small></div><button type="button" data-action="collapse" aria-label="Collapse designer">−</button></header>
-      <div class="ns-designer-body"><div class="ns-designer-row"><label>Edit<select name="mode"><option value="modules">Whole modules</option><option value="assets">Assets inside modules</option></select></label><label class="ns-designer-check"><input name="snap" type="checkbox" checked>Snap 5px</label></div>
-      <div class="ns-designer-actions"><button type="button" data-action="undo">Undo</button><button type="button" data-action="redo">Redo</button><button type="button" data-action="checkpoint">Save</button></div>
+      <div class="ns-designer-body"><div class="ns-designer-row"><label>Edit<select name="mode"><option value="modules">Whole modules</option><option value="assets">Assets inside modules</option></select></label><label>Grid (px)<input name="gridStep" type="number" min="1" max="100" value="5" title="Arrow keys use this step. Alt + arrow moves one pixel."></label></div>
+      <div class="ns-designer-actions"><button type="button" data-action="undo">Undo</button><button type="button" data-action="redo">Redo</button><button type="button" data-action="checkpoint">Save</button><button type="button" data-action="copy-assets">Copy</button><button type="button" data-action="paste-assets">Paste</button></div>
       <details><summary>Create a module</summary><label>Name<input name="newName" placeholder="My module" maxlength="100"></label><label>Section<select name="newSection"></select></label><button type="button" data-action="create">Create blank module</button></details>
       <label>Module<select name="root"></select></label><label>Asset sizing<select name="assetSizing"><option value="dynamic">Dynamic · resize with module</option><option value="fixed">Fixed · keep asset size</option></select></label><div class="ns-designer-fit" aria-label="Fit border padding"><button type="button" data-action="fit">Fit border to assets</button>${[['Left','L'],['Right','R'],['Top','T'],['Bottom','B']].map(([side,short])=>`<label title="${side} padding in pixels">${short}<input type="number" name="fitPadding${side}" aria-label="${side} padding in pixels" min="0" max="2000" step="1" value="12"></label>`).join('')}</div><div class="ns-designer-actions"><button type="button" data-action="rebuild-weather">Rebuild selected weather tile</button><button type="button" data-action="settings">Open module data editor</button><button type="button" data-action="delete-overview-module" hidden>Delete module</button></div>
       <section data-module-padding hidden><h3>Module padding (px)</h3><div class="ns-designer-fit" aria-label="Module padding">${[['Top','T'],['Right','R'],['Bottom','B'],['Left','L']].map(([side,short])=>`<label title="${side} module padding in pixels">${short}<input type="number" name="modulePadding${side}" aria-label="${side} module padding in pixels" min="0" max="2000" step="1"></label>`).join('')}</div></section>
@@ -653,17 +687,25 @@
       <div data-custom-fields><label>Text / label<textarea name="content" rows="2" maxlength="4000"></textarea></label><label data-source-field>Live source<select name="source"></select></label><label data-image-field>Image URL<input name="image" placeholder="https://… or /image.png"></label></div>
       <div class="ns-designer-grid"><label>Text size<input name="fontSize" type="number" min="6" max="200"></label><label>Weight<select name="fontWeight"><option value="400">Regular</option><option value="700">Bold</option></select></label><label>Text color<span class="ns-color-row"><input type="color" data-color-picker="color" aria-label="Choose text color"><input name="color" placeholder="#ffffff"></span></label><label>Background<span class="ns-color-row"><input type="color" data-color-picker="background" aria-label="Choose background color"><input name="background" placeholder="transparent"></span></label><label>Border width<input name="borderWidth" type="number" min="0" max="100" step="1"></label><label>Border style<select name="borderStyle"><option value="none">None</option><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option><option value="double">Double</option></select></label><label>Border color<span class="ns-color-row"><input type="color" data-color-picker="borderColor" aria-label="Choose border color"><input name="borderColor" placeholder="#ffffff"></span></label><label>Font<select name="fontFamily"><option value="system-ui">System</option><option value="Arial">Arial</option><option value="Georgia">Georgia</option><option value="monospace">Monospace</option></select></label><label>Style<select name="fontStyle"><option value="normal">Normal</option><option value="italic">Italic</option></select></label><label>Align<select name="textAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label><label>Line spacing<input name="lineHeight" type="number" min="0.5" max="5" step="0.1"></label><label>Corner radius<input name="radius" type="number" min="0" max="500"></label><label>Opacity<input name="opacity" type="number" min="0" max="1" step="0.1"></label><label>Layer<input name="z" type="number" min="-1" max="1000"></label><label class="ns-designer-check"><input name="hidden" type="checkbox">Hidden</label></div>
       <div class="ns-designer-actions"><button type="button" data-action="duplicate">Duplicate</button><button type="button" data-action="delete">Delete asset</button><button type="button" data-action="delete-module" hidden>Delete custom module</button></div><p data-live-note></p></section>
-      <p class="ns-designer-help">Click and drag an asset. In asset mode, drag empty module space to box-select assets; drag an asset to move it. Drag its corner handles to resize. Escape deselects.</p><p data-designer-status role="status"></p></div>`;
+      <p class="ns-designer-help">Click and drag an asset. In asset mode, drag empty module space to box-select assets; drag an asset to move it. Drag its corner handles to resize. Alt + arrow moves one pixel. Ctrl+C and Ctrl+V copy custom assets between modules or transfer a built-in asset’s appearance. Escape deselects.</p><p data-designer-status role="status"></p></div>`;
     document.body.append(panel);
     const sizeSection=document.createElement('section');sizeSection.dataset.moduleSize='';sizeSection.innerHTML='<h3>Module size (px)</h3><div class="ns-designer-grid"><label>Width<input name="moduleWidth" type="number" min="1" max="5000" step="1"></label><label>Height<input name="moduleHeight" type="number" min="1" max="5000" step="1"></label></div><button type="button" data-action="set-module-size">Apply module size</button>';
     $('[data-module-padding]',panel).before(sizeSection);
-    bindDesignerDrag();
+    const gridInput=$('[name="gridStep"]',panel);
+    const syncGrid=()=>{gridInput.value=String(Number(window.northstarLayoutGridStep)||5);};
+    window.addEventListener('northstar:layout-grid-step-change',syncGrid);
+    syncGrid();bindDesignerDrag();
     outline=document.createElement('div');outline.id='nsAssetSelection';outline.hidden=true;outline.tabIndex=-1;
     outline.innerHTML='<span data-selection-label></span>'+['nw','n','ne','e','se','s','sw','w'].map(c=>`<button type="button" data-asset-corner="${c}" aria-label="Resize asset ${c}" tabindex="0"></button>`).join('');document.body.append(outline);
     outline.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-asset-corner]');if(h){e.preventDefault();e.stopPropagation();if(selectedMany.length)beginMany(e);else begin(e,h.dataset.assetCorner);}else if(selectedMany.length){e.preventDefault();e.stopPropagation();beginMany(e);}});
     panel.addEventListener('change',e=>{
       const c=e.target,k=c.name;
       if(c.dataset.colorPicker && selected){mutate({[c.dataset.colorPicker]:c.value});return;}
+      if(k==='gridStep'){
+        const input=document.querySelector('[data-layout-grid-step]');
+        if(input){input.value=c.value;input.dispatchEvent(new Event('change'));}
+        syncGrid();return;
+      }
       if(k==='mode'){mode=c.value;selected=null;selectedModule=null;selectedModules=[];syncMode();return;}
       if(k==='root'){const root=roots().find(r=>rootKey(r)===c.value);if(root)select(root,null);return;}
       if(k==='assetSizing'){
@@ -733,6 +775,8 @@
         const input=$('[name="newName"]',panel),title=input.value.trim();if(!title){input.focus();return;}
         const m=window.NorthstarModules?.createCanvas(title,$('[name="newSection"]',panel).value);if(m){mode='assets';$('[name="mode"]',panel).value=mode;select(m.el,null);syncMode();status('Blank module created. Add assets; its Overview presentation is separate.');}
       }
+      if(action==='copy-assets')copyAssets();
+      if(action==='paste-assets')pasteAssets();
       if(action==='duplicate' && selected?.custom){remember();const a={...copy(current()),id:crypto.randomUUID()};a.x+=12;a.y+=12;record(selected.root,true).custom.push(a);apply();select(selected.root,selected.root.querySelector('[data-ns-asset="'+a.id+'"]'));persist();}
       if(action==='delete' && selected?.custom){remember();const rec=record(selected.root,true);rec.custom=rec.custom.filter(a=>a.id!==selected.key);selected=null;restoreStyles();apply();inspect();persist();}
       if(action==='delete-module' && selected?.root?.dataset.nsModule){const id=selected.root.dataset.nsModule;if(window.NorthstarModules?.deleteCanvas(id)){selected=null;selectedMany=[];selectedModule=null;panel.dataset.root='';restoreStyles();lastRoots='';lastLayers='';apply();inspect();status('Custom module deleted.');}}
@@ -801,6 +845,11 @@
         if(rootFor(e.target) && e.key!=='Tab'){e.preventDefault();e.stopImmediatePropagation();}
         return;
       }
+      if((e.ctrlKey || e.metaKey) && ['c','v'].includes(e.key.toLowerCase())){
+        e.preventDefault();
+        if(e.key.toLowerCase()==='c')copyAssets();else pasteAssets();
+        return;
+      }
       if((e.ctrlKey || e.metaKey) && ['z','y'].includes(e.key.toLowerCase())){e.preventDefault();history(e.key.toLowerCase()==='z'&&!e.shiftKey);return;}
       if(e.key==='Escape'){selected=null;selectedMany=[];selectedModule=null;selectedModules=[];inspect();draw();return;}
       if(e.key==='Delete' || e.key==='Backspace'){
@@ -812,12 +861,12 @@
         let target=selectedModule,handle=moduleHandle(target);
         while(!handle){target=target.parentElement?.closest(ROOTS);if(!target)break;handle=moduleHandle(target);}
         const dx=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0,dy=e.key==='ArrowUp'?-1:e.key==='ArrowDown'?1:0;
-        if(handle && window.NorthstarWindowLayout?.nudge(handle,dx,dy)){selectedModule=target;draw();}
+        if(handle && window.NorthstarWindowLayout?.nudge(handle,dx*window.NorthstarWindowLayout.keyStep(e),dy*window.NorthstarWindowLayout.keyStep(e))){selectedModule=target;draw();}
         else status('This container has no movable module frame.');
       }else if(selectedMany.length && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
-        e.preventDefault();e.stopImmediatePropagation();const step=e.shiftKey?10:1,dx=e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0,dy=e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0;moveMany(dx,dy);
+        e.preventDefault();e.stopImmediatePropagation();const step=window.NorthstarWindowLayout.keyStep(e),dx=e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0,dy=e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0;moveMany(dx,dy);
       }else if(selected && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
-        e.preventDefault();e.stopImmediatePropagation();const step=e.shiftKey?10:1,dx=e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0,dy=e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0;
+        e.preventDefault();e.stopImmediatePropagation();const step=window.NorthstarWindowLayout.keyStep(e),dx=e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0,dy=e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0;
         const next=window.NorthstarAssetLayout.change(window.NorthstarAssetLayout.box(selected.node,current()),e.target.dataset.assetCorner || 'move',dx,dy);mutate(e.target.dataset.assetCorner?next:{x:next.x,y:next.y});
       }else if(rootFor(e.target) && ['Enter',' '].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();}
     },true);

@@ -133,7 +133,7 @@
       shell.append(bar,divider,workers);document.body.append(shell);
     }
     function openStatusWindow(){
-      const url=new URL('/northstar-clean.html',location.origin);url.searchParams.set('nsStatusWindow','1');url.hash='overview';
+      const url=new URL('/northstar-v1.html',location.origin);url.searchParams.set('nsStatusWindow','1');url.hash='overview';
       const width=screen.availWidth||innerWidth,height=screen.availHeight||innerHeight;
       const popup=window.open(url.href,'northstar-fixed-dashboard',`popup=yes,location=no,toolbar=no,menubar=no,status=no,left=0,top=0,width=${width},height=${height}`);
       if(!popup)window.alert('Allow pop-up windows for NorthStar, then try again.');else {popup.focus();window.NorthstarOperationsConsole?.replaceTracker(document.getElementById('overviewStaff'),popup);}
@@ -292,7 +292,7 @@
     }
     async function loadAlarms(force=false){
       if(alarmLoading || (!force && Date.now()-lastAlarmLoad<15000 && alarmRows.length)){paintAlarms();return;}
-      alarmLoading=true;paintAlarms();
+      alarmLoading=true;let failed=false;paintAlarms();
       try{
         // Retrieve all severities so a display filter cannot suppress critical sound.
         const params=new URLSearchParams({limit:'100'});
@@ -302,8 +302,8 @@
         if(!Array.isArray(data.items))throw Error('invalid');
         alarmRows=data.items;lastAlarmLoad=Date.now();delete events.dataset.alarmError;
       }catch{
-        if(!alarmRows.length)events.dataset.alarmError='Event log unavailable';
-      }finally{alarmLoading=false;paintAlarms();}
+        failed=true;if(!alarmRows.length)events.dataset.alarmError='Event log unavailable';
+      }finally{alarmLoading=false;paintAlarms();window.dispatchEvent(new CustomEvent('northstar:monitor-events',{detail:{items:alarmRows,failed}}));}
     }
     function paintEventShell(){
       const content=events.querySelector('.ns-status-content');

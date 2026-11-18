@@ -71,6 +71,8 @@
     return ['northstar','northstarenergy'].includes(key)?'northstar':key;
   };
   const companyTone = r => companyKey(r)==='northstar'?0:1+[...companyKey(r)].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,0)%5;
+  const tableControls = window.NorthstarRosterControls?.mount(root, render);
+  const stateOf = r => r.needsHelp?'Needs help':r.status==='checked-out'?'Checked out':r.status==='provisional'?'Pending review':r.overdue || r.status==='overdue'?'Overdue':r.alone?'Working alone':'On site';
   function render() {
     syncAppearance();
     const focusId = document.activeElement?.closest('[data-fr-id]')?.dataset.frId;
@@ -84,21 +86,26 @@
     const layoutIds=layout.map(names=>names.map(name=>window.NorthStarSites?.resolve(name)?.id || name));
     const groupOf = s => {const i=layoutIds.findIndex(ids=>ids.includes(siteKey(s)));return i<0?layout.length:i;};
     const selectedSites=sites.filter(s=>(regionFilter==='All' || regionOf(s)===regionFilter) && (!station.value || s.id===station.value)).sort((a,b)=>groupOf(a)-groupOf(b) || (layoutIds[groupOf(a)]?.indexOf(siteKey(a))??0)-(layoutIds[groupOf(b)]?.indexOf(siteKey(b))??0) || a.name.localeCompare(b.name));
-    let previousArea=-1;
-    $('tbody').innerHTML=selectedSites.map(s=>{
-      const people=rows.filter(r=>siteOf(r).id===s.id && (presence.value==='all' || (presence.value==='out')===(r.status==='checked-out')) && `${r.name} ${r.company || ''}`.toLowerCase().includes(query)).sort((a,b)=>Number(companyKey(b)==='northstar')-Number(companyKey(a)==='northstar') || companyKey(a).localeCompare(companyKey(b)) || Number(Boolean(b.alone))-Number(Boolean(a.alone)) || a.name.localeCompare(b.name));
-      if (!people.length && (query || presence.value!=='active')) return '';
-      const quickAdd=`<button type="button" class="fr-site-add" data-fr-add-site="${esc(s.id)}" aria-label="Add person at ${esc(s.name)}" title="Add person at ${esc(s.name)}">+</button>`;
+    const flat = Boolean(tableControls?.sortKey);
+    const siteIds = new Set(selectedSites.map(s => s.id));
+    const sections = flat ? [{id:null}] : selectedSites;
+    $('tbody').innerHTML=sections.map(group=>{
+      const s=group;
+      const people=rows.filter(r=>(flat?siteIds.has(siteOf(r).id):siteOf(r).id===s.id) && (presence.value==='all' || (presence.value==='out')===(r.status==='checked-out')) && `${r.name} ${r.company || ''}`.toLowerCase().includes(query)).sort((a,b)=>(flat?tableControls.compare(a,b,companyKey,stateOf,siteOf):0) || Number(companyKey(b)==='northstar')-Number(companyKey(a)==='northstar') || companyKey(a).localeCompare(companyKey(b)) || Number(Boolean(b.alone))-Number(Boolean(a.alone)) || a.name.localeCompare(b.name));
+      if (!people.length && (flat || query || presence.value!=='active')) return '';
+      const addAt=s=>`<button type="button" class="fr-site-add" data-fr-add-site="${esc(s.id)}" aria-label="Add person at ${esc(s.name)}" title="Add person at ${esc(s.name)}">+</button>`;
       count+=people.length;
-      const area=groupOf(s);
-      return (compact?'':`<tr data-fr-group="${area}" class="fr-station"><th colspan="7" scope="rowgroup">${esc(s.name)} ${quickAdd} <span>${people.length}</span></th></tr>`)+ (people.map((r,index)=>{
+      const quickAdd=flat?'':addAt(s);
+      const area=flat?0:groupOf(s);
+      return (compact || flat?'':`<tr data-fr-group="${area}" class="fr-station"><th colspan="7" scope="rowgroup">${esc(s.name)} ${quickAdd} <span>${people.length}</span></th></tr>`)+ (people.map((r,index)=>{
+        const s=siteOf(r), quickAdd=addAt(s);
         const out=r.status==='checked-out', provisional=r.status==='provisional', contact=String(r.notes || '').startsWith('[Crew contact]');
         const company=companyOf(r);
         const key=companyKey(r), first=index===0 || companyKey(people[index-1])!==key, last=index===people.length-1 || companyKey(people[index+1])!==key;
         const companyClass=`fr-company-${companyTone(r)}${first?' fr-company-start':''}${last?' fr-company-end':''}`;
-        const state=r.needsHelp?'Needs help':out?'Checked out':provisional?'Pending review':r.overdue || r.status==='overdue'?'Overdue':r.alone?'Working alone':'On site';
+        const state=stateOf(r);
         if(compact)return `<tr data-fr-group="${area}" data-fr-id="${esc(r.id)}" class="${companyClass} ${r.needsHelp?'fr-help':r.overdue?'fr-overdue':''}"><td><button type="button" class="fr-person" data-fr-action="profile" title="Open person details">${esc(r.name)}${overview && r.alone ? ' <strong class="fr-alone">Alone</strong>' : ''}</button></td><td data-fr-col="company" title="${esc(company)}">${esc(company)}</td><td title="${esc(s.name)}"><span>${esc(s.name)}</span> ${quickAdd}</td><td data-fr-col="in" title="${esc(r.checkedIn)}">${esc(stamp(r.checkedIn,r))}</td><td data-fr-col="seen" title="${esc(r.lastHeard)}">${esc(stamp(r.lastHeard,r))}</td><td data-fr-col="status" title="${esc(state)}" data-presence="${r.needsHelp?'help':r.overdue||r.status==='overdue'?'overdue':out?'out':provisional?'pending':'active'}">${state}</td></tr>`;
-        return `<tr data-fr-group="${area}" data-fr-id="${esc(r.id)}" class="${companyClass} ${r.needsHelp?'fr-help':r.overdue?'fr-overdue':''}"><td><button type="button" class="fr-person" data-fr-action="profile" title="Open person details">${esc(r.name)}${overview && r.alone ? ' <strong class="fr-alone">Alone</strong>' : ''}${contact?` <span>— ${esc(company)} · crew contact</span>`:''}</button></td><td data-fr-col="company" title="${esc(company)}">${esc(company)}</td><td data-fr-col="in">${esc(stamp(r.checkedIn,r))}</td><td data-fr-col="out">${esc(stamp(r.checkedOutAt,r))}</td><td data-fr-col="seen">${esc(stamp(r.lastHeard,r))}</td><td data-fr-col="status">${state}</td><td class="fr-actions">${out?'<button type="button" data-fr-action="return">Check in</button>':provisional?'<button type="button" data-fr-action="accept">Accept</button><button type="button" data-fr-action="reject">Reject</button>':'<button type="button" data-fr-action="in">Check in</button><button type="button" data-fr-action="out">Check out</button>'}</td></tr>`;
+        return `<tr data-fr-group="${area}" data-fr-id="${esc(r.id)}" class="${companyClass} ${r.needsHelp?'fr-help':r.overdue?'fr-overdue':''}"><td><button type="button" class="fr-person" data-fr-action="profile" title="Open person details">${esc(r.name)}${overview && r.alone ? ' <strong class="fr-alone">Alone</strong>' : ''}${flat?` <small class="fr-sort-station">${esc(s.name)}</small>`: ''}${contact?` <span>— ${esc(company)} · crew contact</span>`:''}</button></td><td data-fr-col="company" title="${esc(company)}">${esc(company)}</td><td data-fr-col="in">${esc(stamp(r.checkedIn,r))}</td><td data-fr-col="out">${esc(stamp(r.checkedOutAt,r))}</td><td data-fr-col="seen">${esc(stamp(r.lastHeard,r))}</td><td data-fr-col="status">${state}</td><td class="fr-actions">${out?'<button type="button" data-fr-action="return">Check in</button>':provisional?'<button type="button" data-fr-action="accept">Accept</button><button type="button" data-fr-action="reject">Reject</button>':'<button type="button" data-fr-action="in">Check in</button><button type="button" data-fr-action="out">Check out</button>'}</td></tr>`;
       }).join('') || (compact?`<tr data-fr-group="${area}"><td class="fr-empty">No one on site</td><td data-fr-col="company"></td><td>${esc(s.name)} ${quickAdd}</td><td colspan="3"></td></tr>`:'<tr><td colspan="7" class="fr-empty">No one on site</td></tr>'));
     }).join('') || '<tr><td colspan="'+(compact?6:7)+'" class="fr-empty">No matching people</td></tr>';
     const groupRows=[...root.querySelectorAll('tbody tr[data-fr-group]')];
@@ -110,6 +117,7 @@
     });
     root.querySelectorAll('[data-fr-col]').forEach(el=>el.hidden=hidden.has(el.dataset.frCol));
     root.querySelectorAll('[data-fr-id]').forEach(el=>el.querySelectorAll('.fr-actions button').forEach(b=>b.disabled=failed || loading || busy.has(el.dataset.frId)));
+    tableControls?.adjust();
     if(focusId)root.querySelector(`[data-fr-id="${CSS.escape(focusId)}"] [data-fr-action="${CSS.escape(focusAction || 'profile')}"]`)?.focus({preventScroll:true});
     if(!failed)status.textContent=loading?'Refreshing…':`${count} people`;
   }

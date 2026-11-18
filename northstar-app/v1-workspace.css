@@ -1,0 +1,46 @@
+#overviewShiftEvents[hidden]{display:none!important}
+body.overview-canvas main #overviewShiftEvents:not([hidden]){display:flex!important;flex-direction:column;padding:6px 10px!important;overflow:hidden!important;background:var(--panel);color:var(--text)}
+#overviewShiftEvents [data-event-content]{height:100%;min-height:0;display:flex;flex-direction:column}
+#overviewShiftEvents header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding:2px 0 5px}
+#overviewShiftEvents h2{margin:0;font-size:14px}
+#overviewShiftEvents header button{margin-left:auto}
+.shift-event-list{overflow:auto;min-height:0}
+.shift-event-list a{display:grid;grid-template-columns:5ch 1fr;gap:10px;padding:4px 0;border-bottom:1px solid var(--line);color:inherit;font:13px/1.35 Arial,sans-serif;text-decoration:none}
+.shift-event-list a:hover,.shift-event-list a:focus-visible{background:var(--panel2)}
+.shift-event-list time{color:var(--muted);font-variant-numeric:tabular-nums}
+.ns-wide-option{display:flex;align-items:center;gap:6px;padding:6px;white-space:normal}
+html body :is(#overviewWorkerList,#fieldRoster) .fr-scroll{overflow-x:auto!important}
+html body :is(#overviewWorkerList,#fieldRoster) tr[data-fr-id]>td{height:var(--fr-row-height,30px)!important}
+html body :is(#overviewWorkerList,#fieldRoster) thead th{padding:2px 8px;overflow:visible}
+html body :is(#overviewWorkerList,#fieldRoster) th .fr-sort{width:100%;height:24px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;padding:0;overflow:hidden;text-overflow:ellipsis}
+.fr-sort-station{margin-left:.5em;color:var(--muted);font-weight:400}
+th[aria-sort=ascending]>.fr-sort::after{content:' ↑'}th[aria-sort=descending]>.fr-sort::after{content:' ↓'}
+html body :is(#overviewWorkerList,#fieldRoster) th .fr-grip{position:absolute;right:0;top:0;bottom:0;width:8px;height:100%;cursor:col-resize;touch-action:none;border:0;border-right:1px solid var(--line);border-radius:0;padding:0;background:transparent}
+html body :is(#overviewWorkerList,#fieldRoster) th .fr-grip:is(:hover,:focus-visible){border-color:var(--blue)}
+.fr-columns input[type=number]{width:55px}
+html body.ns-station-popout #nsStationWindow #overviewStaff>.staff-panel-head{display:flex!important;align-items:center!important;gap:6px!important;margin:2px 0 4px!important;flex-wrap:wrap!important}
+html body.ns-station-popout #nsStationWindow #overviewStaff:has(#nsWebToolbar){overflow:visible!important}
+html body.ns-station-popout #nsStationWindow .staff-panel-head>#nsWebToolbar{position:relative!important;inset:auto!important;z-index:1002;flex:none;margin:0!important;padding:0!important}
+html body.ns-station-popout #nsStationWindow #overviewStaff .staff-panel-head :is(.ns-web-toolbar-menu,#openCrewFromOverview,.ns-monitor-fullscreen),#overviewShiftEvents header button{position:relative;inset:auto;width:auto!important;min-width:28px!important;max-width:none!important;height:28px!important;min-height:0!important;line-height:1!important;padding:0 8px!important;color:var(--text)!important;background:var(--panel2)!important;border:1px solid var(--line)!important;border-radius:3px!important;font:600 12px Arial,sans-serif!important;cursor:pointer;white-space:nowrap}
+html body.ns-simple-monitor #nsSimpleEvents :is(td,td a){font:14px/1.4 Arial,sans-serif}
+html body.ns-simple-monitor #nsStationWindow #overviewWorkerList .fr-scroll{overflow:auto!important}
+html body.ns-simple-monitor #nsWebToolbar [data-action=edit]{display:block!important}
+html body.ns-simple-monitor.layout-edit .layout-toolbar{display:flex!important}
+html body.ns-simple-monitor.layout-edit #nsStationWindow #nsStatusWorkers{grid-template-columns:minmax(0,var(--station-main-width,7fr)) minmax(0,3fr)!important}
+
+html body main.ns-wide-overview #overviewGeneratingStations .gs-card .gs-name{font-size:13px!important;line-height:1.08!important}
+html body main.ns-wide-overview #overviewGeneratingStations .gs-card :is(.gs-output,.gs-level,.gs-flow){font-size:12px!important;line-height:1.1!important}
+html body main.ns-wide-overview #overviewWorkerList .fr-toolbar{gap:4px;min-height:28px;margin-bottom:3px}
+html body main.ns-wide-overview #overviewWorkerList .fr-toolbar input[type=search]{flex:1 1 100px;max-width:180px}
+html body.ns-simple-monitor #nsSimpleEvents col.v3-event-time{width:105px!important}
+html body.ns-simple-monitor #nsSimpleEvents col.v3-event-severity{width:78px!important}
+html body.ns-simple-monitor #nsSimpleEvents .v3-data-scroll{overflow:auto}
+html body.ns-station-popout #nsStationWindow .staff-panel-head #openCrewFromOverview{font-family:Arial,sans-serif!important;color:var(--text,#e4eaf1)!important;background:var(--panel2,#15222a)!important;border-color:var(--line,#304050)!important}
+
+html body.ns-simple-monitor #nsStationWindow #nsStatusWorkers{grid-template-columns:minmax(0,var(--ns-monitor-left,69%)) minmax(0,1fr)!important}
+#nsSimpleRail{position:relative}
+.ns-monitor-divider{position:absolute;top:0;bottom:0;left:-10px;width:8px;min-width:0;padding:0;border:0;border-radius:0;cursor:col-resize;touch-action:none;background:transparent}
+.ns-monitor-divider:is(:hover,:focus-visible){background:var(--line)}
+#nsSimpleEvents th{position:relative}
+#nsSimpleEvents thead .fr-grip{position:absolute;right:0;top:0;width:8px;height:100%;min-width:0;padding:0;border:0;border-right:1px solid var(--line);cursor:col-resize;touch-action:none;background:transparent}
+@media(max-width:850px){html body.ns-simple-monitor #nsStationWindow #nsStatusWorkers{grid-template-columns:minmax(0,1fr)!important}.ns-monitor-divider{display:none}}

@@ -1,3 +1,7 @@
+## 20261118-v1-wide-monitor
+
+Added the [V1 wide Overview, sortable roster and detached monitor controls](packets/2026-11-18-v1-wide-monitor.md). Verified 652 Python and 77 JavaScript tests plus the wide-monitor browser fixture.
+
 ## 20261110-outage-section-library
 
 Restored the [public UWPC reader and form exports](packets/2026-11-10-outage-section-library.md) and scoped the outage folder to the Outages section.

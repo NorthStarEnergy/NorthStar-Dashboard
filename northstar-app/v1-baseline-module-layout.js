@@ -11,9 +11,12 @@
  * appearance. Reordering achieves the same guarantees on top of what is there.
  */
 (() => {
+  const gridSize = () => window.northstarLayoutSnapToGrid === false ? 1 : Math.max(1, Number(window.northstarLayoutGridStep) || 5);
+  const keyStep = event => event.altKey ? 1 : gridSize() * (event.shiftKey ? 10 : 1);
   const moduleNudges = new WeakMap();
   // Section windows and Overview share this file as their geometry owner.
   window.NorthstarWindowLayout = {
+    gridSize, keyStep,
     nudge(handle, dx, dy) {
       return moduleNudges.get(handle)?.(dx, dy) || false;
     },
@@ -25,7 +28,7 @@
       if (north) next.y += box.h - next.h;
       return next;
     },
-    bind(el, handle, corner, get, set, enabled, commit) {
+    bind(el, handle, corner, get, set, enabled, commit, spacing = gridSize) {
       const change = (box, dx, dy) => corner === 'move'
         ? {...box, x: Math.max(0, box.x + dx), y: Math.max(0, box.y + dy)}
         : window.NorthstarWindowLayout.resize(box, corner, dx, dy);
@@ -36,7 +39,7 @@
       handle.addEventListener('keydown', event => {
         if (!enabled() || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
         event.preventDefault(); event.stopPropagation();
-        const step = event.shiftKey ? 20 : 5;
+        const step = keyStep(event);
         set(change(get(), event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0,
           event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0));
         commit();
@@ -47,7 +50,14 @@
         const original = {...get()}, x = event.clientX, y = event.clientY;
         el.classList.add('module-dragging');
         handle.setPointerCapture(event.pointerId);
-        const move = e => set(change(original, e.clientX - x, e.clientY - y));
+        const move = e => {
+          const grid=e.altKey?1:spacing();
+          const snap=(start,delta)=>delta ? Math.round((start+delta)/grid)*grid-start : 0;
+          const dx=e.clientX-x, dy=e.clientY-y;
+          const xEdge=corner==='move' || corner.includes('w')?original.x:original.x+original.w;
+          const yEdge=corner==='move' || corner.includes('n')?original.y:original.y+original.h;
+          set(change(original,snap(xEdge,dx),snap(yEdge,dy)));
+        };
         const finish = e => {
           if (e.type !== 'pointerup') set(original);
           el.classList.remove('module-dragging');
@@ -72,7 +82,7 @@
     },
     change(box, corner, dx, dy, snap = 1) {
       const round = value => Math.round(value / snap) * snap;
-      if (corner === 'move') return {...box, x: round(box.x + dx), y: round(box.y + dy)};
+      if (corner === 'move') return {...box, x: dx ? round(box.x + dx) : box.x, y: dy ? round(box.y + dy) : box.y};
       const next = window.NorthstarWindowLayout.resize(box, corner, round(dx), round(dy), [8, 8]);
       return {...next, w: Math.max(8, next.w), h: Math.max(8, next.h)};
     },
@@ -203,6 +213,7 @@
     let positions = {}, frame = 0, gesture = false, topLayer = 30, restoring = false, activeSignature = '';
     let statusReady = !window.NORTHSTAR_PERSISTENT_STATUS || document.body.classList.contains('ns-has-status');
     const profileKey = 'northstarRestoredV1_northstarOverviewProfilesV2';
+    let alignEdges=false;
     let profiles = {}, profile = '', lastWidth = 0, automatic = true, snapping = window.northstarLayoutSnapToGrid !== false, showAlignmentGuides = true, editSnapshot = null, weatherSizeApplied = false, weatherDensityApplied = false, weatherReferenceSizeApplied = false, weatherFamilyLayoutApplied = false, overviewGroupLayoutApplied = false, carouselTightControlsApplied = false;
     try { showAlignmentGuides = localStorage.getItem('northstarShowAlignmentGuides') !== 'false'; } catch {}
     window.addEventListener('northstar:layout-snap-change', event => { snapping = event.detail?.enabled !== false; renderGuides(); });
@@ -220,7 +231,7 @@
     adoptWeatherWidth(positions);
     // Keep the old canvas intact as a selectable arrangement, never delete it.
     if (!profiles.previous && Object.keys(positions).length) profiles.previous = JSON.parse(JSON.stringify(positions));
-    const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].filter(el=>!document.body.classList.contains('ns-has-status') || !el.matches('#dispatchClient,#marketTopTiles>*,#overviewEventsSummary,#overviewFieldTracker')).map(el => {
+    const entries = () => groups.flatMap(([group, selector, size, min]) => [...document.querySelectorAll(selector)].filter(el=>el.id!=='overviewShiftEvents' || !el.hidden).filter(el=>!document.body.classList.contains('ns-has-status') || !el.matches('#dispatchClient,#marketTopTiles>*,#overviewEventsSummary,#overviewFieldTracker')).map(el => {
       const staffPanel = el.id === 'overviewStaff';
       const fieldTracker = el.id === 'overviewFieldTracker';
       return {el, size: staffPanel ? [560, 320] : fieldTracker ? [280, 180] : size, min: fieldTracker ? [220, 140] : staffPanel ? [300, 180] : [1, 1], key: 'canvas:' + group + ':' + (el.id || el.dataset.moduleId || el.dataset.site || group)};
@@ -281,7 +292,7 @@
         return;
       }
       // Station tiles share one frame size, including saved layouts.
-      if (el.matches('#overviewGeneratingStations .gs-card')) {
+      if (profile!=='monitor' && el.matches('#overviewGeneratingStations .gs-card')) {
         p.w = 94;
         p.h = 75;
       }
@@ -449,16 +460,22 @@
             p.w = w; p.h = h;
           }
           else { p.x = Math.max(0,p.x + dx); p.y = Math.max(0,p.y + dy); }
-          if(snapping && !precise){
+          if((snapping || alignEdges) && !precise){
             if(resize){
               const right=p.x+p.w,bottom=p.y+p.h;
               p.w=Math.max(entry.min[0],Math.min(corner.includes('w')?right:Infinity,p.w));p.h=Math.max(entry.min[1],Math.min(corner.includes('n')?bottom:Infinity,p.h));
               if(corner.includes('w'))p.x=Math.max(0,right-p.w);
               if(corner.includes('n'))p.y=Math.max(0,bottom-p.h);
-              snapResize(p, corner, guideTargets(entry.key), entry.min);
+              const grid=snapping?gridSize():1;
+              if(/[ew]/.test(corner))p.w=Math.max(entry.min[0],Math.round(p.w/grid)*grid);
+              if(/[ns]/.test(corner))p.h=Math.max(entry.min[1],Math.round(p.h/grid)*grid);
+              if(corner.includes('w'))p.x=Math.max(0,right-p.w);
+              if(corner.includes('n'))p.y=Math.max(0,bottom-p.h);
+              if(alignEdges)snapResize(p,corner,guideTargets(entry.key),entry.min);
             }else{
-              p.x=Math.max(0,Math.round(p.x/16)*16);p.y=Math.max(0,Math.round(p.y/16)*16);
-              snapMove(p, guideTargets(entry.key));
+              const grid=snapping?gridSize():1;
+              p.x=Math.max(0,Math.round(p.x/grid)*grid);p.y=Math.max(0,Math.round(p.y/grid)*grid);
+              if(alignEdges)snapMove(p,guideTargets(entry.key));
             }
           }
           p.y=Math.max(0,p.y);
@@ -471,8 +488,8 @@
         handle.addEventListener('keydown', event => {
           if (!editing() || !enabled() || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
           event.preventDefault(); event.stopPropagation();
-          const step = event.shiftKey ? 20 : 5;
-          change(event.key==='ArrowRight'?step:event.key==='ArrowLeft'?-step:0,event.key==='ArrowDown'?step:event.key==='ArrowUp'?-step:0);
+          const step = keyStep(event);
+          change(event.key==='ArrowRight'?step:event.key==='ArrowLeft'?-step:0,event.key==='ArrowDown'?step:event.key==='ArrowUp'?-step:0,true);
           persist();
         });
         handle.addEventListener('click', event => {event.preventDefault();event.stopPropagation();});
@@ -484,7 +501,7 @@
           handle.setPointerCapture(event.pointerId);
           const move = e => {
             positions[entry.key] = {...original};
-            change(e.clientX + window.scrollX - x,e.clientY + window.scrollY - y);
+            change(e.clientX + window.scrollX - x,e.clientY + window.scrollY - y,e.altKey);
             if (e.clientY > innerHeight-40) window.scrollBy(0,16);
             if (e.clientY < 40) window.scrollBy(0,-16);
             if (e.clientX > window.innerWidth-40) window.scrollBy(16,0);
@@ -605,7 +622,7 @@
       restoring=true;
       editSnapshot.forEach(([key,value])=>value===null?localStorage.removeItem(key):localStorage.setItem(key,value));location.reload();
     });
-    tools.querySelector('[data-ov-snap]')?.addEventListener('change',e=>{snapping=e.target.checked;renderGuides();});
+    tools.querySelector('[data-ov-snap]')?.addEventListener('change',e=>{alignEdges=e.target.checked;renderGuides();});
     const guideToggle=tools.querySelector('[data-ov-guides]');
     if(guideToggle){guideToggle.checked=showAlignmentGuides;guideToggle.addEventListener('change',e=>{showAlignmentGuides=e.target.checked;try{localStorage.setItem('northstarShowAlignmentGuides',String(showAlignmentGuides))}catch{}renderGuides();});}
     tools.querySelector('[data-ov-grid-toggle]')?.addEventListener('click',e=>{
@@ -621,6 +638,8 @@
       if(!statusReady)return;
       if (gesture || ['loading','failed'].includes(document.documentElement.dataset.nsStyles)) return;
       const on = enabled();
+      const feedPanel=document.getElementById('overviewShiftEvents');
+      if(feedPanel && !on && !feedPanel.hidden)feedPanel.hidden=true;
       document.body.classList.toggle('overview-canvas', on);
       if (!on) {
         entries().forEach(({el}) => {if(originals.has(el)){el.setAttribute('style',originals.get(el));delete el.dataset.canvasModule;}});
@@ -635,6 +654,7 @@
       });
       updateRestoreRemoved();
       if (matchMedia('(max-width:700px)').matches) {
+        if(feedPanel && !feedPanel.hidden)feedPanel.hidden=true;
         all.forEach(entry => {
           if (!originals.has(entry.el)) originals.set(entry.el, entry.el.getAttribute('style') || '');
           entry.el.dataset.canvasModule = entry.key;
@@ -649,7 +669,11 @@
       // Measure the viewport, not the canvas's manual overflow extent.
       container.style.removeProperty('min-width');
       const width = Math.max(260,Math.min(container.clientWidth,document.documentElement.clientWidth-container.getBoundingClientRect().left)-24);
-      const nextProfile=width>=1500?'wide':width>=1050?'desktop':width>=620?'laptop':'narrow';
+      const wide = width >= 1350 && window.localStorage.getItem('northstarWideOverview') !== 'off' && !window.NORTHSTAR_PLATFORM_DEMO && !window.NORTHSTAR_DEMO_HOME;
+      const log = document.getElementById('overviewShiftEvents');
+      if(log && log.hidden!==(!wide || removed.has(log.id))) log.hidden=!wide || removed.has(log.id);
+      container.classList.toggle('ns-wide-overview',wide);
+      const nextProfile=wide?'monitor':width>=1500?'wide':width>=1050?'desktop':width>=620?'laptop':'narrow';
       if(nextProfile!==profile){
         if(profile)profiles[profile]={positions,width:lastWidth,automatic,indicatorRow:1,weatherOriginal:1,weatherAtikokanSize:weatherSizeApplied,weatherHeaderRow:WEATHER_HEADER_LAYOUT_VERSION,weatherReferenceSizeVersion:weatherReferenceSizeApplied?WEATHER_REFERENCE_SIZE_VERSION:0,weatherFamilyLayoutVersion:WEATHER_FAMILY_LAYOUT_VERSION,overviewGroupLayoutVersion:OVERVIEW_GROUP_LAYOUT_VERSION,workspaceLayoutVersion:1,staffPaddingVersion:4,carouselTightControlsVersion:carouselTightControlsApplied?CAROUSEL_TIGHT_CONTROLS_VERSION:0};
         profile=nextProfile;const saved=profiles[profile];
@@ -806,7 +830,7 @@
       }
       // Compact existing saved station rows once, retaining custom heights and other modules.
       const stationEntries=all.filter(entry=>entry.key.startsWith('canvas:stations:'));
-      if(stationEntries.some(entry=>positions[entry.key].compactFiveVersion!==1)){
+      if(profile!=='monitor' && stationEntries.some(entry=>positions[entry.key].compactFiveVersion!==1)){
         profiles.beforeCompactFive ||= {};
         profiles.beforeCompactFive[profile] ||= JSON.parse(JSON.stringify(positions));
         const oldLeft=Math.min(...stationEntries.map(entry=>positions[entry.key].x));
@@ -825,7 +849,7 @@
       const graphEntry=all.find(entry=>entry.el.id==='overviewMarketMini');
       const graphBox=graphEntry && positions[graphEntry.key];
       const staffBox=positions['canvas:overview:overviewStaff'];
-      if(graphBox && staffBox && (automatic || graphBox.demandWidthVersion!==1)){
+      if(profile!=='monitor' && graphBox && staffBox && (automatic || graphBox.demandWidthVersion!==1)){
         const left=staffBox.x+staffBox.w+4;
         const mainRect=container.getBoundingClientRect();
         const edge=document.querySelector('#nsStatusBar')?.getBoundingClientRect().right || mainRect.right;
@@ -847,6 +871,23 @@
         all.filter(entry=>entry.key.startsWith('canvas:weather:')).forEach(entry=>paint(entry));
       }
       if(!weatherDensityApplied && all.some(entry=>entry.key.startsWith('canvas:weather:'))){weatherDensityApplied=true;try{localStorage.setItem('northstarRestoredV1_northstarOverviewWeatherDensityVersion',String(WEATHER_DENSITY_VERSION));}catch{}}
+      if(profile==='monitor' && automatic){
+        const staff=all.find(e=>e.el.id==='overviewStaff');
+        const feed=all.find(e=>e.el.id==='overviewShiftEvents');
+        if(staff){
+          const box=positions[staff.key];
+          box.x=0;box.y=0;box.w=Math.floor(width*.59);box.h=Math.max(400,innerHeight-container.getBoundingClientRect().top-10);
+          const left=box.w+6, available=width-left, tileWidth=Math.floor((available-16)/5);
+          const cards=all.filter(e=>e.key.startsWith('canvas:stations:'));
+          for(const card of cards)Object.assign(positions[card.key],{w:tileWidth,h:80});
+          arrangeRightOfStaff(all,positions,width);
+          const offset=feed?178:0;
+          for(const card of cards)positions[card.key].y+=offset;
+          if(feed)Object.assign(positions[feed.key],{x:box.w+4,y:0,w:available,h:offset-4});
+          if(graphBox)Object.assign(graphBox,{x:box.w+4,y:Math.max(offset,...cards.map(e=>positions[e.key].y+positions[e.key].h+4)),w:available});
+          all.forEach(paint);
+        }
+      }
       bounds();persist();renderGuides();
     }
     function schedule() { if (!frame) frame = requestAnimationFrame(sync); }
@@ -882,7 +923,7 @@
     bar.dataset.statusCanvasReady = '1';
     const detached = new URLSearchParams(location.search).get('nsStatusWindow') === '1' && !new URLSearchParams(location.search).has('nsModuleWindow');
     const storageKey = detached ? 'northstarStatusWindowLayoutV1' : 'northstarRestoredV1_northstarStatusLayoutV1', MIN_HEIGHT = 1;
-    const snapStatus = value => { const grid = Math.max(1, Number(window.northstarLayoutGridStep) || 5); return Math.round(Number(value || 0) / grid) * grid; };
+
     const profileFor = width => width >= 1500 ? 'wide' : width >= 1100 ? 'desktop' : width >= 900 ? 'laptop' : 'narrow';
     const modules = () => [...bar.querySelectorAll(':scope > .ns-status-module')];
     const moduleKey = el => el.dataset.status;
@@ -1051,7 +1092,7 @@
     };
     const setModule = (key, next) => {
       const layout = ensureLayout();
-      const box = snapToGrid ? { ...next, x: snapStatus(next.x), y: snapStatus(next.y), w: snapStatus(next.w), h: snapStatus(next.h) } : next;
+      const box = next;
       layout.height = heightFor(Math.max(layout.height, box.y + box.h));
       layout.modules[key] = constrain(key, box, layout.height);
       draft = layout;
@@ -1061,7 +1102,7 @@
     const setHeight = next => {
       const layout = ensureLayout();
       const occupiedHeight = Math.max(MIN_HEIGHT, ...Object.values(layout.modules).map(box => box.y + box.h));
-      layout.height = heightFor(Math.max(occupiedHeight, snapToGrid ? snapStatus(next.h) : next.h));
+      layout.height = heightFor(Math.max(occupiedHeight, next.h));
       modules().forEach(el => { layout.modules[moduleKey(el)] = constrain(moduleKey(el), layout.modules[moduleKey(el)], layout.height); });
       draft = layout;
       apply(layout);
@@ -1083,7 +1124,7 @@
         bar.append(handle);
         window.NorthstarWindowLayout.bind(bar, handle, 's',
           () => ({ x: 0, y: 0, w: bar.clientWidth, h: ensureLayout().height }),
-          setHeight, editing, () => {});
+          setHeight, editing, () => {}, () => snapToGrid ? gridSize() : 1);
       }
       modules().forEach(el => {
         if (el.dataset.statusCanvasControls) return;
@@ -1101,9 +1142,9 @@
         });
         el.append(move);
         window.NorthstarWindowLayout.bind(el, move, 'move',
-          () => ({ ...ensureLayout().modules[key] }), next => setModule(key, next), editing, () => {});
+          () => ({ ...ensureLayout().modules[key] }), next => setModule(key, next), editing, () => {}, () => snapToGrid ? gridSize() : 1);
         resizes.forEach(([corner, resize]) => window.NorthstarWindowLayout.bind(el, resize, corner,
-          () => ({ ...ensureLayout().modules[key] }), next => setModule(key, next), editing, () => {}));
+          () => ({ ...ensureLayout().modules[key] }), next => setModule(key, next), editing, () => {}, () => snapToGrid ? gridSize() : 1));
       });
     }
     function sync() {
