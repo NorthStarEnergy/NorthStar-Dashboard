@@ -703,3 +703,5 @@ Engineering now includes [Arc Flash Scenario Studio](packets/2026-11-07-arc-flas
 Engineering studio styling follows the [dashboard theme](packets/2026-11-07-arc-studio-theme.md).
 
 Checked-out outage forms now open a [document editor](packets/2026-11-14-outage-document-editor.md) with printable row formatting and images.
+
+- 2026-11-18: Added main-menu links and independent password access to existing SCADA Bench and Outage Manager workspaces. Public Site v38; 647 Python, 77 JS, focused access/browser checks passed. See packets/2026-11-18-standalone-tool-access.md.

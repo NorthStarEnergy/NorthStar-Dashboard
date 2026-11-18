@@ -1735,6 +1735,10 @@ class Handler(SimpleHTTPRequestHandler):
         then 404s, because it does not exist on that hostname.
         """
         self.correlation_id = events.set_correlation_id(self.headers.get("X-Correlation-Id"))
+        if self.path.split("?", 1)[0].startswith("/public-outage-api/tools/"):
+            import northstar_tool_access
+            northstar_tool_access.handle(self)
+            return True
         if self.path.split("?",1)[0].startswith("/public-outage-api/"):
             import northstar_public_outage
             northstar_public_outage.handle(self)

@@ -1,0 +1,17 @@
+#sideNav > .ns-main-app-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 5px;
+  color: inherit;
+  font: 600 calc(11px * var(--ns-font-scale, 1)) / 1.35 system-ui;
+  text-decoration: none;
+  line-height: 1.35;
+}
+#sideNav > .ns-main-app-link:hover { background: #234456; color: #fff; }
+#sideNav > .ns-main-app-link:focus-visible { outline: 2px solid #66dcc7; outline-offset: -2px; }
+#sideNav > .ns-main-app-link img { flex: none; }
