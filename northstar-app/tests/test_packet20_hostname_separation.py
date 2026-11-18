@@ -104,10 +104,13 @@ class HostnameSeparationTest(unittest.TestCase):
         host: str = PUBLIC_HOST,
         cookie: str = "",
         identity: str = "",
+        bearer: str = "",
     ) -> tuple[int, object, dict[str, str]]:
         headers = {"Content-Type": "application/json", "Host": host}
         if cookie:
             headers["Cookie"] = cookie
+        if bearer:
+            headers["Authorization"]="Bearer "+bearer
         if identity:
             # A client-supplied copy of the header Cloudflare Access injects.
             # The 2026-08-11 probe proved the edge passes this through.
@@ -130,6 +133,32 @@ class HostnameSeparationTest(unittest.TestCase):
 
     def status(self, method: str, path: str, payload: object = MISSING, **kwargs) -> int:
         return self.call(method, path, payload, **kwargs)[0]
+
+    def test_public_outage_passcode_isolated_from_operators(self):
+        import uuid
+        entry="/public-outage-api/entry"
+        self.assertEqual(self.status("POST",entry,{"passcode":"demo"}),404)
+        self.assertEqual(self.status("POST",entry,{"passcode":"wrong"},host=OPS_HOST),401)
+        self.assertEqual(self.status("GET","/public-outage-api/manager/register",host=OPS_HOST,cookie=self.session_cookie()),401)
+        code,first,_=self.call("POST",entry,{"passcode":"demo"},host=OPS_HOST)
+        self.assertEqual((code,first["actor"]),(201,"Tester01"))
+        _,second,_=self.call("POST",entry,{"passcode":"demo"},host=OPS_HOST)
+        self.assertEqual(second["actor"],"Tester02")
+        visitor={"host":OPS_HOST,"bearer":first["token"]}
+        self.assertEqual(self.status("GET","/api/uwpc/requests/manager/register",**visitor),401)
+        self.assertEqual(self.status("GET","/public-outage-api/manager/library/book",**visitor),404)
+        self.assertEqual(self.status("POST","/public-outage-api/practice/Tester01",{},**visitor),404)
+        self.store.create_outage({"title":"Operator only","site":"Norman"})
+        code,new,_=self.call("POST","/public-outage-api/manager/create",{"title":"Visitor record","site":"CTR",
+            "start":"2030-09-08T10:00:00Z","end":"2030-09-08T13:00:00Z","scope":"Test scope",
+            "severity":"Monitor","reviewTrigger":"routine","requestKey":str(uuid.uuid4())},**visitor)
+        self.assertEqual(code,201,new)
+        _,report,_=self.call("GET","/public-outage-api/manager/reports?id="+new["id"],host=OPS_HOST,bearer=second["token"])
+        self.assertTrue(any(e["actor"]=="Tester01" for e in report["events"]))
+        self.assertEqual([o["title"] for o in self.store.list_outages()],["Operator only"])
+        self.assertEqual(self.status("GET","/public-outage-api/manager/register?tab=active",**visitor),200)
+        self.assertEqual(self.status("POST","/public-outage-api/logout",{},**visitor),200)
+        self.assertEqual(self.status("GET","/public-outage-api/manager/session",**visitor),401)
 
     def session_cookie(self) -> str:
         status, _, headers = self.call(

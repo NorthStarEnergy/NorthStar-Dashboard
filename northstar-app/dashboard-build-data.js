@@ -3,12 +3,78 @@
  */
 window.NORTHSTAR_BUILD_DATA = {
   "current": {
-    "version": "v0.229",
+    "version": "v0.240",
     "published": "2026-11-10",
-    "publishedAt": "2026-11-10T01:38:04-05:00",
-    "summary": "Open the Outages menu, current register and UWPC Builder for signed-in operators across dashboard views."
+    "publishedAt": "2026-11-10T10:40:47-05:00",
+    "summary": "Restores the UWPC reader and form links and shows the outage folder only in Outages."
   },
   "history": [
+    {
+      "version": "v0.240",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T10:40:47-05:00",
+      "summary": "Restores the UWPC reader and form links and shows the outage folder only in Outages."
+    },
+    {
+      "version": "v0.239",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T06:55:04-05:00",
+      "summary": "Adds public tester access and lets editors reuse earlier switching plans."
+    },
+    {
+      "version": "v0.238",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T06:35:49-05:00",
+      "summary": "Adds operating-area sorting and filtering to the outage register."
+    },
+    {
+      "version": "v0.237",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T06:09:17-05:00",
+      "summary": "Adds a personal Inbox, advanced settings, field help, site device suggestions and a compact form toolbar to Outage Manager."
+    },
+    {
+      "version": "v0.236",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T05:36:36-05:00",
+      "summary": "Adds outage reports, an outage-wide event log and exclusive checkout for editing package forms and documents."
+    },
+    {
+      "version": "v0.235",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T05:10:45-05:00",
+      "summary": "Outage Manager places New beside the title, simplifies the menu and shows a notification bell for outstanding outage alerts."
+    },
+    {
+      "version": "v0.234",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T04:27:34-05:00",
+      "summary": "UWPC puts navigation, search and page controls on one line, with a collapsible contents menu and full-screen reading."
+    },
+    {
+      "version": "v0.233",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T04:19:31-05:00",
+      "summary": "Outage process phases have distinct icons and compact hover summaries for progress, assignments, review status and timing."
+    },
+    {
+      "version": "v0.232",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T03:58:08-05:00",
+      "summary": "Outage Manager remembers one working package, opens directly on the register and groups UWPC source links with the documents."
+    },
+    {
+      "version": "v0.231",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T02:58:19-05:00",
+      "summary": "Outage folders, a clickable process tracker, control room and field coordination, final accuracy checks and viewer alerts."
+    },
+    {
+      "version": "v0.230",
+      "published": "2026-11-10",
+      "publishedAt": "2026-11-10T02:00:59-05:00",
+      "summary": "Launch Outage Manager with a searchable outage register, new requests, assigned reviews and the UWPC library."
+    },
     {
       "version": "v0.229",
       "published": "2026-11-10",

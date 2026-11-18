@@ -10,15 +10,17 @@ import io
 import json
 import re
 import sqlite3
+import time
 import textwrap
 import urllib.error
 import urllib.request
 import uuid
 import zipfile
-from contextlib import closing, contextmanager
+from contextlib import closing, contextmanager, nullcontext
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import northstar_form_layout as layout_editor
 import northstar_ai as ai
 import northstar_outage_review as outage_review
 import northstar_store as store
@@ -28,7 +30,7 @@ import northstar_uwpc_evidence as evidence
 MAX_SOURCE = 10 * 1024 * 1024
 MAX_TOTAL = 20 * 1024 * 1024
 FIELDS = {"title": 160, "site": 120, "outageId": 160,
-          "description": 2000, "scope": 8000, "notes": 4000,
+          "description": 2000, "scope": 8000, "notes": 4000, "equipment": 160,
           "authority": 160, "reference": 160, "diagramRevision": 160,
           "start": 40, "end": 40, "kind": 40, "template": 40, "preparationMode": 20}
 KINDS = {"REQUEST_GUARANTEE", "PROVIDE_GUARANTEE", "SWITCHING_PLAN"}
@@ -60,10 +62,21 @@ def init_schema(c):
     c.execute("""CREATE TABLE IF NOT EXISTS uwpc_final_copies (
         id TEXT PRIMARY KEY, request_id TEXT NOT NULL REFERENCES uwpc_requests(id),
         digest TEXT NOT NULL, content BLOB NOT NULL)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS outage_edit_checkouts (
+        oid TEXT PRIMARY KEY, doc TEXT NOT NULL, actor TEXT NOT NULL,
+        token_hash TEXT NOT NULL, expires REAL NOT NULL)""")
 
 
 @contextmanager
 def session():
+    visitor_db = outage_review.VISITOR_DB.get()
+    if visitor_db is not None:
+        with closing(sqlite3.connect(visitor_db, timeout=5)) as c, c:
+            c.row_factory = sqlite3.Row
+            c.execute("PRAGMA foreign_keys=ON")
+            c.execute("PRAGMA max_page_count=65536")
+            yield c
+        return
     practice = outage_review.PRACTICE_DB.get()
     if practice is not None:
         practice.parent.mkdir(parents=True, exist_ok=True)
@@ -87,7 +100,7 @@ def digest(value):
 
 def field_snapshot(row):
     return {**{key: row.get(key, "") for key in FIELDS},
-            "switchingPlan": row.get("switchingPlan", {})}
+            "switchingPlan": row.get("switchingPlan", {}), **({"layout": row["layout"]} if "layout" in row else {})}
 
 
 def switching_plan(payload):
@@ -112,6 +125,8 @@ def switching_plan(payload):
 
 def fields(payload):
     result = {k: clip(payload.get(k), n) for k, n in FIELDS.items()}
+    if "layout" in payload:
+        result["layout"] = layout_editor.validate(payload["layout"])
     if result["kind"] not in KINDS or result["template"] not in TEMPLATES:
         raise ValueError("Select a request type and supported UWPC form")
     if (result["kind"] == "SWITCHING_PLAN") != (result["template"] == "pc17a"):
@@ -125,6 +140,8 @@ def fields(payload):
             raise ValueError("Purpose of Order and at least one switching sequence line are required")
         if any(not step["device"] or not step["operation"] for step in plan["steps"]):
             raise ValueError("Every switching sequence line requires a device and operation")
+        if any("[reference]" in step["operation"].lower() for step in plan["steps"]):
+            raise ValueError("Replace each [reference] in the imported instructions before saving")
         result["scope"] = result["scope"] or plan["purpose"]
         result["description"] = result["description"] or plan["purpose"]
     elif not result["scope"]:
@@ -168,6 +185,76 @@ def checked(c, ident, payload):
     return row
 
 
+def outage_key(row):
+    return row.get("registerOutage") or row.get("outageId") or row["id"]
+
+
+def checkout_info(c, oid, actor, token):
+    lock = c.execute("SELECT * FROM outage_edit_checkouts WHERE oid=?", (oid,)).fetchone()
+    if not lock or lock["expires"] <= time.time():
+        return {"owner": None, "mine": False}
+    return {"owner": lock["actor"], "mine": actor == lock["actor"] and digest(token) == lock["token_hash"],
+            "expires": lock["expires"]}
+
+
+def guard_edit(c, row, actor, token, *, require=True):
+    if row.get("practice"):
+        return
+    lock = checkout_info(c, outage_key(row), actor, token)
+    if lock["mine"]:
+        return
+    if lock["owner"]:
+        raise Conflict(f"Checked out by {lock['owner']}. Reopen in Outage Manager to edit.")
+    if require and token is not None and (row.get("kind") == "SWITCHING_PLAN" or row.get("registerOutage") or row.get("outageId")):
+        raise Conflict("Check out this outage in Outage Manager before editing.")
+
+
+def checkout(ident, action, actor, token):
+    if not isinstance(ident,str) or not ident:
+        raise ValueError("Select an outage document")
+    with session() as c:
+        c.execute("BEGIN IMMEDIATE" if action else "BEGIN")
+        row = read(c, ident)
+        if row.get("practice"):
+            raise ValueError("Select an outage package")
+        oid = outage_key(row)
+        current = checkout_info(c, oid, actor, token)
+        can_edit = row["phase"] == "FUTURE" and not c.execute(
+            "SELECT 1 FROM outages WHERE id=? AND status='Closed'", (oid,)).fetchone()
+        if not action:
+            try:
+                outage_review.require_editor(row, actor)
+            except PermissionError:
+                can_edit = False
+            return {**current, "canEdit": can_edit}
+        if not re.fullmatch(r"[a-f0-9-]{36}", token or ""):
+            raise ValueError("A valid editing session is required")
+        if action == "check-in":
+            if current["owner"] and not current["mine"]:
+                raise Conflict("This checkout belongs to another editing session")
+            if current["mine"]:
+                c.execute("DELETE FROM outage_edit_checkouts WHERE oid=?", (oid,))
+                event(c, row, actor, "checked-in", {})
+            return {"owner": None, "mine": False}
+        if action not in {"check-out", "renew"}:
+            raise ValueError("Unknown checkout action")
+        outage_review.require_editor(row, actor)
+        if not can_edit:
+            raise ValueError("Only an open planned package can be edited")
+        if current["owner"] and not current["mine"]:
+            raise Conflict(f"Checked out by {current['owner']}")
+        if not current["mine"]:
+            if action == "renew":
+                raise Conflict("Checkout expired. Check out the outage again.")
+            old = c.execute("SELECT doc,actor FROM outage_edit_checkouts WHERE oid=?", (oid,)).fetchone()
+            if old:
+                event(c, {"id": old["doc"]}, old["actor"], "checkout-expired", {})
+            event(c, row, actor, "checked-out", {})
+        c.execute("INSERT OR REPLACE INTO outage_edit_checkouts VALUES (?,?,?,?,?)",
+                  (oid, ident, actor, digest(token), time.time()+1800))
+        return {**checkout_info(c, oid, actor, token), "canEdit": can_edit}
+
+
 def invalidate(row):
     row.pop("distribution", None)
     prior = row.pop("packageReview", None)
@@ -176,9 +263,10 @@ def invalidate(row):
     row.update(generation=None, review=None, status="DRAFT")
 
 
-def create(payload, actor):
-    with session() as c:
-        c.execute("BEGIN IMMEDIATE")
+def create(payload, actor, *, connection=None, checkout_token=None):
+    with (session() if connection is None else nullcontext(connection)) as c:
+        if connection is None:
+            c.execute("BEGIN IMMEDIATE")
         practice = outage_review.PRACTICE_DB.get() is not None
         if practice:
             if payload.get("practiceSample") is not True:
@@ -211,6 +299,7 @@ def create(payload, actor):
                "createdBy": actor, "sources": [], "generation": None, "review": None}
         if source:
             row["registerOutage"] = source
+        guard_edit(c, row, actor, checkout_token, require=False)
         c.execute("INSERT INTO uwpc_requests VALUES (?,?)", (row["id"], json.dumps(row)))
         if practice:
             content = b"Practice drawing reference only. North and South are fictional sites."
@@ -257,7 +346,10 @@ def correspondence():
 
 def distribute(c, row):
     review = row["packageReview"]
-    recipients = sorted({t["account"] for t in review["tasks"]} | set(review.get("copyTo", [])))
+    recipients = {t["account"] for t in review["tasks"]} | set(review.get("copyTo", []))
+    if review.get("sscLead"):
+        recipients.add(review["preparer"])
+    recipients = sorted(recipients)
     distribution = {"id": uuid.uuid4().hex, "revision": review["number"], "digest": review["digest"],
                     "at": store.now_iso(), "recipients": recipients, "receipts": {}}
     row["distribution"] = distribution
@@ -282,6 +374,22 @@ def record_execution(row, action, payload, actor, roster):
     if action == "final-receipt":
         delivery["receipts"].setdefault(actor, now)
         return {"copyId": delivery["id"], "receivedAt": delivery["receipts"][actor]}
+    if action in {"final-flag", "final-resolve"}:
+        text = payload.get("text")
+        if not isinstance(text, str) or not text.strip() or len(text) > 4000:
+            raise ValueError("Enter a concern or resolution of up to 4,000 characters")
+        flags = delivery.setdefault("flags", [])
+        if action == "final-flag":
+            flag = {"id": str(len(flags)+1), "actor": actor, "at": now, "text": text.strip()}
+            flags.append(flag)
+        else:
+            if actor not in {review.get("sscLead") or review["owner"], review.get("localLead") or review["area"]}:
+                raise PermissionError("An assigned outage manager must record the resolution")
+            flag = next((item for item in flags if item["id"] == payload.get("flag")), None)
+            if not flag or flag.get("resolvedAt"):
+                raise ValueError("Select an open concern on the current final copy")
+            flag.update(resolution=text.strip(), resolvedAt=now, resolvedBy=actor)
+        return {"copyId": delivery["id"], **flag}
     roles = {t["role"] for t in review["tasks"] if t["account"] == actor and actor in roster[t["role"]]}
     if action in {"log-open", "log-close"} and not roles.intersection({"operator", "manager"}):
         raise PermissionError("The assigned manager or a scheduled SSC must open or close the switching log")
@@ -337,11 +445,15 @@ def record_execution(row, action, payload, actor, roster):
     return entry
 
 
-def change(ident, action, payload, actor, operators=()):
+def change(ident, action, payload, actor, operators=(), *, checkout_token=None):
     with session() as c:
         c.execute("BEGIN IMMEDIATE")
         row = checked(c, ident, payload)
         detail = {}
+        if action not in {"final-receipt", "final-flag", "review-view"}:
+            outage_review.require_editor(row, actor)
+        if action in {"save", "remove-source"}:
+            guard_edit(c, row, actor, checkout_token)
         if row.get("registerOutage") and action in {"save", "review-open", "log-open", "distribute"}:
             source = c.execute("SELECT status FROM outages WHERE id=?", (row["registerOutage"],)).fetchone()
             if not source or source["status"] != "Open":
@@ -363,7 +475,7 @@ def change(ident, action, payload, actor, operators=()):
             if actor != review.get("owner") or actor not in outage_review.directory(operators)["manager"]:
                 raise PermissionError("The assigned manager must distribute this approved revision")
             detail = {"revision": review["number"]}
-        elif action in {"final-receipt", "log-open", "log-entry", "log-close", "closeout-note"}:
+        elif action in {"final-receipt", "final-flag", "final-resolve", "log-open", "log-entry", "log-close", "closeout-note"}:
             if actor not in operators:
                 raise PermissionError("A signed-in named account is required")
             detail = record_execution(row, action, payload, actor, outage_review.directory(operators))
@@ -379,17 +491,29 @@ def change(ident, action, payload, actor, operators=()):
                 evidence.require_reviewable(row["generation"], actor)
             detail = outage_review.transition(row, action, payload, actor, outage_review.directory(operators))
         elif action == "save":
-            updated = fields(payload)
+            updated = fields({"equipment":row.get("equipment",""),**payload})
             if row.get("registerOutage") and updated["outageId"] != row["registerOutage"]:
                 raise ValueError("The plan is linked to its original outage request")
             updated.update(outage_review.classification(payload, row))
+            if updated["outageId"] != row.get("outageId"):
+                if row.get("outageId") and checkout_token is not None:
+                    raise ValueError("A saved outage document keeps its original outage ID")
+                destination = outage_key({**row, **updated})
+                guard_edit(c, {**row, **updated}, actor, checkout_token, require=False)
+                if destination != outage_key(row) and checkout_info(c, outage_key(row), actor, checkout_token)["mine"]:
+                    if checkout_info(c, destination, actor, checkout_token)["mine"]:
+                        c.execute("DELETE FROM outage_edit_checkouts WHERE oid=?", (outage_key(row),))
+                    else:
+                        c.execute("DELETE FROM outage_edit_checkouts WHERE oid=? AND expires<=?", (destination, time.time()))
+                        c.execute("UPDATE outage_edit_checkouts SET oid=? WHERE oid=?", (destination, outage_key(row)))
             if row["phase"] in {"ACTIVE", "COMPLETED", "CANCELLED"}:
                 raise ValueError("Return the plan to Future before revising its content")
+            changed = [k for k,v in updated.items() if row.get(k) != v]
             row.update(updated)
             if actor not in row.setdefault("contentEditors", []):
                 row["contentEditors"].append(actor)
             invalidate(row)
-            detail = updated
+            detail = {**updated, "changes": ", ".join(changed)}
         elif action == "route":
             if row.get("preparationMode") in {"INTAKE", "REQUEST"}:
                 raise ValueError("Complete and save the draft form before sending it for sign-off")
@@ -506,7 +630,7 @@ def change(ident, action, payload, actor, operators=()):
     return get(ident)
 
 
-def add_source(ident, version, name, kind, content, actor):
+def add_source(ident, version, name, kind, content, actor, *, checkout_token=None):
     name = Path(name.replace("\\", "/")).name[:180]
     suffix = Path(name).suffix.lower()
     types = {".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg",
@@ -528,6 +652,8 @@ def add_source(ident, version, name, kind, content, actor):
     with session() as c:
         c.execute("BEGIN IMMEDIATE")
         row = checked(c, ident, {"version": version})
+        guard_edit(c, row, actor, checkout_token)
+        outage_review.require_editor(row, actor)
         if row["phase"] != "FUTURE":
             raise ValueError("Return the plan to Future before revising sources")
         if len(row["sources"]) >= 8 or sum(s["size"] for s in row["sources"]) + len(content) > MAX_TOTAL:
@@ -626,11 +752,13 @@ def generate_text(row, sources):
     return text, model
 
 
-def generate(ident, payload, actor):
+def generate(ident, payload, actor, *, checkout_token=None):
     if outage_review.PRACTICE_DB.get() is not None:
         raise ValueError("Practice packages use the supplied training reference")
     with session() as c:
         row = checked(c, ident, payload)
+        guard_edit(c, row, actor, checkout_token)
+        outage_review.require_editor(row, actor)
         if row["phase"] != "FUTURE" or row["status"] in {"PENDING_SIGNOFF", "SIGNED_OFF"}:
             raise ValueError("Save a revised Future request before regenerating")
         if not any(s["kind"] == "diagram" for s in row["sources"]) or not row["diagramRevision"]:
@@ -649,7 +777,9 @@ def generate(ident, payload, actor):
                 "inputVersion": row["version"]}
     document["digest"] = digest(document)
     with session() as c:
+        c.execute("BEGIN IMMEDIATE")
         current = checked(c, ident, payload)
+        guard_edit(c, current, actor, checkout_token)
         evidence.recheck(bundle, actor)
         invalidate(current)
         current.update(generation=document, status="GENERATED", version=current["version"] + 1)
@@ -682,6 +812,7 @@ def _form_rows(row):
         ("Package", row.get("title", "")), ("Lifecycle", phase), ("Review status", row.get("status", "DRAFT")),
         ("UWPC form", str(row.get("template", "")).upper()), ("Request type", kind),
         ("Station / site", row.get("site", "")),
+        *([("Equipment",row["equipment"])] if row.get("equipment") else []),
         ("Outage ID", row.get("outageId", "")), ("Planned start", row.get("start", "")),
         ("Planned end", row.get("end", "")), ("Controlling authority", row.get("authority", "")),
         ("Authority / permit reference", row.get("reference", "")),
@@ -780,7 +911,9 @@ def _pc17a_xlsx(row):
 
 
 def export_xlsx(row):
-    return _pc17a_xlsx(row) if row.get("template") == "pc17a" else _export_summary_xlsx(row)
+    original = _pc17a_xlsx(row) if row.get("template") == "pc17a" else _export_summary_xlsx(row)
+    layout = row.get('layout', {})
+    return layout_editor.xlsx(original, layout) if layout.get('rows') or layout.get('photo') else original
 
 
 def _pdf_escape(value):
@@ -799,6 +932,8 @@ def _review_cover(row):
     if row.get("practice"):
         lines.insert(0, "PRACTICE EXERCISE - fictitious team and equipment")
     if review:
+        if review.get("sscLead"):
+            lines += [f"SSC outage manager: {review['sscLead']}", f"Local outage manager: {review['localLead']}"]
         lines += [f"Review revision {review['number']} | Due {review['due']}",
                   f"Preparer: {review['preparer']} | Manager: {review['owner']}",
                   f"Package SHA-256: {review['digest']}", review["summary"]]
@@ -1012,7 +1147,9 @@ def _pc17a_pdf(row):
 
 
 def export_pdf(row):
-    return _pc17a_pdf(row) if row.get("template") == "pc17a" else _export_summary_pdf(row)
+    original = _pc17a_pdf(row) if row.get("template") == "pc17a" else _export_summary_pdf(row)
+    layout = row.get('layout', {})
+    return layout_editor.pdf(original, layout) if layout.get('rows') or layout.get('photo') else original
 
 
 def _switch_log_pdf(row):

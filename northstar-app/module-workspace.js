@@ -542,6 +542,10 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
     });
     const moduleButton = m => {const b=document.createElement('button');b.type='button';b.textContent=name(m);b.className=m.id===active?'active':'';if(window.NORTHSTAR_RYAN_VIEW&&restrictedInSession(m))b.classList.add('ns-demo-restricted');b.dataset.openModule=m.id;b.setAttribute('aria-label',name(m));b.setAttribute('aria-current',m.id===active?'page':'false');b.onclick=()=>{if(m.sourceSection==='crew')window.NorthstarCheckins?.select('All stations');openModule(m.id);};return b;};
     build('',tree);
+    if(section==='outages'){
+      const link=document.createElement('a');link.href='/outage-manager.html';link.className='ns-game-menu-link';link.textContent='Outage Manager';
+      const row=document.createElement('div');row.className='ns-tree-row';row.append(link);tree.prepend(row);
+    }
     if(section==='games'){
       const links=document.createElement('div');links.className='ns-games-menu-links';links.setAttribute('aria-label','NorthStar games');
       links.innerHTML='<div class="ns-tree-row" data-depth="0"><a class="ns-game-menu-link" href="https://games.northstarenergy.ca/" target="_blank" rel="noopener noreferrer">All games</a></div><div class="ns-tree-row" data-depth="0"><a class="ns-game-menu-link" href="https://games.northstarenergy.ca/poker.html" target="_blank" rel="noopener noreferrer">Poker</a></div><div class="ns-tree-row" data-depth="0"><a class="ns-game-menu-link" href="https://games.northstarenergy.ca/blackjack.html" target="_blank" rel="noopener noreferrer">Blackjack</a></div><div class="ns-tree-row" data-depth="0"><a class="ns-game-menu-link" href="https://games.northstarenergy.ca/classics.html#chess" target="_blank" rel="noopener noreferrer">Chess</a></div><div class="ns-tree-row" data-depth="0"><a class="ns-game-menu-link" href="https://games.northstarenergy.ca/classics.html#euchre" target="_blank" rel="noopener noreferrer">Euchre</a></div>';

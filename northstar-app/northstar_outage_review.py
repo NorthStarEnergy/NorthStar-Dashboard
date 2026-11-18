@@ -11,6 +11,7 @@ import northstar_store as store
 TRIGGERS = {"routine", "multi-site", "crew dependency", "non-routine switching or lockout", "manager designation"}
 ROLES = ("manager", "checker", "operator", "area", "field")
 PRACTICE_DB = ContextVar("outage_practice_db", default=None)
+VISITOR_DB = ContextVar("outage_visitor_db", default=None)
 PRACTICE_TEAM = {
     "manager": ["Avery Brooks"], "operator": ["Morgan Ellis", "Jordan Vale"],
     "checker": ["Morgan Ellis"], "area": ["Casey Rowan"], "field": ["Riley West", "Taylor Reed"],
@@ -18,6 +19,8 @@ PRACTICE_TEAM = {
 
 
 def directory(accounts):
+    if VISITOR_DB.get() is not None:
+        return {role: list(accounts) for role in ROLES}
     if PRACTICE_DB.get() is not None:
         return PRACTICE_TEAM
     path = Path(os.environ.get("NORTHSTAR_OUTAGE_REVIEW_DIRECTORY") or
@@ -55,6 +58,13 @@ def classification(payload, previous=None):
 
 def required(row):
     return row.get("reviewTrigger") in TRIGGERS - {"routine"}
+
+
+def require_editor(row, actor):
+    review = row.get("packageReview") or row.get("lastReview") or {}
+    if actor in review.get("copyTo", []) and actor != review.get("preparer") and not any(
+            task["account"] == actor for task in review.get("tasks", [])):
+        raise PermissionError("Final-copy viewers can read the package and flag concerns")
 
 
 def open_review(row, payload, actor, roster, snapshot, digest, accounts):
@@ -103,6 +113,16 @@ def open_review(row, payload, actor, roster, snapshot, digest, accounts):
     copy_to = payload.get("copyTo", [])
     if not isinstance(copy_to, list) or len(copy_to) > 100 or any(name not in accounts for name in copy_to):
         raise ValueError("Choose active accounts for additional final copies")
+    coordination = {}
+    if row.get("coordinated") or "sscLead" in payload or "localLead" in payload:
+        ssc, local = payload.get("sscLead"), payload.get("localLead")
+        if ssc not in scheduled:
+            raise ValueError("Choose one scheduled SSC as overall outage manager")
+        if local not in set(fields.values()) | {area} or local == ssc:
+            raise ValueError("Choose a separate local outage manager from the assigned field representatives or area manager")
+        coordination = {"sscLead": ssc, "localLead": local}
+        row["coordinated"] = True
+        row["proposedLeads"] = coordination
     tasks = []
 
     def task(role, account, site=""):
@@ -119,7 +139,7 @@ def open_review(row, payload, actor, roster, snapshot, digest, accounts):
     snapshot = {**snapshot, "sources": row["sources"], "proposalDigest": (row.get("generation") or {}).get("digest"),
                 "trigger": row["reviewTrigger"], "sites": row["affectedSites"]}
     review = {"number": number, "due": due.isoformat(), "preparer": preparer, "summary": summary,
-              "owner": actor, "area": area, "openedAt": now, "tasks": tasks, "copyTo": sorted(set(copy_to))}
+              "owner": actor, "area": area, "openedAt": now, "tasks": tasks, "copyTo": sorted(set(copy_to)), **coordination}
     review["digest"] = digest({"package": snapshot, "cover": review})
     status = "CHANGES_REQUESTED" if any(not i.get("closedAt") for i in row.get("reviewIssues", [])) else "PENDING_SIGNOFF"
     row.update(packageReview=review, reviewNumber=number, review=None, status=status)
@@ -158,6 +178,8 @@ def transition(row, action, payload, actor, roster):
                      "task": task["id"], "comment": payload["comment"].strip()[:4000]}
             issues.append(issue)
             task["signedAt"] = None
+            if review.get("sscLead"):
+                next(t for t in review["tasks"] if t["role"] == "checker")["signedAt"] = None
             detail = issue
         else:
             if task["signedAt"] or payload.get("confirmed") is not True:
@@ -166,6 +188,9 @@ def transition(row, action, payload, actor, roster):
                 raise ValueError("An assigned reviewer is no longer eligible. The manager must reissue the review.")
             if any(not issue.get("closedAt") for issue in issues):
                 raise ValueError("Resolve the outstanding corrections before signing")
+            if review.get("sscLead") and task["role"] == "checker" and any(
+                    not t["signedAt"] for t in review["tasks"] if t["role"] != "checker"):
+                raise ValueError("Complete the assigned reviews before the final independent accuracy check")
             task["signedAt"] = now
             detail = dict(task)
     if any(not issue.get("closedAt") for issue in issues):

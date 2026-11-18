@@ -1735,6 +1735,10 @@ class Handler(SimpleHTTPRequestHandler):
         then 404s, because it does not exist on that hostname.
         """
         self.correlation_id = events.set_correlation_id(self.headers.get("X-Correlation-Id"))
+        if self.path.split("?",1)[0].startswith("/public-outage-api/"):
+            import northstar_public_outage
+            northstar_public_outage.handle(self)
+            return True
         if shelf_mobile.handle(self, shelf, OPERATOR_GATE):
             return True
         denial = self._operator_gate_denial()
@@ -1761,20 +1765,77 @@ class Handler(SimpleHTTPRequestHandler):
             return True
         return False
 
-    def _uwpc_request_route(self, route: str) -> bool:
+    def _uwpc_request_route(self, route: str, visitor_identity=None) -> bool:
         prefix = "/api/uwpc/requests"
         if route != prefix and not route.startswith(prefix + "/"):
             return False
-        actor = self._operator_actor()
-        accounts = (DEMO_AUTH or {}).get("accounts", [DEMO_AUTH or {}]) if OPERATOR_GATE == "demo" else []
-        operators = sorted({str(a.get("username")) for a in accounts
-                            if a.get("username") and a.get("role", "operator") == "operator" and not a.get("disabled")})
-        # A separately configured Access directory is needed before assigning external identities.
-        if OPERATOR_GATE == "access":
-            operators = [name.strip() for name in os.environ.get("NORTHSTAR_UWPC_OPERATORS", "").split(",") if name.strip()]
+        if visitor_identity is not None:
+            actor, operators = visitor_identity
+        else:
+            actor = self._operator_actor()
+            accounts = (DEMO_AUTH or {}).get("accounts", [DEMO_AUTH or {}]) if OPERATOR_GATE == "demo" else []
+            operators = sorted({str(a.get("username")) for a in accounts
+                                if a.get("username") and a.get("role", "operator") == "operator" and not a.get("disabled")})
+            if OPERATOR_GATE == "access":
+                operators = [name.strip() for name in os.environ.get("NORTHSTAR_UWPC_OPERATORS", "").split(",") if name.strip()]
         parts = route[len(prefix):].strip("/").split("/") if route != prefix else []
+        checkout_token = self.headers.get("X-Northstar-Checkout", "")
         practice_token = None
         try:
+            if parts[:1] == ["manager"]:
+                import northstar_outage_manager as manager
+                endpoint = parts[1:]
+                params = {k:v[0] for k,v in parse_qs(urlparse(self.path).query).items()}
+                if self.command == "POST" and self._cross_origin_write():
+                    raise PermissionError("Cross-origin outage request refused")
+                if self.command == "GET" and endpoint == ["register"]:
+                    self._send_json(manager.query_register(params))
+                elif self.command == "GET" and endpoint == ["detail"]:
+                    self._send_json(manager.details(params.get("id","")))
+                elif self.command == "GET" and endpoint == ["reports"]:
+                    self._send_json(manager.outage_report(params["id"]) if params.get("id") else manager.report_options())
+                elif self.command == "GET" and endpoint == ["plans"]:
+                    self._send_json(manager.switching_sources(params.get("target","")))
+                elif self.command == "GET" and endpoint == ["plan-versions"]:
+                    self._send_json(manager.switching_versions(params.get("id","")))
+                elif endpoint == ["checkout"] and self.command == "GET":
+                    self._send_json(uwpc_desk.checkout(params.get("doc",""), None, actor, checkout_token))
+                elif endpoint == ["checkout"] and self.command == "POST":
+                    payload = self._json_body(4096)
+                    if not isinstance(payload,dict) or payload.get("action") not in ("check-out","check-in","renew"):
+                        raise ValueError("Select a checkout action")
+                    self._send_json(uwpc_desk.checkout(payload.get("doc",""), payload["action"], actor, checkout_token))
+                elif self.command == "GET" and endpoint == ["session"]:
+                    self._send_json({"actor":actor,"operators":operators,"outageReviewRoles":uwpc_desk.outage_review.directory(operators)})
+                elif self.command == "GET" and endpoint == ["devices"]:
+                    self._send_json(manager.site_devices(parse_qs(urlparse(self.path).query).get("site",[])))
+                elif self.command == "GET" and endpoint == ["inbox"]:
+                    self._send_json(manager.inbox(actor))
+                elif self.command == "POST" and endpoint in (["inbox","open"], ["tag"]):
+                    payload = self._json_body(4096)
+                    if not isinstance(payload, dict):
+                        raise ValueError("Expected an Inbox action")
+                    if endpoint == ["tag"]:
+                        self._send_json(manager.tag_person(payload, actor, operators), 201)
+                    elif isinstance(payload.get("key"), str):
+                        self._send_json(manager.inbox(actor, payload["key"]))
+                    else:
+                        raise ValueError("Select an Inbox item")
+                elif self.command == "GET" and endpoint == ["library"]:
+                    self._send_json(manager.library(actor,params.get("q","")[:250]))
+                elif self.command == "GET" and endpoint == ["library-page"]:
+                    self._send_json(manager.read_page(actor,int(params.get("page",1))))
+                elif self.command == "GET" and len(endpoint)==2 and endpoint[0]=="library":
+                    body, name = manager.library_file(actor,endpoint[1])
+                    self._send_binary(body,"application/pdf",name,hashlib.sha256(body).hexdigest(),inline=endpoint[1]=="book")
+                elif self.command == "POST" and endpoint == ["create"]:
+                    payload = self._json_body(32 * 1024)
+                    if not isinstance(payload, dict):
+                        raise ValueError("An outage request is required")
+                    self._send_json(manager.create_request(payload,actor,operators),201)
+                else:
+                    self._send_json({"error":"Outage Manager route not found"},404)
+                return True
             if parts[:1] == ["practice"]:
                 if actor not in operators or len(parts) < 2:
                     raise PermissionError("Sign in with an active NorthStar account to open the practice outage")
@@ -1814,18 +1875,18 @@ class Handler(SimpleHTTPRequestHandler):
                     version = int(query.get("version", ["0"])[0])
                     result = uwpc_desk.add_source(parts[0], version,
                         unquote(self.headers.get("X-Northstar-Filename", "")),
-                        query.get("kind", [""])[0], self._binary_body(uwpc_desk.MAX_SOURCE), actor)
+                        query.get("kind", [""])[0], self._binary_body(uwpc_desk.MAX_SOURCE), actor, checkout_token=checkout_token)
                 else:
-                    payload = self._json_body(64 * 1024)
+                    payload = self._json_body(2 * 1024 * 1024 if not parts or parts[-1] == "save" else 64 * 1024)
                     if not isinstance(payload, dict):
                         raise ValueError("A JSON object is required")
                     if not parts:
-                        result = uwpc_desk.create(payload, actor)
+                        result = uwpc_desk.create(payload, actor, checkout_token=checkout_token)
                     elif len(parts) == 2:
                         if parts[1] == "generate":
-                            result = uwpc_desk.generate(parts[0], payload, actor)
+                            result = uwpc_desk.generate(parts[0], payload, actor, checkout_token=checkout_token)
                         else:
-                            result = uwpc_desk.change(parts[0], parts[1], payload, actor, operators)
+                            result = uwpc_desk.change(parts[0], parts[1], payload, actor, operators, checkout_token=checkout_token)
                     else:
                         raise LookupError("UWPC route not found")
                 self._send_json(result, 201 if not parts else 200)
@@ -1996,7 +2057,7 @@ class Handler(SimpleHTTPRequestHandler):
         # with failed API calls. Serve the login screen instead of the console.
         if (
             OPERATOR_GATE == "demo"
-            and route in {"/", "/northstar-clean.html", "/index.html", "/operator-mobile.html", "/knowledge-library.html", "/data-workspace.html", "/water-collection.html", "/daily-report-automation.html", "/service-controls.html", "/outage-practice.html"}
+            and route in {"/", "/northstar-clean.html", "/index.html", "/operator-mobile.html", "/knowledge-library.html", "/data-workspace.html", "/water-collection.html", "/daily-report-automation.html", "/service-controls.html", "/outage-practice.html", "/outage-manager.html", "/outage-manager-package.html"}
             and self._is_operator_host()
             and not self._demo_actor()
         ):

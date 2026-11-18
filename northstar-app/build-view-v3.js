@@ -40,6 +40,9 @@
   const choices=()=>[...(groups[section]||[]),...(section==='tools'&&window.NORTHSTAR_PLATFORM_DEMO?[['UWPC','outages:uwpc']]:[])].filter(available);
   function drawMenu(selected=''){
     menu.replaceChildren();menu.hidden=!active||section==='weather'||section==='assistant';
+    if(section==='outages'){
+      const link=document.createElement('a');link.href='/outage-manager.html';link.className='ns-game-menu-link';link.textContent='Outage Manager';menu.append(link);
+    }
     choices().forEach(([label,id])=>{
       const b=document.createElement('button');b.type='button';b.textContent=label;b.dataset.v3Destination=id;
       b.classList.toggle('active',id===selected);b.setAttribute('aria-current',id===selected?'page':'false');menu.append(b);

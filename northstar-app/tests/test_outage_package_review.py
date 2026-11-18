@@ -107,6 +107,43 @@ def approved(row):
     return row
 
 
+def test_coordinators_final_accuracy_check_and_viewer_concerns(draft):
+    assignments = {**COVER, "sscLead": "operator", "localLead": "north", "copyTo": ["replacement"]}
+    for overrides in ({"sscLead": "area"}, {"localLead": "replacement"}):
+        with pytest.raises(ValueError):
+            change(draft, "review-open", **{**assignments, **overrides})
+    row = change(draft, "review-open", **assignments)
+    tasks = row["packageReview"]["tasks"]
+    final = next(t for t in tasks if t["role"] == "checker")
+    with pytest.raises(ValueError, match="final independent"):
+        sign(row, final)
+    for task in tasks:
+        if not task["signedAt"] and task != final:
+            row = sign(row, task)
+    assert "distribution" not in row
+    row = sign(row, final)
+    assert row["distribution"]["receipts"] == {} and "replacement" in row["distribution"]["recipients"]
+    assert all(t["account"] != "replacement" for t in tasks)
+    assert "author" in row["distribution"]["recipients"]
+    with pytest.raises(PermissionError):
+        change(row, "save", "replacement", **FORM)
+    with pytest.raises(PermissionError):
+        desk.add_source(row["id"], row["version"], "extra.txt", "source", b"Fixture", "replacement")
+    copy = {"copyId": row["distribution"]["id"]}
+    with pytest.raises(desk.Conflict):
+        change(row, "final-flag", "replacement", copyId="old", text="Wrong revision")
+    row = change(row, "final-flag", "replacement", **copy, text="Confirm the crew arrival time")
+    assert row["status"] == "SIGNED_OFF" and not row["distribution"]["receipts"]
+    with pytest.raises(PermissionError):
+        change(row, "final-resolve", "replacement", **copy, flag="1", text="Resolved")
+    row = change(row, "final-resolve", "north", **copy, flag="1", text="Crew time confirmed")
+    assert row["distribution"]["flags"][0]["resolvedBy"] == "north"
+    field = next(t for t in tasks if t["role"] == "field")
+    row = change(row, "review-return", field["account"], task=field["id"], comment="Update source")
+    assert not row.get("distribution")
+    assert not next(t for t in row["packageReview"]["tasks"] if t["role"] == "checker")["signedAt"]
+
+
 def test_registered_outage_distribution_log_and_closeout(draft):
     out = store.create_outage({"title": "Registered outage", "site": "North", "type": "Planned"})
     row = desk.create({"fromOutage": out["id"]}, "author")
