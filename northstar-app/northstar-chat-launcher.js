@@ -53,7 +53,7 @@
         menu.addEventListener('keydown',event=>{if(event.key==='Escape'){menu.open=false;summary.focus();}});
       }
     }
-    window.addEventListener('northstar:avatar-change',event=>{if(/^classic-(?:[0-3]\d|4[0-4])$/.test(event.detail?.avatarId))avatarImage.src='/assets/avatars/classic/'+event.detail.avatarId+'.png';});
+    window.addEventListener('northstar:avatar-change',event=>{if(/^classic-(?:[0-4]\d|50)$/.test(event.detail?.avatarId))avatarImage.src='/assets/avatars/classic/'+event.detail.avatarId+'.png';});
     if(configured==='self') [trigger,panel,avatarButton].forEach(el=>el.classList.add('ns-dashboard-chat'));
     trigger.onclick = () => toggle(panel.hidden);
     panel.addEventListener('keydown',event=>{if(event.key==='Escape')toggle(false);});
@@ -61,7 +61,7 @@
   function toggle(open) { mount(); panel.hidden = !open; trigger.setAttribute('aria-expanded',String(open)); if(open) {returnFocus=menuToggle || document.activeElement;const details=menuToggle?.closest('details');if(details)details.open=false;const dropdown=document.querySelector('#nsWebToolbarDropdown');if(dropdown){dropdown.hidden=true;menuToggle?.setAttribute('aria-expanded','false');}post('northstar:avatar-request'); panel.querySelector('header button').focus();} else returnFocus?.focus(); }
   function chooseAvatar() { pendingPicker = true; toggle(true); post('northstar:avatar-picker'); }
   window.addEventListener('message',event=>{
-    if (![...frames].some(item=>item.contentWindow===event.source) || event.origin !== origin || event.data?.type !== 'northstar:avatar-profile' || !/^classic-(?:[0-3]\d|4[0-4])$/.test(event.data.avatarId)) return;
+    if (![...frames].some(item=>item.contentWindow===event.source) || event.origin !== origin || event.data?.type !== 'northstar:avatar-profile' || !/^classic-(?:[0-4]\d|50)$/.test(event.data.avatarId)) return;
     const changed = profile?.avatarId !== event.data.avatarId;
     profile = {avatarId:event.data.avatarId};
     if(avatarImage) avatarImage.src='/assets/avatars/classic/'+profile.avatarId+'.png';

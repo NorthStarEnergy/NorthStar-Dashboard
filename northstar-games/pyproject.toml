@@ -20,4 +20,4 @@ northstar-games = "poker_study.web:main"
 include = ["poker_study*"]
 
 [tool.setuptools.package-data]
-poker_study = ["static/*", "static/avatars/*", "licenses/*"]
+poker_study = ["static/*", "static/avatars/*", "static/assets/avatars/classic/*.png", "licenses/*"]

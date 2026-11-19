@@ -11,6 +11,7 @@ opponent cards, the real deck, or the real deal seed.
 from bisect import bisect_left
 from collections import Counter, OrderedDict
 from dataclasses import asdict
+from functools import lru_cache
 import hashlib
 from itertools import combinations
 import json
@@ -22,7 +23,7 @@ import time
 
 from .cards import DECK, hand_class, rank, validate
 from .engine import Config, Game
-from .bot_policy import OPEN_CUTOFF, public_action_context, weighted_range
+from .bot_policy import OPEN_CUTOFF, postflop, preflop, public_action_context, weighted_range
 from .personalities import NEUTRAL
 
 SCHEMA = 'northstar-outcome-mccfr/1'
@@ -208,6 +209,43 @@ class SampleGame(Game):
     hand_rank = staticmethod(seven_rank)
 
 
+class ReviewEquity:
+    """Small showdown samples for uncovered continuation nodes, shared across branches."""
+    def __init__(self, seed):
+        self.seed = seed
+        self.cached = lru_cache(maxsize=2048)(self.uniform_equity)
+
+    def estimate(self, hole, board, profiles):
+        return self.cached(hole, board, len(profiles))
+
+    def uniform_equity(self, hole, board, opponents):
+        rng = random.Random(repr((self.seed, hole, board, opponents)))
+        unseen = [c for c in DECK if c not in hole and c not in board]
+        need = 5 - len(board)
+        total = 0.
+        for _ in range(12):
+            draw = rng.sample(unseen, need + 2*opponents)
+            runout = list(board) + draw[:need]
+            hero = seven_rank(list(hole) + runout)
+            ranks = [seven_rank(runout + draw[i:i+2]) for i in range(need, len(draw), 2)]
+            if hero >= max(ranks): total += 1 / (1 + ranks.count(hero))
+        return total / 12
+
+    def continuation_action(self, game, available, rng):
+        if game.street == 'preflop':
+            row, _ = preflop(game)
+        else:
+            row, _ = postflop(game, equity_learner=self)
+        action = rng.choices(list(row), weights=list(row.values()))[0]
+        if action in available:
+            return action
+        raises = [a for a in available if a.startswith('raise:')]
+        if raises and action.startswith('raise:'):
+            target = int(action[6:])
+            return min(raises, key=lambda a:abs(int(a[6:]) - target))
+        return 'check' if 'check' in available else 'call'
+
+
 class HoldemEpisode:
     def __init__(self, game, root, bet_sizes, max_raises):
         self.game, self.root = game, root
@@ -316,6 +354,55 @@ class HoldemSolver:
         game.holes, game.deck, game.initial_deck = holes, deck, []
         game.done, game.awards = False, []
         return game
+
+    def decision_review(self, game, chosen, reference, limits, samples=96):
+        """Compare actions on paired deals using a sampled CFR continuation policy."""
+        import copy
+        hero = game.actor
+        self.train(iterations=96, time_limit=.35)
+        # Train on public ranges first. Condition the paired evaluation deals
+        # on the hero's actual cards only after the continuation policy is fixed.
+        self.ranges[hero] = ((tuple(game.holes[hero]),), (1,))
+        def permitted(action):
+            return not action.startswith('raise:') or limits['min'] <= int(action[6:]) <= limits['max']
+        mix = reference
+        labels = set(mix) | {chosen} | {a for a in abstract_actions(game) if permitted(a)}
+        values = dict.fromkeys(sorted(labels), 0.)
+        delta_sum = delta_squares = 0.
+        equity = ReviewEquity(self.options['seed'])
+        for _ in range(samples):
+            world = self.sample_world()
+            rollout_seed = self.trainer.rng.getrandbits(64)
+            payoffs = {}
+            for label in values:
+                rng = random.Random(rollout_seed)
+                branch = copy.deepcopy(world)
+                apply(branch, label)
+                episode = HoldemEpisode(branch, self.root, self.options['bet_sizes'], self.options['max_raises'])
+                while not branch.done:
+                    available = episode.actions()
+                    if branch.actor == hero:
+                        available = [a for a in available if permitted(a)]
+                    policy = self.trainer.policy(episode.info_key()) or {}
+                    weights = [policy.get(action, 0.) for action in available]
+                    if any(weights):
+                        next_action = rng.choices(available, weights=weights)[0]
+                    else:
+                        # Unseen states are common. Use the neutral practice
+                        # policy instead of uniform calls, folds and shoves.
+                        next_action = equity.continuation_action(branch, available, rng)
+                    episode.act(next_action)
+                payoffs[label] = (branch.stacks[hero] - game.stacks[hero]) / game.config.big_blind
+                values[label] += payoffs[label]
+            delta = payoffs[chosen] - sum(payoffs[a]*p for a,p in mix.items())
+            delta_sum += delta
+            delta_squares += delta * delta
+        ev = {a:v / samples for a,v in values.items()}
+        delta = delta_sum / samples
+        error = math.sqrt(max(0., delta_squares / samples - delta**2) / (samples - 1))
+        return {'best': max(ev, key=ev.get), 'delta': delta, 'standard_error': error,
+                'ev': ev, 'reference_ev': sum(ev[a]*p for a,p in mix.items()),
+                'samples': samples}
 
     def train(self, iterations=1000, time_limit=2.):
         if type(iterations) is not int or not 1 <= iterations <= 1000000:

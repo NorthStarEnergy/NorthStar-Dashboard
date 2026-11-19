@@ -39,7 +39,51 @@
       input.addEventListener('change',()=>{saved[key]=input.checked;apply();try{localStorage.setItem(storageKey,JSON.stringify(saved));}catch{}});
       label.append(input,document.createTextNode(title));panel.append(label);apply();
     }
-    chess.querySelector('.ng-status').after(bar);
+    const play=chess.querySelector('.ng-play');
+    const appearance=document.createElement('div');
+    appearance.className='chess-appearance';
+    let prefs={};
+    try{prefs=JSON.parse(localStorage.getItem('chessAppearance')||'{}')||{};}catch{}
+    function save(){try{localStorage.setItem('chessAppearance',JSON.stringify(prefs));}catch{}}
+    function palette(key,title,options){
+      const label=document.createElement('label'),select=document.createElement('select');
+      select.setAttribute('aria-label',title);label.append(title+' ',select);appearance.append(label);
+      for(const [value,name] of Object.entries(options))select.add(new Option(name,value));
+      select.value=Object.hasOwn(options,prefs[key])?prefs[key]:select.options[0].value;
+      chess.dataset[key]=select.value;
+      select.onchange=()=>{chess.dataset[key]=prefs[key]=select.value;save();};
+    }
+    palette('boardTone','Board',{green:'Forest',wood:'Walnut',blue:'Slate blue'});
+    palette('pieceTone','Pieces',{classic:'Ivory & ebony',silver:'Silver & graphite',amber:'Amber & mahogany'});
+    bar.prepend(appearance);
+    const handle=document.createElement('button');
+    handle.type='button';handle.className='chess-resize';handle.textContent='⤡';
+    handle.setAttribute('aria-label','Resize chessboard');handle.title='Drag to resize, or use arrow keys';
+    // The renderer replaces the frame after each move. Keep the handle on its stable parent.
+    const holder=document.createElement('div');
+    holder.className='chess-board-holder';play.before(holder);holder.append(play,handle);
+    function size(width){
+      prefs.width=Math.round(Math.max(280,Math.min(width,holder.parentElement.clientWidth-28)));
+      holder.style.setProperty('--chess-width',prefs.width+'px');
+    }
+    if(Number.isFinite(prefs.width))size(prefs.width);
+    let drag=null;
+    handle.onpointerdown=e=>{
+      if(e.button!==0)return;
+      drag={x:e.clientX,y:e.clientY,width:holder.getBoundingClientRect().width};
+      handle.setPointerCapture(e.pointerId);e.preventDefault();
+    };
+    handle.onpointermove=e=>{
+      if(!drag)return;
+      const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+      size(drag.width+(Math.abs(dx)>Math.abs(dy)?dx:dy));
+    };
+    handle.onlostpointercapture=()=>{drag=null;save();};
+    handle.onkeydown=e=>{
+      if(!['ArrowRight','ArrowUp','ArrowLeft','ArrowDown'].includes(e.key))return;
+      e.preventDefault();size(holder.offsetWidth+(['ArrowRight','ArrowDown'].includes(e.key)?16:-16));save();
+    };
+    chess.querySelector('.ng-toolbar').after(bar);
     return true;
   }
   if(!install()){
@@ -47,3 +91,5 @@
     observer.observe(document.querySelector('main')||document.body,{childList:true,subtree:true});
   }
 })();
+
+

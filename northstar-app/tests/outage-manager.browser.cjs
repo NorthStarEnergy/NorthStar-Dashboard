@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const {spawn}=require('node:child_process');
+const {spawn,spawnSync}=require('node:child_process');
 const {once}=require('node:events');
 const {createInterface}=require('node:readline');
 const fs=require('node:fs');
@@ -273,6 +273,9 @@ async function check() {
       return opened;
     };
     const editor=await launch();
+    assert.equal(await editor.locator('.uwpc-switching-table tbody tr').count(),15);
+    await editor.locator('[data-plan-field=serialNo]').fill('EDITOR-ROUNDTRIP');
+    await editor.getByText('Additional printable rows and images',{exact:true}).click();
     await editor.getByRole('button',{name:'Add row',exact:true}).click();
     await editor.locator('main textarea[aria-label=text]').last().fill('Editor round trip');
     await editor.getByLabel('Font',{exact:true}).selectOption('Georgia');
@@ -281,9 +284,15 @@ async function check() {
     await editor.getByRole('button',{name:'Save changes'}).click();
     await closed;
     const reopened=await launch();
-    const savedBlock=reopened.locator('section').last();
+    assert.equal(await reopened.locator('[data-plan-field=serialNo]').inputValue(),'EDITOR-ROUNDTRIP');
+    await reopened.getByText('Additional printable rows and images',{exact:true}).click();
+    const savedBlock=reopened.locator('main section').last();
     assert.equal(await savedBlock.getByLabel('text',{exact:true}).inputValue(),'Editor round trip');
     assert.equal(await savedBlock.evaluate(el=>el.row.formatting.border),'box');
+    const savedPdf=await page.evaluate(async url=>{const response=await fetch(url);return {status:response.status,bytes:[...new Uint8Array(await response.arrayBuffer())]};},await reopened.getByText('Open saved PDF to print').evaluate(el=>el.href));
+    assert.equal(savedPdf.status,200);
+    const extracted=spawnSync('python',['-c','import io,sys,pypdf; print("EDITOR-ROUNDTRIP" in " ".join(p.extract_text() for p in pypdf.PdfReader(io.BytesIO(sys.stdin.buffer.read())).pages))'],{input:Buffer.from(savedPdf.bytes),windowsHide:true});
+    assert.equal(extracted.stdout.toString().trim(),'True',extracted.stderr.toString());
     await reopened.close();
     const peer=await browser.newContext();
     assert.equal((await peer.request.post(origin+'/api/auth/login',{data:{username:'fixture_relief',password:'fixture-only-password'}})).status(),200);

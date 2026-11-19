@@ -8,7 +8,7 @@
 .ns-shared-chat-toggle,.ns-shared-avatar{position:static;display:block;border:1px solid #52647d;border-radius:6px;background:#182435;color:#f2f5fa;font:600 14px system-ui;cursor:pointer;padding:10px 12px;box-shadow:none}
 .ns-shared-chat-toggle{width:100%;text-align:left;margin-top:8px}
 .ns-shared-avatar{margin:8px 0;width:auto!important;min-height:54px}
-.ns-shared-avatar img{width:68px;height:46px;image-rendering:pixelated;object-fit:contain}
+.ns-shared-avatar img{width:68px;height:46px;object-fit:contain}
 .ns-menu-profile{padding:8px 0;border-top:1px solid #52647d;color:inherit;font:14px system-ui}
 .ns-menu-profile>summary{cursor:pointer;padding:8px 0;font-weight:600}
 .ns-menu-profile>small{display:block;max-width:220px;line-height:1.4}

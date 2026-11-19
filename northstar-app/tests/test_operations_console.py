@@ -34,6 +34,44 @@ def event(id, *, source='trusted', kind='report.received', station='site:A', agg
             payload=payload or {'stationId': station})
 
 
+def test_operator_log_retry_and_changed_request_preserve_hash_chain():
+    entry = dict(subject='Pump inspection', details='Seal dry.', type='Observation',
+                 stationId='site:A', requestId='inspection')
+    with ThreadPoolExecutor(2) as pool:
+        saved = list(pool.map(lambda _: call('logbook', entry), range(2)))
+    assert saved[0]['eventId'] == saved[1]['eventId']
+    with pytest.raises(console.Conflict):
+        call('logbook', {**entry, 'details':'Different observation'})
+    assert store.verify_logbook_chain()['checked'] == 1
+    def append(i):
+        if i % 2:
+            return call('logbook', {**entry, 'requestId':str(i)})
+        return store.add_logbook_entry('Observation', 'Legacy client', str(i), 'operator')
+    with ThreadPoolExecutor(4) as pool:
+        list(pool.map(append, range(8)))
+    chain = store.verify_logbook_chain()
+    assert chain['ok'] and chain['checked'] == 9
+
+
+def test_scheduled_entry_and_completion_share_transaction():
+    call('task-templates', dict(title='Shift inspection', stationId='site:A', category='Log Book',
+                                startsOn='2026-03-07', localTime='07:00', timezone='America/Toronto'))
+    console.tick('2026-03-07T12:00:00Z')
+    task()
+    drafts = call('tasks', params={'category':'Log Book'})['items']
+    assert len(drafts) == 2
+    draft = drafts[0]
+    entry = dict(subject=draft['title'], details='Reviewed by operator', requestId='scheduled',
+                 stationId=draft['stationId'], taskId=draft['id'], version=draft['version'])
+    with pytest.raises(console.Conflict):
+        call('logbook', {**entry, 'version':0})
+    assert store.verify_logbook_chain()['entries'] == 0
+    record = call('logbook', entry)
+    assert call('logbook', entry)['eventId'] == record['eventId']
+    assert call('tasks/'+draft['id'])['task']['status'] == 'completed'
+    assert store.verify_logbook_chain()['ok']
+
+
 def test_manual_lifecycle_reload_and_retry():
     t = task(requestId='one')
     assert task(requestId='one')['id'] == t['id']

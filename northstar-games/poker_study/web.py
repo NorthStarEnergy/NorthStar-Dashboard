@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import ipaddress
 import json
+import logging
 import mimetypes
 import random
 import re
@@ -17,14 +18,17 @@ from dataclasses import asdict
 from http.cookies import SimpleCookie
 from pathlib import Path
 from urllib.parse import urlsplit
+from .live_stream import live_response
 from .engine import Config, Game, replay_data
 from .strategy import Strategy, RANGES, actions, key, choose, apply_label, equity
 from .personalities import seats, public_roster, NEUTRAL, ROSTER, POOL, table_roster, table_public
 
 ROOT = Path(__file__).with_name('static')
+AVATAR_PATHS = frozenset('/' + file.relative_to(ROOT).as_posix()
+                        for file in (ROOT / 'assets/avatars/classic').glob('classic-[0-9][0-9].png'))
 HOSTS = {'games.northstarenergy.ca', 'localhost', '127.0.0.1'}
 COOKIE = 'ns_games'
-VERSION = '0.8.2'
+VERSION = '0.8.4'
 
 from .career_store import CareerStore, restore
 from .bot_league import BotLeague
@@ -185,7 +189,8 @@ class App:
 
     def state(self, session):
         game = session['game']
-        extra={'mode':session.get('mode','study'),'career':self.profile(session),'notice':session.get('notice',''),'account':{'id':session['account_id']} if session.get('account_id') else None,'bet_limits':session.get('bet_limits',{'min':100,'max':10000})}
+        extra={'mode':session.get('mode','study'),'career':self.profile(session),'notice':session.get('notice',''),'account':{'id':session['account_id']} if session.get('account_id') else None,'bet_limits':session.get('bet_limits',{'min':100,'max':10000}),
+               'history_scope':session.get('opponent_id')}
         if game is None: return {'game':None, 'version':VERSION,'players':table_public(session['hero'],session.get('lineup')),**extra}
         view = game.view(session['hero'])
         if session.get('mode')=='sim':view['hole']=[]
@@ -195,6 +200,7 @@ class App:
             view['legal']['raise_max']=min(view['legal']['raise_max'],limits['max'])
             if view['legal']['raise_min']>view['legal']['raise_max']:view['legal']['raise_min']=view['legal']['raise_max']=None
         view.update({'done':game.done, 'hero':session['hero'], 'hand_number':session['number'],
+            'training_decisions':session.get('training_decisions', []),
             'button':game.config.button, 'big_blind':game.config.big_blind,
             'positions':[game.position(i) for i in range(6)], 'total':game.total,
             'history':game.history, 'net':game.stacks[session['hero']]-game.config.stacks[session['hero']] if game.done else None,
@@ -203,6 +209,43 @@ class App:
             'bot_thinking':not game.done and (session.get('mode')=='sim' or game.actor!=session['hero']),
             'imported_states':len(session['strategy'].rows)})
         return {'game':view, 'version':VERSION,'players':table_public(session['hero'],session.get('lineup')),**extra}
+
+    @staticmethod
+    def training_hand(session):
+        game, hero = session['game'], session['hero']
+        if session.get('mode') == 'sim': return None
+        return {'number': session['number'], 'position': game.position(hero),
+                'hole': game.holes[hero], 'board': game.board.copy(),
+                'history': list(game.history), 'positions': [game.position(i) for i in range(game.seat_count)],
+                'mode': session['mode'], 'big_blind': game.config.big_blind,
+                'net_bb': (game.stacks[hero] - game.config.stacks[hero]) / game.config.big_blind if game.done else None,
+                'decisions': session.get('training_decisions', [])}
+
+    @staticmethod
+    def review_action(session, label, automatic=False):
+        from .sampled_solver import HoldemSolver
+        game = session['game']
+        blind = game.config.big_blind
+        spot = {'street': game.street, 'board': list(game.board), 'pot_bb': game.pot / blind,
+                'call_bb': game.legal()['call'] / blind, 'stack_bb': game.stacks[game.actor] / blind,
+                'live': len(game.live()), 'action': label, 'automatic': automatic,
+                'history_index': len(game.history)}
+        try:
+            row, source = session['strategy'].advise(game, wait_for_solver=False)
+            limits = session.get('bet_limits') or {'min':100,'max':10000}
+            allowed = {a:p for a,p in row.items() if p > 0 and
+                       (not a.startswith('raise:') or limits['min'] <= int(a[6:]) <= limits['max'])}
+            total = sum(allowed.values())
+            if not total or len(allowed) > 16:
+                spot['unavailable'] = 'No supported reference mix for these bet sizes.'
+                return spot
+            spot.update(source=source, mix={a:p / total for a,p in allowed.items()})
+            solver = HoldemSolver(game, seed=int(hashlib.sha256(key(game).encode()).hexdigest()[:8], 16))
+            spot.update(solver.decision_review(game, label, spot['mix'], limits))
+        except (ArithmeticError, ValueError, RuntimeError, ImportError) as error:
+            logging.getLogger(__name__).warning('Poker decision review unavailable (%s)', type(error).__name__)
+            spot['unavailable'] = 'The estimator could not rate this spot.'
+        return spot
 
     @staticmethod
     def new_career(name):
@@ -240,7 +283,8 @@ class App:
         if path == '/api/leaderboard':
             players=self.store.standings()
             if self.league:
-                players.extend({key:player[key] for key in ('name','hands','wins','profit','rebuys')} | {'id':'bot:'+player['id'],'kind':'Bot'} for player in self.league.snapshot()['leaderboard'] if player['hands']>0)
+                players.extend({**player, 'id': 'bot:' + player['id'], 'kind': 'Bot'}
+                               for player in self.league.standings() if player['hands'] > 0)
             players.sort(key=lambda player:(-player['profit'],-player['wins'],player['name'].casefold()))
             return {'players':players,'ranking':'Total profit (BB)'}
         if path.startswith('/api/players/'):
@@ -309,13 +353,8 @@ class App:
                 if mode=='sim':candidate['lineup'][hero]='jules'
             if mode!='study':
                 eligible=[i for i in range(6) if mode=='sim' or i!=hero]
-                leaving=[i for i in eligible if stacks[i]<=0]
+                leaving=[i for i in eligible if stacks[i]<=0 or stacks[i]>=30000]
                 notices=[]
-                for i in eligible:
-                    if stacks[i]>=50000:
-                        stacks[i]=10000
-                        name=next(p.name for p in POOL if p.id==candidate['lineup'][i])
-                        notices.append(name+' cashed out at 500 BB or more and returned with 100 BB.')
                 for i in set(leaving):
                     incoming=session['rng'].choice([p for p in POOL if p.id not in candidate['lineup']])
                     old=next(p.name for p in POOL if p.id==candidate['lineup'][i])
@@ -323,10 +362,11 @@ class App:
                     notices.append(old+' left; '+incoming.name+' joined with 10,000 chips.')
                 candidate['notice']=' '.join(notices)
             candidate['hero'],candidate['number'],candidate['mode']=hero,session['number']+1,mode
+            candidate['training_decisions']=[]
             candidate['game']=Game(Config(stacks=stacks,button=button,seed=secrets.randbits(64)))
             frames=[copy.deepcopy(self.state(candidate))]
             self.autoplay(candidate,frames);self.settle(candidate)
-            session.update({k:candidate[k] for k in ('hero','number','mode','game','career','lineup','notice','bet_limits')})
+            session.update({k:candidate[k] for k in ('hero','number','mode','game','career','lineup','notice','bet_limits','training_decisions')})
             session['settled_number']=candidate.get('settled_number')
             self.learn(candidate)
             return {**self.state(session),'frames':frames}
@@ -357,6 +397,9 @@ class App:
                 raise ValueError('Wait for the bot to finish its turn.')
             label = data.get('action','')
             if not isinstance(label,str) or len(label)>40: raise ValueError('Invalid action.')
+            if (data.get('hand_number', session['number']) != session['number'] or
+                    data.get('history_index', len(game.history)) != len(game.history)):
+                raise ValueError('This decision has already changed.')
             if label.startswith('raise:'):
                 try:amount=int(label.split(':',1)[1])
                 except ValueError:raise ValueError('Invalid raise amount.')
@@ -368,9 +411,12 @@ class App:
             candidate = dict(session)
             candidate['game'] = copy.deepcopy(game)
             apply_label(candidate['game'], label)
+            review = self.review_action(session, label, data.get('automatic') is True)
+            candidate['training_decisions'] = [*session.get('training_decisions', []), review]
             frames = [copy.deepcopy(self.state(candidate))]
             self.autoplay(candidate, frames)
             session['game'] = candidate['game']
+            session['training_decisions'] = candidate['training_decisions']
             self.settle(session)
             self.learn(candidate)
             return {**self.state(session), 'frames':frames}
@@ -378,7 +424,12 @@ class App:
             raise ValueError('Study tools are available on your turn.')
         if path == '/api/hint':
             row, source = session['strategy'].advise(game,wait_for_solver=False)
-            return {'probabilities':row, 'source':source}
+            result = {'probabilities':row, 'source':source}
+            if 'review' in data:
+                import copy
+                apply_label(copy.deepcopy(game), data['review'])
+                result['review'] = self.review_action(session, data['review'])
+            return result
         if path == '/api/spot':
             row, source = session['strategy'].advise(game,wait_for_solver=False)
             return {'version':1,'key_format':'exact-local-v1','source':source,'states':{key(game):row}}
@@ -400,18 +451,31 @@ class App:
             host = environ.get('HTTP_HOST','').lower()
             if host.split(':')[0] not in HOSTS: return respond('403 Forbidden',{'error':'Unknown host.'})
             path, method = environ.get('PATH_INFO','/'), environ.get('REQUEST_METHOD','GET')
+            if path == '/live' and method == 'GET':
+                cookie = SimpleCookie()
+                from http.cookies import CookieError
+                try:
+                    cookie.load(environ.get('HTTP_COOKIE', ''))
+                except CookieError:
+                    cookie.clear()
+                member = COOKIE in cookie and self.store.account_for_token(cookie[COOKIE].value)
+                status, page, player_host = live_response(member)
+                if player_host:
+                    headers = [(k, v.replace('frame-src https://ops.northstarenergy.ca', 'frame-src https://' + player_host)
+                                if k == 'Content-Security-Policy' else v) for k, v in headers]
+                return respond(status, page.encode(), 'text/html; charset=utf-8')
             if path == '/api/health' and method == 'GET': return respond('200 OK',{'app':'northstar-games','version':VERSION,'status':'ok','bot_learning':self.equity_learner.status() if self.equity_learner else None,'texas_bot':self.texas_bot.status() if self.texas_bot else None})
-            if method == 'GET' and path in ('/texas-solver.js', '/texas-solver.css', '/bot-coach.js', '/bot-coach.css'):
+            if method == 'GET' and path in ('/gto-training.js', '/texas-solver.js', '/texas-solver.css', '/bot-coach.js', '/bot-coach.css'):
                 return respond('200 OK', (ROOT / path[1:]).read_bytes(), 'application/javascript' if path.endswith('.js') else 'text/css')
             if method == 'GET' and path in ('/invitations.js','/invitations.css','/vendor/stockfish/stockfish-18-lite-single.js','/vendor/stockfish/stockfish-18-lite-single.wasm','/vendor/stockfish/COPYING','/northstar-chat-launcher.js','/northstar-chat-launcher.css','/poker.html','/blackjack.html','/blackjack.css','/blackjack-engine.js','/blackjack-ui.js','/classics.html','/classics-shell.css','/classics-shell.js','/games-engine.js','/games-workspace.js','/games-workspace.css','/vendor/chess/chess.js','/vendor/chess/LICENSE.txt','/hub.css','/','/app.css','/app.js','/favicon.svg','/manifest.webmanifest','/sw.js','/offline.html','/icon-180.png','/icon-192.png','/icon-512.png'):
                 file = ROOT / ('index.html' if path=='/' else path[1:])
                 return respond('200 OK', file.read_bytes(), ('application/wasm' if path.endswith('.wasm') else 'text/plain' if path=='/vendor/stockfish/COPYING' else 'application/manifest+json' if path=='/manifest.webmanifest' else 'application/javascript' if path=='/sw.js' else mimetypes.guess_type(file)[0] or 'application/octet-stream'))
-            if method == 'GET' and path in {f'/assets/avatars/classic/classic-{i:02d}.png' for i in range(45)}:
+            if method == 'GET' and path in AVATAR_PATHS:
                 return respond('200 OK', (ROOT / path[1:]).read_bytes(), 'image/png')
             if method=='GET' and path in {'/avatars/'+p.id+'.svg' for p in POOL}:
                 return respond('200 OK',(ROOT/path[1:]).read_bytes(),'image/svg+xml')
             if not path.startswith('/api/'): return respond('404 Not Found',{'error':'Not found.'})
-            reads = {'/api/bot-coach','/api/invites','/api/state','/api/ranges','/api/history','/api/league','/api/leaderboard'}
+            reads = {'/api/bot-coach','/api/invites','/api/state','/api/ranges','/api/history','/api/league','/api/leaderboard','/api/training'}
             reads.update({'/api/texas-solver/status', '/api/texas-solver/result', '/api/texas-solver/download'})
             if path.startswith('/api/players/'):reads.add(path)
             if method != ('GET' if path in reads else 'POST'): return respond('405 Method Not Allowed',{'error':'Method not allowed.'})
@@ -450,8 +514,12 @@ class App:
                 except ValueError as error: return respond('400 Bad Request', {'error': str(error)})
                 return respond('200 OK', result)
             with session['lock']:
+                if path == '/api/training':
+                    return respond('200 OK', {'hands':self.store.training_history(token, session), 'current':session['number']})
                 result = self.api(path,data,session)
-                if method=='POST':self.store.save(token,session)
+                if method=='POST':
+                    hand = self.training_hand(session) if path in ('/api/new','/api/action','/api/bot-step') else None
+                    self.store.save(token, session, hand)
             if path == '/api/texas-solver/download':
                 headers.append(('Content-Disposition','attachment; filename="northstar-texassolver-result.json"'))
             return respond('200 OK',result)

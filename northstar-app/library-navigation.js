@@ -15,7 +15,7 @@
  document.addEventListener('click',e=>{
    const b=e.target.closest('button,a');if(!b)return;
    const tab=b.dataset.tab;
-   if(b.closest('#sideNav')&&!availableTabs.has(tab)&&(b.classList.contains('ns-demo-restricted')||['switching','outages','games'].includes(tab))){e.preventDefault();e.stopImmediatePropagation();return;}
+   if(b.closest('#sideNav')&&!availableTabs.has(tab)&&(b.classList.contains('ns-demo-restricted')||['switching','outages'].includes(tab))){e.preventDefault();e.stopImmediatePropagation();return;}
    const id=b.dataset.openModule||b.dataset.v3Destination;
    if(b.dataset.tab==='tools'||id==='operations:research'||id==='tools:schematic-builder'){
     e.preventDefault();e.stopImmediatePropagation();
@@ -25,7 +25,7 @@
  },true);
  function update(){
   const nav=document.querySelector('#sideNav');if(!nav)return;
-  const tool=nav.querySelector('[data-tab="tools"]');if(tool&&tool.textContent.trim()!=='Library'){tool.textContent='Library';tool.setAttribute('aria-label','Library');tool.classList.remove('ns-demo-partial');}
+  nav.querySelector('[data-tab="tools"]')?.classList.remove('ns-demo-partial');
   nav.querySelectorAll('[data-open-module="operations:research"],[data-v3-destination="operations:research"]').forEach(b=>{b.hidden=true;});
   nav.querySelectorAll('.ns-demo-restricted').forEach(b=>{if(b.getAttribute('aria-disabled')!=='true')b.setAttribute('aria-disabled','true');});
  }

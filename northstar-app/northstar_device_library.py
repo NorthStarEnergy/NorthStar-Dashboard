@@ -558,11 +558,29 @@ def _related_events(record: dict) -> list[dict]:
     return []
 
 
+def note_target(item_id):
+    if item_id.startswith('equipment:'):
+        from northstar_maximo import note_target as equipment_target
+        return equipment_target(item_id)
+    return catalog()["items"].get(item_id)
+
+
+def note_counts():
+    with store._LOCK, store._session() as connection:
+        rows = connection.execute("SELECT item_id, expires_at FROM device_library_notes").fetchall()
+    counts = {}
+    for row in rows:
+        if not _note_expired(row["expires_at"] or ""):
+            key = row["item_id"]
+            counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
 def item(item_id: str) -> dict:
     item_id = str(item_id or "").strip()
     if not item_id:
         raise ValueError("A library item id is required")
-    record = catalog()["items"].get(item_id)
+    record = note_target(item_id)
     if not record:
         raise LookupError("Library item not found")
     data = dict(record)
@@ -622,7 +640,8 @@ def add_note(item_id: str, text: str, actor: str, request_id: str, expires_at: s
     persist_on = _parse_persist(persist_on)
     if expires_at and persist_on:
         raise ValueError("Choose a time expiry or a persist-on date, not both")
-    if item_id not in catalog()["items"]:
+    record = note_target(item_id)
+    if not record:
         raise LookupError("Library item not found")
     if not text or len(text) > 8000:
         raise ValueError("Enter a note of 1–8000 characters")
@@ -630,7 +649,6 @@ def add_note(item_id: str, text: str, actor: str, request_id: str, expires_at: s
         raise ValueError("A note request ID is required")
     note_id = "libnote_" + hashlib.sha256(json.dumps([item_id, actor, request_id]).encode()).hexdigest()
     timestamp = datetime.now(timezone.utc).isoformat()
-    record = catalog()["items"][item_id]
     bound = sites.bind(
         record.get("site") or record.get("name"),
         record.get("siteId") or (record["id"] if record.get("kind") == "site" else ""),

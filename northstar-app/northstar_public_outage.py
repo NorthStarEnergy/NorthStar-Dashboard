@@ -21,7 +21,8 @@ TTL = 7 * 24 * 3600
 throttle = auth.LoginThrottle(max_failures=12, window_seconds=60)
 READ = {"manager/session","manager/register","manager/detail","manager/reports","manager/inbox",
         "manager/checkout","manager/plans","manager/plan-versions"}
-WRITE = {"manager/create","manager/checkout","manager/tag","manager/inbox/open"}
+READ.add("manager/discussion")
+WRITE = {"manager/create","manager/checkout","manager/tag","manager/inbox/open","manager/discussion"}
 DOC = r"uwpc_[0-9a-f]{32}"
 DOC_ACTIONS = {"save","sources","remove-source","review-view","review-open","review-sign","review-return",
                "review-answer","review-close","distribute","final-receipt","final-flag","final-resolve",

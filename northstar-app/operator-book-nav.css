@@ -1,0 +1,41 @@
+body.ns-book-shell .app>aside{display:flex;flex-direction:column;min-height:0}
+body.ns-book-shell .app>aside .brand{display:flex!important;align-items:center;justify-content:space-between;gap:3px;flex:0 0 auto}
+body.ns-book-shell .brand #nsWebToolbar{order:0;flex:0 0 auto}
+body.ns-book-shell .brand .brand-home-control{order:1;min-width:0;flex:1;padding-inline:0;display:flex;align-items:center;justify-content:center}
+body.ns-book-shell #nsOperatorBrand .northstar-ai-menu-toggle{display:none!important}
+body.ns-book-shell .app>aside .northstar-systems-row{order:5;margin-top:auto;flex:0 0 auto}
+body.ns-book-shell .northstar-systems-row #watchdogDiagnostics{position:fixed!important;top:auto!important;bottom:44px!important;left:10px!important;max-height:70vh;overflow:auto;z-index:1200}
+body.ns-book-shell .app>aside .sidebar-search:empty{display:none}
+body.ns-book-shell #sideNav{min-height:0;overflow-y:auto;display:flex!important;flex-direction:column;align-items:stretch;justify-content:flex-start}
+body.ns-book-shell #sideNav>*{flex-shrink:0}
+body.ns-book-shell #sideNav>#operatorBookMenu{height:auto!important}
+body.ns-book-shell #sideNav>#operatorBookMenu[hidden]{display:none!important}
+body.ns-book-shell #sideNav #operatorBookMenu button{width:100%}
+html body.ns-book-open.ns-book-shell:has(#operatorBookFrame)>.layout-toolbar{display:flex!important;align-items:center;gap:6px}
+html body.ns-book-open .layout-toolbar>:not(.layout-edit-toggle){display:none!important}
+html body.ns-book-open .layout-toolbar>.layout-edit-toggle{display:block!important}
+html body.ns-book-open.ns-book-editing .layout-toolbar>:is(.layout-save,.layout-reset,.layout-snap-toggle){display:flex!important;align-items:center;gap:5px}
+html body.ns-book-open.ns-book-editing .layout-toolbar{padding:5px!important;border:1px solid var(--line,#34484f);border-radius:5px;background:var(--panel,#131e23)}
+html body.ns-book-open #nsAssetEditor{display:none!important}
+body.ns-book-shell .brand .ns-app-notification[hidden]{display:none!important}
+#nsOperatorBrand .brand-home-control::before{content:"";width:16px;height:16px;flex:none;background:url("favicon.png") center / contain no-repeat}
+#nsOperatorBrand.brand.brand-home .brand-home-control{display:flex!important;flex-direction:row;align-items:center;justify-content:center;gap:3px;height:32px!important}
+#nsOperatorBrand.brand.brand-home .brand-name{width:auto!important;min-width:0;padding:0!important;margin:0!important;font-size:13px!important;letter-spacing:0;overflow:visible!important}
+#nsOperatorBrand .brand-home-control::before{width:13px;height:13px}
+#nsOperatorBrand .ns-app-notification[hidden]{display:none!important}
+body.ns-book-shell #sideNav #operatorBookMenu button{padding-inline-start:32px!important}
+body.ns-book-open #sideNav>[data-tab].active{background:transparent!important}
+body.ns-book-open #sideNav>[data-tab].active::after{visibility:hidden}
+body.ns-book-open #sideNav>[data-book-page=entry]{background:#233943!important}
+body.ns-book-shell #sideNav>[data-tab="assistant"] .northstar-nav-icon{filter:grayscale(1)}
+body.ns-book-shell #sideNav>.ns-main-app-link,body.ns-book-shell #sideNav>details{order:2}
+body.ns-book-shell #sideNav>[data-book-page],body.ns-book-shell #sideNav>#operatorTools,body.ns-book-shell #sideNav>[data-tab="tools"]{display:flex!important;align-items:center;gap:8px}
+body.ns-book-shell #operatorBookMenu:not([hidden]){display:grid;gap:2px}
+body.ns-book-shell #operatorBookMenu button{padding-left:32px;text-align:left}
+body.ns-book-shell #sideNav [aria-current="page"]{background:var(--panel2,#233943);color:var(--text,#e7f1f6)}
+body.ns-book-open #sideNav>button.active:not([aria-current]){background:transparent}
+#operatorBookFrame{display:none}
+body.ns-book-open .app>main{display:flex!important;flex-direction:column;min-height:0;overflow:hidden!important;padding:0!important}
+body.ns-book-open .app>main>:not(#operatorBookFrame){display:none!important}
+body.ns-book-open #operatorBookFrame{display:block;border:0;width:100%;flex:1;min-height:0;height:100%}
+#overviewWorkerList .fr-grip::after{content:"";position:absolute;top:22%;bottom:22%;right:3px;border-right:1px solid #66838e}

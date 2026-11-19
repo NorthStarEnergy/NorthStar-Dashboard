@@ -201,6 +201,97 @@
       if(active)show(host.querySelector(`[data-phase="${active}"]`));else close();
     };
   }
+async function mountDiscussion(page,oid){
+    page.insertAdjacentHTML('beforeend',`<details class="panel outage-discussion"><summary>Discussion <small></small></summary>
+      <form><select name="kind" aria-label="Post type"></select><textarea name="body" rows="1" maxlength="2000" required aria-label="Discussion message" placeholder="Add to the discussion"></textarea><button class="primary">Post</button></form>
+      <div class="discussion-tools"><button class="btn" type="button" hidden>Cancel reply</button><select aria-label="Filter discussion"><option value="all">All threads</option><option value="open">Open questions</option><option value="decisions">Decisions</option></select></div>
+      <div role="status"></div><div class="discussion-threads"></div></details>`);
+    const panel=page.lastElementChild, list=panel.querySelector('.discussion-threads'), form=panel.querySelector('form');
+    const filter=panel.querySelector('.discussion-tools select'), cancel=panel.querySelector('.discussion-tools button');
+    const status=panel.querySelector('[role=status]'), url=api+'/discussion?id='+encodeURIComponent(oid);
+    let posts=[], parent='', token='', revision=0;
+    const actor=(await session)?.actor;
+    const readKey=actor && JSON.stringify(['outage-thread-read',actor,oid]);
+    let seen={};
+    try{if(readKey)seen=JSON.parse(localStorage.getItem(readKey))||{};}catch{}
+    let target=new URL(location.href).searchParams.get('thread');
+    function threadUrl(id){
+      const link=new URL(outageUrl(oid),location.origin);
+      link.searchParams.set('thread',id);
+      return link.href;
+    }
+    function compose(id){
+      parent=id;token='';cancel.hidden=!id;
+      const choices=id?[['reply','Reply']]:[['note','Note'],['question','Question'],['decision','Decision']];
+      const thread=posts.find(p=>p.id===id);
+      if(thread?.kind==='question')choices.push(['answer','Answer']);
+      form.elements.kind.innerHTML=opts(choices,choices[0][0]);
+      form.elements.body.placeholder=id?'Reply to '+thread.author:'Add to the discussion';
+    }
+    function draw(){
+      const expanded=new Set([...list.querySelectorAll('details[open]')].map(el=>el.dataset.id));
+      const replies=new Map();
+      for(const p of posts)if(p.parent){if(!replies.has(p.parent))replies.set(p.parent,[]);replies.get(p.parent).push(p);}
+      const roots=posts.filter(p=>!p.parent).reverse();
+      const open=p=>p.kind==='question'&&!(replies.get(p.id)||[]).some(r=>r.kind==='answer');
+      panel.querySelector('summary small').textContent=`${roots.length} ${roots.length===1?'thread':'threads'} · ${roots.filter(open).length} open`;
+      const meta=p=>`${esc(p.author)} · ${esc(date(p.at))}`;
+      list.innerHTML=roots.filter(p=>filter.value==='all'||(filter.value==='open'?open(p):p.kind==='decision')).map(p=>{
+        const children=replies.get(p.id)||[], latest=children.at(-1)||p;
+        const unread=readKey && latest.author!==actor && seen[p.id]!==latest.id;
+        const label=p.kind==='question'?(open(p)?'Open question':'Answered'):p.kind==='decision'?'Decision':'Note';
+        return `<details data-id="${esc(p.id)}" ${expanded.has(p.id)?'open':''}><summary><b>${unread?'● ':''}${label}</b> <span>${esc(p.body)}</span><small>${children.length} ${children.length===1?'reply':'replies'}</small></summary><article><small>${meta(p)}</small><p>${esc(p.body)}</p>${children.map(r=>`<blockquote><small>${r.kind==='answer'?'Answer · ':''}${meta(r)}</small><p>${esc(r.body)}</p></blockquote>`).join('')}<button class="btn" data-reply="${esc(p.id)}">Reply</button> <a href="${esc(threadUrl(p.id))}" data-thread-link>Thread link</a></article></details>`;
+      }).join('')||'<p>No threads in this view.</p>';
+      if(target){
+        const linked=[...list.children].find(el=>el.dataset.id===target);
+        target=null;
+        if(linked){panel.open=true;linked.open=true;linked.scrollIntoView({block:'center'});}
+        else status.textContent='Thread unavailable.';
+      }
+    }
+    async function refresh(){
+      const current=++revision;
+      try{const data=await fetchData(url);if(current===revision){posts=data.posts;draw();}}
+      catch(e){if(current===revision)status.textContent=e.message;}
+    }
+    compose('');
+    panel.ontoggle=()=>{if(panel.open)void refresh();};
+    list.addEventListener('toggle',e=>{
+      const el=e.target;
+      if(!el.open||!el.dataset.id||!readKey)return;
+      const latest=posts.findLast(p=>p.id===el.dataset.id||p.parent===el.dataset.id);
+      if(!latest)return;
+      try{seen=JSON.parse(localStorage.getItem(readKey))||{};seen[el.dataset.id]=latest.id;localStorage.setItem(readKey,JSON.stringify(seen));}catch{}
+      const label=el.querySelector('summary b');
+      label.textContent=label.textContent.replace(/^● /,'');
+    },true);
+    list.addEventListener('click',async e=>{
+      const link=e.target.closest('[data-thread-link]');
+      if(!link||e.ctrlKey||e.metaKey||e.shiftKey||!navigator.clipboard)return;
+      e.preventDefault();
+      try{await navigator.clipboard.writeText(link.href);status.textContent='Thread link copied.';}
+      catch{status.textContent='Use the link menu to copy the address.';}
+    });
+    filter.onchange=draw;
+    cancel.onclick=()=>{compose('');form.elements.body.focus();};
+    list.onclick=e=>{const btn=e.target.closest('[data-reply]');if(btn&&!form.elements.body.disabled){compose(btn.dataset.reply);form.elements.body.focus();}};
+    form.oninput=()=>{token='';};
+    form.onsubmit=async e=>{
+      e.preventDefault();const body=form.elements.body.value.trim();if(!body||form.elements.body.disabled)return;
+      token ||= crypto.randomUUID();
+      const data={id:token,parent,kind:form.elements.kind.value,body};
+      for(const el of form.elements)el.disabled=true;
+      cancel.disabled=true;
+      try{const result=await fetchData(url,data);revision++;posts=result.posts;form.reset();compose('');filter.value='all';draw();
+        const thread=list.querySelector(`[data-id="${data.parent||data.id}"]`);if(thread)thread.open=true;
+        status.textContent='Posted.';}
+      catch(err){status.textContent=err.message;}
+      finally{for(const el of form.elements)el.disabled=false;cancel.disabled=false;}
+    };
+    void refresh();
+    window.addEventListener('focus',()=>{if(panel.open)void refresh();});
+    setInterval(()=>{if(panel.open&&!document.hidden)void refresh();},30000);
+}
   async function loadWorkspace() {
     const query=new URLSearchParams(location.search);
     const section=Object.hasOwn(sections,query.get('section'))?query.get('section'):'overview';
@@ -270,6 +361,7 @@
         [['Outage ID',id],['Requested by',row.owner],['Opened',row.created&&date(row.created)],['Type',row.type],
           ['Priority',priorities[row.severity]||row.severity],['Sites',sites],['Equipment',row.asset],...timing];
       page.insertAdjacentHTML('beforeend',`<section class="panel overview-panel"><h2>Work scope</h2><p>${esc(row.scope||'No scope recorded.')}</p>${facts(fields)}</section>`);
+      if(section==='overview')mountDiscussion(page,id);
       if(section==='overview')page.insertAdjacentHTML('beforeend',`<section class="panel overview-panel"><h2>Package forms</h2>
         ${row.documents.map(doc=>`<a class="file-line" href="${outageUrl(id,'forms',doc.id)}">${icon('file')}<span>${esc(doc.title)}</span><small>${esc(states[doc.status]||doc.status)}</small></a>`).join('')||'<p>No forms have been attached.</p>'}</section>`);
       if(section==='overview') {

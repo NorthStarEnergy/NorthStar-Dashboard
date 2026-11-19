@@ -10,6 +10,15 @@
 
 ## Operation
 
+### Home video broadcast
+
+1. In Cloudflare Stream, create a live input with automatic recording, require signed URLs, and set allowed origins to `games.northstarenergy.ca`. Stream is a separately billed service. Set a recording retention period appropriate for your broadcast.
+2. Set `NS_STREAM_ACCOUNT` (Cloudflare account ID), `NS_STREAM_INPUT` (live input ID), `NS_STREAM_CUSTOMER` (the code between `customer-` and `.cloudflarestream.com`), and `NS_STREAM_API_TOKEN` (account-scoped Stream API token permitted to read input settings and issue playback tokens) in the Games service environment. Restart the Games process with the updated code and environment.
+3. On your home PC, open the browser video or Ace Stream player. In OBS add Window Capture and capture that application's audio. Check the preview and audio meter. Under Settings → Stream choose Custom and enter the input's RTMPS server and stream key. Start Streaming.
+4. From a second device, open the Games lobby, choose Account, sign in, and select Watch Live. Check sound and picture. In a private browsing window, opening `/live` should prompt for sign-in. Stop Streaming in OBS to end the broadcast.
+
+The embedded player uses a bearer playback URL valid for one hour. A copied URL may work until expiry. Reload the page to obtain a fresh URL after expiry. Keep the broadcast key on the home PC and the API token on the Games host.
+
 This host computer must stay online, awake and signed in. The Cloudflare tunnel Windows service must be running. User sessions are in memory and expire after two hours of inactivity; a restart clears sessions. Sessions are isolated by unguessable HttpOnly cookies, SameSite Strict, Secure on the public hostname. No uploaded files are written to disk. Only explicit UI files are served; the project folder is not a public file server.
 
 Check origin: `Invoke-RestMethod http://127.0.0.1:4185/api/health`.

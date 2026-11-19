@@ -137,3 +137,20 @@ body[data-manager-package] #checkoutFields{min-width:0;border:0;padding:0;margin
 @media(max-width:600px){.report-section .sheet table,#eventTable>.sheet table{min-width:540px}}
 @media print{body:has(.outage-report) :is(#shell,.skip,.report-picker){display:none}body:has(.outage-report) #main{margin:0;padding:0}.outage-report .sheet{overflow:visible}.outage-report tr{break-inside:avoid}}
 body[data-manager-package] #checkoutBar button[hidden]{display:none}
+.outage-discussion.panel{padding:0;overflow:hidden}
+.outage-discussion summary{padding:8px 12px;line-height:1.4;color:var(--ink);font-weight:600}
+.outage-discussion small{color:var(--muted);font-size:.84em;font-weight:400}
+.outage-discussion>summary small{margin-inline-start:6px}
+.outage-discussion form,.discussion-tools{display:flex;align-items:center;gap:6px;padding:4px 10px}
+.outage-discussion textarea{min-width:0;flex:1;resize:vertical}
+.outage-discussion :is(select,textarea){border:1px solid var(--line);border-radius:4px;background:white;color:var(--ink);padding:5px}
+.discussion-tools{justify-content:flex-end}
+.discussion-threads>details{border-top:1px solid var(--line)}
+.discussion-threads summary{display:flex;gap:8px;align-items:center}
+.discussion-threads summary::before{content:'▸';color:var(--teal)}
+.discussion-threads details[open]>summary::before{content:'▾'}
+.discussion-threads summary b,.discussion-threads summary small{white-space:nowrap}
+.discussion-threads summary span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
+.discussion-threads article,.discussion-threads>p,.outage-discussion [role=status]:not(:empty){padding:4px 12px 8px}
+.discussion-threads article p{white-space:pre-wrap;overflow-wrap:anywhere;margin:3px 0 8px}
+.discussion-threads blockquote{margin:4px 0 8px 4px;padding-left:10px;border-left:2px solid var(--line)}

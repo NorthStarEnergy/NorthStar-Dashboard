@@ -103,6 +103,9 @@ class BotLeague:
             t['settled']=False
         self.state['rotations']+=sum(len(t['lineup']) for t in tables)
     def _rebuy(self,b):
+        if b['stack'] >= 30000:
+            b['cash'] += b['stack'] - 10000
+            b['stack'] = 10000
         if b['stack']>=100:return
         b['cash']-=10000-b['stack']
         b['stack']=10000
@@ -110,8 +113,16 @@ class BotLeague:
         b['bankroll']=b['cash']+b['stack']
     def _new_hand(self,t):
         n=len(t['lineup']);button=(t['button']+1)%n;stacks=[]
-        for id in t['lineup']:
+        for seat, id in enumerate(t['lineup']):
             b=self.state['bots'][id]
+            if b['stack'] >= 30000 and self.state['waiting']:
+                self._rebuy(b)
+                b['table'], b['idle_hands'] = None, 0
+                incoming = self.state['waiting'].pop(0)
+                self.state['waiting'].append(id)
+                t['lineup'][seat] = incoming
+                b = self.state['bots'][incoming]
+                b['table'] = t['id']
             self._rebuy(b)
             stacks.append(b['stack'])
         t['button']=button;t['game']=Game(Config(stacks=stacks,button=button,seed=self.rng.getrandbits(64)));t['settled']=False
@@ -169,7 +180,7 @@ class BotLeague:
                     for seat,id in enumerate(table['lineup']):
                         b=self.state['bots'][id];b['stack']=game.stacks[seat]+game.total[seat];b['bankroll']=b['cash']+b['stack'];b['profit']=b['bankroll']-INITIAL
                 if game.done:self._finish(table,game)
-            if all(t['hands']>=t['rotation_at']+300 and t['game'].done and t['settled'] for t in self.state['tables']):
+            if all(t['hands']>=t['rotation_at']+300 and t['game'] is not None and t['game'].done and t['settled'] for t in self.state['tables']):
                 self._rotate_all()
             self._save()
     def _run(self):
@@ -180,6 +191,17 @@ class BotLeague:
                 self.state['error']=type(error).__name__
                 time.sleep(1)
             time.sleep(1.2)
+    def standings(self):
+        with self.lock:
+            rows = []
+            for bot_id, bot in self.state['bots'].items():
+                row = {key: bot[key] for key in (
+                    'name', 'style', 'avatar', 'bankroll', 'rating', 'hands', 'wins', 'profit', 'rebuys')}
+                hands = max(1, bot['hands'])
+                rows.append({**row, 'id': bot_id, 'vpip': round(100 * bot['vpip'] / hands),
+                             'pfr': round(100 * bot['pfr'] / hands)})
+            return sorted(rows, key=lambda row: (row['rating'], row['bankroll']), reverse=True)
+
     def snapshot(self):
         with self.lock:
             bots=self.state['bots'];tables=[]
@@ -189,6 +211,6 @@ class BotLeague:
                     b=bots[id];players.append({'id':id,'hole':list(g.holes[i]) if g else [],'name':b['name'],'avatar':b['avatar'],'style':b['style'],'position':g.position(i) if g else '', 'folded':g.folded[i] if g else False,'bet':g.street_bets[i] if g and not g.done else 0,'stack':g.stacks[i] if g else b['stack'],'bankroll':b['bankroll'],'rating':b['rating'],'hands':b['hands'],'wins':b['wins'],'profit':b['profit'],'rebuys':b['rebuys']})
                 # This league seats only bot roster IDs; human games use a separate API.
                 tables.append({'bot_only':True,'id':t['id'],'hand':t['hands']+int(g is not None and not g.done),'street':g.street if g else 'starting','pot':g.pot if g else 0,'board':g.board if g else [],'players':players,'actor':g.actor if g else None,'button':t['button'],'done':g.done if g else False,'history':copy.deepcopy(g.history) if g else [],'awards':copy.deepcopy(g.awards) if g and g.done else []})
-            leaderboard=sorted(({'id':b['id'],'name':b['name'],'style':b['style'],'avatar':b['avatar'],'bankroll':b['bankroll'],'rating':b['rating'],'hands':b['hands'],'wins':b['wins'],'profit':b['profit'],'rebuys':b['rebuys'],'vpip':round(100*b['vpip']/max(1,b['hands'])),'pfr':round(100*b['pfr']/max(1,b['hands']))} for b in ({**v,'id':k} for k,v in bots.items())),key=lambda b:(b['rating'],b['bankroll']),reverse=True)
+            leaderboard=self.standings()
             waiting=[{'id':id,'name':bots[id]['name'],'idle_hands':bots[id]['idle_hands']} for id in self.state['waiting']]
             return {'tables':tables,'leaderboard':leaderboard,'waiting':waiting,'hands_completed':self.state['hands'],'rotations':self.state['rotations'],'updated':self.state['saved_at'],'error':self.state.get('error','')}

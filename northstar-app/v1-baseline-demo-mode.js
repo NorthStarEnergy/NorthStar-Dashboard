@@ -1,7 +1,7 @@
 /* Role-aware dashboard filtering. Server authorization remains authoritative. */
 (() => {
   'use strict';
-  const unavailableTabs = new Set(['switching', 'outages', 'games']);
+  const unavailableTabs = new Set(['switching', 'outages']);
   const partialTabs = new Set(['operations', 'tools']);
 
   function markNavigation(session) {
@@ -10,7 +10,6 @@
     document.querySelectorAll('#sideNav [data-tab]').forEach(button => {
       const unavailable = unavailableTabs.has(button.dataset.tab);
       button.hidden = demo && unavailable;
-      button.classList.toggle('ns-demo-restricted', ryan && button.dataset.tab === 'games');
       button.classList.toggle('ns-demo-partial', ryan && partialTabs.has(button.dataset.tab));
     });
     const development = document.getElementById('nsDevelopmentFolder');
@@ -18,7 +17,7 @@
       development.hidden = demo;
       development.classList.toggle('ns-demo-restricted', ryan);
     }
-    if (demo) document.querySelectorAll('#outages,#games').forEach(section => { section.hidden = true; });
+    if (demo) document.querySelectorAll('#outages').forEach(section => { section.hidden = true; });
     if (demo && unavailableTabs.has(location.hash.slice(1))) history.replaceState(history.state, '', '#overview');
   }
 

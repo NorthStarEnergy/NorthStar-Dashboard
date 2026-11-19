@@ -268,6 +268,7 @@ OPERATOR_ROUTES = {
     "/api/voice/scan": ("POST",),
     "/api/voice/upload": ("POST",),
     "/api/library": ("GET",),
+    "/api/library/note-counts": ("GET",),
     "/api/library/item": ("GET",),
     "/api/library/notes": ("POST",),
     "/api/library/procedures": ("GET",),
@@ -1735,6 +1736,10 @@ class Handler(SimpleHTTPRequestHandler):
         then 404s, because it does not exist on that hostname.
         """
         self.correlation_id = events.set_correlation_id(self.headers.get("X-Correlation-Id"))
+        if self.path.split("?", 1)[0].startswith("/public-outage-api/tools/"):
+            import northstar_tool_access
+            northstar_tool_access.handle(self)
+            return True
         if self.path.split("?",1)[0].startswith("/public-outage-api/"):
             import northstar_public_outage
             northstar_public_outage.handle(self)
@@ -1792,6 +1797,15 @@ class Handler(SimpleHTTPRequestHandler):
                     self._send_json(manager.query_register(params))
                 elif self.command == "GET" and endpoint == ["detail"]:
                     self._send_json(manager.details(params.get("id","")))
+                elif endpoint == ["discussion"] and self.command in ("GET","POST"):
+                    oid = params.get("id","")
+                    if self.command == "POST":
+                        payload = self._json_body(32 * 1024)
+                        if not isinstance(payload, dict):
+                            raise ValueError("Expected a discussion post")
+                        self._send_json(manager.discussion(oid, actor, payload),201)
+                    else:
+                        self._send_json(manager.discussion(oid))
                 elif self.command == "GET" and endpoint == ["reports"]:
                     self._send_json(manager.outage_report(params["id"]) if params.get("id") else manager.report_options())
                 elif self.command == "GET" and endpoint == ["plans"]:
@@ -2562,6 +2576,9 @@ class Handler(SimpleHTTPRequestHandler):
                 procedure["sha256"],
                 inline=True,
             )
+            return
+        if route == "/api/library/note-counts":
+            self._send_json({"counts": device_library.note_counts()})
             return
         if route == "/api/library":
             query = parse_qs(urlparse(self.path).query)

@@ -2,12 +2,12 @@
 (() => {
   const items={
     overview:['Overview','M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z'],
-    assistant:['Agent','M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z'],
+    assistant:['AGENT','M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z'],
     logbook:['Events','M7 3h10v3H7zM5 5H3v16h18V5h-2M7 11h10M7 16h7'],
     crew:['Check-ins','M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-4M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0'],
     markets:['Markets','M3 3v18h18M6 15l4-5 4 3 6-8M16 5h4v4'],
     weather:['Weather','M7 18a5 5 0 1 1 1-10 6 6 0 0 1 11 3 4 4 0 0 1-1 7H7Z'],
-    tools:['Tools','M14 6l4 4 3-3a7 7 0 0 1-9 9l-6 6-4-4 6-6a7 7 0 0 1 9-9Z'],
+    tools:['Library','M3 4h4v16H3z M9 4h4v16H9z M14 5l4-1 4 15-4 1z'],
     flows:['Flows','M3 7c3-4 6 4 9 0s6 4 9 0M3 12c3-4 6 4 9 0s6 4 9 0M3 17c3-4 6 4 9 0s6 4 9 0'],
     switching:['Engineering','M3 3h6v6H3zM15 15h6v6h-6zM15 3h6v6h-6zM6 9v9h9M9 6h6'],
     outages:['Outages','M13 2 4 14h7l-1 8 10-12h-7Z'],
@@ -133,7 +133,7 @@
       shell.append(bar,divider,workers);document.body.append(shell);
     }
     function openStatusWindow(){
-      const url=new URL('/northstar-clean.html',location.origin);url.searchParams.set('nsStatusWindow','1');url.hash='overview';
+      const url=new URL('/northstar-v1.html',location.origin);url.searchParams.set('nsStatusWindow','1');url.hash='overview';
       const width=screen.availWidth||innerWidth,height=screen.availHeight||innerHeight;
       const popup=window.open(url.href,'northstar-fixed-dashboard',`popup=yes,location=no,toolbar=no,menubar=no,status=no,left=0,top=0,width=${width},height=${height}`);
       if(!popup)window.alert('Allow pop-up windows for NorthStar, then try again.');else {popup.focus();window.NorthstarOperationsConsole?.replaceTracker(document.getElementById('overviewStaff'),popup);}
@@ -292,7 +292,7 @@
     }
     async function loadAlarms(force=false){
       if(alarmLoading || (!force && Date.now()-lastAlarmLoad<15000 && alarmRows.length)){paintAlarms();return;}
-      alarmLoading=true;paintAlarms();
+      alarmLoading=true;let failed=false;paintAlarms();
       try{
         // Retrieve all severities so a display filter cannot suppress critical sound.
         const params=new URLSearchParams({limit:'100'});
@@ -302,8 +302,8 @@
         if(!Array.isArray(data.items))throw Error('invalid');
         alarmRows=data.items;lastAlarmLoad=Date.now();delete events.dataset.alarmError;
       }catch{
-        if(!alarmRows.length)events.dataset.alarmError='Event log unavailable';
-      }finally{alarmLoading=false;paintAlarms();}
+        failed=true;if(!alarmRows.length)events.dataset.alarmError='Event log unavailable';
+      }finally{alarmLoading=false;paintAlarms();window.dispatchEvent(new CustomEvent('northstar:monitor-events',{detail:{items:alarmRows,failed}}));}
     }
     function paintEventShell(){
       const content=events.querySelector('.ns-status-content');

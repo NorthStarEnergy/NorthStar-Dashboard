@@ -30,7 +30,7 @@ def handle(handler):
     relative = route.path[len(PREFIX):] or '/'
     if relative == '/':
         relative = '/index.html'
-    if not (relative in ('/index.html', '/app.js', '/style.css', '/manager.html', '/manager.js', '/manager.css') or relative.startswith('/api/')):
+    if not (relative in ('/index.html', '/app.js', '/style.css', '/manager.html', '/manager.js', '/manager.css', '/favicon.ico', '/site.webmanifest', '/icons/scada-bench-16.png', '/icons/scada-bench-32.png', '/icons/scada-bench-48.png', '/icons/scada-bench-180.png', '/icons/scada-bench-192.png', '/icons/scada-bench-512.png') or relative.startswith('/api/')):
         handler.send_error(404)
         return True
     if handler.command == 'POST' and not relative.startswith('/api/'):
@@ -67,13 +67,9 @@ def handle(handler):
                 content_type = 'application/octet-stream'
             if response.status == 200 and relative == '/index.html':
                 text = data.decode('utf-8').replace('href="/style.css"', 'href="/scada-workbench/style.css"').replace('src="/app.js"', 'src="/scada-workbench/app.js"')
-                data = text.encode('utf-8')
-            elif response.status == 200 and relative == '/app.js':
-                text = data.decode('utf-8').replace("fetch('/api/'+route", "fetch('/scada-workbench/api/'+route")
-                marker = "if(location.hash)history.replaceState(null,'',location.pathname);"
-                if marker not in text:
-                    raise ValueError('Unsupported workbench client')
-                text = text.replace(marker, marker + "\ntoken='northstar-session';")
+                for asset in ["favicon.ico","site.webmanifest","icons/scada-bench-16.png","icons/scada-bench-32.png","icons/scada-bench-48.png","icons/scada-bench-180.png","icons/scada-bench-192.png","icons/scada-bench-512.png"]:
+                    for attr in ("href", "src"):
+                        text = text.replace(f'{attr}="/{asset}"', f'{attr}="{PREFIX}/{asset}"')
                 data = text.encode('utf-8')
             handler.send_response(response.status)
             handler.send_header('Content-Type', content_type)

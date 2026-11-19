@@ -11,7 +11,6 @@ $('autoReload').addEventListener('change',()=>{try{localStorage.setItem('northst
 let game = null, busy = false, ranges = null, replayFrames = [], replayEvents = [], replayIndex = 0;
 
 let handAccuracy={number:null,scores:[],unrated:0};
-try{handAccuracy=JSON.parse(sessionStorage.getItem('northstarPokerAccuracyV1'))||handAccuracy;}catch{}
 let currentMode="grind",career=null,nextHandTimer=null;
 let players=[], allOpponents=[], selectedProfile='maya', replayPlayers=[];
 
@@ -273,6 +272,7 @@ function renderControls(){
  $('raise').textContent=game&&Math.max(...game.street_bets)===0?'Bet':'Raise';
  $('raiseAmount').previousElementSibling.innerHTML=($('raise').textContent==='Bet'?'Bet':'Raise to')+' <span>(BB)</span>';
  $('raise').disabled=!canRaise&&!tableEditMode;$('raiseAmount').disabled=!canRaise;
+ $('raiseUp').disabled=$('raiseDown').disabled=!canRaise||tableEditMode;
  document.querySelectorAll('#sizes button').forEach(button=>button.disabled=!canRaise&&!tableEditMode);
  document.querySelectorAll('#mobileRaiseLevels button').forEach(button=>button.disabled=!canRaise||tableEditMode||button.dataset.duplicate==='true');
 
@@ -280,10 +280,21 @@ function renderControls(){
 
 }
 
+function paintOwnAvatar(image) {
+ if (!image) return;
+ const profile = window.NorthStarSharedChat?.profile;
+ image.hidden = !profile;
+ if (profile) image.src = '/assets/avatars/classic/' + profile.avatarId + '.png';
+}
+window.addEventListener('northstar:avatar-change', () => paintOwnAvatar(document.querySelector('[data-poker-own-avatar]')));
+
 function render(data){
 
+ if(data.history_scope)loadSessionHands(data.history_scope);
  game=data.game;
- if(game&&handAccuracy.number!==(game.hand_number)){handAccuracy={number:game.hand_number,scores:[],unrated:0};sessionStorage.setItem('northstarPokerAccuracyV1',JSON.stringify(handAccuracy));}
+ const decisions=game?.training_decisions||[];
+ const scores=decisions.map(d=>practiceActionScore(d.action,d.mix)).filter(Number.isFinite);
+ handAccuracy={scores,unrated:decisions.length-scores.length,decisions};
  renderHandPerformance();
  $('version').textContent='v'+data.version;
  if(data.account!==undefined)renderAccount(data.account);
@@ -320,6 +331,11 @@ function render(data){
   const box=node(person?'button':'div',undefined,'seat-box'),name=node('div',isHero?(career&&currentMode==='grind'?career.name:'You'):person?person.name.split(' ')[0]:`Seat ${i+1}`,'seat-name');
 
   if(person){const avatar=node('img',undefined,'seat-avatar');avatar.src=person.avatar;avatar.alt='';box.append(avatar);box.title=person.name+' · '+person.style;box.setAttribute('aria-label',person.name+' — view playstyle');box.addEventListener('click',()=>{selectedProfile=person.id;renderProfiles();$('profile').scrollIntoView({block:'nearest',behavior:'smooth'});});}
+  else if(isHero){
+   const avatar=node('img',undefined,'seat-avatar');
+   avatar.alt='';avatar.dataset.pokerOwnAvatar='';
+   paintOwnAvatar(avatar);box.append(avatar);
+  }
 
   const pos=game?game.positions[i]:['BTN','SB','BB','UTG','HJ','CO'][i];name.append(node('b',pos));
 
@@ -392,11 +408,8 @@ function download(name, data){const url=URL.createObjectURL(new Blob([JSON.strin
 
 async function readFile(input){const file=input.files[0];if(!file)return null;if(file.size>1048576)throw new Error('Choose a JSON file smaller than 1 MB.');return JSON.parse(await file.text());}
 
-async function act(label){if(tableEditMode)return;unlockAudio();await task(async()=>{
- let score=null;try{score=practiceActionScore(label,(await api('/api/hint',{})).probabilities);}catch{}
- const data=await api('/api/action',{action:label});
- if(score===null)handAccuracy.unrated++;else handAccuracy.scores.push(score);
- sessionStorage.setItem('northstarPokerAccuracyV1',JSON.stringify(handAccuracy));
+async function act(label,automatic=false){if(tableEditMode)return;unlockAudio();await task(async()=>{
+ const data=await api('/api/action',{action:label,automatic,hand_number:game.hand_number,history_index:game.history.length});
  await present(data);clearStudy();
 });}
 
@@ -422,7 +435,7 @@ $('strategyFile').addEventListener('change',()=>task(async()=>{const data=await 
 function renderRange(){if(!ranges)return;const position=$('rangePosition').value,table=ranges[position],ranks='AKQJT98765432';$('rangeGrid').replaceChildren();for(let row=0;row<13;row++)for(let col=0;col<13;col++){const name=row===col?ranks[row]+ranks[col]:row<col?ranks[row]+ranks[col]+'s':ranks[col]+ranks[row]+'o';const freq=table[name];const cell=node('button',name,'range-cell'+(freq?' open':''));cell.setAttribute('aria-label',`${name}: raise ${freq*100}%`);cell.addEventListener('click',()=>{document.querySelectorAll('.range-cell.selected').forEach(e=>e.classList.remove('selected'));cell.classList.add('selected');$('rangeSelection').textContent=`${position} · ${name} · Raise ${(freq*100).toFixed(0)}%, fold ${((1-freq)*100).toFixed(0)}%`;});$('rangeGrid').append(cell);}}
 
 $('backToTable').addEventListener('click',()=>document.querySelector('.tab[data-tab="play"]').click());
-for(const button of document.querySelectorAll('.tab'))button.addEventListener('click',async()=>{if(busy)return;$('mainMenu').open=false;$('mainMenu').querySelector('summary').focus();for(const tab of document.querySelectorAll('.tab')){tab.classList.toggle('active',tab===button);tab.setAttribute('aria-selected',String(tab===button));}for(const panel of document.querySelectorAll('.tab-panel'))panel.hidden=panel.id!==button.dataset.tab;if(button.dataset.tab==='ranges'&&!ranges)await task(async()=>{ranges=(await api('/api/ranges')).ranges;renderRange();});});
+for(const button of document.querySelectorAll('.tab'))button.addEventListener('click',async()=>{if(busy)return;$('mainMenu').open=false;$('mainMenu').querySelector('summary').focus();for(const tab of document.querySelectorAll('.tab')){tab.classList.toggle('active',tab===button);tab.setAttribute('aria-selected',String(tab===button));}for(const panel of document.querySelectorAll('.tab-panel'))panel.hidden=panel.id!==button.dataset.tab;if(button.dataset.tab==='standings')refreshRankings();if(button.dataset.tab==='league')refreshLeague();if(button.dataset.tab==='ranges'&&!ranges)await task(async()=>{ranges=(await api('/api/ranges')).ranges;renderRange();});});
 
 $('rangePosition').addEventListener('change',renderRange);
 function leagueChips(value){return Math.round(value/100).toLocaleString();}
@@ -461,8 +474,6 @@ function renderLeague(data){
   $('leagueTables').append(panel);history.scrollTop=history.scrollHeight;
  }
  renderObserver();
- $('leagueRanks').replaceChildren();
-  for(const [index,player] of data.leaderboard.entries()){const row=node('tr'),who=node('td'),whoInner=node('span',undefined,'league-ranked-player'),img=node('img');img.src=player.avatar;img.alt='';whoInner.append(img,profileButton({id:'bot:'+player.id},`${index+1}. ${player.name}`));who.append(whoInner);row.append(who,node('td',player.style),node('td',`${leagueChips(player.bankroll)} BB`),node('td',player.rating.toLocaleString()),node('td',player.hands.toLocaleString()),node('td',`${player.wins}-${player.hands-player.wins}`),node('td',`${player.profit>=0?'+':''}${leagueChips(player.profit)} BB`,'league-'+(player.profit>=0?'positive':'negative')),node('td',`${player.vpip}% / ${player.pfr}%`));$('leagueRanks').append(row);}
 }
 function renderObserver(){
  const table=leagueSnapshot?.tables.find(t=>t.id===observedTable);
@@ -483,8 +494,8 @@ function renderObserver(){
  renderLeagueHistory($('observerHistory'),table);
 }
 $('closeObserver').addEventListener('click',()=>{observedTable=null;renderObserver();});
-async function refreshLeague(){if(document.hidden||leagueLoading)return;leagueLoading=true;try{renderLeague(await api('/api/league'));}catch{$('leagueMeta').textContent='Connection interrupted · reconnecting…';if(observedTable!==null)$('observerMeta').textContent='Connection interrupted · displayed table may be stale';}finally{leagueLoading=false;}}
-refreshLeague();setInterval(()=>{if(!$('league').hidden)refreshLeague();},500);document.addEventListener('visibilitychange',refreshLeague);
+async function refreshLeague(){if(document.hidden||$('league').hidden||leagueLoading)return;leagueLoading=true;try{const data=await api('/api/league');if(!$('league').hidden)renderLeague(data);}catch{$('leagueMeta').textContent='Connection interrupted · reconnecting…';if(observedTable!==null)$('observerMeta').textContent='Connection interrupted · displayed table may be stale';}finally{leagueLoading=false;}}
+setInterval(()=>{if(!$('league').hidden)refreshLeague();},500);document.addEventListener('visibilitychange',refreshLeague);
 
 function renderReplay(){const frame=replayFrames[replayIndex];if(!frame)return;$('replayStep').textContent=`Step ${replayIndex} of ${replayFrames.length-1}`;$('replayTitle').textContent=frame.street[0].toUpperCase()+frame.street.slice(1);cards($('replayBoard'),frame.board,5);$('replayDetails').replaceChildren();const last=replayEvents[replayIndex-1];$('replayDetails').append(node('p',last?`${replayPlayers[last.seat]?.name||'Seat '+(last.seat+1)}: ${last.action}${last.amount!==null?' to '+bb(last.amount)+' BB':''}`:'Blinds posted. Action begins.'));for(const [label,value]of [['Pot',bb(frame.pot)+' BB'],['Next actor',frame.actor===null?'Hand complete':`${replayPlayers[frame.actor]?.name||'Seat '+(frame.actor+1)} · ${frame.position}`],['Actor cards',frame.hole.join(' ')||'—'],['Stacks',frame.stacks.map(s=>bb(s)).join(' / ')+' BB']]){const line=node('div',undefined,'replay-line');line.append(node('span',label),node('span',value));$('replayDetails').append(line);}renderControls();}
 
@@ -568,13 +579,14 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js',{updat
 
 function scheduleNext(){
  clearTimeout(nextHandTimer);
+ if($('trainingDialog').open)return;
  if(applyPendingUpdate())return;
  if(autoFoldDecision()){
   nextHandTimer=setTimeout(()=>{
    const decision=autoFoldDecision();if(!decision)return;
    // Record before submitting: a failed or ambiguous response must not retry a move.
    autoFoldAttempt=decision.key;
-   act(decision.action);
+   act(decision.action,true);
   },200);
   return;
  }
@@ -598,7 +610,7 @@ $('rememberMePrompt').addEventListener('change',()=>{$('rememberMe').checked=$('
 for(const [button,path] of [['createAccountPrompt','/api/auth/register'],['signInPrompt','/api/auth/login']])$(button).addEventListener('click',async()=>{ $('accountId').value=$('accountIdPrompt').value;$('accountPassword').value=$('accountPasswordPrompt').value;$('rememberMe').checked=$('rememberMePrompt').checked;await accountAction(path);$('accountPromptStatus').textContent=$('accountStatus').textContent;});
 
 // Compare the loaded code's version, not the version displayed by newer API responses.
-const LOADED_VERSION='0.8.2';
+const LOADED_VERSION='0.8.4';
 let pendingUpdate=false,checkingUpdate=false,reloadingUpdate=false;
 function applyPendingUpdate(){
  if(!pendingUpdate||busy||document.hidden||reloadingUpdate)return false;
@@ -624,24 +636,76 @@ window.addEventListener('pageshow',checkForUpdate);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkForUpdate();});
 checkForUpdate();
 
-async function refreshRankings(){
- if(document.hidden)return;
- try{
-  const data=await api('/api/leaderboard');
-  $('topPlayers').replaceChildren();$('allPlayers').replaceChildren();
-  for(const [index,player] of data.players.entries()){
-   const profit=`${player.profit>0?'+':''}${bbLabel(player.profit)}`;
-   if(index<5){const row=node('li');row.append(profileButton(player,`${index+1}. ${player.name}`),node('strong',profit));$('topPlayers').append(row);}
-   const row=node('tr'),name=node('td');name.append(profileButton(player));row.append(node('td',index+1),name,node('td',player.kind),node('td',player.hands.toLocaleString()),node('td',profit));$('allPlayers').append(row);
-  }
-  $('leaderboardStatus').textContent=data.players.length?`${data.players.length} players · updates every 15 seconds`:'No completed hands yet. Play a cash-career hand to join the rankings.';
- }catch{$('leaderboardStatus').textContent='Rankings unavailable. Retrying shortly.';}
+const standingsColumns = [
+ ['name','Player'], ['profit','Net BB'], ['rating','Rating'], ['hands','Hands played'],
+ ['wins','Hands won'], ['losses','Hands lost'], ['winRate','Win %'], ['bankroll','Bankroll (BB)'],
+ ['vpip','VPIP %'], ['pfr','PFR %'], ['rebuys','Rebuys']
+];
+let standingsPlayers = [], standingsKey = 'profit', standingsDirection = -1;
+for (const [key, label] of standingsColumns) {
+ const header = node('th'), button = node('button', label);
+ header.scope = 'col'; button.type = 'button'; button.dataset.sort = key;
+ button.addEventListener('click', () => {
+  standingsDirection = key === standingsKey ? -standingsDirection : key === 'name' ? 1 : -1;
+  standingsKey = key;
+  renderStandings();
+ });
+ header.append(button); $('standingsColumns').append(header);
 }
-refreshRankings();setInterval(refreshRankings,15000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshRankings();});
-$('fullRankings').addEventListener('toggle',()=>{if($('fullRankings').open)refreshRankings();});
-
-// Rankings remain available in the menu so the table can use the full screen.
+function compareStandings(a, b) {
+ const x = a[standingsKey], y = b[standingsKey];
+ if (x == null && y != null) return 1;
+ if (y == null && x != null) return -1;
+ let order = 0;
+ if (x != null && y != null) order = typeof x === 'string' ? x.localeCompare(y) : x - y;
+ return order * standingsDirection || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+}
+function renderStandings() {
+ for (const header of $('standingsColumns').cells) {
+  if (header.firstChild.dataset.sort === standingsKey) header.setAttribute('aria-sort', standingsDirection === 1 ? 'ascending' : 'descending');
+  else header.removeAttribute('aria-sort');
+ }
+ const rows = document.createDocumentFragment();
+ for (const [index, player] of [...standingsPlayers].sort(compareStandings).entries()) {
+  const row = node('tr'), name = node('td'), who = node('div', undefined, 'league-ranked-player');
+  if (player.avatar) {const image = node('img'); image.alt = ''; image.src = player.avatar; who.append(image);}
+  const identity = node('div');
+  identity.append(profileButton(player, (index+1)+'. '+player.name), node('small', player.style || player.kind));
+  who.append(identity); name.append(who); row.append(name);
+  for (const [key] of standingsColumns.slice(1)) {
+   const value = player[key];
+   let display = '—';
+   if (value != null) {
+    if (key === 'bankroll' || key === 'profit') display = (key === 'profit' && value > 0 ? '+' : '') + bb(value);
+    else display = value.toLocaleString(undefined, {maximumFractionDigits: 1});
+   }
+   const cell = node('td', display);
+   if (key === 'profit' && value) cell.className = value > 0 ? 'league-positive' : 'league-negative';
+   row.append(cell);
+  }
+  rows.append(row);
+ }
+ $('leagueRanks').replaceChildren(rows);
+}
+async function refreshRankings() {
+ const button = $('refreshStandings');
+ if (button.disabled) return;
+ button.disabled = true;
+ $('leaderboardStatus').textContent = 'Loading rankings…';
+ try {
+  const data = await api('/api/leaderboard');
+  standingsPlayers = data.players.map(player => ({...player, losses: player.hands - player.wins,
+   winRate: player.hands ? 100 * player.wins / player.hands : null}));
+  renderStandings();
+  const time = new Date().toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'});
+  $('leaderboardStatus').textContent = standingsPlayers.length ? standingsPlayers.length+' players · Updated '+time : 'No completed hands yet.';
+ } catch { $('leaderboardStatus').textContent = 'Could not update rankings. Select Refresh to try again.'; }
+ finally { button.disabled = false; }
+}
+$('refreshStandings').addEventListener('click', refreshRankings);
+for (const link of document.querySelectorAll('[data-poker-tab]')) {
+ link.addEventListener('click', () => document.querySelector('.tab[data-tab="'+link.dataset.pokerTab+'"]').click());
+}
 
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('mainMenu').open){$('mainMenu').open=false;$('mainMenu').querySelector('summary').focus();}});
 
@@ -692,18 +756,51 @@ function renderMobileRaiseLevels(canRaise){
  }
 }
 
+function syncStackLabel(){
+ if($('stackPercent').disabled){$('stackLabel').textContent='—';return;}
+ const amount=Math.round(Number($('raiseAmount').value)*100);
+ const percent=Math.max(0,Math.min(100,Math.round((amount-game.street_bets[game.hero])*100/game.stacks[game.hero])));
+ $('stackPercent').value=percent;
+ $('stackLabel').textContent=percent+'% · '+bbLabel(amount);
+}
+function stepRaise(direction){
+ const field=$('raiseAmount');
+ if(field.disabled||busy||tableEditMode)return;
+ const min=Math.round(Number(field.min)*100),max=Math.round(Number(field.max)*100);
+ const current=Math.round(field.valueAsNumber*100);
+ const chips=Number.isFinite(current)?current+direction*100:min;
+ field.value=Math.min(max,Math.max(min,chips))/100;
+ syncStackLabel();
+}
+$('raiseUp').addEventListener('click',()=>stepRaise(1));
+$('raiseDown').addEventListener('click',()=>stepRaise(-1));
+$('raiseAmount').addEventListener('keydown',event=>{
+ if(event.key==='ArrowUp'||event.key==='ArrowDown'){
+  event.preventDefault();
+  stepRaise(event.key==='ArrowUp'?1:-1);
+ }
+});
+$('raiseAmount').addEventListener('input',syncStackLabel);
+$('stackPercent').addEventListener('input',()=>{
+ const desired=game.street_bets[game.hero]+Math.round(game.stacks[game.hero]*Number($('stackPercent').value)/100);
+ const amount=Math.max(game.legal.raise_min,Math.min(game.legal.raise_max,desired));
+ $('raiseAmount').value=amount/100;
+ $('stackLabel').textContent=$('stackPercent').value+'% · '+bbLabel(amount);
+});
 function renderBetPresets(){
  const canRaise=game&&!game.done&&currentMode!=='sim'&&game.actor===game.hero&&!game.bot_thinking&&game.legal.raise_min!=null;
  const presets=canRaise?bettingPresets(game):[{amount:200,label:'2 BB'},{amount:500,label:'½ Pot'},{amount:1000,label:'Pot'},{amount:10000,label:'All-in'}];
+ $('stackPercent').disabled=!canRaise;
  renderMobileRaiseLevels(canRaise);
  const sizes=$('sizes');
  sizes.replaceChildren();
  if(canRaise){$('raiseAmount').min=String(game.legal.raise_min/100);$('raiseAmount').max=String(game.legal.raise_max/100);$('raiseAmount').value=String(presets[0].amount/100);}
+ syncStackLabel();
  for(const {amount,label} of presets){
   const button=node('button',label);
   button.type='button';
   button.disabled=!canRaise&&!tableEditMode;
-  button.addEventListener('click',()=>{if(!busy&&canRaise&&!tableEditMode)$('raiseAmount').value=String(amount/100);});
+  button.addEventListener('click',()=>{if(!busy&&canRaise&&!tableEditMode){$('raiseAmount').value=String(amount/100);syncStackLabel();}});
   sizes.append(button);
  }
  prepareControlAssets();
@@ -711,7 +808,7 @@ function renderBetPresets(){
 
 // Resume a pending native solve without blocking the UI or accepting human bot moves.
 setInterval(()=>{
- if(!busy&&!document.hidden&&game&&!game.done&&game.bot_thinking){
+ if(!busy&&!document.hidden&&!$('trainingDialog').open&&game&&!game.done&&game.bot_thinking){
   task(async()=>present(await api('/api/bot-step',{})));
  }
 },1500);
@@ -734,10 +831,42 @@ $('resetTableLayout').addEventListener('click',()=>{
  $('tableEditorStatus').textContent='Saved as your default layout.';
 });
 
-const sessionHandsKey='northstarPokerSessionHandsV1';
+let sessionHandsKey=null;
 let sessionHands=[];
-try{sessionHands=JSON.parse(sessionStorage.getItem(sessionHandsKey)||'[]');if(!Array.isArray(sessionHands))sessionHands=[];}catch{}
+function loadSessionHands(scope){
+ const key='northstarPokerSessionHandsV1:'+scope;
+ if(key===sessionHandsKey)return;
+ sessionHandsKey=key;
+ sessionHands=[];
+ try{
+  const legacy='northstarPokerSessionHandsV1';
+  const saved=sessionStorage.getItem(key)??sessionStorage.getItem(legacy);
+  const hands=JSON.parse(saved||'[]');
+  if(Array.isArray(hands))sessionHands=hands;
+  if(saved&&!sessionStorage.getItem(key)){
+   sessionStorage.setItem(key,saved);
+   sessionStorage.removeItem(legacy);
+  }
+ }catch{}
+ renderSessionHands();
+}
 function renderSessionHands(){
+ const reviews=$('practiceReviews');
+ reviews.replaceChildren();
+ if(!sessionHands.length)reviews.append(node('p','Complete a hand to review your decisions.'));
+ const formatAction=a=>a.startsWith('raise:')?'raise to '+bbLabel(Number(a.slice(6))):a;
+ for(const hand of sessionHands){
+  const entry=node('details');
+  entry.append(node('summary',hand.label+' · '+signedHandBB(hand.net)));
+  for(const decision of hand.decisions||[]){
+   const line=node('p',decision.street+' · '+formatAction(decision.action)+' · '+(Number.isFinite(decision.delta)
+    ? signedHandBB(Math.round(decision.delta*100))+' estimated EV vs reference mix. Highest sampled EV: '+formatAction(decision.best)+'. Reference: '+decision.source
+    : 'EV unavailable.'));
+   entry.append(line);
+  }
+  if(!hand.decisions?.length)entry.append(node('p','No recorded decisions.'));
+  reviews.append(entry);
+ }
  const list=$('sessionHandList');list.replaceChildren();
  if(!sessionHands.length)list.append(node('li','No completed hands this session.'));
  for(const [index,hand] of sessionHands.entries()){
@@ -754,7 +883,8 @@ async function rememberSessionHand(){
  try{
   const data=withHandPerformance(await api('/api/history')),key=JSON.stringify([data.config,data.deck,data.actions]);
   if(sessionHands.some(hand=>hand.key===key))return;
-  sessionHands.unshift({key,data,net:game.net,accuracy:practiceAccuracy(),rated:handAccuracy.scores.length,unrated:handAccuracy.unrated,label:`Pot ${bbLabel(game.pot)} · ${game.board.join(' ')||'Preflop'}`});sessionHands=sessionHands.slice(0,100);
+  const decisions=handAccuracy.decisions.map(({street,action,best,delta,source})=>({street,action,best,delta,source}));
+  sessionHands.unshift({key,data,decisions,net:game.net,accuracy:practiceAccuracy(),rated:handAccuracy.scores.length,unrated:handAccuracy.unrated,label:`Pot ${bbLabel(game.total.reduce((sum,n)=>sum+n,0))} · ${game.board.join(' ')||'Preflop'}`});sessionHands=sessionHands.slice(0,100);
   sessionStorage.setItem(sessionHandsKey,JSON.stringify(sessionHands));renderSessionHands();
  }catch{$('sessionHandList').replaceChildren(node('li','Could not save this hand.'));}
 }
@@ -780,6 +910,9 @@ function renderHandPerformance(){
  $('handAccuracy').textContent=accuracy===null?'Practice accuracy: —':`Practice accuracy: ${accuracy}% · ${count} decision${count===1?'':'s'}${handAccuracy.unrated?' · '+handAccuracy.unrated+' unrated':''}`;
  $('handOutcome').textContent=game?.done?`Hand result: ${signedHandBB(game.net)}`:'Hand result: In progress';
  $('handOutcome').dataset.outcome=game?.done?(game.net>0?'win':game.net<0?'loss':'even'):'pending';
+ const last=handAccuracy.decisions.at(-1);
+ document.querySelector('.training-link').textContent=Number.isFinite(last?.delta)
+  ? `GTO training · Last EV vs mix ${signedHandBB(Math.round(last.delta*100))}` : 'GTO training ↗';
 }
 
 function withHandPerformance(data){

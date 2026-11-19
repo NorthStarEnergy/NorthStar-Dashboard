@@ -16,13 +16,20 @@
    {id:'assets',title:'Station and device library',type:'Assets',summary:'Equipment, drawings and reference records by area and site.',disabled:true},
    {id:'schematic-builder',title:'Schematic builder',type:'Tools',summary:'Dedicated one-line drawing workspace.',status:'Available',href:shell+'&nsModuleWindow='+encodeURIComponent('tools:schematic-builder')},
    {id:'data-connections',title:'Data connections',type:'Tools',summary:'Connection information and provider setup.',status:'Available',href:shell+'&nsModuleWindow='+encodeURIComponent('tools:data-connections')},
-   {id:'data-workspace',title:'Data workspace',type:'Tools',summary:'Datasets, calculations, saved scripts and charts.',disabled:true},
+   {id:'data-workspace',title:'Data workspace',type:'Tools',summary:'Datasets, calculations, saved scripts and charts.',status:'Available',href:'data-workspace.html',disabled:session?.role!=='operator' && session?.required!==false},
    {id:'flows',title:'Water flows',type:'Tools',summary:'Water-source monitoring and operational data workspace.',disabled:true},
    {id:'training',title:'Switching Simulator',type:'Tools',summary:'Island / Twin / Iroquois r013 training single-line. Source-qualified draft.',status:'Available',disabled:session?.role!=='operator',href:'northstar-clean.html?buildView=v3&nsModuleWindow=training%3Aswitching-simulator'}];
+  if (session?.role==='operator' || (session?.required===false && !session.role)) {
+    items.push({id:'outage-manager',title:'Outage Manager',type:'Tools',summary:'Track equipment outages and availability.',status:'Available',href:'/outage-manager.html'});
+  }
+  if (session?.role==='operator' && String(session.username||'').toLowerCase()==='ryan') {
+    items.push({id:'scada-bench',title:'SCADA Bench',type:'Tools',summary:'Open the standalone SCADA Bench workspace.',status:'Available',href:'/scada-workbench/'});
+  }
   const item=items.find(i=>i.id===q.get('item'));
   if(q.has('item')){if(!item){main.innerHTML='<a href="'+url()+'">Back to Library</a><h1>Item not found</h1><p>This link does not identify a Library item.</p>';return;}detail(item);return;}
   main.classList.add('library-index');
   main.innerHTML='<header><h1>Library</h1></header><div class="filters"><label>Search<input id="search" type="search" placeholder="Title, station or topic"></label><label>Type<select id="type"><option>All</option><option>Reports</option><option>Research</option><option>Assets</option><option>Tools</option></select></label></div><p class="count muted" role="status" id="count"></p><div class="list" id="list"></div><div id="itemInfo" popover="auto" aria-label="Item details"></div>';
+  if(q.get('type')==='Tools') main.querySelector('h1').textContent='Tools';
   const info=root.getElementById('itemInfo');let infoButton=null;
   info.addEventListener('toggle',e=>{if(infoButton)infoButton.setAttribute('aria-expanded',String(e.newState==='open'));});
   root.getElementById('list').addEventListener('click',e=>{

@@ -86,8 +86,11 @@ MORE_VISITORS=(
 )
 POOL=ROSTER+VISITORS+MORE_VISITORS
 
+OBJECT_PORTRAITS = {'owen': 45, 'leo': 46, 'jules': 47, 'miles': 48, 'rafael': 49, 'zoe': 50}
 
 def classic_avatar(bot_id):
-    ids = [p.id for p in POOL]
-    index = ids.index(bot_id.removesuffix('-2'))
+    regular = bot_id.removesuffix('-2')
+    index = OBJECT_PORTRAITS.get(regular)
+    if index is None:
+        index = [p.id for p in POOL].index(regular)
     return f'/assets/avatars/classic/classic-{index:02d}.png'

@@ -15,19 +15,19 @@ class AvatarProfilesTest(unittest.TestCase):
     tearDown = workflows.ChatWorkflowTest.tearDown
     def test_catalog_and_persistence(self):
         import northstar_avatars as avatars
-        self.assertEqual(len(avatars.CATALOG), 45)
+        self.assertEqual(len(avatars.CATALOG), 51)
         for item in avatars.CATALOG:
             blob = (Path(avatars.__file__).parent / item['url'].lstrip('/')).read_bytes()
-            self.assertEqual(struct.unpack('>II', blob[16:24]), (34, 23))
+            self.assertEqual(struct.unpack('>II', blob[16:24]), (item['width'], item['height']))
         self.assertEqual(avatars.get_profile('alice')['avatarId'], 'classic-00')
-        avatars.save_profile('alice', 'classic-44')
+        avatars.save_profile('alice', 'classic-50')
         importlib.reload(avatars)
-        self.assertEqual(avatars.get_profile('alice')['avatarId'], 'classic-44')
+        self.assertEqual(avatars.get_profile('alice')['avatarId'], 'classic-50')
         self.assertEqual(avatars.get_profile('bob')['avatarId'], 'classic-00')
-        for invalid in ('classic-45', '../evil', None, [], 'https://evil.test/x.png'):
+        for invalid in ('classic-51', '../evil', None, [], 'https://evil.test/x.png'):
             with self.assertRaises(ValueError):
                 avatars.save_profile('alice', invalid)
-        self.assertEqual(avatars.get_profile('alice')['avatarId'], 'classic-44')
+        self.assertEqual(avatars.get_profile('alice')['avatarId'], 'classic-50')
 
     def test_existing_messages_follow_author_profile(self):
         import northstar_avatars as avatars

@@ -1,3 +1,7 @@
+## 20261118-v1-wide-monitor
+
+Added the [V1 wide Overview, sortable roster and detached monitor controls](packets/2026-11-18-v1-wide-monitor.md). Verified 652 Python and 77 JavaScript tests plus the wide-monitor browser fixture.
+
 ## 20261110-outage-section-library
 
 Restored the [public UWPC reader and form exports](packets/2026-11-10-outage-section-library.md) and scoped the outage folder to the Outages section.
@@ -703,3 +707,17 @@ Engineering now includes [Arc Flash Scenario Studio](packets/2026-11-07-arc-flas
 Engineering studio styling follows the [dashboard theme](packets/2026-11-07-arc-studio-theme.md).
 
 Checked-out outage forms now open a [document editor](packets/2026-11-14-outage-document-editor.md) with printable row formatting and images.
+
+- 2026-11-18: Main-menu SCADA Bench and Outage Manager links; 77 JS checks and focused browser matrix pass. See packets/2026-11-18-main-app-links.md.
+
+## Operator Log Book workspace
+
+Added the operator entry workspace, daily drafts, linked alarm comments and tickets, equipment notes and historical search. Updated the dashboard navigation and Overview column sizing. See [the release packet](packets/2026-11-18-operator-book.md).
+
+## Log Book layout and event filters
+
+Log Book now shares the Overview move and snap controls and displays compact, shaded event rows. See [the release packet](packets/2026-11-18-book-layout.md).
+
+## AGENT menu placement
+
+Moved AGENT below Events using the white/grey NorthStar icon. See [the release packet](packets/2026-11-18-agent-menu.md).

@@ -313,5 +313,47 @@
     "url": "/assets/avatars/classic/classic-44.png",
     "width": 34,
     "height": 23
+  },
+  {
+    "id": "classic-45",
+    "name": "Turquoise coffee mug",
+    "url": "/assets/avatars/classic/classic-45.png",
+    "width": 68,
+    "height": 46
+  },
+  {
+    "id": "classic-46",
+    "name": "Eight ball",
+    "url": "/assets/avatars/classic/classic-46.png",
+    "width": 68,
+    "height": 46
+  },
+  {
+    "id": "classic-47",
+    "name": "Potted cactus",
+    "url": "/assets/avatars/classic/classic-47.png",
+    "width": 68,
+    "height": 46
+  },
+  {
+    "id": "classic-48",
+    "name": "Rubber duck",
+    "url": "/assets/avatars/classic/classic-48.png",
+    "width": 68,
+    "height": 46
+  },
+  {
+    "id": "classic-49",
+    "name": "Red tabletop radio",
+    "url": "/assets/avatars/classic/classic-49.png",
+    "width": 68,
+    "height": 46
+  },
+  {
+    "id": "classic-50",
+    "name": "Lucky horseshoe",
+    "url": "/assets/avatars/classic/classic-50.png",
+    "width": 68,
+    "height": 46
   }
 ]

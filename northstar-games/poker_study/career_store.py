@@ -18,17 +18,35 @@ class CareerStore:
             if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='careers'").fetchone():return None
             row=db.execute('SELECT payload FROM careers WHERE token=?',(token,)).fetchone()
         return json.loads(row[0]) if row else None
-    def save(self, token, session):
-        if not self.path or not session.get('career'):return
+    def save(self, token, session, training_hand=None):
+        if not self.path:
+            if training_hand:
+                recent = session.setdefault('recent_training', {})
+                recent[training_hand['number']] = training_hand
+                if len(recent) > 50: del recent[min(recent)]
+            return
+        if not session.get('career') and not session.get('game'):return
         self.path.parent.mkdir(parents=True,exist_ok=True)
-        game=session['game']
-        data={k:session.get(k) for k in ('hero','number','mode','career','lineup','settled_number','notice','opponent_id','bet_limits')}
-        data['game']={'config':asdict(game.config),'deck':game.initial_deck,'history':game.history} if game else None
-        data['strategy_rows']=session['strategy'].rows
         with closing(sqlite3.connect(self.path)) as db:
             db.execute('CREATE TABLE IF NOT EXISTS careers (token TEXT PRIMARY KEY, payload TEXT NOT NULL)')
-            db.execute('INSERT OR REPLACE INTO careers VALUES (?,?)',(token,json.dumps(data)))
+            db.execute('INSERT OR REPLACE INTO careers VALUES (?,?)',(token,self._career_payload(session)))
+            if training_hand:
+                owner = self.profile_id(token)
+                db.execute('CREATE TABLE IF NOT EXISTS training_hands (owner TEXT, number INTEGER, payload TEXT NOT NULL, PRIMARY KEY(owner, number))')
+                db.execute('INSERT OR REPLACE INTO training_hands VALUES (?,?,?)',
+                           (owner, training_hand['number'], json.dumps(training_hand)))
+                db.execute('DELETE FROM training_hands WHERE owner=? AND number < (SELECT number FROM training_hands WHERE owner=? ORDER BY number DESC LIMIT 1 OFFSET 49)', (owner, owner))
             db.commit()
+
+    def training_history(self, token, session):
+        if not self.path:
+            return list(reversed(session.get('recent_training', {}).values()))
+        if not self.path.exists(): return []
+        with closing(sqlite3.connect(self.path)) as db:
+            if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='training_hands'").fetchone():
+                return []
+            rows = db.execute('SELECT payload FROM training_hands WHERE owner=? ORDER BY number DESC LIMIT 50', (self.profile_id(token),))
+            return [json.loads(payload) for payload, in rows]
 
     def standings(self):
         if not self.path or not self.path.exists():return []
@@ -72,6 +90,7 @@ class CareerStore:
         data={k:session.get(k) for k in ('hero','number','mode','career','lineup','settled_number','notice','opponent_id','bet_limits')}
         data['game']={'config':asdict(game.config),'deck':game.initial_deck,'history':game.history} if game else None
         data['strategy_rows']=session['strategy'].rows
+        data['training_decisions']=session.get('training_decisions', [])
         return json.dumps(data)
 
     def create_account(self, username, password, new_token, old_token, session):
@@ -88,6 +107,9 @@ class CareerStore:
                 db.execute('INSERT OR REPLACE INTO careers VALUES (?,?)',(new_token,payload))
                 from .invitations import promote_guest
                 promote_guest(db, old_token, new_token, username)
+                if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='training_hands'").fetchone():
+                    db.execute('UPDATE training_hands SET owner=? WHERE owner=?',
+                               (self.profile_id(new_token), self.profile_id(old_token)))
                 if old_token and old_token!=new_token:db.execute('DELETE FROM careers WHERE token=?',(old_token,))
                 db.commit()
         except sqlite3.IntegrityError as error:

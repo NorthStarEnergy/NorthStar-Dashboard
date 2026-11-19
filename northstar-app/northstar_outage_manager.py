@@ -254,6 +254,45 @@ def details(oid):
         return {**result,"documents":documents}
 
 
+def discussion(oid, actor=None, payload=None):
+    with desk.session() as c:
+        c.execute("BEGIN IMMEDIATE" if payload is not None else "BEGIN")
+        if not c.execute(REGISTER+"SELECT 1 FROM rows WHERE id=?", (oid,)).fetchone():
+            raise LookupError("Outage not found")
+        c.execute("""CREATE TABLE IF NOT EXISTS outage_discussion (
+            outage TEXT NOT NULL, id TEXT NOT NULL, parent TEXT NOT NULL, kind TEXT NOT NULL,
+            body TEXT NOT NULL, author TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY(outage,id))""")
+        if payload is not None:
+            if not isinstance(payload, dict):
+                raise ValueError("Expected a discussion post")
+            ident, parent, kind, body = (payload.get(k) for k in ("id","parent","kind","body"))
+            if not isinstance(ident,str) or not re.fullmatch(r"[a-f0-9-]{36}",ident):
+                raise ValueError("Invalid post identifier")
+            if not isinstance(body,str) or not 0 < len(body.strip()) <= 2000:
+                raise ValueError("Enter a message of up to 2000 characters")
+            if not isinstance(parent,str) or len(parent)>36:
+                raise ValueError("Invalid discussion thread")
+            allowed = ("note","question","decision")
+            if parent:
+                root = c.execute("SELECT kind FROM outage_discussion WHERE outage=? AND id=? AND parent=''",
+                                 (oid,parent)).fetchone()
+                if not root:
+                    raise LookupError("Discussion thread not found")
+                allowed = ("reply","answer") if root[0]=="question" else ("reply",)
+            if kind not in allowed:
+                raise ValueError("Invalid post type")
+            values = (parent,kind,body.strip(),actor)
+            prior = c.execute("SELECT parent,kind,body,author FROM outage_discussion WHERE outage=? AND id=?",
+                              (oid,ident)).fetchone()
+            if prior and tuple(prior)!=values:
+                raise desk.Conflict("Post identifier already used")
+            if not prior:
+                c.execute("INSERT INTO outage_discussion VALUES (?,?,?,?,?,?,?)",
+                          (oid,ident,*values,store.now_iso()))
+        return {"posts":[dict(r) for r in c.execute(
+            "SELECT id,parent,kind,body,author,at FROM outage_discussion WHERE outage=? ORDER BY rowid",(oid,))]}
+
+
 def report_options():
     with desk.session() as c:
         return [dict(r) for r in c.execute(REGISTER + """

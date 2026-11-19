@@ -5,7 +5,7 @@
   bar.className = 'ns-invite-bar';
   bar.setAttribute('aria-label', 'Games account and invitations');
   bar.innerHTML = '<span data-identity>Guest</span><button type="button" data-ns-account>Account</button><button type="button" data-ns-invite>Invite</button>';
-  const header = document.querySelector('.topbar');
+  const header = document.querySelector('.poker-room .table-toolbar, .topbar');
   if (header) header.append(bar); else document.body.prepend(bar);
   const dialog = document.createElement('dialog');
   dialog.className = 'ns-invite-dialog';
@@ -42,6 +42,11 @@
     finally { window.dispatchEvent(new Event('northstar:games-account-change')); }
   }
   function identity() {
+    const chessAccount=profile.account||'guest';
+    if(bar.dataset.chessAccount!==chessAccount){
+      bar.dataset.chessAccount=chessAccount;
+      window.dispatchEvent(new Event('northstar:chess-identity'));
+    }
     bar.querySelector('[data-identity]').textContent = (profile.account || 'Guest') + (profile.sponsor ? ' · Sponsored by ' + profile.sponsor : '');
     bar.querySelector('[data-ns-account]').textContent = profile.account ? 'Account' : 'Sign in / Join';
   }

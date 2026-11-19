@@ -30,6 +30,20 @@ def database(tmp_path, monkeypatch):
     return tmp_path
 
 
+def test_equipment_note_uses_site_and_exact_tag(database, monkeypatch):
+    path = database / 'equipment.json'
+    path.write_text(json.dumps({'schemaVersion':1,'assets':[
+        {'site':site,'assetNum':'P:2/5','description':'Pump','location':'Intake'} for site in ('East','West')]}))
+    monkeypatch.setenv('NORTHSTAR_MAXIMO_SNAPSHOT', str(path))
+    east, west = [row['noteItemId'] for row in maximo.equipment()['assets']]
+    library.add_note(east, 'Inspect packing', 'Fixture operator', 'inspection')
+    assert library.note_counts() == {east:1}
+    assert library.item(east)['notes'][0]['text'] == 'Inspect packing'
+    assert library.item(west)['notes'] == []
+    with pytest.raises(LookupError):
+        library.add_note('equipment:East:missing', 'Observation', 'Fixture operator', 'bad')
+
+
 def test_status_is_setup_pending_and_does_not_invent_records(database):
     snapshot = maximo.status()
     assert snapshot["state"] == "Setup pending"

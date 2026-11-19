@@ -64,7 +64,7 @@ Promise.all([window.northstarLayoutReady, window.northstarOperatorSession]).then
     if (!m) return false;
     if (m.section === 'operations') return m.id === 'operations:sites' || m.id === 'operations:dispatch' || m.id === 'operations:tasks' || m.id === 'operations:research' || m.id === 'operations:spill' || m.id.startsWith('operations:spill:') || m.id.startsWith('operations:site:');
     if (m.section === 'tools') return demoToolIds.has(m.id);
-    return !['switching','outages','games'].includes(m.section);
+    return !['switching','outages'].includes(m.section);
   };
   function restrictedInSession(m) {
     if (window.NORTHSTAR_PLATFORM_DEMO) return !demoModuleAllowed(m);

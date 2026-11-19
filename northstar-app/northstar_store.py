@@ -1655,54 +1655,61 @@ def add_logbook_entry(
     after truncation — so a verified chain reflects the record as kept, not the
     text as typed.
     """
+    with _LOCK, _session() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        return append_logbook_row(connection, entry_type, subject, details, source)
+
+
+def append_logbook_row(connection, entry_type, subject, details, source, context=None):
+    """Append a chained log and its audit event inside the caller's transaction."""
     timestamp = now_iso()
     stored_type = entry_type[:60]
     stored_subject = subject[:160]
     stored_details = details[:4000]
     stored_source = source[:40]
-    with _LOCK, _session() as connection:
-        record_id = _unique_id(connection, "logbook", "event")
-        tail = connection.execute(
-            "SELECT entry_hash FROM logbook ORDER BY rowid DESC LIMIT 1"
-        ).fetchone()
-        previous = (tail["entry_hash"] if tail else "") or ""
-        digest = _logbook_hash(
-            previous, record_id, timestamp, stored_type, stored_subject, stored_details, stored_source
-        )
-        connection.execute(
-            "INSERT INTO logbook (id, at, type, subject, details, source, prev_hash, entry_hash)"
-            " VALUES (?,?,?,?,?,?,?,?)",
-            (
-                record_id,
-                timestamp,
-                stored_type,
-                stored_subject,
-                stored_details,
-                stored_source,
-                previous,
-                digest,
-            ),
-        )
-        events.append_event(
-            connection,
-            event_type="operations.logbook.entry_added",
-            occurred_at=timestamp,
-            actor_id=stored_source,
-            aggregate_type="logbook",
-            aggregate_id=record_id,
-            source="logbook",
-            severity=(
-                "critical" if any(term in stored_type.lower() for term in ("help", "trip", "emergency"))
-                else "warning" if any(term in stored_type.lower() for term in ("alarm", "outage", "overdue"))
-                else "info"
-            ),
-            summary=stored_subject,
-            payload={
-                "type": stored_type,
-                "details": stored_details,
-                "legacyEntryHash": digest,
-            },
-        )
+    record_id = _unique_id(connection, "logbook", "event")
+    tail = connection.execute(
+        "SELECT entry_hash FROM logbook ORDER BY rowid DESC LIMIT 1"
+    ).fetchone()
+    previous = (tail["entry_hash"] if tail else "") or ""
+    digest = _logbook_hash(
+        previous, record_id, timestamp, stored_type, stored_subject, stored_details, stored_source
+    )
+    connection.execute(
+        "INSERT INTO logbook (id, at, type, subject, details, source, prev_hash, entry_hash)"
+        " VALUES (?,?,?,?,?,?,?,?)",
+        (
+            record_id,
+            timestamp,
+            stored_type,
+            stored_subject,
+            stored_details,
+            stored_source,
+            previous,
+            digest,
+        ),
+    )
+    event_id = events.append_event(
+        connection,
+        event_type="operations.logbook.entry_added",
+        occurred_at=timestamp,
+        actor_id=stored_source,
+        aggregate_type="logbook",
+        aggregate_id=record_id,
+        source="logbook",
+        severity=(
+            "critical" if any(term in stored_type.lower() for term in ("help", "trip", "emergency"))
+            else "warning" if any(term in stored_type.lower() for term in ("alarm", "outage", "overdue"))
+            else "info"
+        ),
+        summary=stored_subject,
+        payload={
+            "type": stored_type,
+            "details": stored_details,
+            "legacyEntryHash": digest,
+            **(context or {}),
+        },
+    )
     return {
         "id": record_id,
         "type": stored_type,
@@ -1711,6 +1718,7 @@ def add_logbook_entry(
         "source": stored_source,
         "timestamp": timestamp,
         "entryHash": digest,
+        "eventId": event_id,
     }
 
 

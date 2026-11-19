@@ -160,6 +160,27 @@ def _bounded_int(value: Any, *, name: str, default: int, maximum: int) -> int:
     return parsed
 
 
+def note_target_id(site, asset_num):
+    from urllib.parse import quote
+    return 'equipment:' + quote(site, safe='') + ':' + quote(asset_num, safe='')
+
+
+def note_target(item_id):
+    from urllib.parse import unquote
+    parts = item_id.split(':')
+    if len(parts) != 3:
+        return None
+    site, tag = map(unquote, parts[1:])
+    snapshot = _load_equipment_snapshot() or {}
+    if note_target_id(site, tag) != item_id:
+        return None
+    for row in snapshot.get('assets', []):
+        if row['site'] == site and row['assetNum'] == tag:
+            return {'id': item_id, 'kind': 'equipment-tag', 'name': tag,
+                    'site': site, 'description': row['description'], 'location': row['location']}
+    return None
+
+
 def equipment(query: str = "", site: str = "", page: Any = 1, limit: Any = EQUIPMENT_PAGE_SIZE) -> dict[str, Any]:
     """Search the complete, local equipment list with bounded pagination."""
     requested_query = _text(query, EQUIPMENT_SEARCH_LIMIT)
@@ -198,7 +219,8 @@ def equipment(query: str = "", site: str = "", page: Any = 1, limit: Any = EQUIP
         "sites": snapshot["siteCounts"],
         "total": total,
         "pages": pages,
-        "assets": [dict(asset) for asset in rows[start:start + page_limit]],
+        "assets": [dict(asset, noteItemId=note_target_id(asset["site"], asset["assetNum"]))
+                   for asset in rows[start:start + page_limit]],
     })
     return base
 

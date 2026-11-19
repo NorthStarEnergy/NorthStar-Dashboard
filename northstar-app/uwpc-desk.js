@@ -398,12 +398,7 @@
     $('uwpcExampleDetail').innerHTML = `<article class="uwpc-example-sheet"><small>EXAMPLE · ${esc(form.code)}</small><h3>${esc(form.title)}</h3><dl><div><dt>Station</dt><dd>Example Station</dd></div><div><dt>Outage ID</dt><dd>OUT-EXAMPLE-001</dd></div><div><dt>Plan status</dt><dd>Planned</dd></div><div><dt>Work description</dt><dd>Example only - replace every field with verified package information.</dd></div><div><dt>Notes</dt><dd>Attach the current circuit diagram and identify its revision before generating a proposal.</dd></div></dl><p>This example is not saved and cannot be used as operational authority.</p></article>`;
   }
 
-  async function save() {
-    const form = $('uwpcRequestForm'); if (!form.reportValidity()) return;
-    const data = Object.fromEntries(new FormData(form));
-    if (form.readLayout) data.layout = form.readLayout();
-    data.affectedSites = String(data.affectedSites || '').split(/\r?\n/).map(site => site.trim()).filter(Boolean);
-    ['start','end'].forEach(key => {data[key] = data[key] ? new Date(data[key]).toISOString() : '';});
+  function readSwitchingFields(form, data) {
     if (data.template === 'pc17a') {
       const plan = {};
       form.querySelectorAll('[data-plan-field]').forEach(control => {
@@ -417,6 +412,15 @@
       data.scope = plan.purpose;
       data.description = plan.purpose;
     }
+  }
+
+  async function save() {
+    const form = $('uwpcRequestForm'); if (!form.reportValidity()) return;
+    const data = Object.fromEntries(new FormData(form));
+    if (form.readLayout) data.layout = form.readLayout();
+    data.affectedSites = String(data.affectedSites || '').split(/\r?\n/).map(site => site.trim()).filter(Boolean);
+    ['start','end'].forEach(key => {data[key] = data[key] ? new Date(data[key]).toISOString() : '';});
+    readSwitchingFields(form, data);
     const result = await request(current ? `${api}/${current.id}/save` : api, 'POST', {...data,...(current ? {version:current.version} : {})});
     if(managerPackage && result.outageId && !current?.outageId){
       sessionStorage.setItem('outageEdit.'+result.outageId,editToken);dirty=false;
@@ -524,14 +528,63 @@
     const control = id => doc.getElementById(id);
     const layout = record.layout || {};
     const rows = structuredClone(layout.rows || []);
-    if (!rows.length) {
-      for (const el of $('uwpcRequestForm')?.querySelectorAll('[name], [data-plan-field], [data-step-field]') || []) {
-        if (el.closest('[data-layout]') || el.type==='hidden' || !el.value || (el.type==='checkbox' && !el.checked)) continue;
-        rows.push({label:el.labels?.[0]?.querySelector('span')?.textContent || el.name || el.dataset.planField || el.dataset.stepField,text:el.value});
-        if(rows.length===120)break;
+    const sheet = doc.createElement('form');
+    sheet.className = 'printable-form';
+    const switching = record.template === 'pc17a';
+    if (switching) {
+      sheet.innerHTML = switchingForm(record);
+      sheet.querySelector('.uwpc-plan-record').remove();
+      sheet.querySelector('[data-action="add-step"]').onclick = () => {
+        const body = sheet.querySelector('tbody');
+        body.insertAdjacentHTML('beforeend', switchingRow({}, body.rows.length));
+        changed();
+      };
+    } else {
+      sheet.innerHTML = '<header><strong>NORTHSTAR UWPC</strong><div>Draft form for review</div></header>';
+      for (const [label,key,value] of [
+        ['Package','title'], ['Lifecycle',null,phaseLabels[record.phase]], ['Review status',null,record.status],
+        ['UWPC form',null,record.template.toUpperCase()], ['Request type',null,labels[record.kind]],
+        ['Station / site','site'], ['Equipment','equipment'], ['Outage ID','outageId'],
+        ['Planned start','start'], ['Planned end','end'], ['Controlling authority','authority'],
+        ['Authority / permit reference','reference'], ['Circuit diagram revision','diagramRevision'],
+        ['Work description','description'], ['Request / work scope','scope'], ['Notes','notes']
+      ]) {
+        const line = doc.createElement('label');
+        line.textContent = label;
+        const field = doc.createElement(['notes','scope','description'].includes(key) ? 'textarea' : 'input');
+        field.readOnly = !key || (key === 'outageId' && Boolean(record.registerOutage));
+        if (key) field.name = key;
+        if (key === 'start' || key === 'end') field.type = 'datetime-local';
+        field.value = field.type === 'datetime-local' ? dateValue(record[key]) : (key ? record[key] : value) || '';
+        line.append(field);
+        sheet.append(line);
       }
-      if(!rows.length)rows.push({label:record.title,text:record.scope || ''});
     }
+    sheet.insertAdjacentHTML('beforeend','<p>DRAFT — Qualified review required. This form does not authorize work or system operation.</p>');
+    sheet.oninput = changed;
+    sheet.onsubmit = event => event.preventDefault();
+    page.before(sheet);
+    const stylesheet = doc.createElement('link');
+    stylesheet.rel = 'stylesheet';
+    stylesheet.href = new URL('uwpc-desk.css', location.href).href;
+    doc.head.prepend(stylesheet);
+    const style = doc.createElement('style');
+    style.textContent = '.printable-form{box-sizing:border-box;margin:22px auto;background:white;color:#111;padding:24px;width:min(100%,1080px);font:14px Arial,sans-serif}.printable-form header{position:static;box-shadow:none}.printable-form>header{background:#123044;color:white}.printable-form .uwpc-pc17a-title{padding:0}.printable-form label{display:flex;flex-direction:column}.printable-form>label{margin:12px 0;font-weight:bold}.printable-form input,.printable-form textarea{box-sizing:border-box;width:100%;min-width:0;font:inherit}.printable-form input[type=checkbox]{width:auto}.printable-form .uwpc-switching-table{min-width:0}.printable-form .uwpc-switching-table th{width:auto}.printable-form .uwpc-switching-table th:nth-child(4){width:23%}.printable-form p{color:#962b1e}.printable-form .uwpc-pc17a{padding:0}main:empty{display:none}';
+    doc.head.append(style);
+    const printLink = doc.createElement('a');
+    printLink.href = api+'/'+encodeURIComponent(record.id)+'/exports/pdf?v='+version;
+    printLink.textContent = 'Open saved PDF to print';
+    printLink.target = '_blank';
+    printLink.rel = 'noopener';
+    doc.querySelector('nav').prepend(printLink);
+    const extras = doc.createElement('details');
+    extras.innerHTML = '<summary>Additional printable rows and images</summary>';
+    const toolbar = doc.querySelector('nav');
+    for (const item of [...toolbar.children]) {
+      if (item !== printLink && item.id !== 'save') extras.append(item);
+    }
+    sheet.after(extras);
+    extras.append(page);
     let active, modified=false, loading=false;
     const defaults={color:'#172934',fill:'#ffffff',border:'none',inset:0};
     function changed(){modified=true;lastActivity=Date.now();}
@@ -564,7 +617,7 @@
       handle.onlostpointercapture=()=>{handle.onpointermove=null;};
       block.addEventListener('focusin',()=>select(block));block.onclick=()=>select(block);paint(block);select(block);
     }
-    rows.forEach(row=>insert(row));select(page.firstChild);
+    rows.forEach(row=>insert(row));if(page.firstChild)select(page.firstChild);
     for(const key of ['font','size',...Object.keys(defaults)])control(key).oninput=()=>{
       if(!active || !control(key).checkValidity() || !control(key).value)return;
       const target=['font','size'].includes(key)?active.row:active.row.formatting;
@@ -589,7 +642,17 @@
       doc.body.inert=true;
       try{
         if(dirty || current.id!==record.id || current.version!==version || !lock.mine || !lock.canEdit)throw Error('The form or checkout changed. Reopen the editor on the current revision.');
-        const result=await request(api+'/'+encodeURIComponent(record.id)+'/save','POST',{...record,version,layout:{photo:layout.photo || '',rows:[...page.children].map(block=>block.row)}});
+        if (!sheet.reportValidity()) return;
+        const data = {...record, version};
+        for (const field of sheet.elements) {
+          if (!field.name) continue;
+          if (field.type === 'datetime-local') {
+            if (dateValue(record[field.name]) !== field.value) data[field.name] = field.value ? new Date(field.value).toISOString() : '';
+          } else data[field.name] = field.value;
+        }
+        readSwitchingFields(sheet, data);
+        data.layout = {photo:layout.photo || '',rows:[...page.children].map(block=>block.row)};
+        const result=await request(api+'/'+encodeURIComponent(record.id)+'/save','POST',data);
         modified=false;show(result);popup.close();notice('Document changes saved.');
       }catch(error){msg.textContent=error.message;}finally{doc.body.inert=false;}
     };

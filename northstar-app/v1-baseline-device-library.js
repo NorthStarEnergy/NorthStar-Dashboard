@@ -315,7 +315,7 @@
       const siteCount = Number(snapshot.siteCount || 0);
       const options = (snapshot.sites || []).map(row => `<option value="${esc(row.code)}"${row.code === snapshot.site ? ' selected' : ''}>${esc(row.code)} (${esc(String(row.assets || 0))})</option>`).join('');
       const rows = (snapshot.assets || []).map(asset => `<tr>
-        <td>${esc(asset.assetNum)}</td><td>${esc(asset.description)}</td><td>${esc(asset.location)}</td>
+        <td>${asset.noteItemId ? `<a href="northstar-v1.html?logBook=notes&amp;noteItem=${encodeURIComponent(asset.noteItemId)}">${esc(asset.assetNum)}${snapshot.noteCounts?.[asset.noteItemId] ? ' ⚑ ' + Number(snapshot.noteCounts[asset.noteItemId]) : ''}</a>` : esc(asset.assetNum)}</td><td>${esc(asset.description)}</td><td>${esc(asset.location)}</td>
         <td>${esc(asset.locationDescription)}</td><td>${esc(asset.parent)}</td><td>${esc(asset.rotatingItem)}</td><td>${esc(asset.site)}</td>
       </tr>`).join('');
       const first = snapshot.total ? (snapshot.page - 1) * snapshot.limit + 1 : 0;
@@ -357,7 +357,8 @@
       if (equipmentMaster.site) params.set('site', equipmentMaster.site);
       params.set('page', String(equipmentMaster.page));
       try {
-        const snapshot = await json(`/api/maximo/equipment?${params}`);
+        const [snapshot, flags] = await Promise.all([json(`/api/maximo/equipment?${params}`), json('/api/library/note-counts').catch(() => ({}))]);
+        snapshot.noteCounts = flags.counts || {};
         if (token !== loadToken) return;
         equipmentMaster = { query: snapshot.query || '', site: snapshot.site || '', page: snapshot.page || 1 };
         renderMaximoEquipment(snapshot);

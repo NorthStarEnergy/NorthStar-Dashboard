@@ -395,6 +395,8 @@ def encode(data):
 
 def task_list(connection, params, who, all_open=False):
     clauses, values = scoped(who, 'station', params.get('station', ''))
+    if params.get('category'):
+        clauses.append("json_extract(data,'$.category')=?"); values.append(params['category'])
     status = params.get('status', 'open')
     if status != 'all':
         selected = OPEN if status == 'open' else FINAL if status == 'history' else (status,)
@@ -485,6 +487,33 @@ def feed(connection, who):
     return {'tasks': tasks, 'alarms': alarms, 'recent': recent}
 
 
+def publish_log(connection, data, who):
+    subject = text(data.get('subject'), 'subject', 160, True)
+    body = text(data.get('details'), 'details', 4000, True)
+    kind = text(data.get('type', 'Operator action'), 'entry type', 60, True)
+    station = station_id(text(data.get('stationId', ''), 'station', 120))
+    authorize(who, station, True)
+    key = 'operator-book:' + text(data.get('requestId'), 'request ID', 100, True)
+    prior = connection.execute('SELECT event_id FROM console_requests WHERE actor=? AND request_key=?',
+                               (who['actor'], key)).fetchone()
+    if prior:
+        existing, _ = source_event(connection, prior[0], who)
+        payload = existing['payload']
+        if (existing['summary'], payload.get('details'), payload.get('type'), payload.get('siteId'), payload.get('taskId', '')) != (subject, body, kind, station, data.get('taskId', '')):
+            raise Conflict('Request ID already used for a different log entry')
+        return {'eventId': prior[0], 'duplicate': True}
+    context = {'siteId': station, 'site': (sites.resolve(station) or {}).get('name', station)}
+    if data.get('taskId'):
+        task = task_row(connection, data['taskId'], who, True)
+        if task['category'] != 'Log Book' or not task['recurrenceTemplateId'] or task['stationId'] != station or task['status'] not in OPEN:
+            raise Conflict('Scheduled draft is closed or its station has changed')
+        context['taskId'] = task['id']
+        change_task(connection, task['id'], 'complete', {'version': data.get('version'), 'notes': subject}, who)
+    result = store.append_logbook_row(connection, kind, subject, body, who['actor'], context)
+    connection.execute('INSERT INTO console_requests VALUES (?,?,?)', (who['actor'], key, result['eventId']))
+    return result
+
+
 def request(method, path, params, data, who):
     route_parts = path.removeprefix('/api/console').strip('/').split('/')
     if method == 'POST' and len(route_parts) == 3 and route_parts[0] == 'records' and route_parts[2] == 'acknowledge':
@@ -547,6 +576,8 @@ def request(method, path, params, data, who):
         elif method == 'POST':
             if not who['write']:
                 raise PermissionError('Console is read-only')
+            if parts == ['logbook']:
+                return publish_log(connection, data, who)
             if resource == 'tasks':
                 return create_task(connection, data, who) if len(parts) == 1 else change_task(connection, parts[1], parts[2] if len(parts) > 2 else 'edit', data, who)
             if resource == 'task-templates':

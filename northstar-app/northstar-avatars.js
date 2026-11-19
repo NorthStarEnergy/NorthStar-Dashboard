@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   let catalog = [], profile = null, dialog, opener, loading, saving = false;
-  const valid = id => /^classic-(?:[0-3][0-9]|4[0-4])$/.test(String(id || ''));
+  const valid = id => /^classic-(?:[0-4][0-9]|50)$/.test(String(id || ''));
   const url = id => `/assets/avatars/classic/${valid(id) ? id : 'classic-00'}.png`;
   async function request(path, options = {}) {
     const response = await fetch(path, {cache:'no-store', ...options});
@@ -24,7 +24,7 @@
     if (!loading) loading = (async () => {
       const data = await request('/api/avatars');
       catalog = data.avatars.filter(a => valid(a.id));
-      if (catalog.length !== 45) throw new Error('The avatar catalog could not be loaded.');
+      if (!catalog.length) throw new Error('The avatar catalog could not be loaded.');
       await refresh();
       return profile;
     })().catch(error => {loading = null; throw error;});
@@ -48,7 +48,7 @@
     dialog = document.createElement('dialog');
     dialog.className = 'ns-avatar-dialog';
     dialog.setAttribute('aria-labelledby','nsAvatarHeading');
-    dialog.innerHTML = '<form method="dialog" class="ns-avatar-heading"><h2 id="nsAvatarHeading">Choose your avatar</h2><button aria-label="Close avatar picker">×</button></form><p>Your avatar follows your NorthStar account into chat and games.</p><div class="ns-avatar-grid" aria-label="Classic avatars"></div><p role="status" aria-live="polite"></p>';
+    dialog.innerHTML = '<form method="dialog" class="ns-avatar-heading"><h2 id="nsAvatarHeading">Choose your avatar</h2><button aria-label="Close avatar picker">×</button></form><p>Your avatar follows your NorthStar account into chat and games.</p><div class="ns-avatar-grid" aria-label="Avatars"></div><p role="status" aria-live="polite"></p>';
     document.body.appendChild(dialog);
     dialog.addEventListener('close', () => opener?.focus());
     dialog.querySelector('.ns-avatar-grid').addEventListener('keydown', event => {
@@ -73,7 +73,7 @@
         const img = document.createElement('img'); img.src = url(item.id); img.width = 68; img.height = 46; img.alt = '';
         button.append(img); button.addEventListener('click',() => choose(item.id)); grid.append(button);
       }
-      dialog.querySelector('[role="status"]').textContent = '45 original pixel avatars. Select one to save.';
+      dialog.querySelector('[role="status"]').textContent = 'Select an avatar to save.';
       if (dialog.open) grid.querySelector('[aria-pressed="true"]')?.focus();
     } catch (error) { dialog.querySelector('[role="status"]').textContent = error.message || 'Sign in to choose an avatar.'; }
   }
